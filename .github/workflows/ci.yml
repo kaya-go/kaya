@@ -14,7 +14,7 @@ jobs:
     name: Quality Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -72,7 +72,7 @@ jobs:
       # Use /kaya/next/ for main branch, / for PRs
       ASSET_PREFIX: ${{ github.ref == 'refs/heads/main' && '/kaya/next/' || '/' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -119,7 +119,7 @@ jobs:
     name: Desktop App
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -162,7 +162,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download Web Artifact
         uses: actions/download-artifact@v4
@@ -182,7 +182,7 @@ jobs:
 
       - name: Checkout gh-pages branch
         if: steps.check_branch.outputs.exists == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: gh-pages
           path: gh-pages
