@@ -201,7 +201,7 @@ jobs:
       # - sccache caches compilation outputs per crate
       # - cargo/target caches are keyed off Cargo.lock (NOT Cargo.toml), so version bumps won't bust caches
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.6
+        uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Configure Rust build cache env
         id: sccache_config
