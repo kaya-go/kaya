@@ -262,7 +262,7 @@ jobs:
 
       - name: Upload artifacts (Linux)
         if: matrix.platform == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nightly-linux
           path: |
@@ -273,7 +273,7 @@ jobs:
 
       - name: Upload artifacts (macOS)
         if: matrix.platform == 'macos-latest'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nightly-macos
           path: |
@@ -283,7 +283,7 @@ jobs:
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: nightly-windows
           path: |
