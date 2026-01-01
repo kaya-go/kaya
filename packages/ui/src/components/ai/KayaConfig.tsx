@@ -631,9 +631,14 @@ export const KayaConfig: React.FC = () => {
                 style={{
                   backgroundColor: theme.board.backgroundColor,
                   borderColor: theme.board.borderColor,
+                  backgroundImage: theme.boardTextureUrl
+                    ? `url(${theme.boardTextureUrl})`
+                    : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
                 }}
               >
-                {/* Mini board preview with stones */}
+                {/* Two stones displayed diagonally */}
                 <div className="theme-preview-stones">
                   <div
                     className="theme-preview-stone black"
@@ -645,6 +650,8 @@ export const KayaConfig: React.FC = () => {
                         ? `url(${theme.blackStoneUrl})`
                         : undefined,
                       backgroundSize: 'contain',
+                      top: '35%',
+                      left: '35%',
                     }}
                   />
                   <div
@@ -657,14 +664,11 @@ export const KayaConfig: React.FC = () => {
                         ? `url(${theme.whiteStoneUrl})`
                         : undefined,
                       backgroundSize: 'contain',
+                      top: '65%',
+                      left: '65%',
                     }}
                   />
                 </div>
-                {/* Grid lines overlay */}
-                <div
-                  className="theme-preview-grid"
-                  style={{ borderColor: theme.board.foregroundColor }}
-                />
               </div>
               <div className="theme-info">
                 <div className="theme-name">

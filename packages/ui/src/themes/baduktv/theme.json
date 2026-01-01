@@ -20,7 +20,7 @@
       "shadowOffsetX": "0.08em",
       "shadowOffsetY": "0.1em",
       "shadowBlur": "0.12em",
-      "size": "100%"
+      "size": "108%"
     },
     "white": {
       "image": "assets/stone-white.png",
@@ -31,7 +31,7 @@
       "shadowOffsetX": "0.08em",
       "shadowOffsetY": "0.1em",
       "shadowBlur": "0.12em",
-      "size": "100%"
+      "size": "108%"
     }
   },
   "coordColor": "rgba(107, 66, 1, 0.59)"
