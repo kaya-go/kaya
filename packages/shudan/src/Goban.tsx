@@ -1251,7 +1251,7 @@ export const Goban: React.FC<GobanProps> = ({
               ) : currentPlayer !== undefined ? (
                 // Otherwise show the ghost stone (only if currentPlayer is defined)
                 <div
-                  className="shudan-ghost-stone"
+                  className={`shudan-ghost-stone shudan-ghost-stone_${currentPlayer === 1 ? 'black' : 'white'}`}
                   style={{
                     width: '100%',
                     height: '100%',

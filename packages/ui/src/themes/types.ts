@@ -32,6 +32,10 @@ export interface StoneConfig {
   imageOffsetX?: string;
   /** Image offset Y for SVGs with baked-in shadows (e.g., "-0.03em") - optional */
   imageOffsetY?: string;
+  /** Border color for flat stone styles (hex) - optional */
+  borderColor?: string;
+  /** Border width for flat stone styles (e.g., "1.5pt" or "0.04em") - optional */
+  borderWidth?: string;
 }
 
 /**

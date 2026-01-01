@@ -652,6 +652,13 @@ export const KayaConfig: React.FC = () => {
                       backgroundSize: 'contain',
                       top: '50%',
                       left: '35%',
+                      border: theme.stones.black.borderWidth
+                        ? `${theme.stones.black.borderWidth} solid ${theme.stones.black.borderColor}`
+                        : undefined,
+                      boxShadow:
+                        theme.stones.black.shadowColor !== 'transparent'
+                          ? `${theme.stones.black.shadowOffsetX} ${theme.stones.black.shadowOffsetY} ${theme.stones.black.shadowBlur} ${theme.stones.black.shadowColor}`
+                          : 'none',
                     }}
                   />
                   <div
@@ -666,6 +673,13 @@ export const KayaConfig: React.FC = () => {
                       backgroundSize: 'contain',
                       top: '50%',
                       left: '65%',
+                      border: theme.stones.white.borderWidth
+                        ? `${theme.stones.white.borderWidth} solid ${theme.stones.white.borderColor}`
+                        : undefined,
+                      boxShadow:
+                        theme.stones.white.shadowColor !== 'transparent'
+                          ? `${theme.stones.white.shadowOffsetX} ${theme.stones.white.shadowOffsetY} ${theme.stones.white.shadowBlur} ${theme.stones.white.shadowColor}`
+                          : 'none',
                     }}
                   />
                 </div>

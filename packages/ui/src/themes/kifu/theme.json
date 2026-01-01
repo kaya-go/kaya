@@ -16,7 +16,9 @@
       "shadowColor": "transparent",
       "shadowOffsetX": "0",
       "shadowOffsetY": "0",
-      "shadowBlur": "0"
+      "shadowBlur": "0",
+      "borderColor": "#000000",
+      "borderWidth": "0.04em"
     },
     "white": {
       "backgroundColor": "#ffffff",
@@ -24,7 +26,9 @@
       "shadowColor": "transparent",
       "shadowOffsetX": "0",
       "shadowOffsetY": "0",
-      "shadowBlur": "0"
+      "shadowBlur": "0",
+      "borderColor": "#000000",
+      "borderWidth": "0.04em"
     }
   },
   "coordColor": "#000000"

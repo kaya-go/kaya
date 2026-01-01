@@ -46,6 +46,16 @@ function generateThemeImageCSS(theme: ResolvedBoardTheme): string {
         background-size: cover;
       }
     `);
+  } else {
+    // No texture - ensure no background image and disable gradient overlay for flat themes
+    rules.push(`
+      .shudan-goban {
+        background-image: none;
+      }
+      .shudan-goban::after {
+        background: none;
+      }
+    `);
   }
 
   // Stone size via CSS custom property (default is 90% in base CSS)
@@ -94,9 +104,20 @@ function generateThemeImageCSS(theme: ResolvedBoardTheme): string {
     }
   } else {
     // Use drop-shadow for SVG stones (they don't have shadows baked in)
+    // Also add border if defined (for flat themes like kifu)
+    const blackBorder =
+      theme.stones.black.borderWidth && theme.stones.black.borderColor
+        ? `border: ${theme.stones.black.borderWidth} solid ${theme.stones.black.borderColor};`
+        : '';
+    // For flat themes with borders, use solid color instead of SVG
+    const blackBgOverride = blackBorder
+      ? `background-image: none; background-color: ${theme.stones.black.backgroundColor}; border-radius: 50%;`
+      : '';
     rules.push(`
       .shudan-stone_black {
         filter: drop-shadow(${theme.stones.black.shadowOffsetX} ${theme.stones.black.shadowOffsetY} ${theme.stones.black.shadowBlur} ${theme.stones.black.shadowColor});
+        ${blackBorder}
+        ${blackBgOverride}
       }
     `);
   }
@@ -134,9 +155,43 @@ function generateThemeImageCSS(theme: ResolvedBoardTheme): string {
     }
   } else {
     // Use drop-shadow for SVG stones (they don't have shadows baked in)
+    // Also add border if defined (for flat themes like kifu)
+    const whiteBorder =
+      theme.stones.white.borderWidth && theme.stones.white.borderColor
+        ? `border: ${theme.stones.white.borderWidth} solid ${theme.stones.white.borderColor};`
+        : '';
+    // For flat themes with borders, use solid color instead of SVG
+    const whiteBgOverride = whiteBorder
+      ? `background-image: none; background-color: ${theme.stones.white.backgroundColor}; border-radius: 50%;`
+      : '';
     rules.push(`
       .shudan-stone_white {
         filter: drop-shadow(${theme.stones.white.shadowOffsetX} ${theme.stones.white.shadowOffsetY} ${theme.stones.white.shadowBlur} ${theme.stones.white.shadowColor});
+        ${whiteBorder}
+        ${whiteBgOverride}
+      }
+    `);
+  }
+
+  // Ghost stone styles - apply borders for flat themes
+  const blackGhostBorder =
+    theme.stones.black.borderWidth && theme.stones.black.borderColor
+      ? `border: ${theme.stones.black.borderWidth} solid ${theme.stones.black.borderColor};`
+      : '';
+  const whiteGhostBorder =
+    theme.stones.white.borderWidth && theme.stones.white.borderColor
+      ? `border: ${theme.stones.white.borderWidth} solid ${theme.stones.white.borderColor};`
+      : '';
+
+  if (blackGhostBorder || whiteGhostBorder) {
+    rules.push(`
+      .shudan-ghost-stone_black {
+        ${blackGhostBorder}
+        box-sizing: border-box;
+      }
+      .shudan-ghost-stone_white {
+        ${whiteGhostBorder}
+        box-sizing: border-box;
       }
     `);
   }
