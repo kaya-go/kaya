@@ -63,12 +63,22 @@ function generateThemeImageCSS(theme: ResolvedBoardTheme): string {
 
   // Black stone image
   if (theme.blackStoneUrl) {
+    const offsetX = theme.stones.black.imageOffsetX;
+    const offsetY = theme.stones.black.imageOffsetY;
+    const hasOffset = offsetX || offsetY;
+
+    // Use background-position to offset the stone image within the element
+    // This keeps the element centered for markers while shifting the visible stone
+    const bgPosition = hasOffset
+      ? `calc(50% + ${offsetX || '0'}) calc(50% + ${offsetY || '0'})`
+      : 'center';
+
     rules.push(`
       .shudan-stone_black {
         background-image: url('${theme.blackStoneUrl}');
         background-size: contain;
         background-repeat: no-repeat;
-        background-position: center;
+        background-position: ${bgPosition};
       }
     `);
 
@@ -93,12 +103,22 @@ function generateThemeImageCSS(theme: ResolvedBoardTheme): string {
 
   // White stone image
   if (theme.whiteStoneUrl) {
+    const offsetX = theme.stones.white.imageOffsetX;
+    const offsetY = theme.stones.white.imageOffsetY;
+    const hasOffset = offsetX || offsetY;
+
+    // Use background-position to offset the stone image within the element
+    // This keeps the element centered for markers while shifting the visible stone
+    const bgPosition = hasOffset
+      ? `calc(50% + ${offsetX || '0'}) calc(50% + ${offsetY || '0'})`
+      : 'center';
+
     rules.push(`
       .shudan-stone_white {
         background-image: url('${theme.whiteStoneUrl}');
         background-size: contain;
         background-repeat: no-repeat;
-        background-position: center;
+        background-position: ${bgPosition};
       }
     `);
 

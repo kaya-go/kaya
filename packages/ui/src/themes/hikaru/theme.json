@@ -19,7 +19,9 @@
       "shadowOffsetX": "0.08em",
       "shadowOffsetY": "0.08em",
       "shadowBlur": "0.15em",
-      "size": "100%"
+      "size": "100%",
+      "imageOffsetX": "0.01em",
+      "imageOffsetY": "0.14em"
     },
     "white": {
       "image": "stone-white.svg",
@@ -29,7 +31,9 @@
       "shadowOffsetX": "0.08em",
       "shadowOffsetY": "0.08em",
       "shadowBlur": "0.15em",
-      "size": "100%"
+      "size": "100%",
+      "imageOffsetX": "0.01em",
+      "imageOffsetY": "0.14em"
     }
   },
   "coordColor": "rgba(74, 53, 32, 0.75)"

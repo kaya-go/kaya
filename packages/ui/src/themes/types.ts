@@ -28,6 +28,10 @@ export interface StoneConfig {
   shadowBlur: string;
   /** Stone size as percentage (e.g., "100%" or "127%") - optional, defaults to 100% */
   size?: string;
+  /** Image offset X for SVGs with baked-in shadows (e.g., "-0.03em") - optional */
+  imageOffsetX?: string;
+  /** Image offset Y for SVGs with baked-in shadows (e.g., "-0.03em") - optional */
+  imageOffsetY?: string;
 }
 
 /**
