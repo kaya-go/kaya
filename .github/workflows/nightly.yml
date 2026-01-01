@@ -57,7 +57,7 @@ jobs:
 
       - name: Cache node_modules
         if: ${{ !inputs.skip_cache }}
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -97,7 +97,7 @@ jobs:
       - name: Restore sccache cache
         if: ${{ !inputs.skip_cache }}
         id: sccache_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
@@ -122,7 +122,7 @@ jobs:
       - name: Restore Cargo registry/git cache
         if: ${{ !inputs.skip_cache }}
         id: cargo_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         continue-on-error: true
         with:
           path: |
@@ -162,7 +162,7 @@ jobs:
         run: bun install
 
       - name: Cache wasm-pack
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/wasm-pack*
@@ -293,7 +293,7 @@ jobs:
       # Save caches only when they were not found
       - name: Save Cargo registry/git cache (if miss)
         if: ${{ !inputs.skip_cache && steps.cargo_cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         continue-on-error: true
         with:
           path: |
@@ -304,7 +304,7 @@ jobs:
 
       - name: Save sccache cache (if miss)
         if: ${{ !inputs.skip_cache && steps.sccache_cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}

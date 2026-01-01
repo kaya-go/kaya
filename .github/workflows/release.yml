@@ -28,7 +28,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -46,7 +46,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache wasm-pack
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack*
           key: ${{ runner.os }}-wasm-pack-0.13
@@ -91,7 +91,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -108,7 +108,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache wasm-pack
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack*
           key: ${{ runner.os }}-wasm-pack-0.13
@@ -177,7 +177,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.bun/install/cache
@@ -222,7 +222,7 @@ jobs:
 
       - name: Restore sccache cache
         id: sccache_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
@@ -248,7 +248,7 @@ jobs:
 
       - name: Restore Cargo registry/git cache
         id: cargo_cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         continue-on-error: true
         with:
           path: |
@@ -288,7 +288,7 @@ jobs:
 
       # Cache wasm-pack binary to avoid redownloading
       - name: Cache wasm-pack
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/bin/wasm-pack*
@@ -376,7 +376,7 @@ jobs:
       # Save caches only when they were not found (avoids multi-minute cache uploads on every release run)
       - name: Save Cargo registry/git cache (if miss)
         if: steps.cargo_cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         continue-on-error: true
         with:
           path: |
@@ -387,7 +387,7 @@ jobs:
 
       - name: Save sccache cache (if miss)
         if: steps.sccache_cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
