@@ -130,11 +130,40 @@
     "close": "Cerrar configuración",
     "analysisTab": "Análisis",
     "gameTab": "Juego",
+    "themeTab": "Tema",
     "boardSettings": "Configuración del tablero",
+    "themeSettings": "Tema del tablero",
+    "themeDescription": "Elige un tema visual para el tablero y las piedras.",
     "fuzzyStonePlacement": "Colocación difusa de piedras",
     "fuzzyStonePlacementDescription": "Añade pequeños desplazamientos aleatorios a las posiciones de las piedras para una apariencia más natural.",
     "on": "Activado",
-    "off": "Desactivado"
+    "off": "Desactivado",
+    "themes": {
+      "hikaru": {
+        "name": "Hikaru",
+        "description": "Hermoso tablero de madera con piedras tipo cristal"
+      },
+      "shell-slate": {
+        "name": "Concha y Pizarra",
+        "description": "Piedras tradicionales de concha y pizarra"
+      },
+      "yunzi": {
+        "name": "Yunzi",
+        "description": "Piedras yunzi clásicas biconvexas"
+      },
+      "happy-stones": {
+        "name": "Happy Stones",
+        "description": "Madera naranja vibrante con piedras de cristal"
+      },
+      "kifu": {
+        "name": "Kifu",
+        "description": "Estilo de impresión blanco y negro limpio"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "Estilo de transmisión coreana"
+      }
+    }
   },
 
   "analysis": {

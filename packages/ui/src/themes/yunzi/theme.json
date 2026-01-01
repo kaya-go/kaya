@@ -1,0 +1,34 @@
+{
+  "id": "yunzi",
+  "name": "Yunzi",
+  "description": "Biconvex Chinese Yunzi stones on a warm kaya board",
+  "author": "Bill Hails (adapted for Kaya)",
+  "board": {
+    "backgroundColor": "#deb060",
+    "borderColor": "#c89848",
+    "foregroundColor": "#222222",
+    "borderWidth": 0,
+    "texture": "board.png"
+  },
+  "stones": {
+    "black": {
+      "image": "stone-black.png",
+      "backgroundColor": "#0e0e0e",
+      "foregroundColor": "#eeeeee",
+      "shadowColor": "rgba(0, 0, 0, 0.6)",
+      "shadowOffsetX": "0.106em",
+      "shadowOffsetY": "0.106em",
+      "shadowBlur": "0.06em"
+    },
+    "white": {
+      "image": "stone-white.png",
+      "backgroundColor": "#ebebeb",
+      "foregroundColor": "#eeeeee",
+      "shadowColor": "rgba(0, 0, 0, 0.6)",
+      "shadowOffsetX": "0.106em",
+      "shadowOffsetY": "0.106em",
+      "shadowBlur": "0.06em"
+    }
+  },
+  "coordColor": "rgba(34, 34, 34, 0.7)"
+}

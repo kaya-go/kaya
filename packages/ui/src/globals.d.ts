@@ -3,6 +3,22 @@ declare module '*.css' {
   export default content;
 }
 
+// Image assets
+declare module '*.png' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.svg' {
+  const src: string;
+  export default src;
+}
+
+declare module '*.jpg' {
+  const src: string;
+  export default src;
+}
+
 // Tauri global for runtime detection
 interface Window {
   __TAURI__?: unknown;

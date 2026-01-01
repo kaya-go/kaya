@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider, I18nProvider, setTauriSaveAPI } from '@kaya/ui';
+import { ThemeProvider, BoardThemeProvider, I18nProvider, setTauriSaveAPI } from '@kaya/ui';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import App from './App.tsx';
@@ -60,7 +60,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <I18nProvider>
       <ThemeProvider>
-        <App />
+        <BoardThemeProvider>
+          <App />
+        </BoardThemeProvider>
       </ThemeProvider>
     </I18nProvider>
   </StrictMode>

@@ -1,0 +1,34 @@
+{
+  "id": "happy-stones",
+  "name": "Happy Stones",
+  "description": "Vibrant orange wood board with glass-like stones",
+  "author": "upsided",
+  "board": {
+    "backgroundColor": "#d9a55b",
+    "borderColor": "#8b6914",
+    "foregroundColor": "#3c392f",
+    "borderWidth": 0,
+    "texture": "assets/board.png"
+  },
+  "stones": {
+    "black": {
+      "image": "assets/stone-black.png",
+      "backgroundColor": "#1a1a1a",
+      "foregroundColor": "#d87700",
+      "shadowColor": "rgba(80, 65, 0, 0.35)",
+      "shadowOffsetX": "0.08em",
+      "shadowOffsetY": "0.1em",
+      "shadowBlur": "0.12em"
+    },
+    "white": {
+      "image": "assets/stone-white.png",
+      "backgroundColor": "#ffffff",
+      "foregroundColor": "#fb8a00",
+      "shadowColor": "rgba(80, 65, 0, 0.35)",
+      "shadowOffsetX": "0.08em",
+      "shadowOffsetY": "0.1em",
+      "shadowBlur": "0.12em"
+    }
+  },
+  "coordColor": "rgba(107, 66, 1, 0.59)"
+}

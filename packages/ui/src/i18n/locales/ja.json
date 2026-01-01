@@ -130,11 +130,40 @@
     "close": "設定を閉じる",
     "analysisTab": "分析",
     "gameTab": "ゲーム",
+    "themeTab": "テーマ",
     "boardSettings": "盤面設定",
+    "themeSettings": "碁盤テーマ",
+    "themeDescription": "碁盤と碁石のビジュアルテーマを選択します。",
     "fuzzyStonePlacement": "ファジー配置",
     "fuzzyStonePlacementDescription": "石の位置にわずかなランダムオフセットを加え、手で置いたような自然な見た目にします。",
     "on": "オン",
-    "off": "オフ"
+    "off": "オフ",
+    "themes": {
+      "hikaru": {
+        "name": "ヒカル",
+        "description": "美しい木目の碁盤とガラスのような碁石"
+      },
+      "shell-slate": {
+        "name": "蛤碁石",
+        "description": "伝統的な蛤と那智石の碁石"
+      },
+      "yunzi": {
+        "name": "雲子",
+        "description": "クラシックな雲子の両凸碁石"
+      },
+      "happy-stones": {
+        "name": "ハッピーストーンズ",
+        "description": "鮮やかなオレンジ木目とガラス碁石"
+      },
+      "kifu": {
+        "name": "棋譜",
+        "description": "クリーンな白黒印刷スタイル"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "韓国放送スタイル"
+      }
+    }
   },
 
   "analysis": {

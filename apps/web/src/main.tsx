@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ThemeProvider, I18nProvider } from '@kaya/ui';
+import { ThemeProvider, BoardThemeProvider, I18nProvider } from '@kaya/ui';
 import App from './App.tsx';
 import '@kaya/ui/dist/styles/ui.css';
 import { registerServiceWorker } from './pwa.ts';
@@ -32,7 +32,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <I18nProvider>
       <ThemeProvider>
-        <App />
+        <BoardThemeProvider>
+          <App />
+        </BoardThemeProvider>
       </ThemeProvider>
     </I18nProvider>
   </StrictMode>

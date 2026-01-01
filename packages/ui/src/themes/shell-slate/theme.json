@@ -1,0 +1,34 @@
+{
+  "id": "shell-slate",
+  "name": "Shell & Slate",
+  "description": "Traditional Japanese clamshell and slate stones on a kaya board",
+  "author": "Bill Hails (adapted for Kaya)",
+  "board": {
+    "backgroundColor": "#e8c873",
+    "borderColor": "#d4b45c",
+    "foregroundColor": "#222222",
+    "borderWidth": 0,
+    "texture": "board.png"
+  },
+  "stones": {
+    "black": {
+      "image": "stone-black.png",
+      "backgroundColor": "#0e0e0e",
+      "foregroundColor": "#eeeeee",
+      "shadowColor": "rgba(0, 0, 0, 0.17)",
+      "shadowOffsetX": "0.07em",
+      "shadowOffsetY": "0.07em",
+      "shadowBlur": "0.02em"
+    },
+    "white": {
+      "image": "stone-white.png",
+      "backgroundColor": "#ebebeb",
+      "foregroundColor": "#eeeeee",
+      "shadowColor": "rgba(0, 0, 0, 0.17)",
+      "shadowOffsetX": "0.07em",
+      "shadowOffsetY": "0.07em",
+      "shadowBlur": "0.02em"
+    }
+  },
+  "coordColor": "rgba(34, 34, 34, 0.7)"
+}

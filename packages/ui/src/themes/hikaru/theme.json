@@ -1,0 +1,36 @@
+{
+  "id": "hikaru",
+  "name": "Hikaru",
+  "description": "An anime-inspired theme with crisp, stylized SVG stones",
+  "author": "Upsided (adapted for Kaya)",
+  "board": {
+    "backgroundColor": "#dfc080",
+    "borderColor": "#c9a85c",
+    "foregroundColor": "#4a3520",
+    "borderWidth": 0,
+    "texture": "board.svg"
+  },
+  "stones": {
+    "black": {
+      "image": "stone-black.svg",
+      "backgroundColor": "#1a1a1a",
+      "foregroundColor": "#ffffff",
+      "shadowColor": "rgba(0, 0, 0, 0.5)",
+      "shadowOffsetX": "0.08em",
+      "shadowOffsetY": "0.08em",
+      "shadowBlur": "0.15em",
+      "size": "100%"
+    },
+    "white": {
+      "image": "stone-white.svg",
+      "backgroundColor": "#f5f5f5",
+      "foregroundColor": "#333333",
+      "shadowColor": "rgba(0, 0, 0, 0.35)",
+      "shadowOffsetX": "0.08em",
+      "shadowOffsetY": "0.08em",
+      "shadowBlur": "0.15em",
+      "size": "100%"
+    }
+  },
+  "coordColor": "rgba(74, 53, 32, 0.75)"
+}

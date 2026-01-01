@@ -331,8 +331,6 @@ const Vertex = React.memo<VertexProps>(
               position: 'absolute',
               top: '50%',
               left: '50%',
-              width: '90%',
-              height: '90%',
               borderRadius: '50%',
               transform: shift
                 ? `translate(-50%, -50%) ${getShiftTransform(shift)}`

@@ -130,11 +130,40 @@
     "close": "설정 닫기",
     "analysisTab": "분석",
     "gameTab": "게임",
+    "themeTab": "테마",
     "boardSettings": "바둑판 설정",
+    "themeSettings": "바둑판 테마",
+    "themeDescription": "바둑판과 돌의 시각적 테마를 선택하세요.",
     "fuzzyStonePlacement": "퍼지 착점",
     "fuzzyStonePlacementDescription": "돌의 위치에 약간의 무작위 오프셋을 추가하여 손으로 놓은 듯한 자연스러운 모습을 연출합니다.",
     "on": "켜짐",
-    "off": "꺼짐"
+    "off": "꺼짐",
+    "themes": {
+      "hikaru": {
+        "name": "히카루",
+        "description": "아름다운 원목 바둑판과 유리 같은 돌"
+      },
+      "shell-slate": {
+        "name": "조개 & 슬레이트",
+        "description": "전통적인 조개껍질과 슬레이트 돌"
+      },
+      "yunzi": {
+        "name": "운자",
+        "description": "클래식 운자 양면볼록 돌"
+      },
+      "happy-stones": {
+        "name": "해피 스톤즈",
+        "description": "화려한 오렌지 나무와 유리 돌"
+      },
+      "kifu": {
+        "name": "기보",
+        "description": "깨끗한 흑백 인쇄 스타일"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "한국 방송 스타일"
+      }
+    }
   },
 
   "analysis": {

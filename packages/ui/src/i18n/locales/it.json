@@ -130,11 +130,40 @@
     "close": "Chiudi impostazioni",
     "analysisTab": "Analisi",
     "gameTab": "Gioco",
+    "themeTab": "Tema",
     "boardSettings": "Impostazioni della tavola",
+    "themeSettings": "Tema del goban",
+    "themeDescription": "Scegli un tema visivo per il goban e le pietre.",
     "fuzzyStonePlacement": "Posizionamento sfocato delle pietre",
     "fuzzyStonePlacementDescription": "Aggiunge leggeri spostamenti casuali alle posizioni delle pietre per un aspetto più naturale.",
     "on": "Attivo",
-    "off": "Disattivo"
+    "off": "Disattivo",
+    "themes": {
+      "hikaru": {
+        "name": "Hikaru",
+        "description": "Bellissimo goban in legno con pietre effetto vetro"
+      },
+      "shell-slate": {
+        "name": "Conchiglia & Ardesia",
+        "description": "Pietre tradizionali in conchiglia e ardesia"
+      },
+      "yunzi": {
+        "name": "Yunzi",
+        "description": "Pietre yunzi classiche biconvesse"
+      },
+      "happy-stones": {
+        "name": "Happy Stones",
+        "description": "Legno arancione vibrante con pietre di vetro"
+      },
+      "kifu": {
+        "name": "Kifu",
+        "description": "Stile di stampa pulito bianco e nero"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "Stile trasmissione coreana"
+      }
+    }
   },
 
   "analysis": {

@@ -130,11 +130,40 @@
     "close": "关闭设置",
     "analysisTab": "分析",
     "gameTab": "游戏",
+    "themeTab": "主题",
     "boardSettings": "棋盘设置",
+    "themeSettings": "棋盘主题",
+    "themeDescription": "选择棋盘和棋子的视觉主题。",
     "fuzzyStonePlacement": "模糊落子",
     "fuzzyStonePlacementDescription": "为棋子位置添加轻微随机偏移，呈现更自然的手工摆放效果。",
     "on": "开",
-    "off": "关"
+    "off": "关",
+    "themes": {
+      "hikaru": {
+        "name": "光",
+        "description": "精美木纹棋盘配玻璃质感棋子"
+      },
+      "shell-slate": {
+        "name": "蛤碁石",
+        "description": "传统蛤壳与那智石棋子"
+      },
+      "yunzi": {
+        "name": "云子",
+        "description": "经典云子双凸棋子"
+      },
+      "happy-stones": {
+        "name": "快乐棋子",
+        "description": "鲜艳橙色木纹配玻璃棋子"
+      },
+      "kifu": {
+        "name": "棋谱",
+        "description": "简洁的黑白印刷风格"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "韩国电视转播风格"
+      }
+    }
   },
 
   "analysis": {

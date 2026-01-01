@@ -130,11 +130,40 @@
     "close": "Einstellungen schließen",
     "analysisTab": "Analyse",
     "gameTab": "Spiel",
+    "themeTab": "Thema",
     "boardSettings": "Brett-Einstellungen",
+    "themeSettings": "Brett-Thema",
+    "themeDescription": "Wählen Sie ein visuelles Thema für das Go-Brett und die Steine.",
     "fuzzyStonePlacement": "Unscharfe Steinplatzierung",
     "fuzzyStonePlacementDescription": "Fügt leichte zufällige Verschiebungen zu Steinpositionen hinzu für ein natürlicheres, handplatziertes Aussehen.",
     "on": "Ein",
-    "off": "Aus"
+    "off": "Aus",
+    "themes": {
+      "hikaru": {
+        "name": "Hikaru",
+        "description": "Schönes Holzbrett mit glasartigen Steinen"
+      },
+      "shell-slate": {
+        "name": "Muschel & Schiefer",
+        "description": "Traditionelle Muschel- und Schiefersteine"
+      },
+      "yunzi": {
+        "name": "Yunzi",
+        "description": "Klassische bikonvexe Yunzi-Steine"
+      },
+      "happy-stones": {
+        "name": "Happy Stones",
+        "description": "Lebhaftes Orangenholz mit Glassteinen"
+      },
+      "kifu": {
+        "name": "Kifu",
+        "description": "Sauberer Schwarz-Weiß-Druckstil"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "Koreanischer Übertragungsstil"
+      }
+    }
   },
 
   "analysis": {

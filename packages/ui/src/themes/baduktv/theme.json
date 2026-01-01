@@ -1,0 +1,38 @@
+{
+  "id": "baduktv",
+  "name": "BadukTV",
+  "description": "Korean broadcast style with smooth wood and glass stones",
+  "author": "upsided",
+  "board": {
+    "backgroundColor": "#d4a55a",
+    "borderColor": "#8b6914",
+    "foregroundColor": "#3c392f",
+    "borderWidth": 0,
+    "texture": "assets/board.png"
+  },
+  "stones": {
+    "black": {
+      "image": "assets/stone-black.png",
+      "imageVariations": ["assets/stone-black-1.png", "assets/stone-black-2.png"],
+      "backgroundColor": "#1a1a1a",
+      "foregroundColor": "rgba(255, 255, 255, 0.75)",
+      "shadowColor": "rgba(80, 65, 0, 0.35)",
+      "shadowOffsetX": "0.08em",
+      "shadowOffsetY": "0.1em",
+      "shadowBlur": "0.12em",
+      "size": "100%"
+    },
+    "white": {
+      "image": "assets/stone-white.png",
+      "imageVariations": ["assets/stone-white-1.png", "assets/stone-white-2.png"],
+      "backgroundColor": "#ffffff",
+      "foregroundColor": "rgba(0, 0, 0, 0.75)",
+      "shadowColor": "rgba(80, 65, 0, 0.35)",
+      "shadowOffsetX": "0.08em",
+      "shadowOffsetY": "0.1em",
+      "shadowBlur": "0.12em",
+      "size": "100%"
+    }
+  },
+  "coordColor": "rgba(107, 66, 1, 0.59)"
+}

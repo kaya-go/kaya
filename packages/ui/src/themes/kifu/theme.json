@@ -1,0 +1,31 @@
+{
+  "id": "kifu",
+  "name": "Kifu",
+  "description": "Clean black and white print style for diagrams",
+  "author": "upsided",
+  "board": {
+    "backgroundColor": "#ffffff",
+    "borderColor": "#000000",
+    "foregroundColor": "#000000",
+    "borderWidth": 0
+  },
+  "stones": {
+    "black": {
+      "backgroundColor": "#000000",
+      "foregroundColor": "#ffffff",
+      "shadowColor": "transparent",
+      "shadowOffsetX": "0",
+      "shadowOffsetY": "0",
+      "shadowBlur": "0"
+    },
+    "white": {
+      "backgroundColor": "#ffffff",
+      "foregroundColor": "#000000",
+      "shadowColor": "transparent",
+      "shadowOffsetX": "0",
+      "shadowOffsetY": "0",
+      "shadowBlur": "0"
+    }
+  },
+  "coordColor": "#000000"
+}

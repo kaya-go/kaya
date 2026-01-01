@@ -2,6 +2,10 @@
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';
 export type { Theme, ThemeContextType } from './contexts/ThemeContext';
 
+// Board theme system
+export { BoardThemeProvider, useBoardTheme } from './contexts/BoardThemeContext';
+export type { BuiltInThemeId, ResolvedBoardTheme } from './contexts/BoardThemeContext';
+
 // Game tree context
 export { GameTreeProvider, useGameTree } from './contexts/GameTreeContext';
 export type {

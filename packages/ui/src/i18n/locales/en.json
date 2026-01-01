@@ -130,11 +130,40 @@
     "close": "Close settings",
     "analysisTab": "Analysis",
     "gameTab": "Game",
+    "themeTab": "Theme",
     "boardSettings": "Board Settings",
+    "themeSettings": "Board Theme",
+    "themeDescription": "Choose a visual theme for the Go board and stones.",
     "fuzzyStonePlacement": "Fuzzy Stone Placement",
     "fuzzyStonePlacementDescription": "Add slight random offsets to stone positions for a more natural, hand-placed appearance.",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "themes": {
+      "hikaru": {
+        "name": "Hikaru",
+        "description": "Beautiful wooden board with glass-like stones"
+      },
+      "shell-slate": {
+        "name": "Shell & Slate",
+        "description": "Traditional clamshell and slate stones"
+      },
+      "yunzi": {
+        "name": "Yunzi",
+        "description": "Classic Yunzi biconvex stones"
+      },
+      "happy-stones": {
+        "name": "Happy Stones",
+        "description": "Vibrant orange wood with glass stones"
+      },
+      "kifu": {
+        "name": "Kifu",
+        "description": "Clean black and white print style"
+      },
+      "baduktv": {
+        "name": "BadukTV",
+        "description": "Korean broadcast style"
+      }
+    }
   },
 
   "analysis": {

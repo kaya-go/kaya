@@ -14,8 +14,10 @@ import {
   LuChevronDown,
   LuChevronRight,
   LuGamepad2,
+  LuPalette,
 } from 'react-icons/lu';
 import { useGameTree } from '../../contexts/GameTreeContext';
+import { useBoardTheme } from '../../contexts/BoardThemeContext';
 import { useToast } from '../ui/Toast';
 import { isTauriApp } from '../../services/fileSave';
 import {
@@ -26,7 +28,7 @@ import {
 } from '../../hooks/game/useAIAnalysis';
 import './KayaConfig.css';
 
-type ConfigTab = 'analysis' | 'game';
+type ConfigTab = 'analysis' | 'game' | 'theme';
 
 export const KayaConfig: React.FC = () => {
   const { t } = useTranslation();
@@ -48,6 +50,7 @@ export const KayaConfig: React.FC = () => {
     uploadModel,
   } = useGameTree();
   const { showToast } = useToast();
+  const { boardTheme, setBoardTheme, availableThemes } = useBoardTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Group models by base model index for hierarchical display
@@ -595,6 +598,96 @@ export const KayaConfig: React.FC = () => {
     </section>
   );
 
+  // Theme Tab Content
+  const renderThemeTab = () => {
+    return (
+      <section className="kaya-config-section">
+        <div className="section-header">
+          <LuPalette className="section-icon" />
+          <h3>{t('kayaConfig.themeSettings')}</h3>
+        </div>
+
+        <div className="config-note" style={{ marginBottom: '16px' }}>
+          {t('kayaConfig.themeDescription')}
+        </div>
+
+        <div className="theme-grid">
+          {availableThemes.map(theme => (
+            <div
+              key={theme.id}
+              className={`theme-card ${boardTheme === theme.id ? 'selected' : ''}`}
+              onClick={() => setBoardTheme(theme.id as any)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setBoardTheme(theme.id as any);
+                }
+              }}
+            >
+              <div
+                className="theme-preview"
+                style={{
+                  backgroundColor: theme.board.backgroundColor,
+                  borderColor: theme.board.borderColor,
+                }}
+              >
+                {/* Mini board preview with stones */}
+                <div className="theme-preview-stones">
+                  <div
+                    className="theme-preview-stone black"
+                    style={{
+                      backgroundColor: theme.blackStoneUrl
+                        ? 'transparent'
+                        : theme.stones.black.backgroundColor,
+                      backgroundImage: theme.blackStoneUrl
+                        ? `url(${theme.blackStoneUrl})`
+                        : undefined,
+                      backgroundSize: 'contain',
+                    }}
+                  />
+                  <div
+                    className="theme-preview-stone white"
+                    style={{
+                      backgroundColor: theme.whiteStoneUrl
+                        ? 'transparent'
+                        : theme.stones.white.backgroundColor,
+                      backgroundImage: theme.whiteStoneUrl
+                        ? `url(${theme.whiteStoneUrl})`
+                        : undefined,
+                      backgroundSize: 'contain',
+                    }}
+                  />
+                </div>
+                {/* Grid lines overlay */}
+                <div
+                  className="theme-preview-grid"
+                  style={{ borderColor: theme.board.foregroundColor }}
+                />
+              </div>
+              <div className="theme-info">
+                <div className="theme-name">
+                  {t(`kayaConfig.themes.${theme.id}.name`, { defaultValue: theme.name })}
+                  {boardTheme === theme.id && (
+                    <span className="theme-active-badge">
+                      <LuCheck size={12} />
+                    </span>
+                  )}
+                </div>
+                <div className="theme-description">
+                  {t(`kayaConfig.themes.${theme.id}.description`, {
+                    defaultValue: theme.description,
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+  };
+
   const modalContent = (
     <div
       className="kaya-config-modal-overlay"
@@ -640,12 +733,20 @@ export const KayaConfig: React.FC = () => {
             <LuGamepad2 size={16} />
             {t('kayaConfig.gameTab')}
           </button>
+          <button
+            className={`kaya-config-tab ${activeTab === 'theme' ? 'active' : ''}`}
+            onClick={() => setActiveTab('theme')}
+          >
+            <LuPalette size={16} />
+            {t('kayaConfig.themeTab')}
+          </button>
         </div>
 
         <div className="kaya-config-content">
           <div className="kaya-config-container">
             {activeTab === 'analysis' && renderAnalysisTab()}
             {activeTab === 'game' && renderGameTab()}
+            {activeTab === 'theme' && renderThemeTab()}
           </div>
         </div>
       </div>
