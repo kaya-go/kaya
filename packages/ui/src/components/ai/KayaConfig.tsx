@@ -652,11 +652,20 @@ export const KayaConfig: React.FC = () => {
                       backgroundSize: 'contain',
                       top: '50%',
                       left: '35%',
+                      // Apply stone size from theme (scales the 44px base size)
+                      width: theme.stones.black.size
+                        ? `calc(44px * ${parseFloat(theme.stones.black.size) / 100})`
+                        : undefined,
+                      height: theme.stones.black.size
+                        ? `calc(44px * ${parseFloat(theme.stones.black.size) / 100})`
+                        : undefined,
                       border: theme.stones.black.borderWidth
                         ? `${theme.stones.black.borderWidth} solid ${theme.stones.black.borderColor}`
                         : undefined,
+                      // Only apply box-shadow for themes without custom stone images
+                      // Themes with custom SVGs have shadows baked into the image
                       boxShadow:
-                        theme.stones.black.shadowColor !== 'transparent'
+                        !theme.blackStoneUrl && theme.stones.black.shadowColor !== 'transparent'
                           ? `${theme.stones.black.shadowOffsetX} ${theme.stones.black.shadowOffsetY} ${theme.stones.black.shadowBlur} ${theme.stones.black.shadowColor}`
                           : 'none',
                     }}
@@ -673,11 +682,20 @@ export const KayaConfig: React.FC = () => {
                       backgroundSize: 'contain',
                       top: '50%',
                       left: '65%',
+                      // Apply stone size from theme (scales the 44px base size)
+                      width: theme.stones.white.size
+                        ? `calc(44px * ${parseFloat(theme.stones.white.size) / 100})`
+                        : undefined,
+                      height: theme.stones.white.size
+                        ? `calc(44px * ${parseFloat(theme.stones.white.size) / 100})`
+                        : undefined,
                       border: theme.stones.white.borderWidth
                         ? `${theme.stones.white.borderWidth} solid ${theme.stones.white.borderColor}`
                         : undefined,
+                      // Only apply box-shadow for themes without custom stone images
+                      // Themes with custom SVGs have shadows baked into the image
                       boxShadow:
-                        theme.stones.white.shadowColor !== 'transparent'
+                        !theme.whiteStoneUrl && theme.stones.white.shadowColor !== 'transparent'
                           ? `${theme.stones.white.shadowOffsetX} ${theme.stones.white.shadowOffsetY} ${theme.stones.white.shadowBlur} ${theme.stones.white.shadowColor}`
                           : 'none',
                     }}
