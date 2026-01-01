@@ -30,7 +30,7 @@ tauri-plugin-window-state = "2.4.1"
 # The "half" feature enables fp16 tensor support for models with internal float16 computations
 ort = { version = "2.0.0-rc.10", features = ["download-binaries", "half"] }
 # Must match ndarray version used by ort (0.16.x)
-ndarray = "0.16"
+ndarray = "0.17"
 base64 = "0.22"
 half = "2.4"
 
