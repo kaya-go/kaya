@@ -638,7 +638,7 @@ export const KayaConfig: React.FC = () => {
                   backgroundPosition: 'center',
                 }}
               >
-                {/* Two stones displayed diagonally */}
+                {/* Two stones displayed side by side */}
                 <div className="theme-preview-stones">
                   <div
                     className="theme-preview-stone black"
@@ -650,7 +650,7 @@ export const KayaConfig: React.FC = () => {
                         ? `url(${theme.blackStoneUrl})`
                         : undefined,
                       backgroundSize: 'contain',
-                      top: '35%',
+                      top: '50%',
                       left: '35%',
                     }}
                   />
@@ -664,7 +664,7 @@ export const KayaConfig: React.FC = () => {
                         ? `url(${theme.whiteStoneUrl})`
                         : undefined,
                       backgroundSize: 'contain',
-                      top: '65%',
+                      top: '50%',
                       left: '65%',
                     }}
                   />
