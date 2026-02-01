@@ -37,7 +37,7 @@ half = "2.4"
 # Desktop-only dependencies
 [target.'cfg(not(target_os = "android"))'.dependencies]
 # ONNX Runtime - static linking with download-binaries for desktop
-ort = { version = "2.0.0-rc.10", features = ["download-binaries", "half"] }
+ort = { version = "2.0.0-rc.11", features = ["download-binaries", "half"] }
 # Reqwest with rustls (default) - uses ring/aws-lc
 reqwest = { version = "0.13", features = ["stream"] }
 # Desktop-only Tauri plugins
