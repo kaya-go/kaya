@@ -151,7 +151,7 @@ jobs:
       # TODO: Remove once this is merged into stable tauri-cli release
       - name: Install tauri-cli with new AppImage format (Linux)
         if: matrix.platform == 'ubuntu-22.04'
-        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage
+        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage --force
 
       - name: Install dependencies
         run: bun install
