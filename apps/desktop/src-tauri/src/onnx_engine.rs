@@ -116,8 +116,11 @@ fn ensure_ort_initialized() -> Result<(), String> {
         let path = std::path::Path::new(path_pattern);
         if path.exists() {
             eprintln!("[OnnxEngine] Loading ONNX Runtime from: {}", path_pattern);
-            match ort::init_from(path_pattern).commit() {
-                Ok(_) => return Ok(()),
+            match ort::init_from(path_pattern) {
+                Ok(builder) => {
+                    builder.commit();
+                    return Ok(());
+                }
                 Err(e) => {
                     eprintln!("[OnnxEngine] Failed to load from {}: {}", path_pattern, e);
                     continue;
@@ -129,8 +132,11 @@ fn ensure_ort_initialized() -> Result<(), String> {
     // If no explicit path works, try the library name directly.
     // This relies on the JNI loader having already loaded the library or it being in LD_LIBRARY_PATH.
     eprintln!("[OnnxEngine] Attempting to load ONNX Runtime via system loader (libonnxruntime.so)");
-    match ort::init_from("libonnxruntime.so").commit() {
-        Ok(_) => return Ok(()),
+    match ort::init_from("libonnxruntime.so") {
+        Ok(builder) => {
+            builder.commit();
+            return Ok(());
+        }
         Err(e) => {
             eprintln!("[OnnxEngine] Failed to load libonnxruntime.so: {}", e);
         }
@@ -138,9 +144,7 @@ fn ensure_ort_initialized() -> Result<(), String> {
     
     // Last resort: initialize without specifying a path
     eprintln!("[OnnxEngine] Attempting default ONNX Runtime initialization");
-    ort::init()
-        .commit()
-        .map_err(|e| format!("Failed to initialize ONNX Runtime: {}", e))?;
+    ort::init().commit();
     
     Ok(())
 }
