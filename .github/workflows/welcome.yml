@@ -12,6 +12,7 @@ permissions:
 
 jobs:
   welcome:
+    if: github.event.sender.type != 'Bot'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/first-interaction@v3

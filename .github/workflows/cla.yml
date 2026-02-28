@@ -30,4 +30,4 @@ jobs:
           # URL to the CLA document shown in the PR comment.
           path-to-document: 'https://github.com/${{ github.repository }}/blob/${{ github.event.repository.default_branch }}/.github/CLA.md'
           branch: ${{ github.event.repository.default_branch }}
-          allowlist: hadim,bot*,dependabot[bot],copilot-swe-agent,copilot-swe-agent[bot]
+          allowlist: hadim,bot*,dependabot[bot],copilot-swe-agent,copilot-swe-agent[bot],Copilot,copilot
