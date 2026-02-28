@@ -41,3 +41,6 @@ CHANGELOG.md
 # WASM and library files
 **/public/wasm/
 **/public/vendor/
+
+# CLA signatures (auto-generated, not subject to formatting)
+.github/cla-signatures.json
