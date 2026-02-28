@@ -30,14 +30,14 @@ futures = "0.3"
 base64 = "0.22"
 
 # ONNX Runtime - shared dependencies
-# Must match ndarray version used by ort (0.16.x)
-ndarray = "0.16"
+# Must match ndarray version used by ort (0.17.x)
+ndarray = "0.17"
 half = "2.4"
 
 # Linux desktop: use load-dynamic to support MIGraphX (AMD GPU) execution provider.
 # Set ORT_DYLIB_PATH to point to a MIGraphX-enabled libonnxruntime.so.
 [target.'cfg(target_os = "linux")'.dependencies]
-ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic", "ndarray", "half"] }
+ort = { version = "2.0.0-rc.11", default-features = false, features = ["load-dynamic", "ndarray", "half"] }
 reqwest = { version = "0.13", features = ["stream"] }
 tauri-plugin-http = "2"
 tauri-plugin-process = "2"
@@ -46,7 +46,7 @@ tauri-plugin-window-state = "2.4.1"
 
 # Non-Linux desktop (macOS, Windows): static linking with download-binaries
 [target.'cfg(all(not(target_os = "android"), not(target_os = "linux")))'.dependencies]
-ort = { version = "2.0.0-rc.10", features = ["download-binaries", "half"] }
+ort = { version = "2.0.0-rc.11", features = ["download-binaries", "half"] }
 reqwest = { version = "0.13", features = ["stream"] }
 tauri-plugin-http = "2"
 tauri-plugin-process = "2"
@@ -56,7 +56,7 @@ tauri-plugin-window-state = "2.4.1"
 # Android: dynamic loading at runtime (we bundle libonnxruntime.so in the APK)
 [target.'cfg(target_os = "android")'.dependencies]
 # default-features = false to disable download-binaries which doesn't work for Android
-ort = { version = "2.0.0-rc.10", default-features = false, features = ["load-dynamic", "ndarray", "half"] }
+ort = { version = "2.0.0-rc.11", default-features = false, features = ["load-dynamic", "ndarray", "half"] }
 # Note: reqwest is NOT included for Android to avoid OpenSSL/ring compilation issues
 # HTTP requests on Android should be done via the frontend/WebView
 
