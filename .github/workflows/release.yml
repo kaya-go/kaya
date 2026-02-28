@@ -458,7 +458,7 @@ jobs:
           git push origin "v${{ github.event.inputs.version }}"
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
 
       - name: Generate updater JSON
         run: |
