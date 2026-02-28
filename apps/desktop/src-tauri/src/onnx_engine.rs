@@ -10,7 +10,8 @@ use ort::{
         CUDAExecutionProvider, CoreMLExecutionProvider, DirectMLExecutionProvider,
     },
     session::{builder::GraphOptimizationLevel, Session},
-    value::Tensor,
+    tensor::TensorElementType,
+    value::{Tensor, ValueType},
 };
 #[cfg(target_os = "android")]
 use ort::execution_providers::NNAPIExecutionProvider;
@@ -336,10 +337,10 @@ impl OnnxEngine {
             .map_err(|e| format!("Failed to load model from {:?}: {}", model_path, e))?;
 
         // Detect if model uses fp16 inputs by checking first input's type
-        let is_fp16 = session.inputs.first().map_or(false, |input| {
-            let type_str = format!("{:?}", input.input_type);
+        let is_fp16 = session.inputs().first().map_or(false, |input| {
+            let type_str = format!("{:?}", input.dtype());
             eprintln!("[OnnxEngine] Input type: {}", type_str);
-            type_str.contains("Float16") || type_str.contains("float16") || type_str.contains("f16")
+            matches!(input.dtype(), ValueType::Tensor { ty: TensorElementType::Float16, .. })
         });
         eprintln!("[OnnxEngine] Detected fp16 model: {}", is_fp16);
 
@@ -380,10 +381,10 @@ impl OnnxEngine {
             .map_err(|e| format!("Failed to load model from bytes: {}", e))?;
 
         // Detect if model uses fp16 inputs by checking first input's type
-        let is_fp16 = session.inputs.first().map_or(false, |input| {
-            let type_str = format!("{:?}", input.input_type);
+        let is_fp16 = session.inputs().first().map_or(false, |input| {
+            let type_str = format!("{:?}", input.dtype());
             eprintln!("[OnnxEngine from_bytes] Input type: {}", type_str);
-            type_str.contains("Float16") || type_str.contains("float16") || type_str.contains("f16")
+            matches!(input.dtype(), ValueType::Tensor { ty: TensorElementType::Float16, .. })
         });
         eprintln!("[OnnxEngine from_bytes] Detected fp16 model: {}", is_fp16);
 
