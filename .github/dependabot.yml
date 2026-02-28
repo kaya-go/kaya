@@ -9,7 +9,6 @@ updates:
     commit-message:
       prefix: 'chore(deps)'
     labels:
-      - 'dependencies'
       - 'javascript'
     groups:
       # Group minor/patch updates together to reduce PR noise
@@ -29,8 +28,7 @@ updates:
     commit-message:
       prefix: 'chore(deps)'
     labels:
-      - 'dependencies'
-      - 'rust'
+      - '🦀 rust'
     groups:
       rust-minor-patch:
         patterns:
@@ -47,8 +45,7 @@ updates:
     commit-message:
       prefix: 'chore(deps)'
     labels:
-      - 'dependencies'
-      - 'rust'
+      - '🦀 rust'
 
   # GitHub Actions
   - package-ecosystem: 'github-actions'
@@ -58,5 +55,4 @@ updates:
     commit-message:
       prefix: 'chore(ci)'
     labels:
-      - 'dependencies'
-      - 'ci'
+      - '⚙️ ci'
