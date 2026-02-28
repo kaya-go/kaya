@@ -153,7 +153,7 @@ fn ensure_ort_initialized() -> Result<(), String> {
     
     // Last resort: initialize without specifying a path
     eprintln!("[OnnxEngine] Attempting default ONNX Runtime initialization");
-    if !ort::init() {
+    if !ort::init().commit() {
         return Err("Failed to initialize ONNX Runtime".to_string());
     }
     
