@@ -3,8 +3,8 @@
 ## Project Overview
 
 **Kaya**: Desktop + Web Go (Baduk/Weiqi) game application with AI analysis  
-**Stack**: Bun + TypeScript + Tauri v2 + React 18 + Rsbuild  
-**Architecture**: Monorepo with 10 core packages + 2 apps
+**Stack**: Bun + TypeScript + Tauri v2 + React 19 + Rsbuild  
+**Architecture**: Monorepo with 14 core packages + 2 apps
 
 ## Agent Behavior Rules
 
@@ -19,10 +19,19 @@
 
 4. **Internationalization (i18n)** - All user-facing strings **must** be localized:
    - Use translation keys via `useTranslation()` hook from `react-i18next`
-   - Add new keys to `packages/ui/src/i18n/locales/en.json` first
+   - Add new keys to `packages/i18n/src/locales/en.json` first
    - Ensure translations exist for **all 8 supported languages**: `en`, `zh`, `ko`, `ja`, `fr`, `de`, `es`, `it`
    - Regularly verify all translation files have complete coverage
    - Never hardcode user-visible text in components
+
+5. **Documentation Maintenance** - When making structural changes (adding/removing/moving packages, renaming files, changing architecture), **always update** the relevant documentation files:
+   - `AGENTS.md` - Monorepo layout, architecture points, key patterns
+   - `docs/PROJECT_STATE.md` - Package structure, feature list
+   - `docs/DEVELOPER_GUIDE.md` - Monorepo structure diagram, data flow
+   - `docs/I18N.md` - Translation file locations (if i18n paths change)
+   - Any other doc that references moved/renamed/restructured code
+
+   Do this proactively — don't wait to be asked.
 
 ## Essential Commands
 
@@ -67,11 +76,14 @@ kaya/
     ├── sgf/             # SGF parser
     ├── gametree/        # Immutable tree with structural sharing
     ├── shudan/          # React board component
-    ├── gtp/             # GTP protocol
     ├── boardmatcher/    # Pattern matching
     ├── deadstones/      # Rust/WASM Monte Carlo
-    ├── ai-engine/       # KataGo via ONNX Runtime
+    ├── ai-engine/       # KataGo via ONNX Runtime + GTP protocol
     ├── board-recognition/ # Photo → SGF (classic CV + Moku AI)
+    ├── i18n/            # Internationalization (8 languages)
+    ├── themes/          # Board theme system (6 built-in themes)
+    ├── game-library/    # IndexedDB-based SGF file storage
+    ├── platform/        # File save, clipboard, Tauri detection
     └── ui/              # Shared React components (GameTreeContext)
 ```
 

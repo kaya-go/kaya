@@ -7,7 +7,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 ## Technology Stack
 
 - **Runtime**: Bun + TypeScript 5.9
-- **Frontend**: React 18 + Rsbuild
+- **Frontend**: React 19 + Rsbuild
 - **Desktop**: Tauri v2 (Rust backend)
 - **Mobile**: Android (experimental, via Tauri v2)
 - **AI**: ONNX Runtime (Native on Desktop, NNAPI on Android, WebGPU/WASM on Web)
@@ -15,21 +15,25 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 ## Package Structure
 
 ```
-10 Library Packages:
-  @kaya/goboard      - Core Go game logic
-  @kaya/sgf          - SGF parser/stringifier
-  @kaya/gametree     - Immutable game tree with structural sharing
-  @kaya/shudan       - React board component
-  @kaya/gtp          - GTP protocol parser
-  @kaya/boardmatcher - Pattern matching and move naming
-  @kaya/deadstones   - Dead stone detection (Rust/WASM)
-  @kaya/ai-engine    - KataGo via ONNX Runtime
+14 Library Packages:
+  @kaya/goboard          - Core Go game logic
+  @kaya/sgf              - SGF parser/stringifier
+  @kaya/gametree         - Immutable game tree with structural sharing
+  @kaya/shudan           - React board component
+  @kaya/boardmatcher     - Pattern matching and move naming
+  @kaya/deadstones       - Dead stone detection (Rust/WASM)
+  @kaya/ai-engine        - KataGo via ONNX Runtime + GTP protocol
   @kaya/board-recognition - Photo-to-SGF board recognition (classic CV + Moku AI)
-  @kaya/ui           - Shared React components
+  @kaya/i18n             - Internationalization (8 languages, locale detection)
+  @kaya/themes           - Board theme system (6 built-in themes)
+  @kaya/game-library     - IndexedDB-based SGF file storage and management
+  @kaya/platform         - Platform abstraction (file save, clipboard, Tauri detection)
+  @kaya/ui               - Shared React components (GameTreeContext, contexts, hooks)
+  @kaya/gtp              - GTP protocol parser (legacy, merged into ai-engine)
 
 2 Application Packages:
-  @kaya/desktop      - Tauri desktop app
-  @kaya/web          - Web app (PWA)
+  @kaya/desktop          - Tauri desktop app
+  @kaya/web              - Web app (PWA)
 ```
 
 ## Features
