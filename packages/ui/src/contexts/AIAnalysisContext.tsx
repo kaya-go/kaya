@@ -532,7 +532,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (currentRequestId === globalAnalysisId) {
         const message = err instanceof Error ? err.message : String(err);
         setError(`Analysis failed: ${message}`);
-        console.error('AI analysis failed:', err);
+        console.error('[AI] Analysis failed:', err);
       }
     } finally {
       globalIsAnalyzing = false;

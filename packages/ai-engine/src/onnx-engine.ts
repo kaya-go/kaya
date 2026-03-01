@@ -100,9 +100,9 @@ export class OnnxEngine extends Engine {
   private debugLog(message: string, payload?: Record<string, unknown>): void {
     if (!this.debugEnabled) return;
     if (payload) {
-      console.log('[OnnxEngine][debug]', message, payload);
+      console.log('[AI:Onnx][debug]', message, payload);
     } else {
-      console.log('[OnnxEngine][debug]', message);
+      console.log('[AI:Onnx][debug]', message);
     }
   }
 

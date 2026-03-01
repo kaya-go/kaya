@@ -74,7 +74,7 @@ export class WorkerEngine extends Engine {
             this.debugLog('request-error', { id: msg.id, error: msg.error });
           }
         } else {
-          console.error('Worker error:', msg.error);
+          console.error('[AI:Worker] Error:', msg.error);
         }
       }
     };

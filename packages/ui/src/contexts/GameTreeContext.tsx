@@ -429,7 +429,7 @@ export const GameTreeProvider: React.FC<{
             }
           }
         } catch (e) {
-          console.warn('Failed to extract analysis from SGF:', e);
+          console.warn('[SGF] Failed to extract analysis from SGF:', e);
         }
       }
 
@@ -474,7 +474,7 @@ export const GameTreeProvider: React.FC<{
             }
           }
         } catch (e) {
-          console.warn('Failed to extract analysis from SGF:', e);
+          console.warn('[SGF] Failed to extract analysis from SGF:', e);
         }
       }
 
@@ -541,7 +541,7 @@ export const GameTreeProvider: React.FC<{
         setCleanAnalysisCacheSize(analysisCache.current.size);
       }
     } catch (e) {
-      console.warn('Failed to extract analysis from restored game:', e);
+      console.warn('[SGF] Failed to extract analysis from restored game:', e);
     }
   }, [
     isInitialized,

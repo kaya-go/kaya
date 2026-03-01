@@ -240,7 +240,7 @@ function loadAISettings(): AISettings {
       };
     }
   } catch (e) {
-    console.warn('Failed to load AI settings from localStorage:', e);
+    console.warn('[AI:Settings] Failed to load from localStorage:', e);
   }
   // Return defaults with environment-specific backend
   return {
@@ -254,7 +254,7 @@ function saveAISettings(settings: AISettings): void {
   try {
     localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(settings));
   } catch (e) {
-    console.warn('Failed to save AI settings to localStorage:', e);
+    console.warn('[AI:Settings] Failed to save to localStorage:', e);
   }
 }
 
@@ -383,7 +383,7 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
 
         setIsModelLoaded(true);
       } catch (err) {
-        console.error('Failed to initialize model library:', err);
+        console.error('[AI:Download] Failed to initialize model library:', err);
         setIsModelLoaded(true);
       }
     };
@@ -542,7 +542,7 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
 
         // Use default toast if available (not available in hook, relying on UI feedback)
       } catch (err) {
-        console.error('Failed to download model:', err);
+        console.error('[AI:Download] Failed to download model:', err);
         setModelLibrary(prev =>
           prev.map(m =>
             m.id === id ? { ...m, isDownloading: false, downloadProgress: undefined } : m
@@ -576,7 +576,7 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
             }
           } catch (tauriErr) {
             // Log but don't fail - IndexedDB deletion is the primary storage
-            console.warn('Failed to delete model from Tauri cache:', tauriErr);
+            console.warn('[AI:Download] Failed to delete model from Tauri cache:', tauriErr);
           }
         }
 
@@ -607,7 +607,7 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
           setCustomAIModel(null);
         }
       } catch (err) {
-        console.error('Failed to delete model:', err);
+        console.error('[AI:Download] Failed to delete model:', err);
         throw err;
       }
     },

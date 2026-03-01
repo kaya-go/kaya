@@ -51,12 +51,12 @@ export const useGamepads = () => {
 
     // Listen for gamepad events
     const handleGamepadConnected = (e: GamepadEvent) => {
-      console.log('Gamepad connected:', e.gamepad.id, 'at index', e.gamepad.index);
+      console.log('[Gamepad] Connected:', e.gamepad.id, 'at index', e.gamepad.index);
       updateGamepads();
     };
 
     const handleGamepadDisconnected = (e: GamepadEvent) => {
-      console.log('Gamepad disconnected:', e.gamepad.id, 'at index', e.gamepad.index);
+      console.log('[Gamepad] Disconnected:', e.gamepad.id, 'at index', e.gamepad.index);
       updateGamepads();
     };
 
