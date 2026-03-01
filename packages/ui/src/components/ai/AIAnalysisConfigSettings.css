@@ -1,0 +1,288 @@
+/* AI Analysis Config - Settings & Controls Styles */
+
+/* Settings Section - Redesigned with Two Columns */
+.settings-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.setting-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background-color: var(--bg-tertiary, #f5f5f5);
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.setting-item-toggle {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Full width items span both columns */
+.setting-item-full {
+  grid-column: 1 / -1;
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.setting-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent-color, #007bff);
+  background-color: rgba(0, 123, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.setting-description {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666);
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Mobile responsive: single column on small screens */
+@media (max-width: 520px) {
+  .settings-list {
+    grid-template-columns: 1fr;
+  }
+
+  .setting-item-full {
+    grid-column: 1;
+  }
+}
+
+/* Toggle Switch */
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  background-color: var(--border-color, #ccc);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.toggle-switch:hover {
+  background-color: var(--text-secondary, #999);
+}
+
+.toggle-switch.active {
+  background-color: var(--accent-color, #007bff);
+}
+
+.toggle-switch.active:hover {
+  background-color: var(--accent-hover, #0056b3);
+}
+
+.toggle-switch-handle {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch.active .toggle-switch-handle {
+  transform: translateX(20px);
+}
+
+.ai-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #ccc);
+  background-color: var(--bg-secondary, #fff);
+  color: var(--text-primary, #333);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.ai-select:hover {
+  border-color: var(--accent-color, #007bff);
+}
+
+.ai-select:focus {
+  outline: none;
+  border-color: var(--accent-color, #007bff);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+}
+
+.ai-slider {
+  width: 100%;
+  height: 6px;
+  background: var(--border-color, #ddd);
+  border-radius: 3px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ai-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--accent-color, #007bff);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.1s;
+}
+
+.ai-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.ai-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--accent-color, #007bff);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Legend Section */
+.legend-bar {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.legend-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.swatch {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.legend-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.legend-text strong {
+  font-size: 0.7rem;
+  color: var(--text-primary, #333);
+}
+
+.legend-text span {
+  font-size: 0.65rem;
+  color: var(--text-secondary, #888);
+}
+
+/* Mobile responsive */
+@media (max-width: 600px) {
+  .settings-list {
+    gap: 16px;
+  }
+
+  .setting-item {
+    padding-bottom: 14px;
+  }
+
+  .setting-item-toggle {
+    /* Keep toggle visible on mobile */
+    flex-direction: row;
+  }
+
+  .setting-label {
+    font-size: 0.85rem;
+  }
+
+  .setting-description {
+    font-size: 0.7rem;
+  }
+
+  .toggle-switch {
+    /* Larger touch target on mobile */
+    width: 52px;
+    height: 30px;
+  }
+
+  .toggle-switch-handle {
+    width: 24px;
+    height: 24px;
+  }
+
+  .toggle-switch.active .toggle-switch-handle {
+    transform: translateX(22px);
+  }
+}
+
+/* Dark Mode - Settings */
+[data-theme='dark'] .setting-label,
+[data-theme='dark'] .legend-text strong {
+  color: #eee;
+}
+
+[data-theme='dark'] .setting-description,
+[data-theme='dark'] .legend-text span {
+  color: #aaa;
+}
+
+[data-theme='dark'] .setting-item {
+  border-color: #333;
+}
+
+[data-theme='dark'] .setting-value {
+  background-color: rgba(0, 123, 255, 0.15);
+}
+
+[data-theme='dark'] .toggle-switch {
+  background-color: #444;
+}
+
+[data-theme='dark'] .toggle-switch:hover {
+  background-color: #555;
+}
+
+[data-theme='dark'] .ai-select {
+  background-color: #2d2d2d;
+  border-color: #444;
+  color: #eee;
+}
+
+[data-theme='dark'] .ai-slider {
+  background: #444;
+}

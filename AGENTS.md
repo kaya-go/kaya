@@ -133,6 +133,27 @@ const boardCache = new Map<string, GoBoard>(); // 1000 entries max
 
 **Direct State Updates**: No `startTransition()` for instant navigation
 
+## File Size Guidelines
+
+Keep files small for readability and maintainability. Maximum line counts per file type:
+
+| File Type                        | Target   | Max | Action if exceeded                                       |
+| -------------------------------- | -------- | --- | -------------------------------------------------------- |
+| React components (`.tsx`)        | 100–250  | 400 | Extract sub-components into sibling files or a folder    |
+| Hooks / Contexts (`.ts`, `.tsx`) | 100–300  | 500 | Extract helper functions, split context logic into hooks |
+| CSS (`.css`)                     | 100–250  | 400 | Split alongside component splits, one CSS per component  |
+| Pure logic (`.ts`)               | 150–350  | 500 | Break into thematic modules                              |
+| Tests                            | Flexible | —   | Split by feature area if unwieldy                        |
+
+**Splitting strategy:**
+
+- **Components**: Convert `Component.tsx` → `Component/index.tsx` + `Component/SubPart.tsx` + `Component/SubPart.css`
+- **Contexts**: Keep providers thin — extract business logic into dedicated hooks
+- **Monolithic `index.ts`**: Split into thematic modules, re-export from index
+- **CSS**: Each sub-component gets its own CSS file; never have a single CSS > 400 lines
+
+**Rule**: When creating or modifying a file, check its line count. If it exceeds the max, refactor before merging.
+
 ## Common Pitfalls
 
 1. **Sign Type Safety**: Always cast explicitly as `Sign`

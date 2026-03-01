@@ -1,0 +1,146 @@
+/* KayaConfig Theme Grid Styles */
+
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 16px;
+}
+
+.theme-card {
+  background-color: var(--bg-tertiary, #f8f9fa);
+  border: 2px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-card:hover {
+  border-color: var(--accent-color, #007bff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.theme-card.selected {
+  border-color: var(--accent-color, #007bff);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+.theme-card:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+.theme-preview {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.theme-preview-stones {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+}
+
+.theme-preview-stone {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transform: translate(-50%, -50%);
+}
+
+.theme-info {
+  padding: 12px;
+}
+
+.theme-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary, #333);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.theme-active-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background-color: var(--accent-color, #007bff);
+  color: white;
+  border-radius: 50%;
+}
+
+.theme-description {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #666);
+  line-height: 1.4;
+}
+
+/* Theme grid responsive */
+@media (max-width: 480px) {
+  .theme-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .theme-preview-stone {
+    width: 24px;
+    height: 24px;
+  }
+
+  .theme-info {
+    padding: 10px;
+  }
+
+  .theme-name {
+    font-size: 0.85rem;
+  }
+
+  .theme-description {
+    font-size: 0.7rem;
+  }
+}
+
+/* Dark theme support for theme grid */
+[data-theme='dark'] .theme-card {
+  background-color: #2d2d2d;
+  border-color: #444;
+}
+
+[data-theme='dark'] .theme-card:hover {
+  border-color: #4dabf7;
+}
+
+[data-theme='dark'] .theme-card.selected {
+  border-color: #4dabf7;
+  box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.2);
+}
+
+[data-theme='dark'] .theme-preview {
+  border-bottom-color: #444;
+}
+
+[data-theme='dark'] .theme-name {
+  color: #eee;
+}
+
+[data-theme='dark'] .theme-description {
+  color: #aaa;
+}

@@ -24,6 +24,10 @@ import {
   getModelId,
 } from '../../hooks/game/useAIAnalysis';
 import './AIAnalysisConfig.css';
+import './AIAnalysisConfigModels.css';
+import './AIAnalysisConfigModelItems.css';
+import './AIAnalysisConfigBanner.css';
+import './AIAnalysisConfigSettings.css';
 
 export const AIAnalysisConfig: React.FC = () => {
   const { t } = useTranslation();

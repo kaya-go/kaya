@@ -29,6 +29,10 @@ import {
 } from '../../hooks/game/useAIAnalysis';
 import { ShortcutsTab } from '../settings/ShortcutsTab';
 import './KayaConfig.css';
+import './KayaConfigBanner.css';
+import './KayaConfigModels.css';
+import './KayaConfigSettings.css';
+import './KayaConfigThemes.css';
 
 type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts';
 
