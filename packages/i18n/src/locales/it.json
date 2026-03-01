@@ -73,7 +73,9 @@
     "fromPhotoDesc": "Seleziona un file immagine dal tuo dispositivo",
     "fromCamera": "Usa fotocamera",
     "fromCameraDesc": "Scatta una foto con la fotocamera del dispositivo",
-    "cameraNotAvailable": "Fotocamera non disponibile su questo dispositivo"
+    "cameraNotAvailable": "Fotocamera non disponibile su questo dispositivo",
+    "capturePhoto": "Scatta foto",
+    "cameraError": "Impossibile accedere alla fotocamera"
   },
   "settings": "Impostazioni",
   "showLibrary": "Mostra libreria",

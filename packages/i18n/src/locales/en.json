@@ -71,7 +71,9 @@
     "fromPhotoDesc": "Select an image file from your device",
     "fromCamera": "Use Camera",
     "fromCameraDesc": "Take a photo with your device camera",
-    "cameraNotAvailable": "Camera not available on this device"
+    "cameraNotAvailable": "Camera not available on this device",
+    "capturePhoto": "Take Photo",
+    "cameraError": "Could not access camera"
   },
   "saveToFolder": "Save to folder:",
   "saveToLibrary": "Save to Library",

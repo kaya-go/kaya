@@ -73,7 +73,9 @@
     "fromPhotoDesc": "기기에서 이미지 파일 선택",
     "fromCamera": "카메라 사용",
     "fromCameraDesc": "기기 카메라로 사진 촬영",
-    "cameraNotAvailable": "이 기기에서는 카메라를 사용할 수 없습니다"
+    "cameraNotAvailable": "이 기기에서는 카메라를 사용할 수 없습니다",
+    "capturePhoto": "사진 촬영",
+    "cameraError": "카메라에 접근할 수 없습니다"
   },
   "settings": "설정",
   "showLibrary": "라이브러리 보기",

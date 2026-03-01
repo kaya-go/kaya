@@ -73,7 +73,9 @@
     "fromPhotoDesc": "デバイスから画像ファイルを選択",
     "fromCamera": "カメラを使用",
     "fromCameraDesc": "デバイスのカメラで写真を撮影",
-    "cameraNotAvailable": "このデバイスではカメラが利用できません"
+    "cameraNotAvailable": "このデバイスではカメラが利用できません",
+    "capturePhoto": "写真を撮る",
+    "cameraError": "カメラにアクセスできませんでした"
   },
   "settings": "設定",
   "showLibrary": "ライブラリを表示",

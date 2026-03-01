@@ -1,0 +1,96 @@
+/* CameraCapture – live camera viewfinder */
+
+.camera-capture-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+}
+
+.camera-capture-dialog {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  width: 90vw;
+  max-width: 640px;
+}
+
+.camera-capture-video-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+
+.camera-capture-video-wrap video {
+  display: block;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.camera-capture-error {
+  color: var(--text-secondary, #aaa);
+  font-size: 1rem;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.camera-capture-controls {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.camera-capture-shutter {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.camera-capture-shutter:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.camera-capture-shutter::after {
+  content: '';
+  display: block;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.1s;
+}
+
+.camera-capture-shutter:active::after {
+  transform: scale(0.9);
+}
+
+.camera-capture-cancel {
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  transition: background 0.15s;
+}
+
+.camera-capture-cancel:hover {
+  background: rgba(255, 255, 255, 0.25);
+}

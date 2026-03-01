@@ -73,7 +73,9 @@
     "fromPhotoDesc": "Seleccionar un archivo de imagen de su dispositivo",
     "fromCamera": "Usar cámara",
     "fromCameraDesc": "Tomar una foto con la cámara del dispositivo",
-    "cameraNotAvailable": "Cámara no disponible en este dispositivo"
+    "cameraNotAvailable": "Cámara no disponible en este dispositivo",
+    "capturePhoto": "Tomar foto",
+    "cameraError": "No se pudo acceder a la cámara"
   },
   "settings": "Configuración",
   "showLibrary": "Mostrar biblioteca",

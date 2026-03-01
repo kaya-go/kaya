@@ -73,7 +73,9 @@
     "fromPhotoDesc": "从设备中选择图片文件",
     "fromCamera": "使用相机",
     "fromCameraDesc": "使用设备相机拍摄照片",
-    "cameraNotAvailable": "此设备不支持相机"
+    "cameraNotAvailable": "此设备不支持相机",
+    "capturePhoto": "拍照",
+    "cameraError": "无法访问相机"
   },
   "settings": "设置",
   "showLibrary": "显示棋库",

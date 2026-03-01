@@ -24,6 +24,10 @@
     "shortDescription": "Go game with AI analysis",
     "resources": {
       "scripts/pytorch_inference.py": "scripts/pytorch_inference.py"
+    },
+    "macOS": {
+      "entitlements": null,
+      "infoPlist": "Info.plist"
     }
   },
   "app": {

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CameraCapture } from './CameraCapture';
 import './ScanOptionsModal.css';
 
 interface ScanOptionsModalProps {
@@ -15,11 +16,12 @@ export const ScanOptionsModal: React.FC<ScanOptionsModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [hasCamera, setHasCamera] = useState<boolean | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    setShowCamera(false);
     // Check for camera availability
     if (!navigator.mediaDevices?.enumerateDevices) {
       setHasCamera(false);
@@ -51,10 +53,22 @@ export const ScanOptionsModal: React.FC<ScanOptionsModalProps> = ({
   }, []);
 
   const handleCameraClick = useCallback(() => {
-    cameraInputRef.current?.click();
+    setShowCamera(true);
   }, []);
 
+  const handleCameraCapture = useCallback(
+    (file: File) => {
+      onSelectFile(file);
+      onClose();
+    },
+    [onSelectFile, onClose]
+  );
+
   if (!isOpen) return null;
+
+  if (showCamera) {
+    return <CameraCapture onCapture={handleCameraCapture} onClose={() => setShowCamera(false)} />;
+  }
 
   return (
     <div
@@ -66,19 +80,11 @@ export const ScanOptionsModal: React.FC<ScanOptionsModalProps> = ({
       <div className="scan-options-dialog">
         <h2>{t('scan.chooseSource')}</h2>
 
-        {/* Hidden file inputs */}
+        {/* Hidden file input for photo selection */}
         <input
           ref={photoInputRef}
           type="file"
           accept="image/*"
-          style={{ display: 'none' }}
-          onChange={handleFile}
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
           style={{ display: 'none' }}
           onChange={handleFile}
         />
