@@ -625,6 +625,9 @@
     "backendMoku": "Moku (KI)",
     "threshold": "Schwellenwert:",
     "loadingModel": "KI-Modell wird geladen…",
-    "mokuError": "KI-Erkennungsmodell konnte nicht geladen werden"
+    "mokuError": "KI-Erkennungsmodell konnte nicht geladen werden",
+    "selectSizePrompt": "Brettgröße auswählen, um die Analyse zu starten",
+    "customSize": "Benutzerdefiniert",
+    "apply": "Anwenden"
   }
 }

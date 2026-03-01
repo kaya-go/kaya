@@ -54,10 +54,14 @@ export interface MokuDetectorConfig {
   modelUrl?: string;
   /** Path to ONNX Runtime WASM files (default: '/wasm/') */
   wasmPath?: string;
+  /** Progress callback for model download (0..1) */
+  onProgress?: ProgressCallback;
+  /** Expected model hash for cache invalidation */
+  modelHash?: string;
 }
 
 export interface MokuDetectOptions {
-  boardSize: 9 | 13 | 19;
+  boardSize: number;
   /** Confidence threshold for detections (default: 0.5) */
   threshold?: number;
   /** Output warped image size (default: 800) */
@@ -125,6 +129,160 @@ export function expandCorners(
   }) as BoardCorners;
 }
 
+// ── Logging ──────────────────────────────────────────────────────────────────
+
+const LOG_PREFIX = '[Moku]';
+function mokuLog(...args: unknown[]) {
+  console.log(LOG_PREFIX, ...args);
+}
+function mokuWarn(...args: unknown[]) {
+  console.warn(LOG_PREFIX, ...args);
+}
+
+// ── Model caching ────────────────────────────────────────────────────────────
+
+const MODEL_CACHE_NAME = 'kaya-moku-models';
+const MODEL_HASH_KEY_PREFIX = 'kaya-moku-hash:';
+
+/** Progress callback: receives values in [0, 1]. */
+export type ProgressCallback = (progress: number) => void;
+
+/**
+ * Store and retrieve a hash string for a model URL using the Cache API.
+ * The hash is stored as a simple text Response keyed by a special URL.
+ */
+async function getStoredHash(cache: Cache, modelUrl: string): Promise<string | null> {
+  const hashKey = `${MODEL_HASH_KEY_PREFIX}${modelUrl}`;
+  const resp = await cache.match(hashKey);
+  if (!resp) return null;
+  return resp.text();
+}
+
+async function storeHash(cache: Cache, modelUrl: string, hash: string): Promise<void> {
+  const hashKey = `${MODEL_HASH_KEY_PREFIX}${modelUrl}`;
+  await cache.put(hashKey, new Response(hash));
+}
+
+/**
+ * Clear the cached model. Useful when a new version is available.
+ */
+export async function clearModelCache(): Promise<void> {
+  if (typeof caches !== 'undefined') {
+    await caches.delete(MODEL_CACHE_NAME);
+    mokuLog('Model cache cleared');
+  }
+}
+
+/**
+ * Fetch the ONNX model with Cache API persistence and hash-based invalidation.
+ * On first load, the model is fetched from the network and stored in the
+ * browser Cache API so subsequent loads are instant without re-downloading.
+ * If `expectedHash` is provided, the cached model is invalidated when the
+ * hash doesn't match (e.g. when a new model version is deployed).
+ */
+async function fetchModelWithCache(
+  modelUrl: string,
+  onProgress?: ProgressCallback,
+  expectedHash?: string
+): Promise<ArrayBuffer> {
+  // Try Cache API (available in workers and main thread)
+  if (typeof caches !== 'undefined') {
+    try {
+      const cache = await caches.open(MODEL_CACHE_NAME);
+
+      // Check hash-based invalidation
+      if (expectedHash) {
+        const storedHash = await getStoredHash(cache, modelUrl);
+        if (storedHash && storedHash !== expectedHash) {
+          mokuLog(
+            `Model hash mismatch (stored=${storedHash}, expected=${expectedHash}), re-downloading`
+          );
+          await cache.delete(modelUrl);
+        }
+      }
+
+      const cached = await cache.match(modelUrl);
+      if (cached) {
+        mokuLog('Model loaded from cache');
+        onProgress?.(1);
+        return cached.arrayBuffer();
+      }
+
+      // Fetch from network with progress tracking
+      mokuLog('Downloading model from', modelUrl);
+      const t0 = performance.now();
+      const response = await fetch(modelUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
+      }
+
+      const buffer = await readResponseWithProgress(response, onProgress);
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+      const sizeMB = (buffer.byteLength / 1024 / 1024).toFixed(1);
+      mokuLog(`Model downloaded: ${sizeMB} MB in ${elapsed}s`);
+
+      // Cache the downloaded buffer
+      await cache.put(modelUrl, new Response(buffer.slice(0)));
+      if (expectedHash) {
+        await storeHash(cache, modelUrl, expectedHash);
+      }
+      return buffer;
+    } catch (e) {
+      // Cache API failed (e.g. opaque origin, storage quota) — fall through to plain fetch
+      if (e instanceof Error && e.message.startsWith('Failed to download model')) throw e;
+      mokuWarn('Cache API unavailable, falling back to plain fetch:', (e as Error).message);
+    }
+  }
+
+  // Fallback: plain fetch without caching
+  mokuLog('Downloading model (no cache) from', modelUrl);
+  const t0 = performance.now();
+  const response = await fetch(modelUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
+  }
+  const buffer = await readResponseWithProgress(response, onProgress);
+  const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+  mokuLog(`Model downloaded: ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB in ${elapsed}s`);
+  return buffer;
+}
+
+/**
+ * Read the full response body while reporting download progress.
+ */
+async function readResponseWithProgress(
+  response: Response,
+  onProgress?: ProgressCallback
+): Promise<ArrayBuffer> {
+  if (!onProgress || !response.body) {
+    return response.arrayBuffer();
+  }
+  const contentLength = Number(response.headers.get('content-length') || 0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+    if (contentLength > 0) {
+      onProgress(Math.min(received / contentLength, 1));
+    }
+  }
+
+  // Merge chunks into a single ArrayBuffer
+  const merged = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  onProgress(1);
+  return merged.buffer as ArrayBuffer;
+}
+
 // ── MokuDetector class ───────────────────────────────────────────────────────
 
 export class MokuDetector {
@@ -141,20 +299,31 @@ export class MokuDetector {
     const modelUrl = this.config.modelUrl ?? DEFAULT_MODEL_URL;
 
     // Configure WASM paths so the runtime finds its .wasm files
-    ort.env.wasm.wasmPaths = this.config.wasmPath ?? '/wasm/';
+    const wasmPath = this.config.wasmPath ?? '/wasm/';
+    ort.env.wasm.wasmPaths = wasmPath;
     ort.env.wasm.numThreads = 1;
+    mokuLog('Initializing — wasmPath:', wasmPath, 'modelUrl:', modelUrl);
 
-    // Fetch the model ourselves for better error handling
-    const response = await fetch(modelUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
-    }
-    const modelBuffer = await response.arrayBuffer();
+    // Try Cache API first, then fetch and cache
+    const t0 = performance.now();
+    const modelBuffer = await fetchModelWithCache(
+      modelUrl,
+      this.config.onProgress,
+      this.config.modelHash
+    );
 
+    const t1 = performance.now();
+    mokuLog(
+      `Creating ONNX session (model ${(modelBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)…`
+    );
     this.session = await ort.InferenceSession.create(modelBuffer, {
       executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     });
+    const t2 = performance.now();
+    mokuLog(
+      `Session ready in ${((t2 - t1) / 1000).toFixed(1)}s (total init: ${((t2 - t0) / 1000).toFixed(1)}s)`
+    );
   }
 
   /** Whether the model is loaded and ready for inference. */
@@ -175,16 +344,24 @@ export class MokuDetector {
     const outputSize = options.outputSize ?? WARP_OUTPUT_SIZE;
 
     // 1. Preprocess image → (1, 3, 640, 640) normalized tensor
+    const t0 = performance.now();
     const inputTensor = preprocess(img);
 
     // 2. Run inference
     const feeds = { pixel_values: inputTensor };
+    const t1 = performance.now();
     const results = await this.session.run(feeds);
+    const t2 = performance.now();
     const logits = results.logits.data as Float32Array; // (1, 300, 3)
     const predBoxes = results.pred_boxes.data as Float32Array; // (1, 300, 4)
 
     // 3. Postprocess → RecognitionResult
-    return postprocess(logits, predBoxes, img, options.boardSize, threshold, outputSize);
+    const out = postprocess(logits, predBoxes, img, options.boardSize, threshold, outputSize);
+    const t3 = performance.now();
+    mokuLog(
+      `Detection: preprocess=${(t1 - t0).toFixed(0)}ms, inference=${(t2 - t1).toFixed(0)}ms, postprocess=${(t3 - t2).toFixed(0)}ms, total=${(t3 - t0).toFixed(0)}ms, stones=${out.stones.length}, cornersDetected=${out.cornersDetected}`
+    );
+    return out;
   }
 
   /** Release the ONNX session and free resources. */
@@ -247,7 +424,7 @@ function postprocess(
   logits: Float32Array,
   predBoxes: Float32Array,
   origImg: RawImage,
-  boardSize: 9 | 13 | 19,
+  boardSize: number,
   threshold: number,
   outputSize: number
 ): RecognitionResult {

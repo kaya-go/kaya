@@ -628,6 +628,9 @@
     "backendMoku": "Moku (AI)",
     "threshold": "閾値：",
     "loadingModel": "AIモデルを読み込み中…",
-    "mokuError": "AI検出モデルの読み込みに失敗しました"
+    "mokuError": "AI検出モデルの読み込みに失敗しました",
+    "selectSizePrompt": "碁盤のサイズを選択して分析を開始",
+    "customSize": "カスタム",
+    "apply": "適用"
   }
 }

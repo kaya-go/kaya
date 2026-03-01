@@ -625,6 +625,9 @@
     "backendMoku": "Moku (IA)",
     "threshold": "Umbral:",
     "loadingModel": "Cargando modelo de IA…",
-    "mokuError": "Error al cargar el modelo de detección IA"
+    "mokuError": "Error al cargar el modelo de detección IA",
+    "selectSizePrompt": "Selecciona el tamaño del tablero para iniciar el análisis",
+    "customSize": "Personalizado",
+    "apply": "Aplicar"
   }
 }

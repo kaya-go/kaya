@@ -628,6 +628,9 @@
     "backendMoku": "Moku (AI)",
     "threshold": "阈值：",
     "loadingModel": "正在加载 AI 模型…",
-    "mokuError": "AI 检测模型加载失败"
+    "mokuError": "AI 检测模型加载失败",
+    "selectSizePrompt": "请选择棋盘大小以开始分析",
+    "customSize": "自定义",
+    "apply": "应用"
   }
 }

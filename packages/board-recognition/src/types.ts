@@ -41,7 +41,7 @@ export interface CalibrationHint {
 
 /** Options for recognition */
 export interface RecognitionOptions {
-  boardSize: 9 | 13 | 19;
+  boardSize: number;
   outputSize?: number; // size of warped square image in pixels (default 800)
   blackThreshold?: number; // how much darker than board = black stone (default 45)
   whiteThreshold?: number; // how much brighter than board = white stone (default 35)

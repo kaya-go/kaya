@@ -625,6 +625,9 @@
     "backendMoku": "Moku (IA)",
     "threshold": "Soglia:",
     "loadingModel": "Caricamento modello IA…",
-    "mokuError": "Impossibile caricare il modello di rilevamento IA"
+    "mokuError": "Impossibile caricare il modello di rilevamento IA",
+    "selectSizePrompt": "Seleziona la dimensione della tavola per avviare l'analisi",
+    "customSize": "Personalizzato",
+    "apply": "Applica"
   }
 }
