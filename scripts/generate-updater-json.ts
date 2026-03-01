@@ -67,10 +67,6 @@ if (darwinSigFile) {
   // Assume the binary is the same name without .sig
   const binaryName = darwinSigFile.replace('.sig', '');
 
-  updaterJson.platforms['darwin-x86_64'] = {
-    signature: sigContent,
-    url: `${baseUrl}/${basename(binaryName)}`,
-  };
   updaterJson.platforms['darwin-aarch64'] = {
     signature: sigContent,
     url: `${baseUrl}/${basename(binaryName)}`,

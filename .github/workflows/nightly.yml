@@ -173,7 +173,7 @@ jobs:
 
       - name: Add Rust targets (macOS)
         if: matrix.platform == 'macos-latest'
-        run: rustup target add x86_64-apple-darwin aarch64-apple-darwin
+        run: rustup target add aarch64-apple-darwin
 
       # macOS code signing: Import Apple certificates into temporary keychain
       - name: Import Apple certificates (macOS)
@@ -224,9 +224,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
 
-      - name: Build desktop app (macOS Universal)
+      - name: Build desktop app (macOS)
         if: matrix.platform == 'macos-latest'
-        run: bun run tauri:build -- --target universal-apple-darwin
+        run: bun run tauri:build -- --target aarch64-apple-darwin
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
@@ -252,7 +252,7 @@ jobs:
         shell: bash
         run: |
           echo "Collecting macOS artifacts..."
-          find apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.app.tar.gz" \) -exec ls -lh {} \;
+          find apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.app.tar.gz" \) -exec ls -lh {} \;
 
       - name: Collect artifact info (Windows)
         if: matrix.platform == 'windows-latest'
@@ -279,8 +279,8 @@ jobs:
         with:
           name: nightly-macos
           path: |
-            apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            apps/desktop/src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
           retention-days: 14
 
       - name: Upload artifacts (Windows)
@@ -348,7 +348,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # macOS section
-          echo "### 🍎 macOS (Universal - Intel & Apple Silicon)" >> $GITHUB_STEP_SUMMARY
+          echo "### 🍎 macOS (Apple Silicon)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|------|------|" >> $GITHUB_STEP_SUMMARY
