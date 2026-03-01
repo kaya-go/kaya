@@ -42,7 +42,7 @@
     "@kaya/goboard": "workspace:*",
     "@kaya/sgf": "workspace:*",
     "onnxruntime-web": "^1.24.2",
-    "protobufjs": "^7.2.4"
+    "protobufjs": "^8.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",
