@@ -1,0 +1,125 @@
+/* ShortcutsTab - Collision Dialog */
+
+.shortcuts-collision-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.15s ease-out;
+}
+
+.shortcuts-collision-dialog {
+  background: var(--bg-secondary, #fff);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 400px;
+  width: calc(100% - 32px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.2s ease-out;
+}
+
+.collision-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.collision-icon {
+  color: var(--warning-color, #f59e0b);
+  font-size: 1.25rem;
+}
+
+.collision-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+}
+
+.collision-message {
+  margin: 0 0 20px 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary, #666);
+  line-height: 1.5;
+}
+
+.collision-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.collision-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.collision-btn.cancel {
+  background: var(--bg-tertiary, #f5f5f5);
+  color: var(--text-secondary, #666);
+}
+
+.collision-btn.cancel:hover {
+  background: var(--bg-hover, #e8e8e8);
+}
+
+.collision-btn.replace {
+  background: var(--accent-color, #007bff);
+  color: #fff;
+}
+
+.collision-btn.replace:hover {
+  background: var(--accent-hover, #0056b3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Mobile responsive (< 768px) */
+@media (max-width: 768px) {
+  .shortcuts-collision-dialog {
+    margin: 16px;
+    padding: 16px;
+  }
+
+  .collision-actions {
+    flex-direction: column;
+  }
+
+  .collision-btn {
+    justify-content: center;
+  }
+}

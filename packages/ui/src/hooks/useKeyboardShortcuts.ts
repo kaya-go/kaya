@@ -10,353 +10,40 @@
 
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 
-/** Storage key for keyboard shortcuts */
-const SHORTCUTS_STORAGE_KEY = 'kaya-keyboard-shortcuts';
+import type {
+  KeyBinding,
+  ShortcutCategory,
+  ShortcutCollision,
+  ShortcutDefinition,
+  ShortcutId,
+  StoredShortcuts,
+} from './shortcutTypes';
+import { createBinding, DEFAULT_SHORTCUTS } from './shortcutTypes';
+import {
+  bindingsEqual,
+  bindingToDisplayString,
+  createBindingFromEvent,
+  eventMatchesBinding,
+  loadStoredShortcuts,
+  saveStoredShortcuts,
+} from './shortcutUtils';
 
-/** Modifier keys */
-export interface ModifierKeys {
-  ctrl: boolean;
-  shift: boolean;
-  alt: boolean;
-  meta: boolean;
-}
-
-/** A single key binding */
-export interface KeyBinding {
-  key: string;
-  modifiers: ModifierKeys;
-}
-
-/** Shortcut action categories */
-export type ShortcutCategory = 'navigation' | 'board' | 'file' | 'view' | 'ai' | 'edit';
-
-/** A keyboard shortcut definition */
-export interface ShortcutDefinition {
-  id: string;
-  category: ShortcutCategory;
-  defaultBinding: KeyBinding;
-  customBinding?: KeyBinding;
-  isCustomized?: boolean;
-}
-
-/** All available shortcut IDs */
-export type ShortcutId =
-  // Navigation shortcuts
-  | 'nav.back'
-  | 'nav.forward'
-  | 'nav.start'
-  | 'nav.end'
-  | 'nav.branchUp'
-  | 'nav.branchDown'
-  // File shortcuts
-  | 'file.save'
-  | 'file.saveAs'
-  | 'file.paste'
-  // View shortcuts
-  | 'view.toggleHeader'
-  | 'view.toggleSidebar'
-  | 'view.toggleLibrary'
-  | 'view.toggleFullscreen'
-  | 'view.openSettings'
-  // Board mode shortcuts
-  | 'board.toggleEditMode'
-  | 'board.toggleNavigationMode'
-  | 'board.toggleScoringMode'
-  | 'board.toggleAnalysis'
-  | 'board.toggleSound'
-  | 'board.toggleNextMove'
-  // AI shortcuts
-  | 'ai.suggestMove'
-  | 'ai.toggleTopMoves'
-  | 'ai.toggleOwnership'
-  // Edit shortcuts
-  | 'edit.undo'
-  | 'edit.redo'
-  | 'edit.makeMainBranch';
-
-/** Modifier key for the current platform (Cmd on Mac, Ctrl elsewhere) */
-const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
-
-/** Create a key binding helper */
-export function createBinding(key: string, options?: Partial<ModifierKeys>): KeyBinding {
-  return {
-    key: key.toLowerCase(),
-    modifiers: {
-      ctrl: options?.ctrl ?? false,
-      shift: options?.shift ?? false,
-      alt: options?.alt ?? false,
-      meta: options?.meta ?? false,
-    },
-  };
-}
-
-/** Create a platform-aware binding (Cmd on Mac, Ctrl elsewhere) */
-export function createPlatformBinding(
-  key: string,
-  options?: Partial<Omit<ModifierKeys, 'ctrl' | 'meta'>>
-): KeyBinding {
-  return createBinding(key, {
-    ...options,
-    ctrl: !isMac,
-    meta: isMac,
-  });
-}
-
-/** Default shortcuts configuration */
-const DEFAULT_SHORTCUTS: Record<ShortcutId, Omit<ShortcutDefinition, 'id'>> = {
-  // Navigation
-  'nav.back': {
-    category: 'navigation',
-    defaultBinding: createBinding('arrowleft'),
-  },
-  'nav.forward': {
-    category: 'navigation',
-    defaultBinding: createBinding('arrowright'),
-  },
-  'nav.start': {
-    category: 'navigation',
-    defaultBinding: createBinding('home'),
-  },
-  'nav.end': {
-    category: 'navigation',
-    defaultBinding: createBinding('end'),
-  },
-  'nav.branchUp': {
-    category: 'navigation',
-    defaultBinding: createBinding('arrowup'),
-  },
-  'nav.branchDown': {
-    category: 'navigation',
-    defaultBinding: createBinding('arrowdown'),
-  },
-
-  // File operations
-  'file.save': {
-    category: 'file',
-    defaultBinding: createPlatformBinding('s'),
-  },
-  'file.saveAs': {
-    category: 'file',
-    defaultBinding: createPlatformBinding('s', { shift: true }),
-  },
-  'file.paste': {
-    category: 'file',
-    defaultBinding: createPlatformBinding('v'),
-  },
-
-  // View shortcuts
-  'view.toggleHeader': {
-    category: 'view',
-    defaultBinding: createPlatformBinding('m', { shift: true }),
-  },
-  'view.toggleSidebar': {
-    category: 'view',
-    defaultBinding: createPlatformBinding('b', { shift: true }),
-  },
-  'view.toggleLibrary': {
-    category: 'view',
-    defaultBinding: createPlatformBinding('l'),
-  },
-  'view.toggleFullscreen': {
-    category: 'view',
-    defaultBinding: createBinding('f'),
-  },
-  'view.openSettings': {
-    category: 'view',
-    defaultBinding: createPlatformBinding(','),
-  },
-
-  // Board mode shortcuts
-  'board.toggleEditMode': {
-    category: 'board',
-    defaultBinding: createBinding('e'),
-  },
-  'board.toggleNavigationMode': {
-    category: 'board',
-    defaultBinding: createBinding('n'),
-  },
-  'board.toggleScoringMode': {
-    category: 'board',
-    defaultBinding: createBinding('s'),
-  },
-  'board.toggleAnalysis': {
-    category: 'board',
-    defaultBinding: createBinding('a'),
-  },
-  'board.toggleSound': {
-    category: 'board',
-    defaultBinding: createBinding('s', { shift: true }),
-  },
-  'board.toggleNextMove': {
-    category: 'board',
-    defaultBinding: createBinding('x'),
-  },
-
-  // AI shortcuts
-  'ai.suggestMove': {
-    category: 'ai',
-    defaultBinding: createBinding('g'),
-  },
-  'ai.toggleTopMoves': {
-    category: 'ai',
-    defaultBinding: createBinding('t'),
-  },
-  'ai.toggleOwnership': {
-    category: 'ai',
-    defaultBinding: createBinding('o'),
-  },
-
-  // Edit shortcuts
-  'edit.undo': {
-    category: 'edit',
-    defaultBinding: createPlatformBinding('z'),
-  },
-  'edit.redo': {
-    category: 'edit',
-    defaultBinding: createPlatformBinding('z', { shift: true }),
-  },
-  'edit.makeMainBranch': {
-    category: 'edit',
-    defaultBinding: createPlatformBinding('m', { shift: true }),
-  },
-};
-
-/** Convert a KeyBinding to a display string */
-export function bindingToDisplayString(binding: KeyBinding): string {
-  const parts: string[] = [];
-  const { modifiers, key } = binding;
-
-  if (modifiers.ctrl) parts.push(isMac ? '⌃' : 'Ctrl');
-  if (modifiers.alt) parts.push(isMac ? '⌥' : 'Alt');
-  if (modifiers.shift) parts.push(isMac ? '⇧' : 'Shift');
-  if (modifiers.meta) parts.push(isMac ? '⌘' : 'Win');
-
-  // Format special keys
-  let displayKey = key;
-  switch (key.toLowerCase()) {
-    case 'arrowleft':
-      displayKey = '←';
-      break;
-    case 'arrowright':
-      displayKey = '→';
-      break;
-    case 'arrowup':
-      displayKey = '↑';
-      break;
-    case 'arrowdown':
-      displayKey = '↓';
-      break;
-    case 'home':
-      displayKey = 'Home';
-      break;
-    case 'end':
-      displayKey = 'End';
-      break;
-    case 'escape':
-      displayKey = 'Esc';
-      break;
-    case 'enter':
-      displayKey = '↵';
-      break;
-    case 'backspace':
-      displayKey = '⌫';
-      break;
-    case 'delete':
-      displayKey = 'Del';
-      break;
-    case 'tab':
-      displayKey = 'Tab';
-      break;
-    case ' ':
-      displayKey = 'Space';
-      break;
-    case ',':
-      displayKey = ',';
-      break;
-    default:
-      displayKey = key.length === 1 ? key.toUpperCase() : key;
-  }
-
-  parts.push(displayKey);
-  return parts.join(isMac ? '' : '+');
-}
-
-/** Check if a KeyboardEvent matches a KeyBinding */
-export function eventMatchesBinding(event: KeyboardEvent, binding: KeyBinding): boolean {
-  const { modifiers, key } = binding;
-  const eventKey = event.key.toLowerCase();
-
-  // Check modifiers
-  const ctrlMatch = modifiers.ctrl === event.ctrlKey;
-  const shiftMatch = modifiers.shift === event.shiftKey;
-  const altMatch = modifiers.alt === event.altKey;
-  const metaMatch = modifiers.meta === event.metaKey;
-
-  // Check key
-  const keyMatch = eventKey === key.toLowerCase();
-
-  return ctrlMatch && shiftMatch && altMatch && metaMatch && keyMatch;
-}
-
-/** Compare two bindings for equality */
-export function bindingsEqual(a: KeyBinding, b: KeyBinding): boolean {
-  return (
-    a.key.toLowerCase() === b.key.toLowerCase() &&
-    a.modifiers.ctrl === b.modifiers.ctrl &&
-    a.modifiers.shift === b.modifiers.shift &&
-    a.modifiers.alt === b.modifiers.alt &&
-    a.modifiers.meta === b.modifiers.meta
-  );
-}
-
-/** Collision info when two shortcuts have the same binding */
-export interface ShortcutCollision {
-  existingShortcutId: ShortcutId;
-  binding: KeyBinding;
-}
-
-/** Stored custom shortcuts (only stores customized ones) */
-type StoredShortcuts = Partial<Record<ShortcutId, KeyBinding>>;
-
-/** Load stored shortcuts from localStorage */
-function loadStoredShortcuts(): StoredShortcuts {
-  try {
-    if (typeof window === 'undefined') return {};
-    const stored = localStorage.getItem(SHORTCUTS_STORAGE_KEY);
-    if (!stored) return {};
-    return JSON.parse(stored) as StoredShortcuts;
-  } catch {
-    return {};
-  }
-}
-
-/** Save shortcuts to localStorage */
-function saveStoredShortcuts(shortcuts: StoredShortcuts): void {
-  try {
-    if (typeof window === 'undefined') return;
-    localStorage.setItem(SHORTCUTS_STORAGE_KEY, JSON.stringify(shortcuts));
-  } catch (e) {
-    console.warn('Failed to save shortcuts to localStorage:', e);
-  }
-}
-
-/** Create a KeyBinding from a KeyboardEvent */
-export function createBindingFromEvent(event: KeyboardEvent): KeyBinding | null {
-  // Ignore modifier-only key presses
-  if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) {
-    return null;
-  }
-
-  return {
-    key: event.key.toLowerCase(),
-    modifiers: {
-      ctrl: event.ctrlKey,
-      shift: event.shiftKey,
-      alt: event.altKey,
-      meta: event.metaKey,
-    },
-  };
-}
+// Re-export all public types, constants and utilities so existing consumers work unchanged
+export type {
+  ModifierKeys,
+  KeyBinding,
+  ShortcutCategory,
+  ShortcutDefinition,
+  ShortcutId,
+  ShortcutCollision,
+} from './shortcutTypes';
+export { createBinding, createPlatformBinding, DEFAULT_SHORTCUTS } from './shortcutTypes';
+export {
+  bindingToDisplayString,
+  eventMatchesBinding,
+  bindingsEqual,
+  createBindingFromEvent,
+} from './shortcutUtils';
 
 /**
  * Hook for managing keyboard shortcuts

@@ -11,6 +11,7 @@ import { Grid } from './Grid';
 import { getHoshis, range, defaultCoordX, defaultCoordY } from './helper';
 import { renderMarker } from './goban-utils';
 import { BoardRow } from './BoardRow';
+import { CoordX, CoordY } from './GobanCoordinates';
 import {
   useGhostPosition,
   useFuzzyMaps,
@@ -171,68 +172,19 @@ export const Goban: React.FC<GobanProps> = ({
     <div id={id} className={`shudan-goban ${className}`.trim()} style={containerStyle}>
       {/* Coordinates - Top */}
       {showCoordinates && (
-        <div
-          className="shudan-coord-x"
-          style={{
-            display: 'flex',
-            height: vertexSize * 0.6,
-            position: 'relative',
-            marginLeft: vertexSize,
-          }}
-        >
-          {xs.map((x: number) => (
-            <div
-              key={`coord-x-${x}`}
-              style={{
-                position: 'absolute',
-                left: x * vertexSize + vertexSize / 2,
-                width: vertexSize,
-                transform: 'translateX(-50%)',
-                textAlign: 'center',
-                fontSize: Math.max(10, vertexSize / 2),
-                lineHeight: `${vertexSize * 0.6}px`,
-                userSelect: 'none',
-              }}
-            >
-              {coordX(x)}
-            </div>
-          ))}
-        </div>
+        <CoordX xs={xs} vertexSize={vertexSize} coordFunc={coordX} position="top" />
       )}
 
       <div style={{ display: 'flex' }}>
         {/* Coordinates - Left */}
         {showCoordinates && (
-          <div
-            className="shudan-coord-y"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: vertexSize,
-              position: 'relative',
-              height: contentSize.height,
-              marginTop: vertexSize / 2,
-            }}
-          >
-            {ys.map((y: number) => (
-              <div
-                key={`coord-y-${y}`}
-                style={{
-                  position: 'absolute',
-                  top: y * vertexSize,
-                  height: vertexSize,
-                  transform: 'translateY(-50%)',
-                  width: '100%',
-                  textAlign: 'center',
-                  fontSize: Math.max(10, vertexSize / 2),
-                  lineHeight: `${vertexSize}px`,
-                  userSelect: 'none',
-                }}
-              >
-                {yCoordFunc(y)}
-              </div>
-            ))}
-          </div>
+          <CoordY
+            ys={ys}
+            vertexSize={vertexSize}
+            coordFunc={yCoordFunc}
+            contentHeight={contentSize.height}
+            position="left"
+          />
         )}
 
         {/* Board content */}
@@ -358,69 +310,19 @@ export const Goban: React.FC<GobanProps> = ({
 
         {/* Coordinates - Right */}
         {showCoordinates && (
-          <div
-            className="shudan-coord-y"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: vertexSize,
-              position: 'relative',
-              height: contentSize.height,
-              marginTop: vertexSize / 2,
-            }}
-          >
-            {ys.map((y: number) => (
-              <div
-                key={`coord-y-right-${y}`}
-                style={{
-                  position: 'absolute',
-                  top: y * vertexSize,
-                  height: vertexSize,
-                  transform: 'translateY(-50%)',
-                  width: '100%',
-                  textAlign: 'center',
-                  fontSize: Math.max(10, vertexSize / 2),
-                  lineHeight: `${vertexSize}px`,
-                  userSelect: 'none',
-                }}
-              >
-                {yCoordFunc(y)}
-              </div>
-            ))}
-          </div>
+          <CoordY
+            ys={ys}
+            vertexSize={vertexSize}
+            coordFunc={yCoordFunc}
+            contentHeight={contentSize.height}
+            position="right"
+          />
         )}
       </div>
 
       {/* Coordinates - Bottom */}
       {showCoordinates && (
-        <div
-          className="shudan-coord-x"
-          style={{
-            display: 'flex',
-            height: vertexSize * 0.6,
-            position: 'relative',
-            marginLeft: vertexSize,
-            marginTop: -(vertexSize * 0.3),
-          }}
-        >
-          {xs.map((x: number) => (
-            <div
-              key={`coord-x-bottom-${x}`}
-              style={{
-                position: 'absolute',
-                left: x * vertexSize + vertexSize / 2,
-                width: vertexSize,
-                transform: 'translateX(-50%)',
-                textAlign: 'center',
-                fontSize: Math.max(10, vertexSize / 2),
-                lineHeight: `${vertexSize * 0.6}px`,
-                userSelect: 'none',
-              }}
-            >
-              {coordX(x)}
-            </div>
-          ))}
-        </div>
+        <CoordX xs={xs} vertexSize={vertexSize} coordFunc={coordX} position="bottom" />
       )}
     </div>
   );

@@ -1,0 +1,198 @@
+/* Analysis Graph Panel - Controls & Progress Styles */
+
+/* Run Analysis Button */
+.analysis-run-button {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.2));
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.3));
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analysis-run-button:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(128, 128, 128, 0.3));
+}
+
+.analysis-run-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Progress Bar */
+.analysis-progress-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.analysis-progress-bar-container {
+  width: 80%;
+  max-width: 200px;
+  height: 8px;
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.2));
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.analysis-progress-bar {
+  height: 100%;
+  background: var(--accent-color, #4a9eff);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.analysis-progress-text {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+/* Stop Button */
+.analysis-stop-button {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.2));
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.3));
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analysis-stop-button:hover:not(:disabled) {
+  background: var(--bg-hover, rgba(128, 128, 128, 0.3));
+}
+
+.analysis-stop-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Inline Progress Bar - shown above chart during analysis */
+.analysis-progress-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+  font-size: 0.75rem;
+}
+
+.analysis-progress-label {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.analysis-progress-bar-inline {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.2));
+  border-radius: 3px;
+  overflow: hidden;
+  min-width: 60px;
+}
+
+.analysis-stop-button-small {
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.3));
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.analysis-stop-button-small:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: var(--bg-hover, rgba(128, 128, 128, 0.2));
+}
+
+.analysis-stop-button-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Analysis Mode Indicator */
+.analysis-mode-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.15));
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.analysis-mode-indicator:hover {
+  background: var(--bg-hover, rgba(128, 128, 128, 0.25));
+}
+
+.analysis-mode-indicator.active {
+  background: var(--accent-transparent, rgba(59, 130, 246, 0.15));
+  border-color: var(--accent, #3b82f6);
+  color: var(--accent, #3b82f6);
+}
+
+.analysis-mode-indicator.active:hover {
+  background: var(--accent-transparent, rgba(59, 130, 246, 0.25));
+}
+
+.analysis-mode-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary, #888);
+  transition: background 0.2s ease;
+}
+
+.analysis-mode-indicator.active .analysis-mode-dot {
+  background: var(--accent, #3b82f6);
+  box-shadow: 0 0 0 2px var(--accent-transparent, rgba(59, 130, 246, 0.4));
+}
+
+.analysis-mode-indicator svg {
+  flex-shrink: 0;
+}
+
+/* Responsive Styles */
+
+/* Tablet and smaller */
+@media (max-width: 1024px) {
+  .analysis-mode-indicator {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.65rem;
+  }
+}
+
+/* Mobile portrait */
+@media (max-width: 768px) {
+  /* Ensure touch target size */
+  .analysis-mode-indicator {
+    min-height: 36px;
+    padding: 0.25rem 0.5rem;
+  }
+}
+
+/* Landscape mobile - more compact */
+@media (max-height: 500px) and (orientation: landscape) {
+  .analysis-mode-indicator {
+    height: 24px;
+    padding: 0.15rem 0.35rem;
+  }
+}

@@ -17,6 +17,8 @@ import {
 } from '../../contexts/KeyboardShortcutsContext';
 import { type ShortcutCollision, createBindingFromEvent } from '../../hooks/useKeyboardShortcuts';
 import './ShortcutsTab.css';
+import './ShortcutsTabControls.css';
+import './ShortcutsTabCollision.css';
 
 interface ShortcutsTabProps {
   onClose?: () => void;

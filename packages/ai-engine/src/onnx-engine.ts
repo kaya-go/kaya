@@ -1,9 +1,4 @@
-/**
- * ONNX Runtime Web engine for KataGo analysis
- *
- * Uses the 'all' bundle which has JSEP enabled for proper WebGPU support.
- * NOTE: Requires ort-wasm-simd-threaded.jsep.wasm + .mjs to be served from /wasm/
- */
+/** ONNX Runtime Web engine for KataGo analysis. */
 import * as ort from 'onnxruntime-web/all';
 import { GoBoard, type Sign, type SignMap } from '@kaya/goboard';
 import {
@@ -21,9 +16,17 @@ import {
   debugLog,
   processBatchResults,
 } from './onnx-utils';
-import { filterKoMoves } from './onnx-mcts';
+import { filterKoMoves, runMCTS } from './onnx-mcts';
 import { featurize, featurizeToBuffer } from './onnx-featurization';
-import { runMCTS } from './onnx-mcts';
+import { createOnnxSession } from './onnx-session';
+import {
+  type GpuBufferState,
+  createEmptyGpuState,
+  allocateGpuBuffers,
+  releaseGpuBuffers,
+  uploadToGpuBuffers,
+  recreateSessionForBoardSize,
+} from './onnx-gpu';
 
 export { type OnnxEngineConfig } from './onnx-types';
 
@@ -37,21 +40,10 @@ export class OnnxEngine extends Engine {
   private didFallback: boolean = false;
   private graphCaptureEnabled: boolean = false;
   private useGpuInputs: boolean = false;
-  /** Board size for which GPU buffers are currently allocated (0 = not allocated) */
-  private allocatedBoardSize: number = 0;
-  /** Max batch size for inference (1 for static/graph-capture models) */
   private maxInferenceBatch: number = Infinity;
-
-  // Stored for session recreation on board size change (graph capture locks buffers)
   private storedSessionOptions: ort.InferenceSession.SessionOptions | null = null;
   private modelSource: { buffer?: ArrayBuffer; url?: string } | null = null;
-
-  // Pre-allocated GPU buffers for graph capture mode
-  private gpuDevice: any = null;
-  private gpuBinBuffer: any = null;
-  private gpuGlobalBuffer: any = null;
-  private gpuBinTensor: ort.Tensor | null = null;
-  private gpuGlobalTensor: ort.Tensor | null = null;
+  private gpu: GpuBufferState = createEmptyGpuState();
 
   constructor(config: OnnxEngineConfig = {}) {
     super(config);
@@ -62,356 +54,56 @@ export class OnnxEngine extends Engine {
     debugLog(this.debugEnabled, message, payload);
   }
 
-  // --- GPU buffer management ---
-
-  private async allocateGpuBuffers(boardSize: number): Promise<void> {
-    const device = (ort.env as any).webgpu?.device;
-    if (!device) {
-      throw new Error('WebGPU device not available from ORT');
-    }
-    this.gpuDevice = device;
-
-    const size = boardSize;
-    const batchSize = this.maxInferenceBatch;
-    const bytesPerElement = this.inputDataType === 'float16' ? 2 : 4;
-    const dataType = this.inputDataType === 'float16' ? 'float16' : 'float32';
-    const bufferUsage = 4 | 8 | 128; // COPY_SRC | COPY_DST | STORAGE
-    const align4 = (n: number) => Math.ceil(n / 4) * 4;
-
-    const binSize = align4(batchSize * 22 * size * size * bytesPerElement);
-    this.gpuBinBuffer = device.createBuffer({ size: binSize, usage: bufferUsage });
-    this.gpuBinTensor = ort.Tensor.fromGpuBuffer(this.gpuBinBuffer, {
-      dataType,
-      dims: [batchSize, 22, size, size],
-    });
-
-    const globalSize = align4(batchSize * 19 * bytesPerElement);
-    this.gpuGlobalBuffer = device.createBuffer({ size: globalSize, usage: bufferUsage });
-    this.gpuGlobalTensor = ort.Tensor.fromGpuBuffer(this.gpuGlobalBuffer, {
-      dataType,
-      dims: [batchSize, 19],
-    });
-
-    console.log(
-      `[OnnxEngine] GPU buffers allocated for graph capture (batch=${batchSize}, board=${size}x${size})`
+  private async ensureGpuBuffers(size: number): Promise<void> {
+    if (!this.storedSessionOptions || !this.modelSource) return;
+    const result = await recreateSessionForBoardSize(
+      this.gpu,
+      size,
+      this.inputDataType,
+      this.maxInferenceBatch,
+      this.storedSessionOptions,
+      this.modelSource,
+      this.session
     );
-    this.allocatedBoardSize = size;
-  }
-
-  private async ensureGpuBuffersForSize(size: number): Promise<void> {
-    if (size === this.allocatedBoardSize) return;
-
-    if (!this.storedSessionOptions || !this.modelSource) {
-      throw new Error('Cannot recreate session: missing stored config');
-    }
-
-    console.log(
-      `[OnnxEngine] Board size changed (${this.allocatedBoardSize}→${size}), recreating session for graph capture`
-    );
-
-    if (this.gpuBinBuffer) {
-      this.gpuBinBuffer.destroy();
-      this.gpuBinBuffer = null;
-    }
-    if (this.gpuGlobalBuffer) {
-      this.gpuGlobalBuffer.destroy();
-      this.gpuGlobalBuffer = null;
-    }
-    this.gpuBinTensor = null;
-    this.gpuGlobalTensor = null;
-    this.allocatedBoardSize = 0;
-
-    try {
-      if (this.session) {
-        await this.session.release();
-        this.session = null;
-      }
-
-      const recreateStart = performance.now();
-      if (this.modelSource.buffer) {
-        this.session = await ort.InferenceSession.create(
-          this.modelSource.buffer,
-          this.storedSessionOptions
-        );
-      } else if (this.modelSource.url) {
-        this.session = await ort.InferenceSession.create(
-          this.modelSource.url,
-          this.storedSessionOptions
-        );
-      } else {
-        throw new Error('No model source available');
-      }
-
-      await this.allocateGpuBuffers(size);
-      const elapsed = performance.now() - recreateStart;
-      console.log(
-        `[OnnxEngine] Session recreated for ${size}x${size} board in ${elapsed.toFixed(0)}ms`
-      );
-    } catch (e) {
-      console.warn('[OnnxEngine] Session recreation failed, disabling graph capture:', e);
-      this.graphCaptureEnabled = false;
-      this.useGpuInputs = false;
+    if (result) {
+      this.session = result.session;
+      this.graphCaptureEnabled = result.graphCaptureEnabled;
+      this.useGpuInputs = result.useGpuInputs;
     }
   }
-
-  private uploadToGpu(
-    binData: Float32Array | Uint16Array,
-    globalData: Float32Array | Uint16Array
-  ): { binTensor: ort.Tensor; globalTensor: ort.Tensor } {
-    if (!this.gpuDevice || !this.gpuBinBuffer || !this.gpuGlobalBuffer) {
-      throw new Error('GPU buffers not allocated');
-    }
-
-    const align4Write = (device: any, buffer: any, data: Float32Array | Uint16Array) => {
-      const byteLen = data.byteLength;
-      if (byteLen % 4 === 0) {
-        device.queue.writeBuffer(buffer, 0, data.buffer, data.byteOffset, byteLen);
-      } else {
-        const padded = new Uint8Array(Math.ceil(byteLen / 4) * 4);
-        padded.set(new Uint8Array(data.buffer, data.byteOffset, byteLen));
-        device.queue.writeBuffer(buffer, 0, padded.buffer, 0, padded.byteLength);
-      }
-    };
-
-    align4Write(this.gpuDevice, this.gpuBinBuffer, binData);
-    align4Write(this.gpuDevice, this.gpuGlobalBuffer, globalData);
-
-    return { binTensor: this.gpuBinTensor!, globalTensor: this.gpuGlobalTensor! };
-  }
-
-  // --- Initialization ---
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
     const config = this.config as OnnxEngineConfig;
 
     try {
-      const isCrossOriginIsolated = typeof self !== 'undefined' && self.crossOriginIsolated;
-      const numThreads = isCrossOriginIsolated
-        ? config.numThreads ||
-          Math.min(8, typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4)
-        : 1;
-
-      this.debugLog('Initializing session', {
-        requestedProviders: config.executionProviders,
-        wasmPath: config.wasmPath,
-        numThreads,
-        crossOriginIsolated: isCrossOriginIsolated,
-      });
-
-      ort.env.wasm.numThreads = numThreads;
-      ort.env.wasm.simd = true;
-      ort.env.wasm.proxy = false;
-      ort.env.wasm.wasmPaths = config.wasmPath || '/wasm/';
-      ort.env.debug = false;
-      ort.env.logLevel = 'warning';
-
-      // Check WebGPU availability
-      let webgpuAvailable = false;
-      if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
-        try {
-          const webgpuAdapter = await (navigator as any).gpu.requestAdapter({
-            powerPreference: 'high-performance',
-          });
-          if (webgpuAdapter) {
-            webgpuAvailable = true;
-            // @ts-ignore
-            ort.env.webgpu = ort.env.webgpu || {};
-            // @ts-ignore
-            ort.env.webgpu.adapter = webgpuAdapter;
-            // @ts-ignore
-            ort.env.webgpu.powerPreference = 'high-performance';
-          }
-        } catch {
-          // WebGPU not available
-        }
-      }
-
-      let providers = config.executionProviders || ['webgpu', 'wasm'];
-      providers = providers.filter(p => {
-        const name = typeof p === 'string' ? p : (p as any).name;
-        return name !== 'webgl';
-      });
-      this.requestedProviders = providers.map(p => (typeof p === 'string' ? p : (p as any).name));
-
-      if (!webgpuAvailable) {
-        providers = providers.filter(p => {
-          const name = typeof p === 'string' ? p : (p as any).name;
-          return name !== 'webgpu';
-        });
-      }
-
-      const hasWebnn = this.requestedProviders.includes('webnn');
-      if (hasWebnn && typeof navigator !== 'undefined' && !('ml' in navigator)) {
-        providers = providers.filter(p => {
-          const name = typeof p === 'string' ? p : (p as any).name;
-          return name !== 'webnn';
-        });
-      }
-
-      const sessionOptions: ort.InferenceSession.SessionOptions = {
-        executionProviders: providers,
-        graphOptimizationLevel: 'all',
-        logSeverityLevel: 2,
-        intraOpNumThreads: numThreads,
-        interOpNumThreads: numThreads,
-        enableCpuMemArena: true,
-        enableMemPattern: true,
-        executionMode: 'sequential',
-      };
-
-      const effectiveProviders = providers.map(p => (typeof p === 'string' ? p : (p as any).name));
-      if (effectiveProviders.includes('webgpu') && config.enableGraphCapture) {
-        sessionOptions.preferredOutputLocation = 'gpu-buffer';
-        (sessionOptions as any).enableGraphCapture = true;
-        this.graphCaptureEnabled = true;
-        this.useGpuInputs = true;
-        console.log('[OnnxEngine] Graph capture enabled for WebGPU');
-      }
-
-      if (effectiveProviders.includes('webnn')) {
-        const bs = config.boardSize ?? 19;
-        const webnnBatch = config.staticBatchSize ?? 1;
-        (sessionOptions as any).freeDimensionOverrides = {
-          batch_size: webnnBatch,
-          height: bs,
-          width: bs,
-        };
-      }
-
-      const createStart = performance.now();
-      let usedProviderNames = [...effectiveProviders];
-
-      const createSession = async (opts: ort.InferenceSession.SessionOptions) => {
-        if (config.modelBuffer) {
-          return await ort.InferenceSession.create(config.modelBuffer, opts);
-        } else if (config.modelUrl) {
-          return await ort.InferenceSession.create(config.modelUrl, opts);
-        }
-        throw new Error('No model provided');
-      };
-
-      try {
-        this.session = await createSession(sessionOptions);
-      } catch (initialError) {
-        const gpuProviders = ['webgpu', 'webnn'];
-        const hasGpu = effectiveProviders.some(p => gpuProviders.includes(p));
-        if (hasGpu && effectiveProviders.length > 1) {
-          const failedGpu = effectiveProviders.filter(p => gpuProviders.includes(p)).join('+');
-          console.warn(`[OnnxEngine] ${failedGpu} failed, falling back to WASM`);
-          usedProviderNames = effectiveProviders.filter(p => !gpuProviders.includes(p));
-          if (usedProviderNames.length === 0) usedProviderNames = ['wasm'];
-          this.didFallback = true;
-          this.graphCaptureEnabled = false;
-          this.useGpuInputs = false;
-          this.session = await createSession({
-            executionProviders: usedProviderNames,
-            graphOptimizationLevel: sessionOptions.graphOptimizationLevel,
-            enableCpuMemArena: sessionOptions.enableCpuMemArena,
-            enableMemPattern: sessionOptions.enableMemPattern,
-            executionMode: sessionOptions.executionMode,
-          });
-        } else {
-          throw initialError;
-        }
-      }
-
-      const createTime = performance.now() - createStart;
+      const result = await createOnnxSession(config, this.debugLog.bind(this));
+      this.session = result.session;
+      this.usedProviders = result.usedProviders;
+      this.requestedProviders = result.requestedProviders;
+      this.inputDataType = result.inputDataType;
+      this.didFallback = result.didFallback;
+      this.graphCaptureEnabled = result.graphCaptureEnabled;
+      this.useGpuInputs = result.useGpuInputs;
+      this.maxInferenceBatch = result.maxInferenceBatch;
+      this.modelSource = result.modelSource;
+      this.storedSessionOptions = result.sessionOptions;
       this.initialized = true;
-      this.usedProviders = usedProviderNames;
-      this.modelSource = { buffer: config.modelBuffer, url: config.modelUrl };
-      this.storedSessionOptions = sessionOptions;
 
-      // Detect static batch size
-      if (config.staticBatchSize && config.staticBatchSize > 0) {
-        this.maxInferenceBatch = config.staticBatchSize;
-      } else {
-        try {
-          const handler = (this.session as any).handler;
-          if (handler?.inputMetadata) {
-            const binMeta = handler.inputMetadata.find(
-              (m: any) => m.name === 'bin_input' || m.name === this.session!.inputNames[0]
-            );
-            if (binMeta?.dims && binMeta.dims[0] > 0) {
-              this.maxInferenceBatch = binMeta.dims[0];
-            }
-          }
-        } catch {
-          // Not available
-        }
-      }
-
-      // Check fallback
-      if (
-        this.requestedProviders.some(p => ['webgpu', 'webnn'].includes(p)) &&
-        !usedProviderNames.some(p => ['webgpu', 'webnn'].includes(p))
-      ) {
-        this.didFallback = true;
-      }
-
-      // Detect input data type
-      let detectedFp16 = false;
-      try {
-        const handler = (this.session as any).handler;
-        if (handler?.inputMetadata) {
-          const binInputMeta = handler.inputMetadata.find(
-            (m: any) => m.name === 'bin_input' || m.name === this.session!.inputNames[0]
-          );
-          if (binInputMeta?.type === 'float16') detectedFp16 = true;
-        }
-      } catch {
-        // Fallback: detect at runtime
-      }
-
-      if (detectedFp16) {
-        this.inputDataType = 'float16';
-        const isWasmOnly = usedProviderNames.every(p => p === 'wasm' || p === 'cpu');
-        const isWebNN = usedProviderNames.includes('webnn');
-        if (isWasmOnly) {
-          console.warn(
-            '[OnnxEngine] FP16 model detected on CPU/WASM backend. ' +
-              'Consider using an FP32 model or WebGPU backend.'
-          );
-        } else if (isWebNN) {
-          console.warn(
-            '[OnnxEngine] FP16 model detected with WebNN backend. ' +
-              'Use an FP32 model for better WebNN GPU coverage.'
-          );
-        }
-      } else {
-        this.inputDataType = 'float32';
-      }
-
-      // Pre-allocate GPU buffers for graph capture mode
       if (this.graphCaptureEnabled) {
         try {
-          await this.allocateGpuBuffers(19);
+          await allocateGpuBuffers(this.gpu, 19, this.maxInferenceBatch, this.inputDataType);
         } catch (e) {
           console.warn('[OnnxEngine] GPU buffer allocation failed, disabling graph capture:', e);
           this.graphCaptureEnabled = false;
           this.useGpuInputs = false;
         }
       }
-
-      // Log model loaded info
-      const backendInfo = usedProviderNames.join('/').toUpperCase();
-      const threadInfo = numThreads > 1 ? ` (${numThreads} threads)` : '';
-      const dtypeInfo = this.inputDataType === 'float16' ? ' [FP16]' : '';
-      const gcInfo = this.graphCaptureEnabled ? ' [GraphCapture]' : '';
-      const batchInfo =
-        this.maxInferenceBatch !== Infinity ? ` [batch=${this.maxInferenceBatch}]` : '';
-      const timeStr =
-        createTime >= 1000 ? `${(createTime / 1000).toFixed(1)}s` : `${createTime.toFixed(0)}ms`;
-      console.log(
-        `[AI] Model loaded: ${backendInfo}${threadInfo}${dtypeInfo}${gcInfo}${batchInfo} in ${timeStr}`
-      );
     } catch (e) {
       console.error('[OnnxEngine] Failed to initialize:', e);
       throw e;
     }
   }
-
-  // --- Public API ---
 
   getCapabilities(): EngineCapabilities {
     return {
@@ -431,8 +123,6 @@ export class OnnxEngine extends Engine {
       backend = this.graphCaptureEnabled ? 'webgpu-gc' : 'webgpu';
     } else if (this.usedProviders.includes('webnn')) {
       backend = 'webnn';
-    } else if (this.usedProviders.includes('wasm')) {
-      backend = 'wasm';
     } else if (this.usedProviders.length > 0) {
       backend = this.usedProviders[0];
     }
@@ -450,8 +140,6 @@ export class OnnxEngine extends Engine {
       requestedBackend,
     };
   }
-
-  // --- Analysis ---
 
   protected async analyzePosition(
     signMap: SignMap,
@@ -497,7 +185,7 @@ export class OnnxEngine extends Engine {
         numVisits,
         size,
         this.maxInferenceBatch,
-        this.featurizeToBuffer.bind(this),
+        featurizeToBuffer,
         this.runBatchInference.bind(this),
         this.evaluateSingle.bind(this),
         this.debugLog.bind(this)
@@ -508,19 +196,6 @@ export class OnnxEngine extends Engine {
     const analysisResult = await this.evaluateSingle(board, nextPla, komi, history, size);
     this.debugLog('Single analysis complete', { totalTimeMs: performance.now() - analysisStart });
     return analysisResult;
-  }
-
-  private featurizeToBuffer(
-    board: GoBoard,
-    pla: Sign,
-    komi: number,
-    history: { color: Sign; x: number; y: number }[],
-    bin_input: Float32Array,
-    global_input: Float32Array,
-    batchIndex: number,
-    size: number
-  ): void {
-    featurizeToBuffer(board, pla, komi, history, bin_input, global_input, batchIndex, size);
   }
 
   private async evaluateSingle(
@@ -534,41 +209,12 @@ export class OnnxEngine extends Engine {
     validateTensorData(bin_input, 'bin_input', this.debugEnabled);
     validateTensorData(global_input, 'global_input', this.debugEnabled);
 
-    let binTensor: ort.Tensor;
-    let globalTensor: ort.Tensor;
-    let usingGpuBuffers = false;
-
-    if (this.useGpuInputs && this.gpuDevice) {
-      await this.ensureGpuBuffersForSize(size);
-    }
-
-    if (this.useGpuInputs && this.gpuDevice) {
-      const batchBin = new Float32Array(this.maxInferenceBatch * 22 * size * size);
-      batchBin.set(bin_input);
-      const batchGlobal = new Float32Array(this.maxInferenceBatch * 19);
-      batchGlobal.set(global_input);
-      const binData = this.inputDataType === 'float16' ? float32ToFloat16(batchBin) : batchBin;
-      const globalData =
-        this.inputDataType === 'float16' ? float32ToFloat16(batchGlobal) : batchGlobal;
-      const gpuTensors = this.uploadToGpu(binData, globalData);
-      binTensor = gpuTensors.binTensor;
-      globalTensor = gpuTensors.globalTensor;
-      usingGpuBuffers = true;
-    } else if (this.maxInferenceBatch !== Infinity && this.maxInferenceBatch > 1) {
-      const batchBin = new Float32Array(this.maxInferenceBatch * 22 * size * size);
-      batchBin.set(bin_input);
-      const batchGlobal = new Float32Array(this.maxInferenceBatch * 19);
-      batchGlobal.set(global_input);
-      binTensor = createTensor(
-        batchBin,
-        [this.maxInferenceBatch, 22, size, size],
-        this.inputDataType
-      );
-      globalTensor = createTensor(batchGlobal, [this.maxInferenceBatch, 19], this.inputDataType);
-    } else {
-      binTensor = createTensor(bin_input, [1, 22, size, size], this.inputDataType);
-      globalTensor = createTensor(global_input, [1, 19], this.inputDataType);
-    }
+    let { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
+      bin_input,
+      global_input,
+      1,
+      size
+    );
 
     const inferenceStart = performance.now();
     let results: ort.InferenceSession.OnnxValueMapType;
@@ -629,63 +275,70 @@ export class OnnxEngine extends Engine {
     size: number
   ): Promise<AnalysisResult[]> {
     const batchSize = plas.length;
-    const perPosBinSize = 22 * size * size;
 
-    let binTensor: ort.Tensor;
-    let globalTensor: ort.Tensor;
-    let usingGpuBuffers = false;
+    const { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
+      bin_input,
+      global_input,
+      batchSize,
+      size
+    );
 
-    if (this.useGpuInputs && this.gpuDevice) {
-      await this.ensureGpuBuffersForSize(size);
-    }
-
-    if (this.useGpuInputs && this.gpuDevice) {
-      const paddedBin = new Float32Array(this.maxInferenceBatch * perPosBinSize);
-      paddedBin.set(bin_input);
-      const paddedGlobal = new Float32Array(this.maxInferenceBatch * 19);
-      paddedGlobal.set(global_input);
-      const binData = this.inputDataType === 'float16' ? float32ToFloat16(paddedBin) : paddedBin;
-      const globalData =
-        this.inputDataType === 'float16' ? float32ToFloat16(paddedGlobal) : paddedGlobal;
-      const gpuTensors = this.uploadToGpu(binData, globalData);
-      binTensor = gpuTensors.binTensor;
-      globalTensor = gpuTensors.globalTensor;
-      usingGpuBuffers = true;
-    } else if (this.maxInferenceBatch !== Infinity && batchSize < this.maxInferenceBatch) {
-      const paddedBin = new Float32Array(this.maxInferenceBatch * perPosBinSize);
-      paddedBin.set(bin_input);
-      const paddedGlobal = new Float32Array(this.maxInferenceBatch * 19);
-      paddedGlobal.set(global_input);
-      binTensor = createTensor(
-        paddedBin,
-        [this.maxInferenceBatch, 22, size, size],
-        this.inputDataType
-      );
-      globalTensor = createTensor(paddedGlobal, [this.maxInferenceBatch, 19], this.inputDataType);
-    } else {
-      binTensor = createTensor(
-        new Float32Array(bin_input),
-        [batchSize, 22, size, size],
-        this.inputDataType
-      );
-      globalTensor = createTensor(
-        new Float32Array(global_input),
-        [batchSize, 19],
-        this.inputDataType
-      );
-    }
-
-    const results = await this.session!.run({
-      bin_input: binTensor,
-      global_input: globalTensor,
-    });
-
+    const results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
     if (!usingGpuBuffers) {
       binTensor.dispose();
       globalTensor.dispose();
     }
-
     return processBatchResults(results, plas, size, batchSize);
+  }
+
+  private async prepareInputTensors(
+    binInput: Float32Array,
+    globalInput: Float32Array,
+    batchSize: number,
+    size: number
+  ): Promise<{ binTensor: ort.Tensor; globalTensor: ort.Tensor; usingGpuBuffers: boolean }> {
+    if (this.useGpuInputs && this.gpu.device) {
+      await this.ensureGpuBuffers(size);
+    }
+    if (this.useGpuInputs && this.gpu.device) {
+      const paddedBin = new Float32Array(this.maxInferenceBatch * 22 * size * size);
+      paddedBin.set(binInput);
+      const paddedGlobal = new Float32Array(this.maxInferenceBatch * 19);
+      paddedGlobal.set(globalInput);
+      const binData = this.inputDataType === 'float16' ? float32ToFloat16(paddedBin) : paddedBin;
+      const globalData =
+        this.inputDataType === 'float16' ? float32ToFloat16(paddedGlobal) : paddedGlobal;
+      const t = uploadToGpuBuffers(this.gpu, binData, globalData);
+      return { binTensor: t.binTensor, globalTensor: t.globalTensor, usingGpuBuffers: true };
+    }
+    if (this.maxInferenceBatch !== Infinity && batchSize < this.maxInferenceBatch) {
+      const paddedBin = new Float32Array(this.maxInferenceBatch * 22 * size * size);
+      paddedBin.set(binInput);
+      const paddedGlobal = new Float32Array(this.maxInferenceBatch * 19);
+      paddedGlobal.set(globalInput);
+      return {
+        binTensor: createTensor(
+          paddedBin,
+          [this.maxInferenceBatch, 22, size, size],
+          this.inputDataType
+        ),
+        globalTensor: createTensor(paddedGlobal, [this.maxInferenceBatch, 19], this.inputDataType),
+        usingGpuBuffers: false,
+      };
+    }
+    return {
+      binTensor: createTensor(
+        new Float32Array(binInput),
+        [batchSize, 22, size, size],
+        this.inputDataType
+      ),
+      globalTensor: createTensor(
+        new Float32Array(globalInput),
+        [batchSize, 19],
+        this.inputDataType
+      ),
+      usingGpuBuffers: false,
+    };
   }
 
   async analyzeBatch(
@@ -828,17 +481,8 @@ export class OnnxEngine extends Engine {
   }
 
   async dispose(): Promise<void> {
-    if (this.gpuBinBuffer) {
-      this.gpuBinBuffer.destroy();
-      this.gpuBinBuffer = null;
-    }
-    if (this.gpuGlobalBuffer) {
-      this.gpuGlobalBuffer.destroy();
-      this.gpuGlobalBuffer = null;
-    }
-    this.gpuBinTensor = null;
-    this.gpuGlobalTensor = null;
-    this.gpuDevice = null;
+    releaseGpuBuffers(this.gpu);
+    this.gpu.device = null;
 
     if (this.session) {
       try {

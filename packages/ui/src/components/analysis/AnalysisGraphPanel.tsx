@@ -23,6 +23,8 @@ import { getPathToNode } from '../../utils/gameCache';
 import { AnalysisChart, type AnalysisDataPoint } from './AnalysisChart';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import './AnalysisGraphPanel.css';
+import './AnalysisGraphPanelControls.css';
+import './AnalysisGraphPanelChart.css';
 
 export interface AnalysisGraphPanelProps {
   className?: string;

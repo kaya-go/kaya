@@ -49,6 +49,7 @@ import {
   useScoringData,
 } from './gameboard-interactions';
 import './GameBoard.css';
+import './GameBoardAnalysisSummary.css';
 
 interface GameBoardProps {
   onScoreData?: (scoreData: ScoreData | null) => void;

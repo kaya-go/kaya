@@ -1,47 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import {
   LuLibrary,
   LuPanelRight,
-  LuChevronDown,
-  LuChevronRight,
   LuGitBranch,
   LuInfo,
   LuMessageSquare,
   LuChartLine,
-  LuLayoutGrid,
-  LuBrain,
 } from 'react-icons/lu';
 import { useLayoutMode, useOrientation } from '../../hooks/useMediaQuery';
-import { MobileTabBar, type MobileTab } from './MobileTabBar';
+import type { MobileTab } from './MobileTabBar';
+import { useLayoutPanels } from './useLayoutPanels';
+import { CollapsibleSectionHeader } from './CollapsibleSectionHeader';
+import { ResizableLayoutMobile } from './ResizableLayoutMobile';
 import './ResizableLayout.css';
-
-// Storage keys for panel visibility
-const STORAGE_KEY = 'kaya-sidebar-panels';
-const LEFT_PANEL_STORAGE_KEY = 'kaya-left-panels';
-
-interface SidebarPanelVisibility {
-  gameTree: boolean;
-  gameInfo: boolean;
-  comment: boolean;
-}
-
-interface LeftPanelVisibility {
-  library: boolean;
-  analysisGraph: boolean;
-}
-
-const DEFAULT_VISIBILITY: SidebarPanelVisibility = {
-  gameTree: true,
-  gameInfo: true,
-  comment: true,
-};
-
-const DEFAULT_LEFT_VISIBILITY: LeftPanelVisibility = {
-  library: true,
-  analysisGraph: true,
-};
+import './ResizableLayoutMobile.css';
 
 interface ResizableLayoutProps {
   libraryContent?: React.ReactNode;
@@ -62,29 +36,6 @@ interface ResizableLayoutProps {
   /** Callback for mobile tab change */
   onMobileTabChange?: (tab: MobileTab) => void;
 }
-
-const CollapsibleSectionHeader: React.FC<{
-  title: string;
-  icon: React.ReactNode;
-  isVisible: boolean;
-  onToggle: () => void;
-  headerActions?: React.ReactNode;
-}> = ({ title, icon, isVisible, onToggle, headerActions }) => {
-  return (
-    <div className="sidebar-section-header collapsible-header">
-      <button
-        className="collapse-toggle"
-        onClick={onToggle}
-        title={isVisible ? `Hide ${title} ` : `Show ${title} `}
-      >
-        {isVisible ? <LuChevronDown size={14} /> : <LuChevronRight size={14} />}
-        <span className="section-icon">{icon}</span>
-        <h3>{title}</h3>
-      </button>
-      {isVisible && headerActions && <div className="sidebar-section-actions">{headerActions}</div>}
-    </div>
-  );
-};
 
 export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   libraryContent,
@@ -117,182 +68,33 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   const activeTab = activeMobileTab ?? internalActiveTab;
   const handleTabChange = onMobileTabChange ?? setInternalActiveTab;
 
-  // Load initial visibility from localStorage (right sidebar)
-  const [panelVisibility, setPanelVisibility] = useState<SidebarPanelVisibility>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return { ...DEFAULT_VISIBILITY, ...JSON.parse(saved) };
-      }
-    } catch {
-      // Ignore parse errors
-    }
-    return DEFAULT_VISIBILITY;
-  });
-
-  // Load initial visibility for left panel sections
-  const [leftPanelVisibility, setLeftPanelVisibility] = useState<LeftPanelVisibility>(() => {
-    try {
-      const saved = localStorage.getItem(LEFT_PANEL_STORAGE_KEY);
-      if (saved) {
-        return { ...DEFAULT_LEFT_VISIBILITY, ...JSON.parse(saved) };
-      }
-    } catch {
-      // Ignore parse errors
-    }
-    return DEFAULT_LEFT_VISIBILITY;
-  });
-
-  // Save visibility to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(panelVisibility));
-  }, [panelVisibility]);
-
-  useEffect(() => {
-    localStorage.setItem(LEFT_PANEL_STORAGE_KEY, JSON.stringify(leftPanelVisibility));
-  }, [leftPanelVisibility]);
-
-  const togglePanel = useCallback((panel: keyof SidebarPanelVisibility) => {
-    setPanelVisibility(prev => ({ ...prev, [panel]: !prev[panel] }));
-  }, []);
-
-  const toggleLeftPanel = useCallback((panel: keyof LeftPanelVisibility) => {
-    setLeftPanelVisibility(prev => ({ ...prev, [panel]: !prev[panel] }));
-  }, []);
-
-  // Count visible panels for sizing (right sidebar)
-  const visiblePanelCount = [
-    panelVisibility.gameTree,
-    panelVisibility.gameInfo,
-    panelVisibility.comment,
-  ].filter(Boolean).length;
-
-  // Calculate default sizes based on visible panels
-  // Game Tree: 50%, Game Info: 35%, Comment: 15% when all visible
-  const getDefaultSize = (isVisible: boolean, panelName?: 'gameTree' | 'gameInfo' | 'comment') => {
-    if (!isVisible) return 0;
-    if (visiblePanelCount === 1) return 100;
-    if (visiblePanelCount === 2) {
-      // When 2 panels visible, give them roughly equal space
-      return 50;
-    }
-    // All 3 panels visible: Game Tree 50%, Game Info 35%, Comment 15%
-    switch (panelName) {
-      case 'gameTree':
-        return 50;
-      case 'gameInfo':
-        return 35;
-      case 'comment':
-        return 15;
-      default:
-        return 100 / visiblePanelCount;
-    }
-  };
-
-  // Count visible left panels for sizing
-  const visibleLeftPanelCount = [
-    leftPanelVisibility.library,
-    leftPanelVisibility.analysisGraph,
-  ].filter(Boolean).length;
-
-  const getLeftPanelSize = (isVisible: boolean) => {
-    if (!isVisible) return 0;
-    // Library gets more space by default (60/40 split)
-    return isVisible ? (visibleLeftPanelCount === 2 ? 60 : 100) : 0;
-  };
+  // Panel visibility and sizing from extracted hook
+  const {
+    panelVisibility,
+    leftPanelVisibility,
+    togglePanel,
+    toggleLeftPanel,
+    visibleLeftPanelCount,
+    getDefaultSize,
+    getLeftPanelSize,
+  } = useLayoutPanels();
 
   // =========================
   // Mobile Layout
   // =========================
   if (isMobile) {
-    const renderMobileContent = () => {
-      return (
-        <>
-          {/* Board Panel - always rendered, hidden if not active */}
-          <div
-            className="mobile-panel mobile-board-panel"
-            style={{ display: activeTab === 'board' ? 'flex' : 'none' }}
-          >
-            <div className="mobile-panel-content">{boardContent}</div>
-          </div>
-
-          {/* Info Panel */}
-          <div
-            className="mobile-panel mobile-info-panel"
-            style={{ display: activeTab === 'info' ? 'flex' : 'none' }}
-          >
-            <div className="mobile-panel-header">
-              <LuInfo size={16} />
-              <span>Game Info</span>
-            </div>
-            <div className="mobile-panel-content mobile-info-content">
-              <div className="mobile-info-section">
-                {gameInfoContent || <div className="placeholder">Game Info</div>}
-              </div>
-              <div className="mobile-comment-section">
-                <div className="mobile-section-title">
-                  <LuMessageSquare size={14} />
-                  <span>Comments</span>
-                </div>
-                {commentContent || <div className="placeholder">Comments</div>}
-              </div>
-            </div>
-          </div>
-
-          {/* Tree Panel */}
-          <div
-            className="mobile-panel mobile-tree-panel"
-            style={{ display: activeTab === 'tree' ? 'flex' : 'none' }}
-          >
-            <div className="mobile-panel-header">
-              <LuGitBranch size={16} />
-              <span>Game Tree</span>
-            </div>
-            <div className="mobile-panel-content">
-              {gameTreeContent || <div className="placeholder">Game Tree</div>}
-            </div>
-          </div>
-
-          {/* AI Analysis Panel */}
-          {analysisGraphContent && (
-            <div
-              className="mobile-panel mobile-analysis-panel"
-              style={{ display: activeTab === 'analysis' ? 'flex' : 'none' }}
-            >
-              <div className="mobile-panel-header">
-                <LuBrain size={16} />
-                <span>Analysis</span>
-              </div>
-              <div className="mobile-panel-content">{analysisGraphContent}</div>
-            </div>
-          )}
-
-          {/* Library Panel */}
-          <div
-            className="mobile-panel mobile-library-panel"
-            style={{ display: activeTab === 'library' ? 'flex' : 'none' }}
-          >
-            <div className="mobile-panel-header">
-              <LuLibrary size={16} />
-              <span>Library</span>
-            </div>
-            <div className="mobile-panel-content">
-              {libraryContent || <div className="placeholder">Library</div>}
-            </div>
-          </div>
-        </>
-      );
-    };
-
     return (
-      <div className={`mobile-layout ${isLandscape ? 'mobile-landscape' : 'mobile-portrait'} `}>
-        <div className="mobile-layout-content">{renderMobileContent()}</div>
-        <MobileTabBar
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          showAnalysis={!!analysisGraphContent}
-        />
-      </div>
+      <ResizableLayoutMobile
+        boardContent={boardContent}
+        gameTreeContent={gameTreeContent}
+        gameInfoContent={gameInfoContent}
+        commentContent={commentContent}
+        libraryContent={libraryContent}
+        analysisGraphContent={analysisGraphContent}
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        isLandscape={isLandscape}
+      />
     );
   }
 

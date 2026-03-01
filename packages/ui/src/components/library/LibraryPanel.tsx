@@ -19,6 +19,8 @@ import { NewFolderDialog, ConfirmDialog } from './LibraryDialogs';
 import { useLibraryActions } from './useLibraryActions';
 import { type TreeNode, DragPreview, useNodeRenderer } from './LibraryTreeNode';
 import './LibraryPanel.css';
+import './LibraryPanelTree.css';
+import './LibraryPanelOverlays.css';
 
 export interface LibraryPanelProps {
   width?: number;

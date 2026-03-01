@@ -6,86 +6,27 @@
  * Engine lifecycle is managed by AIEngineContext.
  */
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-  useMemo,
-} from 'react';
-import type { AnalysisResult, MoveSuggestion } from '@kaya/ai-engine';
-import { type SignMap } from '@kaya/goboard';
+import React, { useEffect, useCallback, useRef, useMemo } from 'react';
+import type { MoveSuggestion } from '@kaya/ai-engine';
 import { useGameTree } from './GameTreeContext';
 import { useAIEngine } from './AIEngineContext';
-import { WorkerEngine } from '../workers/WorkerEngine';
-import { getPathToNode, boardCache } from '../utils/gameCache';
+import { getPathToNode } from '../utils/gameCache';
 import {
   createInitialAnalysisState,
   updateAnalysisState,
   generateAnalysisCacheKey,
-  smoothAnalysisResult,
   gtpToVertex,
   normalizeStrength,
   formatProbability,
-  type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
+import { AIAnalysisContext, analysisGlobals } from './ai-analysis-types';
+import type { AIAnalysisContextValue } from './ai-analysis-types';
+import { useLiveAnalysis } from './useLiveAnalysis';
+import { useFullGameAnalysis } from './useFullGameAnalysis';
 
-// Global guard for analysis
-let globalIsAnalyzing = false;
-let globalAnalysisId = 0;
-// Track which nodeId we're currently analyzing to allow re-analysis on position change
-let globalAnalyzingForNodeId: number | string | null = null;
-
-export interface AIAnalysisContextValue {
-  // Heatmaps (derived)
-  heatMap: Array<Array<{ strength: number; text: string } | null>> | null;
-  ownershipMap: number[][] | null;
-
-  // UI State
-  showOwnership: boolean;
-  toggleOwnership: () => void;
-  showTopMoves: boolean;
-  toggleTopMoves: () => void;
-  isInitializing: boolean;
-  isAnalyzing: boolean;
-  error: string | null;
-  analysisResult: AnalysisResult | null;
-
-  // Full Game Analysis
-  analyzeFullGame: () => Promise<void>;
-  stopFullGameAnalysis: () => void;
-  isFullGameAnalyzing: boolean;
-  isStopping: boolean;
-  fullGameProgress: number;
-  fullGameCurrentMove: number;
-  fullGameTotalMoves: number;
-  fullGameETA: string | null;
-  allAnalyzedMessage: string | null;
-  pendingFullGameAnalysis: boolean;
-
-  // Cache / Progress
-  analysisCacheSize: number;
-  clearAnalysisCache: () => void;
-  nativeUploadProgress: { stage: string; progress: number; message: string } | null;
-
-  // Fallback notification (from AIEngineContext)
-  backendFallbackMessage: string | null;
-
-  // Wait for the currently running live analysis to finish (resolves immediately if none)
-  waitForCurrentAnalysis: () => Promise<void>;
-}
-
-const AIAnalysisContext = createContext<AIAnalysisContextValue | null>(null);
-
-export function useAIAnalysis() {
-  const context = useContext(AIAnalysisContext);
-  if (!context) {
-    throw new Error('useAIAnalysis must be used within a AIAnalysisProvider');
-  }
-  return context;
-}
+// Re-export public API
+export { useAIAnalysis } from './ai-analysis-types';
+export type { AIAnalysisContextValue } from './ai-analysis-types';
 
 export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const {
@@ -115,27 +56,73 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // Get engine from AIEngineContext
   const {
     engine,
-    isEngineReady,
     isInitializing,
     error: engineError,
     nativeUploadProgress,
     backendFallbackMessage,
   } = useAIEngine();
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isFullGameAnalyzing, setIsFullGameAnalyzing] = useState(false);
-  const [isStopping, setIsStopping] = useState(false);
-  const [fullGameProgress, setFullGameProgress] = useState<number>(0);
-  const [fullGameCurrentMove, setFullGameCurrentMove] = useState<number>(0);
-  const [fullGameTotalMoves, setFullGameTotalMoves] = useState<number>(0);
-  const [fullGameETA, setFullGameETA] = useState<string | null>(null);
-  const [allAnalyzedMessage, setAllAnalyzedMessage] = useState<string | null>(null);
-  const [pendingFullGameAnalysis, setPendingFullGameAnalysis] = useState(false);
-
-  const stopAnalysisRef = useRef(false);
+  // Shared refs
   const currentNodeIdRef = useRef(currentNodeId);
-  const isFullGameAnalyzingRef = useRef(isFullGameAnalyzing);
+  useEffect(() => {
+    currentNodeIdRef.current = currentNodeId;
+  }, [currentNodeId]);
+
+  const isFullGameAnalyzingRef = useRef(false);
+
+  // Live analysis hook
+  const {
+    isAnalyzing,
+    setIsAnalyzing,
+    error,
+    setError,
+    runAnalysis,
+    lookupCachedResult,
+    waitForCurrentAnalysis,
+  } = useLiveAnalysis({
+    engine,
+    analysisMode,
+    currentBoard,
+    gameTree,
+    currentNodeId,
+    moveNumber,
+    gameInfo,
+    aiSettings,
+    analysisCache,
+    updateAnalysisCacheSize,
+    setAnalysisResult,
+    isFullGameAnalyzingRef,
+  });
+
+  // Full game analysis hook
+  const {
+    isFullGameAnalyzing,
+    isStopping,
+    fullGameProgress,
+    fullGameCurrentMove,
+    fullGameTotalMoves,
+    fullGameETA,
+    allAnalyzedMessage,
+    pendingFullGameAnalysis,
+    analyzeFullGame,
+    stopFullGameAnalysis,
+    resetFullGameState,
+  } = useFullGameAnalysis({
+    engine,
+    analysisMode,
+    setAnalysisMode,
+    currentBoard,
+    gameTree,
+    currentNodeId,
+    gameInfo,
+    aiSettings,
+    analysisCache,
+    updateAnalysisCacheSize,
+    lookupCachedResult,
+    currentNodeIdRef,
+    setIsAnalyzing,
+    isFullGameAnalyzingRef,
+  });
 
   // Keep cache size in sync on game change
   useEffect(() => {
@@ -152,7 +139,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     updateAnalysisCacheSize();
     setAnalysisResult(null);
     // Increment analysis ID to invalidate any pending results
-    globalAnalysisId++;
+    analysisGlobals.analysisId++;
     // Clear engine cache as well (e.g. worker cache)
     if (engine) {
       engine.clearCache();
@@ -165,15 +152,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     aiSettings.saveAnalysisToSgf,
     setIsDirty,
   ]);
-
-  // Keep refs up to date
-  useEffect(() => {
-    currentNodeIdRef.current = currentNodeId;
-  }, [currentNodeId]);
-
-  useEffect(() => {
-    isFullGameAnalyzingRef.current = isFullGameAnalyzing;
-  }, [isFullGameAnalyzing]);
 
   // Track if this is the first render (to avoid clearing on mount)
   const isFirstRenderRef = useRef(true);
@@ -204,10 +182,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const prevLoadingRef = useRef<boolean>(false);
   // Track previous numVisits to clear cache when search depth changes
   const prevNumVisitsRef = useRef<number | undefined>(undefined);
-  // Promise that resolves when the current live analysis run finishes
-  const analysisCompleteRef = useRef<(() => void) | null>(null);
-  const analysisWaiterRef = useRef<Promise<void>>(Promise.resolve());
-  const waitForCurrentAnalysis = useCallback(() => analysisWaiterRef.current, []);
 
   // Clear cache when komi changes (analysis results depend on komi)
   // Skip during SGF loading and right after loading finishes
@@ -289,535 +263,9 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     gameInfo,
   ]);
 
-  // Run analysis when mode is enabled and engine is ready
-  const runAnalysis = useCallback(async () => {
-    // Skip if we're already analyzing this exact position
-    if (globalIsAnalyzing && globalAnalyzingForNodeId === currentNodeId) return;
-    globalIsAnalyzing = true;
-    globalAnalyzingForNodeId = currentNodeId;
-
-    if (!analysisMode || isFullGameAnalyzingRef.current) {
-      globalIsAnalyzing = false;
-      return;
-    }
-
-    if (!engine) {
-      globalIsAnalyzing = false;
-      return;
-    }
-
-    if (!gameTree || currentNodeId === null || currentNodeId === undefined) {
-      globalIsAnalyzing = false;
-      return;
-    }
-
-    const boardSize = currentBoard.signMap.length;
-    const komi = gameInfo?.komi ?? 7.5;
-
-    const sequence = getPathToNode(gameTree, currentNodeId);
-    const currentIndex = sequence.length - 1;
-
-    type PositionInfo = {
-      state: ReturnType<typeof createInitialAnalysisState>;
-      cacheKey: string;
-      index: number;
-    };
-
-    const positions: { prev: PositionInfo | null; current: PositionInfo } = {
-      prev: null,
-      current: null as unknown as PositionInfo,
-    };
-
-    let state = createInitialAnalysisState(boardSize);
-    for (let i = 0; i < sequence.length; i++) {
-      state = updateAnalysisState(state, sequence[i], i);
-
-      const cacheKey = generateAnalysisCacheKey(
-        state.board.signMap,
-        state.nextToPlay,
-        komi,
-        state.history
-      );
-
-      if (i === currentIndex - 1 && currentIndex > 0) {
-        positions.prev = {
-          state: { ...state, board: state.board.clone(), history: [...state.history] },
-          cacheKey,
-          index: i,
-        };
-      } else if (i === currentIndex) {
-        positions.current = {
-          state: { ...state, board: state.board.clone(), history: [...state.history] },
-          cacheKey,
-          index: i,
-        };
-      }
-    }
-
-    const cachedResults = {
-      prev: positions.prev ? (analysisCache.current.get(positions.prev.cacheKey) ?? null) : null,
-      current: analysisCache.current.get(positions.current.cacheKey) ?? null,
-    };
-
-    if (cachedResults.current) {
-      const hasPrev = !positions.prev || cachedResults.prev !== null;
-      if (hasPrev) {
-        const smoothed = smoothAnalysisResult(cachedResults.current, cachedResults.prev);
-        setAnalysisResult(smoothed);
-        globalIsAnalyzing = false;
-        return;
-      }
-    }
-
-    const currentRequestId = ++globalAnalysisId;
-    const analysisStartTime = performance.now();
-
-    setIsAnalyzing(true);
-    analysisWaiterRef.current = new Promise(resolve => {
-      analysisCompleteRef.current = resolve;
-    });
-    setError(null);
-
-    try {
-      const numVisits = aiSettings.numVisits ?? 1;
-      const toAnalyze: Array<{
-        key: 'prev' | 'current';
-        signMap: SignMap;
-        options: {
-          history: AnalysisHistoryItem[];
-          nextToPlay: 'B' | 'W';
-          komi: number;
-          numVisits: number;
-          koInfo: { sign: number; vertex: [number, number] };
-        };
-        cacheKey: string;
-      }> = [];
-
-      if (positions.prev && !cachedResults.prev) {
-        toAnalyze.push({
-          key: 'prev',
-          signMap: positions.prev.state.board.signMap,
-          options: {
-            history: positions.prev.state.history,
-            nextToPlay: positions.prev.state.nextToPlay,
-            komi,
-            numVisits,
-            koInfo: positions.prev.state.board._koInfo as {
-              sign: number;
-              vertex: [number, number];
-            },
-          },
-          cacheKey: positions.prev.cacheKey,
-        });
-      }
-
-      if (!cachedResults.current) {
-        toAnalyze.push({
-          key: 'current',
-          signMap: positions.current.state.board.signMap,
-          options: {
-            history: positions.current.state.history,
-            nextToPlay: positions.current.state.nextToPlay,
-            komi,
-            numVisits,
-            koInfo: positions.current.state.board._koInfo as {
-              sign: number;
-              vertex: [number, number];
-            },
-          },
-          cacheKey: positions.current.cacheKey,
-        });
-      }
-
-      const newResults: { [key: string]: AnalysisResult } = {};
-
-      if (toAnalyze.length > 0) {
-        if (toAnalyze.length === 1) {
-          const item = toAnalyze[0];
-          const result = await engine.analyze(item.signMap, item.options);
-          newResults[item.key] = result;
-          analysisCache.current.set(item.cacheKey, result);
-        } else {
-          const inputs = toAnalyze.map(item => ({
-            signMap: item.signMap,
-            options: item.options,
-          }));
-          const results = await engine.analyzeBatch(inputs);
-          results.forEach((result: AnalysisResult, idx: number) => {
-            const item = toAnalyze[idx];
-            newResults[item.key] = result;
-            analysisCache.current.set(item.cacheKey, result);
-          });
-        }
-        updateAnalysisCacheSize();
-      }
-
-      if (currentRequestId === globalAnalysisId) {
-        const finalResults = {
-          prev: cachedResults.prev ?? newResults['prev'] ?? null,
-          current: cachedResults.current ?? newResults['current']!,
-        };
-
-        const smoothed = smoothAnalysisResult(finalResults.current, finalResults.prev);
-        setAnalysisResult(smoothed);
-
-        // Log analysis details
-        const analysisDuration = performance.now() - analysisStartTime;
-        const currentResult = finalResults.current;
-        const historyLen = positions.current.state.history.length;
-        const topMoves = currentResult.moveSuggestions.slice(0, 5).map(m => ({
-          move: m.move,
-          prob: `${(m.probability * 100).toFixed(1)}%`,
-        }));
-
-        // Count stones on the board that was analyzed
-        const analyzedSignMap = positions.current.state.board.signMap;
-        let blackStones = 0;
-        let whiteStones = 0;
-        for (const row of analyzedSignMap) {
-          for (const cell of row) {
-            if (cell === 1) blackStones++;
-            else if (cell === -1) whiteStones++;
-          }
-        }
-
-        // Sanity check: detect if top moves land on occupied positions
-        const invalidMoves: { move: string; occupied: 'B' | 'W' }[] = [];
-        for (const suggestion of currentResult.moveSuggestions.slice(0, 5)) {
-          const m = suggestion.move;
-          if (m && m.length >= 2 && m !== 'pass') {
-            // Parse move like "D4" -> [3, 3] (0-indexed)
-            const col =
-              m.charCodeAt(0) - 'A'.charCodeAt(0) - (m.charCodeAt(0) > 'I'.charCodeAt(0) ? 1 : 0);
-            const row = parseInt(m.slice(1)) - 1;
-            if (
-              row >= 0 &&
-              row < analyzedSignMap.length &&
-              col >= 0 &&
-              col < analyzedSignMap.length
-            ) {
-              // signMap is [y][x] where y=0 is top
-              const y = analyzedSignMap.length - 1 - row; // Convert row to y (row 1 = bottom = y=18)
-              const stone = analyzedSignMap[y]?.[col];
-              if (stone === 1) {
-                invalidMoves.push({ move: m, occupied: 'B' });
-              } else if (stone === -1) {
-                invalidMoves.push({ move: m, occupied: 'W' });
-              }
-            }
-          }
-        }
-
-        console.log('[AI] Live analysis:', {
-          move: moveNumber,
-          inferences: toAnalyze.length,
-          cached: { prev: !!cachedResults.prev, current: !!cachedResults.current },
-          historyMoves: historyLen,
-          stonesOnBoard: {
-            black: blackStones,
-            white: whiteStones,
-            total: blackStones + whiteStones,
-          },
-          nextToPlay: positions.current.state.nextToPlay,
-          winRate: `${(currentResult.winRate * 100).toFixed(1)}%`,
-          scoreLead: currentResult.scoreLead.toFixed(1),
-          topMoves,
-          ...(invalidMoves.length > 0 ? { WARNING_INVALID_MOVES: invalidMoves } : {}),
-          durationMs: Math.round(analysisDuration),
-          msPerInference:
-            toAnalyze.length > 0 ? Math.round(analysisDuration / toAnalyze.length) : 0,
-        });
-      }
-    } catch (err) {
-      if (currentRequestId === globalAnalysisId) {
-        const message = err instanceof Error ? err.message : String(err);
-        setError(`Analysis failed: ${message}`);
-        console.error('[AI] Analysis failed:', err);
-      }
-    } finally {
-      globalIsAnalyzing = false;
-      globalAnalyzingForNodeId = null;
-      analysisCompleteRef.current?.();
-      analysisCompleteRef.current = null;
-      if (currentRequestId === globalAnalysisId) {
-        setIsAnalyzing(false);
-      }
-    }
-  }, [
-    engine,
-    analysisMode,
-    currentBoard,
-    gameTree,
-    currentNodeId,
-    moveNumber,
-    gameInfo,
-    aiSettings.numVisits,
-    analysisCache,
-    updateAnalysisCacheSize,
-    setAnalysisResult,
-  ]);
-
-  const lookupCachedResult = useCallback((): boolean => {
-    if (!gameTree || currentNodeId === null || currentNodeId === undefined) {
-      return false;
-    }
-    const boardSize = currentBoard.signMap.length;
-    const komi = gameInfo?.komi ?? 7.5;
-
-    const sequence = getPathToNode(gameTree, currentNodeId);
-    const currentIndex = sequence.length - 1;
-
-    const cacheKeys: { index: number; key: string }[] = [];
-    let state = createInitialAnalysisState(boardSize);
-
-    for (let i = 0; i < sequence.length; i++) {
-      state = updateAnalysisState(state, sequence[i], i);
-      if (i === currentIndex - 1 || i === currentIndex) {
-        const key = generateAnalysisCacheKey(
-          state.board.signMap,
-          state.nextToPlay,
-          komi,
-          state.history
-        );
-        cacheKeys.push({ index: i, key });
-      }
-    }
-
-    const currentCacheKey = cacheKeys.find(c => c.index === currentIndex);
-    if (!currentCacheKey || !analysisCache.current.has(currentCacheKey.key)) {
-      return false;
-    }
-
-    const currentResult = analysisCache.current.get(currentCacheKey.key)!;
-    const prevCacheKey = cacheKeys.find(c => c.index === currentIndex - 1);
-    const prevResult = prevCacheKey ? (analysisCache.current.get(prevCacheKey.key) ?? null) : null;
-
-    const smoothed = smoothAnalysisResult(currentResult, prevResult);
-    setAnalysisResult(smoothed);
-    return true;
-  }, [gameTree, currentNodeId, currentBoard, gameInfo, analysisCache, setAnalysisResult]);
-
-  const analyzeFullGame = useCallback(async () => {
-    if (!gameTree || currentNodeId === null || currentNodeId === undefined) return;
-
-    if (!analysisMode) {
-      setPendingFullGameAnalysis(true);
-      setAnalysisMode(true);
-      return;
-    }
-
-    if (!engine) {
-      setPendingFullGameAnalysis(true);
-      return;
-    }
-
-    setPendingFullGameAnalysis(false);
-    isFullGameAnalyzingRef.current = true;
-    setAllAnalyzedMessage(null);
-
-    globalAnalysisId++;
-    setIsAnalyzing(false);
-
-    if (engine instanceof WorkerEngine) {
-      engine.abortPendingRequests();
-    }
-
-    const boardCacheSize = boardCache.size;
-    if (boardCacheSize > 0) {
-      boardCache.clear();
-    }
-
-    setIsFullGameAnalyzing(true);
-    setFullGameProgress(0);
-    setFullGameETA(null);
-    stopAnalysisRef.current = false;
-
-    try {
-      const historyNodes = getPathToNode(gameTree, currentNodeId);
-      const futureNodes = Array.from(gameTree.listNodesVertically(currentNodeId, 1)).slice(1);
-      const fullSequence = [...historyNodes, ...futureNodes];
-
-      setFullGameTotalMoves(fullSequence.length);
-
-      const boardSize = currentBoard.signMap.length;
-      const komi = gameInfo?.komi ?? 7.5;
-
-      let state = createInitialAnalysisState(boardSize);
-      const positionsToAnalyze: {
-        index: number;
-        signMap: SignMap;
-        history: typeof state.history;
-        nextToPlay: 'B' | 'W';
-        cacheKey: string;
-        koInfo: { sign: number; vertex: [number, number] };
-      }[] = [];
-
-      for (let i = 0; i < fullSequence.length; i++) {
-        const node = fullSequence[i];
-        state = updateAnalysisState(state, node, i);
-
-        const cacheKey = generateAnalysisCacheKey(
-          state.board.signMap,
-          state.nextToPlay,
-          komi,
-          state.history
-        );
-
-        if (!analysisCache.current.has(cacheKey)) {
-          positionsToAnalyze.push({
-            index: i,
-            signMap: state.board.clone().signMap,
-            history: [...state.history],
-            nextToPlay: state.nextToPlay,
-            cacheKey,
-            koInfo: state.board._koInfo as { sign: number; vertex: [number, number] },
-          });
-        }
-      }
-
-      const cachedCount = fullSequence.length - positionsToAnalyze.length;
-      if (positionsToAnalyze.length === 0) {
-        setAllAnalyzedMessage(`All ${fullSequence.length} positions are already analyzed`);
-        setTimeout(() => setAllAnalyzedMessage(null), 3000);
-        return;
-      }
-
-      let processedCount = cachedCount;
-      // When numVisits > 1, MCTS is sequential per position, so reduce batch size
-      const numVisits = aiSettings.numVisits ?? 1;
-      const BATCH_SIZE = numVisits > 1 ? 1 : aiSettings.webgpuBatchSize || 8;
-      let totalBatchTime = 0;
-      let totalBatchPositions = 0;
-
-      setFullGameProgress(Math.round((processedCount / fullSequence.length) * 100));
-      setFullGameCurrentMove(processedCount);
-
-      for (let i = 0; i < positionsToAnalyze.length; i += BATCH_SIZE) {
-        if (stopAnalysisRef.current) break;
-
-        const batch = positionsToAnalyze.slice(i, i + BATCH_SIZE);
-        const inputs = batch.map(p => ({
-          signMap: p.signMap,
-          options: {
-            history: p.history,
-            nextToPlay: p.nextToPlay,
-            komi,
-            numVisits,
-            koInfo: p.koInfo,
-          },
-        }));
-
-        try {
-          const batchStartTime = performance.now();
-          const results = await engine.analyzeBatch(inputs);
-          const batchTime = performance.now() - batchStartTime;
-
-          totalBatchTime += batchTime;
-          totalBatchPositions += batch.length;
-
-          const posPerSec = (totalBatchPositions / totalBatchTime) * 1000;
-          const remainingPositions = positionsToAnalyze.length - (i + batch.length);
-          const etaSeconds = remainingPositions / posPerSec;
-          const etaStr =
-            etaSeconds < 60
-              ? `${Math.round(etaSeconds)}s`
-              : `${Math.floor(etaSeconds / 60)}m ${Math.round(etaSeconds % 60)}s`;
-          setFullGameETA(remainingPositions > 0 ? etaStr : null);
-
-          // Log batch analysis details
-          const moveRange = batch.map(p => p.index);
-          const firstMove = Math.min(...moveRange);
-          const lastMove = Math.max(...moveRange);
-
-          // Log individual position results
-          const positionDetails = results.map((result: AnalysisResult, idx: number) => {
-            const position = batch[idx];
-            const topMoves = result.moveSuggestions.slice(0, 3).map(m => ({
-              move: m.move,
-              prob: `${(m.probability * 100).toFixed(1)}%`,
-            }));
-            return {
-              move: position.index,
-              nextToPlay: position.nextToPlay,
-              winRate: `${(result.winRate * 100).toFixed(1)}%`,
-              scoreLead: result.scoreLead.toFixed(1),
-              topMoves,
-            };
-          });
-
-          console.log('[AI] Batch analysis:', {
-            moves: batch.length === 1 ? firstMove : `${firstMove}-${lastMove}`,
-            positions: batch.length,
-            durationMs: Math.round(batchTime),
-            msPerMove: Math.round(batchTime / batch.length),
-            progress: `${processedCount + batch.length}/${fullSequence.length}`,
-            eta: remainingPositions > 0 ? etaStr : 'done',
-            results: positionDetails,
-          });
-
-          results.forEach((result: AnalysisResult, idx: number) => {
-            const position = batch[idx];
-            analysisCache.current.set(position.cacheKey, result);
-
-            const currentNodeId = currentNodeIdRef.current;
-            const currentNodeIndex = fullSequence.findIndex(
-              n => String(n.id) === String(currentNodeId)
-            );
-            if (position.index === currentNodeIndex) {
-              const prevNodeIndex = currentNodeIndex - 1;
-              // Just re-trigger lookup since we handle smoothing there
-              // But we want to smooth with PREVIOUS result which might be in this batch or cache
-              // Simplest is to just call lookupCachedResult() if current node was updated
-              lookupCachedResult();
-            }
-          });
-
-          updateAnalysisCacheSize();
-
-          processedCount += batch.length;
-          setFullGameProgress(Math.round((processedCount / fullSequence.length) * 100));
-          setFullGameCurrentMove(processedCount);
-        } catch (err) {
-          console.error('[BatchAnalysis] Batch failed:', err);
-          break;
-        }
-      }
-    } catch (err) {
-      console.error('[BatchAnalysis] Failed:', err);
-      setAllAnalyzedMessage('Analysis failed');
-    } finally {
-      setIsFullGameAnalyzing(false);
-      setIsStopping(false);
-      isFullGameAnalyzingRef.current = false;
-      setFullGameETA(null);
-      setPendingFullGameAnalysis(false);
-      lookupCachedResult();
-    }
-  }, [
-    gameTree,
-    currentNodeId,
-    analysisMode,
-    engine,
-    currentBoard,
-    gameInfo,
-    aiSettings.numVisits,
-    analysisCache,
-    lookupCachedResult,
-    setAnalysisMode,
-    updateAnalysisCacheSize,
-  ]);
-
-  // Handle stop
-  const stopFullGameAnalysis = useCallback(() => {
-    if (isFullGameAnalyzing) {
-      stopAnalysisRef.current = true;
-      setIsStopping(true);
-    }
-  }, [isFullGameAnalyzing]);
-
-  // Effects
+  // Trigger analysis when conditions are met
   useEffect(() => {
-    if (analysisMode && engine && !isFullGameAnalyzing && !globalIsAnalyzing) {
+    if (analysisMode && engine && !isFullGameAnalyzing && !analysisGlobals.isAnalyzing) {
       const cached = lookupCachedResult();
       if (!cached) {
         // Clear stale results immediately to avoid showing top moves from wrong position
@@ -837,12 +285,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     runAnalysis,
     setAnalysisResult,
   ]);
-
-  useEffect(() => {
-    if (pendingFullGameAnalysis && engine && analysisMode) {
-      analyzeFullGame();
-    }
-  }, [pendingFullGameAnalysis, engine, analysisMode, analyzeFullGame]);
 
   // Heatmap generation
   const heatMap = useMemo(() => {
@@ -921,23 +363,15 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return map;
   }, [showOwnership, analysisResult, currentBoard.signMap.length]);
 
+  // Reset state on game change
   useEffect(() => {
     if (isFirstRenderRef.current) {
       isFirstRenderRef.current = false;
       return;
     }
-    if (isFullGameAnalyzingRef.current) {
-      stopAnalysisRef.current = true;
-      setIsStopping(true);
-    }
+    resetFullGameState();
     setError(null);
-    setIsFullGameAnalyzing(false);
-    setIsStopping(false);
-    setFullGameProgress(0);
-    setFullGameCurrentMove(0);
-    setFullGameTotalMoves(0);
-    setFullGameETA(null);
-  }, [gameId]);
+  }, [gameId, resetFullGameState, setError]);
 
   const value: AIAnalysisContextValue = {
     heatMap,

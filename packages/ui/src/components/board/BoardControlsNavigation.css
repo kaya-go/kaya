@@ -1,0 +1,252 @@
+/* Navigation section */
+.navigation-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  justify-content: center;
+  grid-area: nav;
+  z-index: 10;
+  /* Ensure nav is above players if they overlap due to resize */
+}
+
+.branch-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2px;
+}
+
+.main-nav-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.branch-info-display {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 0.85rem;
+  padding: 2px 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  min-width: 100px;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.branch-info-display:hover {
+  background: var(--bg-hover);
+  border-color: var(--border);
+}
+
+.branch-label {
+  color: var(--muted-foreground);
+  margin-right: 4px;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.branch-current {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.branch-separator {
+  color: var(--muted-foreground);
+  margin: 0 1px;
+}
+
+.branch-total {
+  color: var(--muted-foreground);
+}
+
+.branch-depth {
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-left: 4px;
+  padding: 1px 4px;
+  background: var(--accent-background, rgba(var(--accent-rgb, 59, 130, 246), 0.15));
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.edit-hint-icon {
+  margin-left: 6px;
+  opacity: 0.5;
+  color: var(--muted-foreground);
+}
+
+.branch-info-display:hover .edit-hint-icon {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.branch-edit-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.nav-button {
+  padding: 0.5rem 0.75rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--foreground);
+  transition: all 0.15s ease;
+  min-width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-button:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+}
+
+.nav-button:active:not(:disabled) {
+  background-color: var(--bg-active);
+}
+
+.nav-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.move-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 1rem;
+  min-width: 140px;
+}
+
+.move-number {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.move-number-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.move-number-display:hover .edit-hint-icon {
+  opacity: 1;
+  color: var(--accent);
+}
+
+.branch-info {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  opacity: 0.6;
+}
+
+.editable-value {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  transition: background-color 0.15s;
+}
+
+.editable-value:hover {
+  background-color: var(--bg-hover);
+}
+
+.edit-input {
+  width: 50px;
+  padding: 2px 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--background);
+  color: var(--foreground);
+  text-align: center;
+}
+
+.edit-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.2);
+}
+
+.edit-input-small {
+  width: 35px;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+/* Hide number input spinners */
+.edit-input::-webkit-outer-spin-button,
+.edit-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.edit-input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.current-player {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.current-player-stone {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Branch navigation buttons */
+.branch-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 0.5rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--border);
+}
+
+.branch-nav-button {
+  padding: 0.25rem 0.4rem;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.branch-nav-button:hover {
+  background-color: var(--bg-hover);
+  color: var(--foreground);
+}
+
+.branch-nav-button:active {
+  background-color: var(--bg-active);
+}

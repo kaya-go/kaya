@@ -14,12 +14,11 @@ import type {
 import { buildSGF, orderCorners } from '@kaya/board-recognition';
 import { BoardPreview } from './BoardPreview';
 import { CalibrationToolbar } from './CalibrationToolbar';
-import { useBoardRecognition } from './useBoardRecognition';
+import { PRESET_SIZES, useBoardRecognition } from './useBoardRecognition';
 import { useCanvasInteraction } from './useCanvasInteraction';
 import './BoardRecognitionDialog.css';
-
-type BoardSize = number;
-type CalibrationMode = 'black' | 'white' | 'empty' | null;
+import './BoardRecognitionDialogControls.css';
+import './BoardRecognitionDialogCanvas.css';
 
 interface Props {
   file: File;
@@ -27,15 +26,13 @@ interface Props {
   onClose: () => void;
 }
 
-const PRESET_SIZES: number[] = [9, 13, 19];
-
 export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClose }) => {
   const { t } = useTranslation();
 
-  const [boardSize, setBoardSize] = useState<BoardSize | null>(19);
+  const [boardSize, setBoardSize] = useState<number | null>(19);
   const [detectionBackend, setDetectionBackend] = useState<'classic' | 'moku'>('moku');
   const [mokuThreshold, setMokuThreshold] = useState(0.05);
-  const [calibrationMode, setCalibrationMode] = useState<CalibrationMode>(null);
+  const [calibrationMode, setCalibrationMode] = useState<'black' | 'white' | 'empty' | null>(null);
   const [gridClicks, setGridClicks] = useState<Point[]>([]);
   const [settingGrid, setSettingGrid] = useState(false);
   const [customSizeInput, setCustomSizeInput] = useState('');
@@ -128,14 +125,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   );
 
   const toggleGridMode = useCallback(() => {
-    if (settingGrid) {
-      setSettingGrid(false);
-      setGridClicks([]);
-    } else {
-      setSettingGrid(true);
-      setGridClicks([]);
-      setCalibrationMode(null);
-    }
+    setSettingGrid(prev => !prev);
+    setGridClicks([]);
+    if (!settingGrid) setCalibrationMode(null);
   }, [settingGrid]);
 
   const resetGrid = useCallback(() => {
@@ -189,9 +181,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   );
 
   const handleImport = useCallback(() => {
-    if (!result) return;
-    const baseName = file.name.replace(/\.[^.]+$/, '');
-    onImport(result.sgf, `${baseName}.sgf`);
+    if (result) onImport(result.sgf, `${file.name.replace(/\.[^.]+$/, '')}.sgf`);
   }, [result, file.name, onImport]);
 
   const isCustomSize =

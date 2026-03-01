@@ -1,0 +1,126 @@
+/* ShortcutsTab - Shortcut Controls, Key Button & Reset */
+
+.shortcut-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Shortcut key button */
+.shortcut-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  padding: 6px 12px;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shortcut-key:hover {
+  border-color: var(--accent-color, #007bff);
+  background: var(--bg-tertiary, #f5f5f5);
+}
+
+.shortcut-key.recording {
+  border-color: var(--warning-color, #f59e0b);
+  background: rgba(245, 158, 11, 0.1);
+  animation: pulse 1s infinite;
+}
+
+.shortcut-key.disabled {
+  color: var(--text-tertiary, #999);
+  font-style: italic;
+}
+
+.recording-prompt {
+  color: var(--warning-color, #f59e0b);
+  font-size: 0.8rem;
+}
+
+.disabled-label {
+  font-size: 0.8rem;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Reset button */
+.shortcut-reset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 4px;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.shortcut-reset:hover {
+  background: var(--bg-tertiary, #f5f5f5);
+  color: var(--accent-color, #007bff);
+  border-color: var(--accent-color, #007bff);
+}
+
+/* Tablet responsive (768px - 1024px) */
+@media (max-width: 1024px) {
+  .shortcut-key {
+    min-width: 70px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Mobile responsive (< 768px) */
+@media (max-width: 768px) {
+  .shortcut-controls {
+    justify-content: center;
+  }
+
+  .shortcut-key {
+    flex: 1;
+    max-width: 150px;
+  }
+}
+
+/* Small mobile (< 480px) */
+@media (max-width: 480px) {
+  .shortcut-key {
+    font-size: 0.75rem;
+    min-width: 60px;
+    padding: 5px 8px;
+  }
+
+  .shortcut-reset {
+    width: 24px;
+    height: 24px;
+  }
+
+  .shortcut-reset svg {
+    width: 12px;
+    height: 12px;
+  }
+}

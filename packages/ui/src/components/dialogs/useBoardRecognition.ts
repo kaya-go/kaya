@@ -20,6 +20,8 @@ const RECLASSIFY_DEBOUNCE_MS = 350;
 /** Max dimension for the working image used in warp / classify. */
 const MAX_WORKING_DIM = 1600;
 
+export const PRESET_SIZES: number[] = [9, 13, 19];
+
 /** Load a File into an RGBA pixel buffer, downscaled to maxDim. */
 async function fileToDownscaledImage(
   file: File,

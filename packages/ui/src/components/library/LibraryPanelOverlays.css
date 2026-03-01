@@ -1,0 +1,191 @@
+/**
+ * Library Panel - Context Menu, Drop Zone & Dialog Styles
+ */
+
+/* Context menu */
+.library-context-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 160px;
+  padding: 4px;
+  border-radius: 6px;
+  background: var(--bg-secondary, #1a1a1a);
+  border: 1px solid var(--border-color, #333);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.library-context-menu-header {
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #999);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.library-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-primary, #fff);
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.library-context-menu-item:hover {
+  background: var(--bg-hover, #333);
+}
+
+.library-context-menu-item.danger {
+  color: #ef4444;
+}
+
+.library-context-menu-item.danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.library-context-menu-separator {
+  height: 1px;
+  margin: 4px 0;
+  background: var(--border-color, #333);
+}
+
+.library-context-menu-item-icon {
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.7;
+}
+
+/* Drop zone */
+.library-drop-zone {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed var(--accent-color, #3b82f6);
+  border-radius: 8px;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.library-drop-zone-text {
+  font-size: 14px;
+  color: var(--accent-color, #3b82f6);
+  font-weight: 500;
+}
+
+/* Dialog styles */
+.library-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.library-dialog {
+  min-width: 320px;
+  padding: 20px;
+  border-radius: 8px;
+  background: var(--bg-secondary, #1a1a1a);
+  border: 1px solid var(--border-color, #333);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.library-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text-primary, #fff);
+}
+
+.library-dialog-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 6px;
+  background: var(--bg-primary, #0a0a0a);
+  color: var(--text-primary, #fff);
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 16px;
+}
+
+.library-dialog-input:focus {
+  border-color: var(--accent-color, #3b82f6);
+}
+
+.library-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.library-dialog-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.library-dialog-btn.primary {
+  background: var(--accent-color, #3b82f6);
+  color: white;
+}
+
+.library-dialog-btn.primary:hover {
+  background: var(--accent-hover, #2563eb);
+}
+
+.library-dialog-btn.secondary {
+  background: var(--bg-tertiary, #252525);
+  color: var(--text-primary, #fff);
+}
+
+.library-dialog-btn.secondary:hover {
+  background: var(--bg-hover, #333);
+}
+
+.library-dialog-btn.danger {
+  background: #ef4444;
+  color: white;
+}
+
+.library-dialog-btn.danger:hover {
+  background: #dc2626;
+}
+
+.library-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.library-dialog-header .library-dialog-title {
+  margin-bottom: 0;
+}
+
+.library-dialog-icon {
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+}
+
+.library-dialog-message {
+  color: var(--text-secondary, #999);
+  font-size: 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}

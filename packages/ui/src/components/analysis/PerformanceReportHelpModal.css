@@ -1,0 +1,143 @@
+/* Help Modal Overlay */
+.performance-report-help-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+/* Help Modal */
+.performance-report-help-modal {
+  background: var(--bg-primary, #1e1e1e);
+  border-radius: 12px;
+  max-width: 560px;
+  max-height: 80vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+}
+
+.help-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
+}
+
+.help-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.help-modal-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.help-modal-close:hover {
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.1));
+  color: var(--text-primary);
+}
+
+.help-modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+}
+
+.help-section {
+  margin-bottom: 1.25rem;
+}
+
+.help-section:last-child {
+  margin-bottom: 0;
+}
+
+.help-section h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.help-section p {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.help-category-list {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.help-category-list li {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.help-category-list li span {
+  font-weight: 600;
+}
+
+.help-section.help-note {
+  padding: 0.75rem;
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.1));
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-color, #4a9eff);
+}
+
+.help-section.help-note p {
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+/* Mobile adjustments for help modal */
+@media (max-width: 480px) {
+  .performance-report-help-modal {
+    max-height: 90vh;
+    border-radius: 8px;
+  }
+
+  .help-modal-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .help-modal-content {
+    padding: 0.875rem 1rem;
+  }
+
+  .help-section h4 {
+    font-size: 0.875rem;
+  }
+
+  .help-section p,
+  .help-category-list li {
+    font-size: 0.75rem;
+  }
+}

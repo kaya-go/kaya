@@ -12,109 +12,10 @@ import { useTranslation } from 'react-i18next';
 import { LuPencil } from 'react-icons/lu';
 import { useGameTreeBoard } from '../../contexts/GameTreeContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
+import type { EditableField, TranslatedFieldConfig } from './GameInfoEditorConfig';
+import { FIELD_CONFIG_KEYS, renderTextWithLinks } from './GameInfoEditorConfig';
+import { GameInfoField, PlayerRow } from './GameInfoFields';
 import './GameInfoEditor.css';
-
-// Helper function to detect and render URLs as clickable links
-const renderTextWithLinks = (text: string) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-
-  return parts.map((part, index) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a
-          key={index}
-          href={part}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="game-info-link"
-        >
-          {part}
-        </a>
-      );
-    }
-    return part;
-  });
-};
-
-type EditableField =
-  | 'gameName'
-  | 'date'
-  | 'place'
-  | 'playerBlack'
-  | 'rankBlack'
-  | 'playerWhite'
-  | 'rankWhite'
-  | 'komi'
-  | 'handicap'
-  | 'rules'
-  | 'timeControl'
-  | 'result';
-
-interface FieldConfig {
-  key: EditableField;
-  labelKey: string;
-  placeholderKey: string;
-  type?: 'text' | 'number';
-  step?: string;
-  min?: string;
-  max?: string;
-  alwaysShow?: boolean; // Always show even when empty (like Game, Black, White, Komi)
-  fallbackKey?: string; // Translation key for fallback value in renderValue
-  hasLinkRender?: boolean; // Whether to render value with links
-}
-
-const FIELD_CONFIG_KEYS: FieldConfig[] = [
-  {
-    key: 'gameName',
-    labelKey: 'gameInfo.game',
-    placeholderKey: 'gameInfo.untitled',
-    alwaysShow: true,
-    fallbackKey: 'gameInfo.untitled',
-  },
-  { key: 'date', labelKey: 'gameInfo.date', placeholderKey: 'gameInfo.datePlaceholder' },
-  {
-    key: 'place',
-    labelKey: 'gameInfo.place',
-    placeholderKey: 'gameInfo.placePlaceholder',
-    hasLinkRender: true,
-  },
-  {
-    key: 'playerBlack',
-    labelKey: 'gameInfo.black',
-    placeholderKey: 'gameInfo.black',
-    alwaysShow: true,
-    fallbackKey: 'gameInfo.black',
-  },
-  { key: 'rankBlack', labelKey: 'gameInfo.blackRank', placeholderKey: 'gameInfo.rankPlaceholder' },
-  {
-    key: 'playerWhite',
-    labelKey: 'gameInfo.white',
-    placeholderKey: 'gameInfo.white',
-    alwaysShow: true,
-    fallbackKey: 'gameInfo.white',
-  },
-  { key: 'rankWhite', labelKey: 'gameInfo.whiteRank', placeholderKey: 'gameInfo.rankPlaceholder' },
-  {
-    key: 'komi',
-    labelKey: 'gameInfo.komi',
-    placeholderKey: 'gameInfo.komiPlaceholder',
-    type: 'number',
-    step: '0.5',
-    alwaysShow: true,
-  },
-  {
-    key: 'handicap',
-    labelKey: 'gameInfo.handicap',
-    placeholderKey: 'gameInfo.handicapPlaceholder',
-    type: 'number',
-    min: '0',
-    max: '9',
-  },
-  { key: 'rules', labelKey: 'gameInfo.rules', placeholderKey: 'gameInfo.rulesPlaceholder' },
-  { key: 'timeControl', labelKey: 'gameInfo.time', placeholderKey: 'gameInfo.timePlaceholder' },
-  { key: 'result', labelKey: 'gameInfo.result', placeholderKey: 'gameInfo.resultPlaceholder' },
-];
 
 // Hook to get game info editor state for external header actions
 export const useGameInfoEditMode = () => {
@@ -162,19 +63,6 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   const { t } = useTranslation();
   const { gameInfo, updateGameInfo, gameId } = useGameTreeBoard();
   const { clearAnalysisCache } = useAIAnalysis();
-
-  // Create translated field configs
-  interface TranslatedFieldConfig {
-    key: EditableField;
-    label: string;
-    placeholder: string;
-    type?: 'text' | 'number';
-    step?: string;
-    min?: string;
-    max?: string;
-    alwaysShow?: boolean;
-    renderValue?: (value: string | number | undefined) => React.ReactNode;
-  }
 
   const fieldConfigs: TranslatedFieldConfig[] = useMemo(() => {
     return FIELD_CONFIG_KEYS.map(config => ({
@@ -319,138 +207,46 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
     setEditValue('');
   }, [isEditMode, setIsEditMode]);
 
-  const renderField = (config: TranslatedFieldConfig) => {
-    const value = getFieldValue(config.key);
-    const hasValue = value !== undefined && value !== '' && value !== 0;
-    const isEditing = editingField === config.key;
+  const renderField = (config: TranslatedFieldConfig) => (
+    <GameInfoField
+      key={config.key}
+      config={config}
+      value={getFieldValue(config.key)}
+      isEditMode={isEditMode}
+      isEditing={editingField === config.key}
+      editValue={editValue}
+      inputRef={inputRef}
+      onEditValueChange={setEditValue}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      onFieldClick={handleFieldClick}
+    />
+  );
 
-    // In normal mode, hide empty fields (unless alwaysShow)
-    // In edit mode, show all fields
-    if (!isEditMode && !config.alwaysShow && !hasValue) {
-      return null;
-    }
-
-    // Special handling for handicap - only show if > 0 in non-edit mode
-    if (config.key === 'handicap' && !isEditMode && (!value || value === 0)) {
-      return null;
-    }
-
-    // Determine display value
-    let displayValue: React.ReactNode;
-    if (config.renderValue) {
-      displayValue = config.renderValue(value);
-    } else if (config.key === 'komi') {
-      displayValue = value ?? 6.5;
-    } else {
-      displayValue =
-        value || (isEditMode ? <em className="empty-placeholder">Click to add</em> : null);
-    }
-
-    return (
-      <div key={config.key} className="game-info-row">
-        <strong>{config.label}:</strong>{' '}
-        {isEditing ? (
-          <input
-            ref={inputRef}
-            type={config.type || 'text'}
-            step={config.step}
-            min={config.min}
-            max={config.max}
-            className="inline-edit-input"
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            onKeyUp={e => e.stopPropagation()}
-            onKeyPress={e => e.stopPropagation()}
-            placeholder={config.placeholder}
-          />
-        ) : (
-          <span
-            className={`editable-field ${isEditMode ? 'edit-mode' : ''}`}
-            onClick={() => handleFieldClick(config.key)}
-            title="Click to edit"
-          >
-            {displayValue}
-          </span>
-        )}
-      </div>
-    );
-  };
-
-  // Custom rendering for combined player + rank fields
   const renderPlayerRow = (
     playerKey: 'playerBlack' | 'playerWhite',
     rankKey: 'rankBlack' | 'rankWhite',
     label: string
-  ) => {
-    const playerValue = getFieldValue(playerKey);
-    const rankValue = getFieldValue(rankKey);
-    const isEditingPlayer = editingField === playerKey;
-    const isEditingRank = editingField === rankKey;
-    const playerConfig = fieldConfigs.find(c => c.key === playerKey)!;
-    const rankConfig = fieldConfigs.find(c => c.key === rankKey)!;
-
-    return (
-      <div key={playerKey} className="game-info-row">
-        <strong>{label}:</strong>{' '}
-        {isEditingPlayer ? (
-          <input
-            ref={inputRef}
-            type="text"
-            className="inline-edit-input"
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            onKeyUp={e => e.stopPropagation()}
-            onKeyPress={e => e.stopPropagation()}
-            placeholder={playerConfig.placeholder}
-          />
-        ) : (
-          <span
-            className={`editable-field ${isEditMode ? 'edit-mode' : ''}`}
-            onClick={() => handleFieldClick(playerKey)}
-            title="Click to edit name"
-          >
-            {playerValue || <em>{playerKey === 'playerBlack' ? 'Black' : 'White'}</em>}
-          </span>
-        )}
-        {/* Show rank inline or as separate editable */}
-        {(rankValue || isEditMode) && (
-          <>
-            {' '}
-            {isEditingRank ? (
-              <>
-                (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  className="inline-edit-input inline-edit-input-small"
-                  value={editValue}
-                  onChange={e => setEditValue(e.target.value)}
-                  onBlur={handleBlur}
-                  onKeyDown={handleKeyDown}
-                  onKeyUp={e => e.stopPropagation()}
-                  onKeyPress={e => e.stopPropagation()}
-                  placeholder={rankConfig.placeholder}
-                />
-                )
-              </>
-            ) : (
-              <span
-                className={`editable-field editable-rank ${isEditMode ? 'edit-mode' : ''}`}
-                onClick={() => handleFieldClick(rankKey)}
-                title="Click to edit rank"
-              >
-                ({rankValue || <em>rank</em>})
-              </span>
-            )}
-          </>
-        )}
-      </div>
-    );
-  };
+  ) => (
+    <PlayerRow
+      key={playerKey}
+      playerKey={playerKey}
+      rankKey={rankKey}
+      label={label}
+      playerValue={getFieldValue(playerKey)}
+      rankValue={getFieldValue(rankKey)}
+      playerConfig={fieldConfigs.find(c => c.key === playerKey)!}
+      rankConfig={fieldConfigs.find(c => c.key === rankKey)!}
+      isEditMode={isEditMode}
+      editingField={editingField}
+      editValue={editValue}
+      inputRef={inputRef}
+      onEditValueChange={setEditValue}
+      onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
+      onFieldClick={handleFieldClick}
+    />
+  );
 
   return (
     <div className="game-info-editor">
