@@ -619,6 +619,12 @@
     "markWhite": "Marcar piedra blanca",
     "markEmpty": "Marcar intersección vacía",
     "resetCalibration": "Restablecer calibración",
-    "calibrateHint": "Haz clic en las intersecciones de la vista previa para corregir errores"
+    "calibrateHint": "Haz clic en las intersecciones de la vista previa para corregir errores",
+    "backend": "Detección:",
+    "backendClassic": "Clásico",
+    "backendMoku": "Moku (IA)",
+    "threshold": "Umbral:",
+    "loadingModel": "Cargando modelo de IA…",
+    "mokuError": "Error al cargar el modelo de detección IA"
   }
 }

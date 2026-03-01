@@ -12,6 +12,7 @@ export type {
   RecognitionOptions,
   RecognitionResult,
   StoneColor,
+  MokuRawDetection,
 } from './types';
 
 import type {
@@ -28,10 +29,12 @@ import { classifyIntersections, classifyWithHints } from './stones';
 import { buildSGF } from './sgf';
 
 export { orderCorners, estimateGridInWarped } from './corners';
-export { warpPerspective } from './perspective';
+export { warpPerspective, computeHomography, applyHomography } from './perspective';
 export { classifyIntersections, classifyWithHints } from './stones';
 export { buildSGF } from './sgf';
 export { toGrayscale } from './image';
+export { MokuDetector, mapStonesToGrid, expandCorners } from './moku-detector';
+export type { MokuDetectorConfig, MokuDetectOptions } from './moku-detector';
 
 // ============================================================================
 // Main entry point

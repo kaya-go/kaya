@@ -6,6 +6,7 @@ import {
   recognizeBoard,
   reclassifyWithCorners,
   reclassifyWithHints,
+  MokuDetector,
 } from '@kaya/board-recognition';
 import type {
   RawImage,
@@ -13,6 +14,9 @@ import type {
   CalibrationHint,
   RecognitionOptions,
   RecognitionResult,
+  MokuDetectorConfig,
+  MokuDetectOptions,
+  MokuRawDetection,
 } from '@kaya/board-recognition';
 
 // ── Message protocol ────────────────────────────────────────────────────────
@@ -44,6 +48,23 @@ export type WorkerRequest =
       corners: BoardCorners;
       hints: CalibrationHint[];
       options: RecognitionOptions;
+    }
+  | {
+      type: 'mokuInit';
+      id: number;
+      config?: MokuDetectorConfig;
+    }
+  | {
+      type: 'mokuDetect';
+      id: number;
+      imgBuffer: ArrayBuffer;
+      width: number;
+      height: number;
+      options: MokuDetectOptions;
+    }
+  | {
+      type: 'mokuDispose';
+      id: number;
     };
 
 export interface WorkerResponse {
@@ -61,6 +82,7 @@ export interface SerializedResult {
   sgf: string;
   warpedBuffer: ArrayBuffer;
   warpedSize: number; // width === height
+  mokuRawDetections?: MokuRawDetection[];
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -83,10 +105,15 @@ function serializeResult(r: RecognitionResult): {
       sgf: r.sgf,
       warpedBuffer,
       warpedSize: r.warpedImage.width,
+      mokuRawDetections: r.mokuRawDetections,
     },
     transfer: [warpedBuffer],
   };
 }
+
+// ── Moku detector singleton ──────────────────────────────────────────────────
+
+let mokuDetector: MokuDetector | null = null;
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
@@ -110,6 +137,31 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
         result = await reclassifyWithHints(img, msg.corners, msg.hints, msg.options);
         break;
+      }
+      case 'mokuInit': {
+        mokuDetector?.dispose();
+        mokuDetector = new MokuDetector(msg.config);
+        await mokuDetector.init();
+        (self as unknown as Worker).postMessage({
+          id: msg.id,
+          result: undefined,
+        } satisfies WorkerResponse);
+        return;
+      }
+      case 'mokuDetect': {
+        if (!mokuDetector) throw new Error('Moku detector not initialized');
+        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
+        result = await mokuDetector.detect(img, msg.options);
+        break;
+      }
+      case 'mokuDispose': {
+        mokuDetector?.dispose();
+        mokuDetector = null;
+        (self as unknown as Worker).postMessage({
+          id: msg.id,
+          result: undefined,
+        } satisfies WorkerResponse);
+        return;
       }
       default:
         return;

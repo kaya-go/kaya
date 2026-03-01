@@ -622,6 +622,12 @@
     "markWhite": "白石を指定",
     "markEmpty": "空き交点を指定",
     "resetCalibration": "補正をリセット",
-    "calibrateHint": "プレビュー上の交点をクリックして誤検出を修正"
+    "calibrateHint": "プレビュー上の交点をクリックして誤検出を修正",
+    "backend": "検出方法：",
+    "backendClassic": "クラシック",
+    "backendMoku": "Moku (AI)",
+    "threshold": "閾値：",
+    "loadingModel": "AIモデルを読み込み中…",
+    "mokuError": "AI検出モデルの読み込みに失敗しました"
   }
 }

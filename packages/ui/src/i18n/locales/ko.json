@@ -622,6 +622,12 @@
     "markWhite": "백돌 표시",
     "markEmpty": "빈 교차점 표시",
     "resetCalibration": "보정 초기화",
-    "calibrateHint": "미리보기에서 교차점을 클릭하여 오류를 수정하세요"
+    "calibrateHint": "미리보기에서 교차점을 클릭하여 오류를 수정하세요",
+    "backend": "감지 방식:",
+    "backendClassic": "클래식",
+    "backendMoku": "Moku (AI)",
+    "threshold": "임계값:",
+    "loadingModel": "AI 모델 로딩 중…",
+    "mokuError": "AI 감지 모델 로드 실패"
   }
 }

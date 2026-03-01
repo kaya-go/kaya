@@ -98,13 +98,20 @@ export function invertMatrix3(m: number[]): number[] | null {
 // ============================================================================
 
 /**
- * Warp the input image so that `corners` [TL, TR, BR, BL] maps to a
- * square of size `outSize × outSize`.
+ * Warp the input image so that `corners` [TL, TR, BR, BL] maps to
+ * `dstCorners` within a square of size `outSize × outSize`.
+ *
+ * When `dstCorners` is omitted the corners map to the full output square.
  */
-export function warpPerspective(img: RawImage, corners: BoardCorners, outSize: number): RawImage {
+export function warpPerspective(
+  img: RawImage,
+  corners: BoardCorners,
+  outSize: number,
+  dstCorners?: [Point, Point, Point, Point]
+): RawImage {
   const { data, width, height } = img;
 
-  const dst: [Point, Point, Point, Point] = [
+  const dst: [Point, Point, Point, Point] = dstCorners ?? [
     [0, 0],
     [outSize - 1, 0],
     [outSize - 1, outSize - 1],

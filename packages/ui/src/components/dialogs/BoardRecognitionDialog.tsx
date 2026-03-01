@@ -19,7 +19,7 @@ import type {
   RawImage,
   StoneColor,
 } from '@kaya/board-recognition';
-import { orderCorners } from '@kaya/board-recognition';
+import { orderCorners, buildSGF, warpPerspective, mapStonesToGrid } from '@kaya/board-recognition';
 import { BoardRecognitionWorker } from '../../workers/BoardRecognitionWorker';
 import './BoardRecognitionDialog.css';
 
@@ -130,6 +130,12 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   const [gridClicks, setGridClicks] = useState<Point[]>([]);
   const [settingGrid, setSettingGrid] = useState(false);
 
+  // Detection backend state
+  const [detectionBackend, setDetectionBackend] = useState<'classic' | 'moku'>('moku');
+  const [mokuThreshold, setMokuThreshold] = useState(0.05);
+  const [mokuReady, setMokuReady] = useState(false);
+  const [mokuLoading, setMokuLoading] = useState(false);
+
   // ── Refs ───────────────────────────────────────────────
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,9 +147,12 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   const dragOffsetRef = useRef<[number, number]>([0, 0]);
   const workerRef = useRef<BoardRecognitionWorker | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warpDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reclassifySeqRef = useRef(0);
   const boardSizeRef = useRef<BoardSize | null>(null);
   const gridCornersRef = useRef<BoardCorners | null>(null);
+  const mokuThresholdRef = useRef(0.05);
+  const thresholdDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Worker lifecycle ──────────────────────────────────
   useEffect(() => {
@@ -152,6 +161,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     return () => {
       w.dispose();
       workerRef.current = null;
+      if (thresholdDebounceRef.current) clearTimeout(thresholdDebounceRef.current);
     };
   }, []);
 
@@ -165,6 +175,33 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   useEffect(() => {
     gridCornersRef.current = gridCorners;
   }, [gridCorners]);
+  useEffect(() => {
+    mokuThresholdRef.current = mokuThreshold;
+  }, [mokuThreshold]);
+
+  // ── Init moku detector when backend switches ─────────
+  useEffect(() => {
+    if (detectionBackend !== 'moku' || !workerRef.current || mokuReady) return;
+    let cancelled = false;
+    setMokuLoading(true);
+    workerRef.current
+      .mokuInit()
+      .then(() => {
+        if (!cancelled) {
+          setMokuReady(true);
+          setMokuLoading(false);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMokuLoading(false);
+          setLoadError(t('boardRecognition.mokuError'));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detectionBackend, mokuReady, t]);
 
   // ── Load & downscale image ────────────────────────────
   useEffect(() => {
@@ -193,6 +230,8 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   // ── Run recognition when boardSize + rawImage ready ───
   useEffect(() => {
     if (!rawImage || !boardSize || !workerRef.current) return;
+    if (detectionBackend === 'moku' && !mokuReady) return;
+
     let cancelled = false;
     setAnalyzing(true);
     setResult(null);
@@ -200,14 +239,22 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     setHints([]);
     setCalibrationMode(null);
 
-    workerRef.current
-      .recognizeBoard(rawImage.data, rawImage.width, rawImage.height, { boardSize })
+    const promise =
+      detectionBackend === 'moku'
+        ? workerRef.current.mokuDetect(rawImage.data, rawImage.width, rawImage.height, {
+            boardSize,
+            threshold: mokuThresholdRef.current,
+          })
+        : workerRef.current.recognizeBoard(rawImage.data, rawImage.width, rawImage.height, {
+            boardSize,
+          });
+
+    promise
       .then(r => {
         if (cancelled) return;
         setCorners(r.corners);
         setResult(r);
         setWarpedURL(rawImageToDataURL(r.warpedImage));
-        // Auto-set estimated grid corners so the grid overlay is correctly inset
         if (r.estimatedGridCorners) {
           setGridCorners(r.estimatedGridCorners);
           gridCornersRef.current = r.estimatedGridCorners;
@@ -223,16 +270,112 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     return () => {
       cancelled = true;
     };
-  }, [rawImage, boardSize, t]);
+  }, [rawImage, boardSize, detectionBackend, mokuReady, t]);
+
+  // ── Debounced moku threshold re-detection ────────────
+  const handleMokuThresholdChange = useCallback(
+    (newThreshold: number) => {
+      setMokuThreshold(newThreshold);
+      mokuThresholdRef.current = newThreshold;
+
+      if (
+        detectionBackend !== 'moku' ||
+        !mokuReady ||
+        !rawImage ||
+        !boardSize ||
+        !workerRef.current
+      )
+        return;
+
+      if (thresholdDebounceRef.current) clearTimeout(thresholdDebounceRef.current);
+
+      const seq = ++reclassifySeqRef.current;
+      thresholdDebounceRef.current = setTimeout(() => {
+        if (!workerRef.current) return;
+        setAnalyzing(true);
+
+        workerRef.current
+          .mokuDetect(rawImage.data, rawImage.width, rawImage.height, {
+            boardSize,
+            threshold: newThreshold,
+          })
+          .then(r => {
+            if (reclassifySeqRef.current !== seq) return;
+            setCorners(r.corners);
+            setResult(r);
+            setWarpedURL(rawImageToDataURL(r.warpedImage));
+            if (r.estimatedGridCorners) {
+              setGridCorners(r.estimatedGridCorners);
+              gridCornersRef.current = r.estimatedGridCorners;
+            }
+            setHints([]);
+          })
+          .catch(() => {
+            /* ignore stale/cancelled */
+          })
+          .finally(() => {
+            if (reclassifySeqRef.current === seq) setAnalyzing(false);
+          });
+      }, RECLASSIFY_DEBOUNCE_MS);
+    },
+    [detectionBackend, mokuReady, rawImage, boardSize]
+  );
 
   // ── Debounced reclassify (called after corner drag) ───
   const scheduleReclassify = useCallback(
     (newCorners: BoardCorners) => {
-      if (!rawImage || !boardSize || !workerRef.current) return;
+      if (!rawImage || !boardSize) return;
 
       if (debounceRef.current) clearTimeout(debounceRef.current);
 
       const seq = ++reclassifySeqRef.current;
+
+      // In moku mode: update stones + grid immediately (cheap),
+      // defer the expensive warpPerspective to avoid UI freeze.
+      if (detectionBackend === 'moku' && result?.mokuRawDetections) {
+        if (warpDebounceRef.current) clearTimeout(warpDebounceRef.current);
+
+        const rawDets = result.mokuRawDetections!;
+        const stones = mapStonesToGrid(rawDets, newCorners, boardSize);
+
+        // Inset destination so the board has visible margins in the warped output
+        const WARP_MARGIN = 0.08;
+        const m = Math.round(800 * WARP_MARGIN);
+        const insetDst: [Point, Point, Point, Point] = [
+          [m, m],
+          [799 - m, m],
+          [799 - m, 799 - m],
+          [m, 799 - m],
+        ];
+        const grid: BoardCorners = insetDst;
+
+        // Immediately update stones + grid (no warp yet)
+        const partialResult: RecognitionResult = {
+          ...result,
+          boardSize,
+          stones,
+          corners: newCorners,
+          cornersDetected: true,
+          sgf: buildSGF(boardSize, stones),
+          estimatedGridCorners: grid,
+          mokuRawDetections: rawDets,
+        };
+        setResult(partialResult);
+        setGridCorners(grid);
+        gridCornersRef.current = grid;
+
+        // Defer the expensive warp
+        warpDebounceRef.current = setTimeout(() => {
+          if (reclassifySeqRef.current !== seq) return;
+          const warped = warpPerspective(rawImage, newCorners, 800, insetDst);
+          setResult(prev => (prev ? { ...prev, warpedImage: warped } : prev));
+          setWarpedURL(rawImageToDataURL(warped));
+        }, RECLASSIFY_DEBOUNCE_MS);
+        return;
+      }
+
+      // Classic mode: send to worker
+      if (!workerRef.current) return;
 
       debounceRef.current = setTimeout(() => {
         if (!workerRef.current) return;
@@ -260,7 +403,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
           });
       }, RECLASSIFY_DEBOUNCE_MS);
     },
-    [rawImage, boardSize]
+    [rawImage, boardSize, detectionBackend, result]
   );
 
   // ── Reclassify with hints (called after calibration click) ──
@@ -566,7 +709,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   // ── Preview click for calibration ─────────────────────
   const onPreviewClick = useCallback(
     (col: number, row: number) => {
-      if (!calibrationMode || !boardSize) return;
+      if (!calibrationMode || !boardSize || !result) return;
 
       const color: StoneColor | 'empty' = calibrationMode;
       const newHint: CalibrationHint = { x: col, y: row, color };
@@ -575,9 +718,28 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
       const updated = hints.filter(h => !(h.x === col && h.y === row));
       updated.push(newHint);
       setHints(updated);
-      reclassifyWithHints(updated);
+
+      if (detectionBackend === 'moku') {
+        // In moku mode, apply hints directly to the stones array
+        // without re-running any engine
+        const baseStones = result.stones.filter(
+          s => !updated.some(h => h.x === s.x && h.y === s.y)
+        );
+        const addedStones = updated
+          .filter(h => h.color !== 'empty')
+          .map(h => ({ x: h.x, y: h.y, color: h.color as StoneColor }));
+        const newStones = [...baseStones, ...addedStones];
+        const newResult: RecognitionResult = {
+          ...result,
+          stones: newStones,
+          sgf: buildSGF(result.boardSize as 9 | 13 | 19, newStones),
+        };
+        setResult(newResult);
+      } else {
+        reclassifyWithHints(updated);
+      }
     },
-    [calibrationMode, boardSize, hints, reclassifyWithHints]
+    [calibrationMode, boardSize, hints, reclassifyWithHints, detectionBackend, result]
   );
 
   // ── Import ────────────────────────────────────────────
@@ -618,6 +780,46 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
               {s}×{s}
             </button>
           ))}
+          <span className="brd-size-sep" />
+          <span className="brd-size-label">{t('boardRecognition.backend')}</span>
+          <button
+            className={`brd-size-btn${detectionBackend === 'classic' ? ' active' : ''}`}
+            onClick={() => setDetectionBackend('classic')}
+          >
+            {t('boardRecognition.backendClassic')}
+          </button>
+          <button
+            className={`brd-size-btn${detectionBackend === 'moku' ? ' active' : ''}`}
+            onClick={() => setDetectionBackend('moku')}
+          >
+            {t('boardRecognition.backendMoku')}
+          </button>
+          {detectionBackend === 'moku' && (
+            <>
+              {mokuLoading && (
+                <span className="brd-moku-status brd-moku-loading">
+                  {t('boardRecognition.loadingModel')}
+                </span>
+              )}
+              {mokuReady && (
+                <>
+                  <span className="brd-size-label brd-threshold-label">
+                    {t('boardRecognition.threshold')}
+                  </span>
+                  <input
+                    type="range"
+                    className="brd-threshold-slider"
+                    min={0.01}
+                    max={0.99}
+                    step={0.01}
+                    value={mokuThreshold}
+                    onChange={e => handleMokuThresholdChange(Number(e.target.value))}
+                  />
+                  <span className="brd-threshold-value">{mokuThreshold.toFixed(2)}</span>
+                </>
+              )}
+            </>
+          )}
         </div>
 
         {loadError && <div className="brd-error">{loadError}</div>}

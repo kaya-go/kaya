@@ -619,6 +619,12 @@
     "markWhite": "Segna pietra bianca",
     "markEmpty": "Segna intersezione vuota",
     "resetCalibration": "Reimposta calibrazione",
-    "calibrateHint": "Clicca sulle intersezioni nell'anteprima per correggere gli errori"
+    "calibrateHint": "Clicca sulle intersezioni nell'anteprima per correggere gli errori",
+    "backend": "Rilevamento:",
+    "backendClassic": "Classico",
+    "backendMoku": "Moku (IA)",
+    "threshold": "Soglia:",
+    "loadingModel": "Caricamento modello IA…",
+    "mokuError": "Impossibile caricare il modello di rilevamento IA"
   }
 }

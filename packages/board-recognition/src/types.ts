@@ -51,6 +51,14 @@ export interface RecognitionOptions {
   gridCorners?: BoardCorners;
 }
 
+/** Raw moku detection in original image coordinates (for re-mapping on corner change) */
+export interface MokuRawDetection {
+  cx: number;
+  cy: number;
+  classId: number;
+  score: number;
+}
+
 /** Full recognition result */
 export interface RecognitionResult {
   boardSize: number;
@@ -61,4 +69,6 @@ export interface RecognitionResult {
   warpedImage: RawImage; // for preview
   /** Estimated grid corners within the warped image (inset from board boundary). */
   estimatedGridCorners?: BoardCorners;
+  /** Raw moku detections in image coords (only set by moku backend, for corner re-mapping). */
+  mokuRawDetections?: MokuRawDetection[];
 }

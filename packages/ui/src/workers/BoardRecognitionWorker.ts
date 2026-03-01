@@ -7,6 +7,8 @@ import type {
   CalibrationHint,
   RecognitionOptions,
   RecognitionResult,
+  MokuDetectorConfig,
+  MokuDetectOptions,
 } from '@kaya/board-recognition';
 import type { WorkerRequest, WorkerResponse, SerializedResult } from './boardRecognition.worker';
 
@@ -30,6 +32,7 @@ function deserializeResult(s: SerializedResult): RecognitionResult {
       width: s.warpedSize,
       height: s.warpedSize,
     },
+    mokuRawDetections: s.mokuRawDetections,
   };
 }
 
@@ -51,6 +54,9 @@ export class BoardRecognitionWorker {
         p.reject(new Error(error));
       } else if (result) {
         p.resolve(deserializeResult(result));
+      } else {
+        // mokuInit / mokuDispose return no result
+        p.resolve(undefined as unknown as RecognitionResult);
       }
     };
   }
@@ -149,5 +155,63 @@ export class BoardRecognitionWorker {
       p.reject(new Error('Cancelled'));
     }
     this.pending.clear();
+  }
+
+  // ── Moku detector methods ──────────────────────────────
+
+  /** Initialize the moku ONNX detector (downloads and loads the model). */
+  mokuInit(config?: MokuDetectorConfig): Promise<void> {
+    const id = this.nextId++;
+    return new Promise<void>((resolve, reject) => {
+      this.pending.set(id, {
+        resolve: () => resolve(),
+        reject,
+      } as Pending);
+      this.worker.postMessage({
+        type: 'mokuInit' as const,
+        id,
+        config,
+      });
+    });
+  }
+
+  /** Run moku detection on an image. */
+  mokuDetect(
+    imgData: Uint8ClampedArray,
+    width: number,
+    height: number,
+    options: MokuDetectOptions
+  ): Promise<RecognitionResult> {
+    const id = this.nextId++;
+    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    return new Promise<RecognitionResult>((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage(
+        {
+          type: 'mokuDetect' as const,
+          id,
+          imgBuffer: copy,
+          width,
+          height,
+          options,
+        },
+        [copy]
+      );
+    });
+  }
+
+  /** Dispose the moku detector and free ONNX resources. */
+  mokuDispose(): Promise<void> {
+    const id = this.nextId++;
+    return new Promise<void>((resolve, reject) => {
+      this.pending.set(id, {
+        resolve: () => resolve(),
+        reject,
+      } as Pending);
+      this.worker.postMessage({
+        type: 'mokuDispose' as const,
+        id,
+      });
+    });
   }
 }

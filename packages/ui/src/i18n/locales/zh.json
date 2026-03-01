@@ -622,6 +622,12 @@
     "markWhite": "标记白子",
     "markEmpty": "标记空位",
     "resetCalibration": "重置校准",
-    "calibrateHint": "点击预览中的交叉点以修正误检"
+    "calibrateHint": "点击预览中的交叉点以修正误检",
+    "backend": "检测方式：",
+    "backendClassic": "经典",
+    "backendMoku": "Moku (AI)",
+    "threshold": "阈值：",
+    "loadingModel": "正在加载 AI 模型…",
+    "mokuError": "AI 检测模型加载失败"
   }
 }

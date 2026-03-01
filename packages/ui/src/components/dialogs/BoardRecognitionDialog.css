@@ -92,6 +92,52 @@
   color: var(--accent, #4a9eff);
 }
 
+.brd-size-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color, #444);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.brd-moku-status {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.brd-moku-loading {
+  color: var(--text-secondary, #888);
+  animation: brd-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes brd-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.brd-threshold-label {
+  margin-left: 4px;
+}
+
+.brd-threshold-slider {
+  width: 100px;
+  accent-color: var(--accent, #4a9eff);
+  cursor: pointer;
+}
+
+.brd-threshold-value {
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary, #888);
+  min-width: 2.5em;
+}
+
 /* Body */
 .brd-body {
   display: grid;

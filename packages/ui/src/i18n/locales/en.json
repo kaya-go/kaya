@@ -622,6 +622,12 @@
     "markWhite": "Mark white stone",
     "markEmpty": "Mark empty intersection",
     "resetCalibration": "Reset calibration",
-    "calibrateHint": "Click intersections on the preview to correct misdetections"
+    "calibrateHint": "Click intersections on the preview to correct misdetections",
+    "backend": "Detection:",
+    "backendClassic": "Classic",
+    "backendMoku": "Moku (AI)",
+    "threshold": "Threshold:",
+    "loadingModel": "Loading AI model…",
+    "mokuError": "Failed to load AI detection model"
   }
 }

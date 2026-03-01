@@ -619,6 +619,12 @@
     "markWhite": "Weißen Stein markieren",
     "markEmpty": "Leeren Schnittpunkt markieren",
     "resetCalibration": "Kalibrierung zurücksetzen",
-    "calibrateHint": "Klicken Sie auf Schnittpunkte in der Vorschau, um Fehler zu korrigieren"
+    "calibrateHint": "Klicken Sie auf Schnittpunkte in der Vorschau, um Fehler zu korrigieren",
+    "backend": "Erkennung:",
+    "backendClassic": "Klassisch",
+    "backendMoku": "Moku (KI)",
+    "threshold": "Schwellenwert:",
+    "loadingModel": "KI-Modell wird geladen…",
+    "mokuError": "KI-Erkennungsmodell konnte nicht geladen werden"
   }
 }
