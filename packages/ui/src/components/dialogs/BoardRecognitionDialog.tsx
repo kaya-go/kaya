@@ -261,18 +261,20 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     promise
       .then(r => {
         if (cancelled) return;
+        // Batch all state updates in a single React render pass
         setCorners(r.corners);
         setResult(r);
         if (r.estimatedGridCorners) {
           setGridCorners(r.estimatedGridCorners);
           gridCornersRef.current = r.estimatedGridCorners;
         }
+        setAnalyzing(false);
       })
       .catch(() => {
-        if (!cancelled) setLoadError(t('boardRecognition.analysisError'));
-      })
-      .finally(() => {
-        if (!cancelled) setAnalyzing(false);
+        if (!cancelled) {
+          setLoadError(t('boardRecognition.analysisError'));
+          setAnalyzing(false);
+        }
       });
 
     return () => {
@@ -316,11 +318,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
               gridCornersRef.current = r.estimatedGridCorners;
             }
             setHints([]);
+            setAnalyzing(false);
           })
           .catch(() => {
-            /* ignore stale/cancelled */
-          })
-          .finally(() => {
             if (reclassifySeqRef.current === seq) setAnalyzing(false);
           });
       }, RECLASSIFY_DEBOUNCE_MS);
@@ -410,11 +410,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
               setGridCorners(r.estimatedGridCorners);
               gridCornersRef.current = r.estimatedGridCorners;
             }
+            setAnalyzing(false);
           })
           .catch(() => {
-            /* ignore stale/cancelled */
-          })
-          .finally(() => {
             if (reclassifySeqRef.current === seq) setAnalyzing(false);
           });
       }, RECLASSIFY_DEBOUNCE_MS);
@@ -447,11 +445,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         .then(r => {
           if (reclassifySeqRef.current !== seq) return;
           setResult(r);
+          setAnalyzing(false);
         })
         .catch(() => {
-          /* ignore stale/cancelled */
-        })
-        .finally(() => {
           if (reclassifySeqRef.current === seq) setAnalyzing(false);
         });
     },
@@ -489,11 +485,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         .then(r => {
           if (reclassifySeqRef.current !== seq) return;
           setResult(r);
+          setAnalyzing(false);
         })
         .catch(() => {
-          /* ignore stale/cancelled */
-        })
-        .finally(() => {
           if (reclassifySeqRef.current === seq) setAnalyzing(false);
         });
     },
@@ -583,10 +577,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     }
   }, []);
 
-  // Repaint when corners state changes
-  useEffect(() => {
-    paintCanvas(corners);
-  }, [corners, paintCanvas]);
+  // Repaint when corners state changes (useLayoutEffect to avoid flicker)
   useLayoutEffect(() => {
     paintCanvas(corners);
   }, [corners, paintCanvas]);
@@ -1240,8 +1231,17 @@ const BoardPreview: React.FC<PreviewProps> = ({
     warpedImageRef.current = raw;
 
     let cancelled = false;
-    const pixels = new Uint8ClampedArray(raw.data);
-    const imageData = new ImageData(pixels, raw.width, raw.height);
+    // Use the buffer directly — it's already a valid Uint8ClampedArray
+    // from the transferred worker result, no need to copy 2.5MB
+    const imageData = new ImageData(
+      new Uint8ClampedArray(
+        raw.data.buffer as ArrayBuffer,
+        raw.data.byteOffset,
+        raw.data.byteLength
+      ),
+      raw.width,
+      raw.height
+    );
     createImageBitmap(imageData).then(bmp => {
       if (cancelled) {
         bmp.close();
