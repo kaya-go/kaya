@@ -32,6 +32,7 @@
 - 🌳 **Game Tree** - Visual tree viewer with variation support
 - 📄 **SGF Support** - Import/export games, drag & drop, OGS URL import
 - 🤖 **AI Analysis** - Live win rate, move suggestions, and full game analysis (KataGo via ONNX)
+- 📷 **Board Recognition** - Convert a photo or screenshot of a Go board into a playable game or SGF file
 - ✏️ **Edit Mode** - Add stones, markers, labels, and annotations
 - 🎯 **Score Estimation** - Interactive dead stone marking with territory calculation
 - 📚 **Game Library** - Organize games in folders with local storage
