@@ -7,6 +7,7 @@ import {
   reclassifyWithCorners,
   reclassifyWithHints,
   MokuDetector,
+  warpPerspective,
 } from '@kaya/board-recognition';
 import type {
   RawImage,
@@ -65,12 +66,28 @@ export type WorkerRequest =
   | {
       type: 'mokuDispose';
       id: number;
+    }
+  | {
+      type: 'warpOnly';
+      id: number;
+      imgBuffer: ArrayBuffer;
+      width: number;
+      height: number;
+      corners: [number, number][];
+      outputSize: number;
+      insetDst?: [[number, number], [number, number], [number, number], [number, number]];
     };
 
 export interface WorkerResponse {
   id: number;
   result?: SerializedResult;
   error?: string;
+}
+
+/** Progress update sent during model download. */
+export interface WorkerProgress {
+  type: 'mokuProgress';
+  progress: number; // 0..1
 }
 
 /** Serializable version of RecognitionResult (warpedImage sent as buffer). */
@@ -140,7 +157,16 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       }
       case 'mokuInit': {
         mokuDetector?.dispose();
-        mokuDetector = new MokuDetector(msg.config);
+        const config = {
+          ...msg.config,
+          onProgress: (progress: number) => {
+            (self as unknown as Worker).postMessage({
+              type: 'mokuProgress',
+              progress,
+            } satisfies WorkerProgress);
+          },
+        };
+        mokuDetector = new MokuDetector(config);
         await mokuDetector.init();
         (self as unknown as Worker).postMessage({
           id: msg.id,
@@ -161,6 +187,28 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
           id: msg.id,
           result: undefined,
         } satisfies WorkerResponse);
+        return;
+      }
+      case 'warpOnly': {
+        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
+        const corners = msg.corners as import('@kaya/board-recognition').BoardCorners;
+        const warped = warpPerspective(img, corners, msg.outputSize, msg.insetDst);
+        const warpedBuffer = warped.data.buffer as ArrayBuffer;
+        (self as unknown as Worker).postMessage(
+          {
+            id: msg.id,
+            result: {
+              boardSize: 0,
+              stones: [],
+              corners,
+              cornersDetected: true,
+              sgf: '',
+              warpedBuffer,
+              warpedSize: warped.width,
+            },
+          } satisfies WorkerResponse,
+          [warpedBuffer]
+        );
         return;
       }
       default:

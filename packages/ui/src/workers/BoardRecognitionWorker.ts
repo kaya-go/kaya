@@ -10,7 +10,12 @@ import type {
   MokuDetectorConfig,
   MokuDetectOptions,
 } from '@kaya/board-recognition';
-import type { WorkerRequest, WorkerResponse, SerializedResult } from './boardRecognition.worker';
+import type {
+  WorkerRequest,
+  WorkerResponse,
+  SerializedResult,
+  WorkerProgress,
+} from './boardRecognition.worker';
 
 // Re-export for convenience
 export type { SerializedResult };
@@ -40,13 +45,20 @@ export class BoardRecognitionWorker {
   private worker: Worker;
   private nextId = 1;
   private pending = new Map<number, Pending>();
+  private progressCallback: ((progress: number) => void) | null = null;
 
   constructor() {
     this.worker = new Worker(new URL('./boardRecognition.worker.js', import.meta.url), {
       type: 'module',
     });
-    this.worker.onmessage = (e: MessageEvent<WorkerResponse>) => {
-      const { id, result, error } = e.data;
+    this.worker.onmessage = (e: MessageEvent<WorkerResponse | WorkerProgress>) => {
+      const data = e.data;
+      // Handle progress updates
+      if ('type' in data && data.type === 'mokuProgress') {
+        this.progressCallback?.(data.progress);
+        return;
+      }
+      const { id, result, error } = data as WorkerResponse;
       const p = this.pending.get(id);
       if (!p) return;
       this.pending.delete(id);
@@ -160,12 +172,19 @@ export class BoardRecognitionWorker {
   // ── Moku detector methods ──────────────────────────────
 
   /** Initialize the moku ONNX detector (downloads and loads the model). */
-  mokuInit(config?: MokuDetectorConfig): Promise<void> {
+  mokuInit(config?: MokuDetectorConfig, onProgress?: (progress: number) => void): Promise<void> {
+    this.progressCallback = onProgress ?? null;
     const id = this.nextId++;
     return new Promise<void>((resolve, reject) => {
       this.pending.set(id, {
-        resolve: () => resolve(),
-        reject,
+        resolve: () => {
+          this.progressCallback = null;
+          resolve();
+        },
+        reject: err => {
+          this.progressCallback = null;
+          reject(err);
+        },
       } as Pending);
       this.worker.postMessage({
         type: 'mokuInit' as const,
@@ -212,6 +231,35 @@ export class BoardRecognitionWorker {
         type: 'mokuDispose' as const,
         id,
       });
+    });
+  }
+
+  /** Warp the image only (no stone detection). Used during corner dragging. */
+  warpOnly(
+    imgData: Uint8ClampedArray,
+    width: number,
+    height: number,
+    corners: BoardCorners,
+    outputSize: number,
+    insetDst?: [[number, number], [number, number], [number, number], [number, number]]
+  ): Promise<RecognitionResult> {
+    const id = this.nextId++;
+    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    return new Promise<RecognitionResult>((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage(
+        {
+          type: 'warpOnly' as const,
+          id,
+          imgBuffer: copy,
+          width,
+          height,
+          corners,
+          outputSize,
+          insetDst,
+        },
+        [copy]
+      );
     });
   }
 }

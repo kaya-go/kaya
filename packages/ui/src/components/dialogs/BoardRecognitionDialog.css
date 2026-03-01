@@ -64,6 +64,54 @@
   flex-wrap: wrap;
 }
 
+/* ── Progress bar for model download ── */
+.brd-progress-bar-wrap {
+  height: 3px;
+  background: var(--border-color, #333);
+  flex-shrink: 0;
+}
+
+.brd-progress-bar {
+  height: 100%;
+  background: var(--accent, #4a9eff);
+  transition: width 0.2s ease;
+}
+
+.brd-size-custom-input {
+  width: 70px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 2px solid var(--border-color, #444);
+  background: var(--input-bg, #2a2a2a);
+  color: var(--text-primary, #e0e0e0);
+  font-size: 0.9rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.brd-size-custom-input:focus {
+  border-color: var(--accent, #4a9eff);
+  outline: none;
+}
+/* Hide spinner arrows */
+.brd-size-custom-input::-webkit-inner-spin-button,
+.brd-size-custom-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.brd-size-custom-input {
+  -moz-appearance: textfield;
+}
+
+.brd-size-custom-input-inline {
+  width: 56px;
+  padding: 5px 6px;
+  font-size: 0.85rem;
+}
+.brd-size-custom-input-inline.active {
+  border-color: var(--accent, #4a9eff);
+  background: rgba(74, 158, 255, 0.18);
+}
+
 .brd-size-label {
   font-size: 0.85rem;
   color: var(--text-secondary, #888);
@@ -170,6 +218,7 @@
 }
 
 .brd-canvas-wrap {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -187,6 +236,7 @@
 }
 
 .brd-preview-wrap {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -328,6 +378,46 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Subtle overlay spinner for moku detection */
+.brd-moku-overlay-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+  border-radius: 4px;
+}
+.brd-moku-overlay-spinner::after {
+  content: '';
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--accent, #4a9eff);
+  border-radius: 50%;
+  animation: brd-spin 0.7s linear infinite;
+}
+
+/* Small spinner on the photo panel corner during warping */
+.brd-canvas-wrap.warping {
+  cursor: progress;
+}
+.brd-canvas-wrap.warping::after {
+  content: '';
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--accent, #4a9eff);
+  border-radius: 50%;
+  animation: brd-spin 0.7s linear infinite;
+  pointer-events: none;
+  z-index: 2;
 }
 
 .brd-placeholder {

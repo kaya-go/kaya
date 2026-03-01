@@ -19,15 +19,16 @@ import type {
   RawImage,
   StoneColor,
 } from '@kaya/board-recognition';
-import { orderCorners, buildSGF, warpPerspective, mapStonesToGrid } from '@kaya/board-recognition';
+import { orderCorners, buildSGF, mapStonesToGrid } from '@kaya/board-recognition';
 import { BoardRecognitionWorker } from '../../workers/BoardRecognitionWorker';
+import { isTauriApp } from '../../services/fileSave';
 import './BoardRecognitionDialog.css';
 
 // ──────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────
 
-type BoardSize = 9 | 13 | 19;
+type BoardSize = number;
 type CalibrationMode = 'black' | 'white' | 'empty' | null;
 
 interface Props {
@@ -82,17 +83,6 @@ async function fileToDownscaledImage(
   });
 }
 
-function rawImageToDataURL(raw: RawImage): string {
-  const canvas = document.createElement('canvas');
-  canvas.width = raw.width;
-  canvas.height = raw.height;
-  const ctx = canvas.getContext('2d')!;
-  const id = ctx.createImageData(raw.width, raw.height);
-  id.data.set(raw.data);
-  ctx.putImageData(id, 0, 0);
-  return canvas.toDataURL();
-}
-
 /** Check if a mouse position is near any corner handle. */
 function nearCornerIdx(mx: number, my: number, corners: BoardCorners, hitRadius: number): number {
   for (let i = 0; i < 4; i++) {
@@ -110,16 +100,15 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   const { t } = useTranslation();
 
   // ── State ──────────────────────────────────────────────
-  const [boardSize, setBoardSize] = useState<BoardSize | null>(null);
+  const [boardSize, setBoardSize] = useState<BoardSize | null>(19);
   const [rawImage, setRawImage] = useState<RawImage | null>(null);
   const [objectURL, setObjectURL] = useState<string | null>(null);
   const [corners, setCorners] = useState<BoardCorners | null>(null);
   const [result, setResult] = useState<RecognitionResult | null>(null);
-  const [warpedURL, setWarpedURL] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [warping, setWarping] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [canvasCursor, setCanvasCursor] = useState('default');
+  const dragIdxRef = useRef<number | null>(null);
 
   // Calibration state
   const [calibrationMode, setCalibrationMode] = useState<CalibrationMode>(null);
@@ -135,12 +124,16 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   const [mokuThreshold, setMokuThreshold] = useState(0.05);
   const [mokuReady, setMokuReady] = useState(false);
   const [mokuLoading, setMokuLoading] = useState(false);
+  const [mokuProgress, setMokuProgress] = useState(0);
+  const [customSizeInput, setCustomSizeInput] = useState('');
+  const [customSizeActive, setCustomSizeActive] = useState(false);
 
   // ── Refs ───────────────────────────────────────────────
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const scaleRef = useRef(1); // canvas pixel scale (rawImage → canvas px), used in paintCanvas
   const imgRef = useRef<HTMLImageElement | null>(null);
+  const bgBitmapRef = useRef<ImageBitmap | null>(null); // cached scaled bitmap for fast repaints
   const rawDimsRef = useRef({ width: 1, height: 1 });
   const objectURLRef = useRef<string | null>(null);
   const cornersRef = useRef<BoardCorners | null>(null);
@@ -184,17 +177,34 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     if (detectionBackend !== 'moku' || !workerRef.current || mokuReady) return;
     let cancelled = false;
     setMokuLoading(true);
+    setMokuProgress(0);
+
+    // Compute wasmPath — match AIEngineContext pattern for Tauri compatibility
+    const envPrefix = (import.meta as any).env?.VITE_ASSET_PREFIX;
+    let wasmPath: string;
+    if (isTauriApp()) {
+      wasmPath = '/wasm/';
+    } else if (envPrefix && envPrefix !== '/') {
+      wasmPath = envPrefix.endsWith('/') ? `${envPrefix}wasm/` : `${envPrefix}/wasm/`;
+    } else {
+      wasmPath = new URL('wasm/', document.baseURI || window.location.href).href;
+    }
+
     workerRef.current
-      .mokuInit()
+      .mokuInit({ wasmPath }, progress => {
+        if (!cancelled) setMokuProgress(progress);
+      })
       .then(() => {
         if (!cancelled) {
           setMokuReady(true);
           setMokuLoading(false);
+          setMokuProgress(1);
         }
       })
       .catch(() => {
         if (!cancelled) {
           setMokuLoading(false);
+          setMokuProgress(0);
           setLoadError(t('boardRecognition.mokuError'));
         }
       });
@@ -235,7 +245,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     let cancelled = false;
     setAnalyzing(true);
     setResult(null);
-    setWarpedURL(null);
     setHints([]);
     setCalibrationMode(null);
 
@@ -254,7 +263,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         if (cancelled) return;
         setCorners(r.corners);
         setResult(r);
-        setWarpedURL(rawImageToDataURL(r.warpedImage));
         if (r.estimatedGridCorners) {
           setGridCorners(r.estimatedGridCorners);
           gridCornersRef.current = r.estimatedGridCorners;
@@ -303,7 +311,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
             if (reclassifySeqRef.current !== seq) return;
             setCorners(r.corners);
             setResult(r);
-            setWarpedURL(rawImageToDataURL(r.warpedImage));
             if (r.estimatedGridCorners) {
               setGridCorners(r.estimatedGridCorners);
               gridCornersRef.current = r.estimatedGridCorners;
@@ -364,12 +371,22 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         setGridCorners(grid);
         gridCornersRef.current = grid;
 
-        // Defer the expensive warp
+        // Defer the expensive warp to the worker
         warpDebounceRef.current = setTimeout(() => {
-          if (reclassifySeqRef.current !== seq) return;
-          const warped = warpPerspective(rawImage, newCorners, 800, insetDst);
-          setResult(prev => (prev ? { ...prev, warpedImage: warped } : prev));
-          setWarpedURL(rawImageToDataURL(warped));
+          if (reclassifySeqRef.current !== seq || !workerRef.current) return;
+          setWarping(true);
+          workerRef.current
+            .warpOnly(rawImage.data, rawImage.width, rawImage.height, newCorners, 800, insetDst)
+            .then(r => {
+              if (reclassifySeqRef.current !== seq) return;
+              setResult(prev => (prev ? { ...prev, warpedImage: r.warpedImage } : prev));
+            })
+            .catch(() => {
+              /* ignore stale/cancelled */
+            })
+            .finally(() => {
+              if (reclassifySeqRef.current === seq) setWarping(false);
+            });
         }, RECLASSIFY_DEBOUNCE_MS);
         return;
       }
@@ -388,7 +405,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
           .then(r => {
             if (reclassifySeqRef.current !== seq) return;
             setResult(r);
-            setWarpedURL(rawImageToDataURL(r.warpedImage));
             // Restore estimated grid inset for the new warp
             if (r.estimatedGridCorners) {
               setGridCorners(r.estimatedGridCorners);
@@ -431,7 +447,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         .then(r => {
           if (reclassifySeqRef.current !== seq) return;
           setResult(r);
-          setWarpedURL(rawImageToDataURL(r.warpedImage));
         })
         .catch(() => {
           /* ignore stale/cancelled */
@@ -474,7 +489,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         .then(r => {
           if (reclassifySeqRef.current !== seq) return;
           setResult(r);
-          setWarpedURL(rawImageToDataURL(r.warpedImage));
         })
         .catch(() => {
           /* ignore stale/cancelled */
@@ -490,6 +504,8 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   useEffect(() => {
     if (!objectURL) return;
     imgRef.current = null;
+    bgBitmapRef.current?.close();
+    bgBitmapRef.current = null;
     const img = new Image();
     img.onload = () => {
       imgRef.current = img;
@@ -520,10 +536,26 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     if (canvas.width !== dw || canvas.height !== dh) {
       canvas.width = dw;
       canvas.height = dh;
+      // Invalidate cached bitmap when canvas dimensions change
+      bgBitmapRef.current?.close();
+      bgBitmapRef.current = null;
     }
 
     const ctx = canvas.getContext('2d')!;
-    ctx.drawImage(img, 0, 0, dw, dh);
+
+    // Use cached bitmap for fast redraws during corner dragging
+    if (bgBitmapRef.current) {
+      ctx.drawImage(bgBitmapRef.current, 0, 0);
+    } else {
+      ctx.drawImage(img, 0, 0, dw, dh);
+      // Cache the background as an ImageBitmap for subsequent fast repaints
+      if (typeof createImageBitmap !== 'undefined') {
+        createImageBitmap(canvas).then(bmp => {
+          bgBitmapRef.current?.close();
+          bgBitmapRef.current = bmp;
+        });
+      }
+    }
 
     if (currentCorners) {
       const pts = currentCorners.map(([x, y]: [number, number]) => [x * scale, y * scale]);
@@ -573,26 +605,31 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
     ];
   }, []);
 
+  const setCursor = useCallback((cursor: string) => {
+    const c = canvasRef.current;
+    if (c) c.style.cursor = cursor;
+  }, []);
+
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!cornersRef.current) return;
       const canvas = canvasRef.current!;
       const rect = canvas.getBoundingClientRect();
       const { width: rawW } = rawDimsRef.current;
-      const cssToRaw = rawW / rect.width; // pixels per CSS pixel
+      const cssToRaw = rawW / rect.width;
       const [mx, my] = getImagePos(e);
       const hr = CORNER_HIT_RADIUS * cssToRaw;
       const idx = nearCornerIdx(mx, my, cornersRef.current, hr);
       if (idx >= 0) {
         const [cx, cy] = cornersRef.current[idx];
         dragOffsetRef.current = [cx - mx, cy - my];
-        setDragIdx(idx);
-        setCanvasCursor('grabbing');
+        dragIdxRef.current = idx;
+        setCursor('grabbing');
         (e.target as HTMLElement).setPointerCapture(e.pointerId);
         e.preventDefault();
       }
     },
-    [getImagePos]
+    [getImagePos, setCursor]
   );
 
   const onPointerMove = useCallback(
@@ -601,15 +638,16 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
       const rect = canvas?.getBoundingClientRect();
       const { width: rawW } = rawDimsRef.current;
       const cssToRaw = rect ? rawW / rect.width : 1;
+      const di = dragIdxRef.current;
 
-      if (dragIdx === null && cornersRef.current) {
+      if (di === null && cornersRef.current) {
         const [mx, my] = getImagePos(e);
         const hr = CORNER_HIT_RADIUS * cssToRaw;
         const idx = nearCornerIdx(mx, my, cornersRef.current, hr);
-        setCanvasCursor(idx >= 0 ? 'grab' : 'crosshair');
+        setCursor(idx >= 0 ? 'grab' : 'crosshair');
       }
 
-      if (dragIdx === null || !cornersRef.current || !rawImage) return;
+      if (di === null || !cornersRef.current || !rawImage) return;
       e.preventDefault();
       const [mx, my] = getImagePos(e);
       const [ox, oy] = dragOffsetRef.current;
@@ -618,31 +656,29 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         Math.max(0, Math.min(rawImage.height - 1, my + oy)),
       ];
       const updated = [...cornersRef.current] as BoardCorners;
-      updated[dragIdx] = clamped;
+      updated[di] = clamped;
       cornersRef.current = updated;
       paintCanvas(updated);
     },
-    [dragIdx, rawImage, paintCanvas, getImagePos]
+    [rawImage, paintCanvas, getImagePos, setCursor]
   );
 
   const onPointerUp = useCallback(
     (_e: React.PointerEvent) => {
-      if (dragIdx === null) return;
-      setDragIdx(null);
-      setCanvasCursor('crosshair');
+      if (dragIdxRef.current === null) return;
+      dragIdxRef.current = null;
+      setCursor('crosshair');
       const finalCorners = cornersRef.current;
       if (finalCorners) {
         const ordered = orderCorners(finalCorners);
         setCorners(ordered);
-        // Clear hints and user grid clicks — they're no longer valid for the new warp.
-        // gridCorners will be auto-reset to the new estimate by scheduleReclassify callback.
         setHints([]);
         setGridClicks([]);
         setSettingGrid(false);
         scheduleReclassify(ordered);
       }
     },
-    [dragIdx, scheduleReclassify]
+    [scheduleReclassify, setCursor]
   );
 
   // ── Grid corner click handler (phase 2) ───────────────
@@ -732,7 +768,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
         const newResult: RecognitionResult = {
           ...result,
           stones: newStones,
-          sgf: buildSGF(result.boardSize as 9 | 13 | 19, newStones),
+          sgf: buildSGF(result.boardSize, newStones),
         };
         setResult(newResult);
       } else {
@@ -750,7 +786,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
   }, [result, file.name, onImport]);
 
   // ── Board size buttons ────────────────────────────────
-  const SIZES: BoardSize[] = [9, 13, 19];
+  const PRESET_SIZES: number[] = [9, 13, 19];
+  const isCustomSize =
+    customSizeActive || (boardSize !== null && !PRESET_SIZES.includes(boardSize));
 
   return (
     <div
@@ -768,37 +806,68 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
           </button>
         </div>
 
-        {/* Board size selector */}
+        {/* Board size + backend selector — always inline */}
         <div className="brd-size-row">
           <span className="brd-size-label">{t('boardRecognition.selectSize')}</span>
-          {SIZES.map(s => (
+          {PRESET_SIZES.map(s => (
             <button
               key={s}
-              className={`brd-size-btn${boardSize === s ? ' active' : ''}`}
-              onClick={() => setBoardSize(s)}
+              className={`brd-size-btn${boardSize === s && !isCustomSize ? ' active' : ''}`}
+              onClick={() => {
+                setBoardSize(s);
+                setCustomSizeActive(false);
+                setCustomSizeInput('');
+              }}
             >
               {s}×{s}
             </button>
           ))}
+          <input
+            type="number"
+            className={`brd-size-custom-input brd-size-custom-input-inline${isCustomSize ? ' active' : ''}`}
+            min={2}
+            max={52}
+            placeholder={t('boardRecognition.customSize')}
+            value={
+              isCustomSize
+                ? customSizeInput ||
+                  (boardSize && !PRESET_SIZES.includes(boardSize) ? String(boardSize) : '')
+                : ''
+            }
+            onFocus={() => setCustomSizeActive(true)}
+            onBlur={() => {
+              if (!customSizeInput) setCustomSizeActive(false);
+            }}
+            onChange={e => {
+              const val = e.target.value;
+              setCustomSizeInput(val);
+              setCustomSizeActive(true);
+              const n = parseInt(val, 10);
+              if (n >= 2 && n <= 52) setBoardSize(n);
+            }}
+          />
           <span className="brd-size-sep" />
           <span className="brd-size-label">{t('boardRecognition.backend')}</span>
-          <button
-            className={`brd-size-btn${detectionBackend === 'classic' ? ' active' : ''}`}
-            onClick={() => setDetectionBackend('classic')}
-          >
-            {t('boardRecognition.backendClassic')}
-          </button>
           <button
             className={`brd-size-btn${detectionBackend === 'moku' ? ' active' : ''}`}
             onClick={() => setDetectionBackend('moku')}
           >
             {t('boardRecognition.backendMoku')}
           </button>
+          <button
+            className={`brd-size-btn${detectionBackend === 'classic' ? ' active' : ''}`}
+            onClick={() => setDetectionBackend('classic')}
+          >
+            {t('boardRecognition.backendClassic')}
+          </button>
           {detectionBackend === 'moku' && (
             <>
               {mokuLoading && (
                 <span className="brd-moku-status brd-moku-loading">
                   {t('boardRecognition.loadingModel')}
+                  {mokuProgress > 0 && mokuProgress < 1 && (
+                    <> ({Math.round(mokuProgress * 100)}%)</>
+                  )}
                 </span>
               )}
               {mokuReady && (
@@ -821,6 +890,12 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
             </>
           )}
         </div>
+        {/* Progress bar for model download */}
+        {mokuLoading && mokuProgress > 0 && mokuProgress < 1 && (
+          <div className="brd-progress-bar-wrap">
+            <div className="brd-progress-bar" style={{ width: `${mokuProgress * 100}%` }} />
+          </div>
+        )}
 
         {loadError && <div className="brd-error">{loadError}</div>}
 
@@ -828,13 +903,13 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
           {/* Left: original image with draggable corners */}
           <div className="brd-panel brd-panel-photo">
             <div className="brd-panel-title">{t('boardRecognition.photo')}</div>
-            <div className="brd-canvas-wrap" ref={containerRef}>
+            <div className={`brd-canvas-wrap${warping ? ' warping' : ''}`} ref={containerRef}>
               {objectURL ? (
                 <canvas
                   ref={canvasRef}
                   className="brd-canvas"
                   style={{
-                    cursor: dragIdx !== null ? 'grabbing' : corners ? canvasCursor : 'default',
+                    cursor: corners ? 'crosshair' : 'default',
                     touchAction: 'none',
                   }}
                   onPointerDown={onPointerDown}
@@ -852,7 +927,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
           <div className="brd-panel brd-panel-preview">
             <div className="brd-panel-title">{t('boardRecognition.preview')}</div>
             <div className="brd-preview-wrap">
-              {analyzing && (
+              {analyzing && !(detectionBackend === 'moku' && result) && (
                 <div className="brd-analyzing">
                   <div className="brd-spinner" />
                   <span>{t('boardRecognition.analyzing')}</span>
@@ -861,19 +936,24 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
               {!analyzing && !boardSize && (
                 <div className="brd-placeholder">{t('boardRecognition.chooseSizeFirst')}</div>
               )}
-              {!analyzing && boardSize && warpedURL && result && (
-                <BoardPreview
-                  warpedURL={warpedURL}
-                  result={result}
-                  hints={hints}
-                  calibrationMode={calibrationMode}
-                  onIntersectionClick={onPreviewClick}
-                  gridCorners={gridCorners}
-                  settingGrid={settingGrid}
-                  gridClicks={gridClicks}
-                  onGridClick={onGridClick}
-                />
-              )}
+              {((!analyzing && boardSize) || (analyzing && detectionBackend === 'moku')) &&
+                result && (
+                  <>
+                    <BoardPreview
+                      result={result}
+                      hints={hints}
+                      calibrationMode={calibrationMode}
+                      onIntersectionClick={onPreviewClick}
+                      gridCorners={gridCorners}
+                      settingGrid={settingGrid}
+                      gridClicks={gridClicks}
+                      onGridClick={onGridClick}
+                    />
+                    {(analyzing || warping) && detectionBackend === 'moku' && (
+                      <div className="brd-moku-overlay-spinner" />
+                    )}
+                  </>
+                )}
             </div>
 
             {/* Grid alignment + Calibration toolbar + stats */}
@@ -891,24 +971,30 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
                   )}
                 </div>
                 <div className="brd-calibration-row">
-                  <span className="brd-calibration-label">{t('boardRecognition.alignGrid')}</span>
-                  <button
-                    className={`brd-cal-btn brd-cal-grid${settingGrid ? ' active' : ''}`}
-                    onClick={toggleGridMode}
-                    title={t('boardRecognition.alignGrid')}
-                  >
-                    ⊞
-                  </button>
-                  {gridCorners && (
-                    <button
-                      className="brd-cal-btn brd-cal-reset"
-                      onClick={resetGrid}
-                      title={t('boardRecognition.resetGrid')}
-                    >
-                      ↺
-                    </button>
+                  {detectionBackend !== 'moku' && (
+                    <>
+                      <span className="brd-calibration-label">
+                        {t('boardRecognition.alignGrid')}
+                      </span>
+                      <button
+                        className={`brd-cal-btn brd-cal-grid${settingGrid ? ' active' : ''}`}
+                        onClick={toggleGridMode}
+                        title={t('boardRecognition.alignGrid')}
+                      >
+                        ⊞
+                      </button>
+                      {gridCorners && (
+                        <button
+                          className="brd-cal-btn brd-cal-reset"
+                          onClick={resetGrid}
+                          title={t('boardRecognition.resetGrid')}
+                        >
+                          ↺
+                        </button>
+                      )}
+                      <span className="brd-calibration-sep" />
+                    </>
                   )}
-                  <span className="brd-calibration-sep" />
                   <span className="brd-calibration-label">{t('boardRecognition.calibrate')}</span>
                   <button
                     className={`brd-cal-btn brd-cal-black${calibrationMode === 'black' ? ' active' : ''}`}
@@ -994,7 +1080,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({ file, onImport, onClos
 // ──────────────────────────────────────────────────────────
 
 interface PreviewProps {
-  warpedURL: string;
   result: RecognitionResult;
   hints: CalibrationHint[];
   calibrationMode: CalibrationMode;
@@ -1029,7 +1114,6 @@ function gridToCanvas(
 }
 
 const BoardPreview: React.FC<PreviewProps> = ({
-  warpedURL,
   result,
   hints,
   calibrationMode,
@@ -1040,133 +1124,161 @@ const BoardPreview: React.FC<PreviewProps> = ({
   onGridClick,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const imgCacheRef = useRef<HTMLImageElement | null>(null);
+  const bitmapRef = useRef<ImageBitmap | null>(null);
+  const warpedImageRef = useRef<RawImage | null>(null);
+  const paintRef = useRef<() => void>(() => {});
 
-  const paint = useCallback(
-    (img: HTMLImageElement) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const size = canvas.clientWidth || 360;
+  const paintCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = bitmapRef.current;
+    if (!canvas || !img) return;
+    const size = canvas.clientWidth || 360;
+    if (canvas.width !== size || canvas.height !== size) {
       canvas.width = size;
       canvas.height = size;
-      const ctx = canvas.getContext('2d')!;
-      const scale = size / WARP_SIZE;
+    }
+    const ctx = canvas.getContext('2d')!;
+    const scale = size / WARP_SIZE;
 
-      ctx.drawImage(img, 0, 0, size, size);
+    ctx.drawImage(img, 0, 0, size, size);
 
-      const bs = result.boardSize;
+    const bs = result.boardSize;
 
-      // Grid overlay (bright blue)
-      ctx.strokeStyle = 'rgba(0, 140, 255, 0.5)';
-      ctx.lineWidth = 0.8;
+    // Grid overlay (bright blue)
+    ctx.strokeStyle = 'rgba(0, 140, 255, 0.5)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    for (let i = 0; i < bs; i++) {
+      const [hx0, hy0] = gridToCanvas(0, i, bs, scale, gridCorners);
+      const [hx1, hy1] = gridToCanvas(bs - 1, i, bs, scale, gridCorners);
+      ctx.moveTo(hx0, hy0);
+      ctx.lineTo(hx1, hy1);
+      const [vx0, vy0] = gridToCanvas(i, 0, bs, scale, gridCorners);
+      const [vx1, vy1] = gridToCanvas(i, bs - 1, bs, scale, gridCorners);
+      ctx.moveTo(vx0, vy0);
+      ctx.lineTo(vx1, vy1);
+    }
+    ctx.stroke();
+
+    // Draw detected stones
+    const cellPx = ((WARP_SIZE - 1) / (bs - 1)) * scale;
+    const r = Math.max(3, cellPx * 0.3);
+    for (const stone of result.stones) {
+      const [cx, cy] = gridToCanvas(stone.x, stone.y, bs, scale, gridCorners);
       ctx.beginPath();
-      for (let i = 0; i < bs; i++) {
-        const [hx0, hy0] = gridToCanvas(0, i, bs, scale, gridCorners);
-        const [hx1, hy1] = gridToCanvas(bs - 1, i, bs, scale, gridCorners);
-        ctx.moveTo(hx0, hy0);
-        ctx.lineTo(hx1, hy1);
-        const [vx0, vy0] = gridToCanvas(i, 0, bs, scale, gridCorners);
-        const [vx1, vy1] = gridToCanvas(i, bs - 1, bs, scale, gridCorners);
-        ctx.moveTo(vx0, vy0);
-        ctx.lineTo(vx1, vy1);
-      }
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fillStyle = stone.color === 'black' ? 'rgba(0,180,255,0.55)' : 'rgba(255,80,0,0.55)';
+      ctx.fill();
+    }
+
+    // Draw hint markers
+    for (const h of hints) {
+      const [cx, cy] = gridToCanvas(h.x, h.y, bs, scale, gridCorners);
+      const d = Math.max(4, cellPx * 0.18);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - d);
+      ctx.lineTo(cx + d, cy);
+      ctx.lineTo(cx, cy + d);
+      ctx.lineTo(cx - d, cy);
+      ctx.closePath();
+      ctx.fillStyle = h.color === 'black' ? '#00e5ff' : h.color === 'white' ? '#ff6600' : '#44ff44';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
       ctx.stroke();
+    }
 
-      // Draw detected stones
-      const cellPx = ((WARP_SIZE - 1) / (bs - 1)) * scale;
-      const r = Math.max(3, cellPx * 0.3);
-      for (const stone of result.stones) {
-        const [cx, cy] = gridToCanvas(stone.x, stone.y, bs, scale, gridCorners);
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.fillStyle = stone.color === 'black' ? 'rgba(0,180,255,0.55)' : 'rgba(255,80,0,0.55)';
-        ctx.fill();
-      }
+    // Draw grid corner click markers (during grid-setting mode)
+    for (let i = 0; i < gridClicks.length; i++) {
+      const [wx, wy] = gridClicks[i];
+      const cx = wx * scale;
+      const cy = wy * scale;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#00ff88';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(i + 1), cx, cy);
+    }
 
-      // Draw hint markers
-      for (const h of hints) {
-        const [cx, cy] = gridToCanvas(h.x, h.y, bs, scale, gridCorners);
-        const d = Math.max(4, cellPx * 0.18);
+    // Draw grid corner handles (when gridCorners are set)
+    if (gridCorners) {
+      const CORNER_LABELS = ['TL', 'TR', 'BR', 'BL'];
+      const CORNER_COLORS = ['#ff4444', '#ffaa00', '#ff4444', '#ffaa00'];
+      for (let i = 0; i < 4; i++) {
+        const cx = gridCorners[i][0] * scale;
+        const cy = gridCorners[i][1] * scale;
         ctx.beginPath();
-        ctx.moveTo(cx, cy - d);
-        ctx.lineTo(cx + d, cy);
-        ctx.lineTo(cx, cy + d);
-        ctx.lineTo(cx - d, cy);
-        ctx.closePath();
-        ctx.fillStyle =
-          h.color === 'black' ? '#00e5ff' : h.color === 'white' ? '#ff6600' : '#44ff44';
-        ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      }
-
-      // Draw grid corner click markers (during grid-setting mode)
-      for (let i = 0; i < gridClicks.length; i++) {
-        const [wx, wy] = gridClicks[i];
-        const cx = wx * scale;
-        const cy = wy * scale;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 6, 0, Math.PI * 2);
-        ctx.fillStyle = '#00ff88';
+        ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+        ctx.fillStyle = CORNER_COLORS[i];
         ctx.fill();
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
         ctx.stroke();
-        ctx.fillStyle = '#000';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 8px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(String(i + 1), cx, cy);
+        ctx.fillText(CORNER_LABELS[i], cx, cy);
       }
+    }
+  }, [result, hints, gridCorners, gridClicks, settingGrid]);
 
-      // Draw grid corner handles (when gridCorners are set)
-      if (gridCorners) {
-        const CORNER_LABELS = ['TL', 'TR', 'BR', 'BL'];
-        const CORNER_COLORS = ['#ff4444', '#ffaa00', '#ff4444', '#ffaa00'];
-        for (let i = 0; i < 4; i++) {
-          const cx = gridCorners[i][0] * scale;
-          const cy = gridCorners[i][1] * scale;
-          ctx.beginPath();
-          ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-          ctx.fillStyle = CORNER_COLORS[i];
-          ctx.fill();
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.fillStyle = '#fff';
-          ctx.font = 'bold 8px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(CORNER_LABELS[i], cx, cy);
-        }
-      }
-    },
-    [result, hints, gridCorners, gridClicks, settingGrid]
-  );
+  // Keep paintRef in sync so the bitmap effect can call the latest paint
+  paintRef.current = paintCanvas;
 
+  // Create ImageBitmap asynchronously when warpedImage reference changes
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      imgCacheRef.current = img;
-      paint(img);
+    const raw = result.warpedImage;
+    if (raw === warpedImageRef.current) return;
+    warpedImageRef.current = raw;
+
+    let cancelled = false;
+    const pixels = new Uint8ClampedArray(raw.data);
+    const imageData = new ImageData(pixels, raw.width, raw.height);
+    createImageBitmap(imageData).then(bmp => {
+      if (cancelled) {
+        bmp.close();
+        return;
+      }
+      bitmapRef.current?.close();
+      bitmapRef.current = bmp;
+      paintRef.current();
+    });
+    return () => {
+      cancelled = true;
     };
-    img.src = warpedURL;
-  }, [warpedURL, paint]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result.warpedImage]);
 
+  // Clean up bitmap on unmount
   useEffect(() => {
-    if (imgCacheRef.current) paint(imgCacheRef.current);
-  }, [hints, paint, gridCorners, gridClicks, settingGrid]);
+    return () => {
+      bitmapRef.current?.close();
+    };
+  }, []);
+
+  // Repaint when overlay data changes
+  useEffect(() => {
+    paintCanvas();
+  }, [result, hints, paintCanvas, gridCorners, gridClicks, settingGrid]);
 
   const onClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
-      const size = canvas.clientWidth || 360;
-      const scale = size / WARP_SIZE;
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      const scale = canvas.width / WARP_SIZE;
 
       if (settingGrid) {
         onGridClick(mx / scale, my / scale);
