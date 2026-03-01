@@ -81,7 +81,7 @@ export const HeaderFileControls: React.FC<HeaderFileControlsProps> = ({
       },
       {
         id: 'new',
-        label: t('newGame'),
+        label: t('new'),
         icon: <LuPlus size={18} />,
         onClick: onNewGame,
       },
