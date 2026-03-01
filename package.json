@@ -41,7 +41,7 @@
     "build:web:app": "bun --filter @kaya/web build",
     "build:desktop": "bun run generate-version-info && bun run copy-assets && bun run build:packages && bun --filter @kaya/desktop build",
     "build:desktop:app": "bun --filter @kaya/desktop build",
-    "build:packages": "bun run --filter @kaya/goboard build && bun run --filter @kaya/sgf build && bun run --filter @kaya/gametree build && bun run --filter @kaya/gtp build && bun run --filter @kaya/boardmatcher build && bun run --filter @kaya/deadstones build && bun run --filter @kaya/ai-engine build && bun run --filter @kaya/shudan build && bun run --filter @kaya/board-recognition build && bun run --filter @kaya/ui build",
+    "build:packages": "bun run --filter @kaya/goboard build && bun run --filter @kaya/sgf build && bun run --filter @kaya/gametree build && bun run --filter @kaya/boardmatcher build && bun run --filter @kaya/deadstones build && bun run --filter @kaya/ai-engine build && bun run --filter @kaya/shudan build && bun run --filter @kaya/board-recognition build && bun run --filter @kaya/i18n build && bun run --filter @kaya/themes build && bun run --filter @kaya/game-library build && bun run --filter @kaya/platform build && bun run --filter @kaya/ui build",
     "tauri:dev": "bun --filter @kaya/desktop tauri dev",
     "tauri:build": "bun --filter @kaya/desktop tauri build",
     "tauri:check": "bun --filter @kaya/desktop tauri:check",

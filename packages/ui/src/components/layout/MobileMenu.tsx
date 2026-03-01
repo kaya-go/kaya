@@ -22,8 +22,8 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useGameSounds } from '../../useGameSounds';
-import { useI18n } from '../../i18n/I18nProvider';
-import type { Locale } from '../../i18n';
+import { useI18n } from '@kaya/i18n';
+import type { Locale } from '@kaya/i18n';
 import type { VersionData } from './StatusBar';
 import './MobileMenu.css';
 

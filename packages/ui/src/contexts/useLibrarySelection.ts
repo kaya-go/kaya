@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { LibraryItem, LibraryItemId } from '../services/library/types';
+import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 
 export function useLibrarySelection(items: LibraryItem[]) {
   const [selectedId, setSelectedId] = useState<LibraryItemId | null>(null);

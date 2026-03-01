@@ -11,7 +11,7 @@ import {
   type StoredModelMetadata,
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
-import { isTauriApp } from '../../services/fileSave';
+import { isTauriApp } from '@kaya/platform';
 import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { PREDEFINED_MODELS } from './ai-analysis-types';
 

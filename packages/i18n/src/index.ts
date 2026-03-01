@@ -114,3 +114,6 @@ i18n.use(initReactI18next).init({
 });
 
 export { i18n };
+
+// Re-export provider and hook
+export { I18nProvider, useI18n } from './I18nProvider';

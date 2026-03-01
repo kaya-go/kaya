@@ -6,7 +6,7 @@ import type {
   LibraryItemId,
   LibraryStats,
   ImportResult,
-} from '../services/library/types';
+} from '@kaya/game-library';
 
 export interface LibraryContextValue {
   /** Whether the library is initialized */

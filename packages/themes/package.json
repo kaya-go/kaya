@@ -1,0 +1,22 @@
+{
+  "name": "@kaya/themes",
+  "version": "0.2.5-dev",
+  "description": "Board themes for Kaya - 6 built-in Go board visual themes",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build --force",
+    "dev": "tsc --build --force --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "react": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "react": "^19.2.3",
+    "typescript": "^5.6.0"
+  }
+}

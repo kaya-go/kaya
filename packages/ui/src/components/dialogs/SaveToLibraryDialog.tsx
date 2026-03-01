@@ -7,7 +7,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { LuFolder, LuFolderOpen, LuChevronRight, LuChevronDown } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
-import type { LibraryItem } from '../../services/library/types';
+import type { LibraryItem } from '@kaya/game-library';
 import './SaveFileDialog.css';
 
 interface SaveToLibraryDialogProps {

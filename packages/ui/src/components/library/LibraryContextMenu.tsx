@@ -13,7 +13,7 @@ import {
   LuFolder,
   LuCopy,
 } from 'react-icons/lu';
-import type { LibraryItem, LibraryItemId } from '../../services/library/types';
+import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 
 interface ContextMenuState {
   x: number;

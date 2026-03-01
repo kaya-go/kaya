@@ -13,8 +13,8 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import type { LibraryItem, LibraryItemId, LibraryStats } from '../services/library/types';
-import { getLibraryStorage, initializeLibraryStorage } from '../services/library';
+import type { LibraryItem, LibraryItemId, LibraryStats } from '@kaya/game-library';
+import { getLibraryStorage, initializeLibraryStorage } from '@kaya/game-library';
 import {
   UnsavedChangesDialog,
   type UnsavedChangesAction,

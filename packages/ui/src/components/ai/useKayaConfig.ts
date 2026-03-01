@@ -2,9 +2,9 @@ import type { ChangeEvent } from 'react';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameTree } from '../../contexts/GameTreeContext';
-import { useBoardTheme } from '../../contexts/BoardThemeContext';
+import { useBoardTheme } from '@kaya/themes';
 import { useToast } from '../ui/Toast';
-import { isTauriApp } from '../../services/fileSave';
+import { isTauriApp } from '@kaya/platform';
 import { BASE_MODELS, parseModelId, getModelId } from '../../hooks/game/useAIAnalysis';
 
 export type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts';

@@ -8,8 +8,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuGlobe, LuCheck, LuChevronDown } from 'react-icons/lu';
-import { useI18n } from '../../i18n/I18nProvider';
-import type { Locale } from '../../i18n';
+import { useI18n } from '@kaya/i18n';
+import type { Locale } from '@kaya/i18n';
 import './LanguageSwitcher.css';
 
 // Flag emojis for each locale

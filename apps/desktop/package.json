@@ -23,7 +23,6 @@
     "@dagrejs/graphlib": "^3.0.2",
     "@kaya/gametree": "workspace:*",
     "@kaya/goboard": "workspace:*",
-    "@kaya/gtp": "workspace:*",
     "@kaya/sgf": "workspace:*",
     "@kaya/shudan": "workspace:*",
     "@kaya/ui": "workspace:*",

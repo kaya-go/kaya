@@ -11,9 +11,9 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { useGameSounds } from '../../useGameSounds';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import type { NewGameConfig } from '../../contexts/GameTreeContext';
-import { saveFile, isTauriApp } from '../../services/fileSave';
+import { saveFile, isTauriApp } from '@kaya/platform';
 import { loadContentOrOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
-import { readClipboardText, writeClipboardText } from '../../services/clipboard';
+import { readClipboardText, writeClipboardText } from '@kaya/platform';
 import { useToast } from '../ui/Toast';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];

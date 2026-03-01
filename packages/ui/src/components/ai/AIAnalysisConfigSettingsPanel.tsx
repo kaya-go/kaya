@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuSettings } from 'react-icons/lu';
 import type { AISettings } from '../../types/game';
-import { isTauriApp } from '../../services/fileSave';
+import { isTauriApp } from '@kaya/platform';
 
 export interface AIAnalysisConfigSettingsPanelProps {
   aiSettings: AISettings;

@@ -13,7 +13,7 @@ import type {
 } from '@kaya/board-recognition';
 import { orderCorners, buildSGF, mapStonesToGrid } from '@kaya/board-recognition';
 import { BoardRecognitionWorker } from '../../workers/BoardRecognitionWorker';
-import { isTauriApp } from '../../services/fileSave';
+import { isTauriApp } from '@kaya/platform';
 
 const RECLASSIFY_DEBOUNCE_MS = 350;
 

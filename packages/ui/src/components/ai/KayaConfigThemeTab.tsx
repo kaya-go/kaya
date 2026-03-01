@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuPalette, LuCheck } from 'react-icons/lu';
-import { useBoardTheme } from '../../contexts/BoardThemeContext';
+import { useBoardTheme } from '@kaya/themes';
 import './KayaConfigThemes.css';
 
 export const KayaConfigThemeTab: React.FC = () => {

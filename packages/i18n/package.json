@@ -1,0 +1,25 @@
+{
+  "name": "@kaya/i18n",
+  "version": "0.2.5-dev",
+  "description": "Internationalization for Kaya - 8 language translations and i18next configuration",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build --force",
+    "dev": "tsc --build --force --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "i18next": "^25.7.3",
+    "react-i18next": "^16.5.0"
+  },
+  "peerDependencies": {
+    "react": "^19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "react": "^19.2.3",
+    "typescript": "^5.6.0"
+  }
+}

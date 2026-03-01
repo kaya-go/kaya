@@ -101,8 +101,11 @@ export default defineConfig({
           '@kaya/boardmatcher': path.resolve(__dirname, '../../packages/boardmatcher/src'),
           '@kaya/deadstones': path.resolve(__dirname, '../../packages/deadstones/src'),
           '@kaya/gametree': path.resolve(__dirname, '../../packages/gametree/src'),
+          '@kaya/game-library': path.resolve(__dirname, '../../packages/game-library/src'),
+          '@kaya/i18n': path.resolve(__dirname, '../../packages/i18n/src'),
+          '@kaya/platform': path.resolve(__dirname, '../../packages/platform/src'),
+          '@kaya/themes': path.resolve(__dirname, '../../packages/themes/src'),
           '@kaya/goboard': path.resolve(__dirname, '../../packages/goboard/src'),
-          '@kaya/gtp': path.resolve(__dirname, '../../packages/gtp/src'),
           '@kaya/sgf': path.resolve(__dirname, '../../packages/sgf/src'),
           '@kaya/shudan': path.resolve(__dirname, '../../packages/shudan/src'),
           '@kaya/ui/dist/styles/ui.css': path.resolve(

@@ -2,9 +2,9 @@
 export { ThemeProvider, useTheme } from './contexts/ThemeContext';
 export type { Theme, ThemeContextType } from './contexts/ThemeContext';
 
-// Board theme system
-export { BoardThemeProvider, useBoardTheme } from './contexts/BoardThemeContext';
-export type { BuiltInThemeId, ResolvedBoardTheme } from './contexts/BoardThemeContext';
+// Board theme system - re-exported from @kaya/themes
+export { BoardThemeProvider, useBoardTheme } from '@kaya/themes';
+export type { BuiltInThemeId, ResolvedBoardTheme } from '@kaya/themes';
 
 // Keyboard shortcuts context
 export {
@@ -116,10 +116,10 @@ export { StatusBar } from './components/layout/StatusBar';
 export type { VersionData } from './components/layout/StatusBar';
 
 // File utilities
-export { saveFile, isTauriApp, setTauriSaveAPI } from './services/fileSave';
-export { setTauriClipboardAPI } from './services/clipboard';
-export type { TauriSaveAPI } from './services/fileSave';
-export { readClipboardText, writeClipboardText } from './services/clipboard';
+export { saveFile, isTauriApp, setTauriSaveAPI } from '@kaya/platform';
+export { setTauriClipboardAPI } from '@kaya/platform';
+export type { TauriSaveAPI } from '@kaya/platform';
+export { readClipboardText, writeClipboardText } from '@kaya/platform';
 
 // Hooks
 export { useGameSounds } from './useGameSounds';
@@ -166,7 +166,7 @@ export type { LibraryContextValue, LibraryProviderProps } from './contexts/Libra
 export { LibraryPanel } from './components/library';
 export type { LibraryPanelProps } from './components/library';
 export { useLibraryPanel } from './hooks/useLibraryPanel';
-export * from './services/library';
+export * from '@kaya/game-library';
 
 // Scoring utilities
 export { calculateTerritory, countDeadStones } from './services/scoring';
@@ -183,10 +183,18 @@ export {
   type CreateEngineOptions,
 } from './workers/engineFactory';
 
-// i18n (internationalization)
-export { i18n, locales, defaultLocale, detectLocale, loadLocale, getLocale } from './i18n';
-export type { Locale } from './i18n';
-export { I18nProvider, useI18n } from './i18n/I18nProvider';
+// i18n (internationalization) - re-exported from @kaya/i18n
+export {
+  i18n,
+  locales,
+  defaultLocale,
+  detectLocale,
+  loadLocale,
+  getLocale,
+  I18nProvider,
+  useI18n,
+} from '@kaya/i18n';
+export type { Locale } from '@kaya/i18n';
 export { LanguageSwitcher } from './components/ui/LanguageSwitcher';
 // Re-export useTranslation from react-i18next for convenience
 export { useTranslation } from 'react-i18next';

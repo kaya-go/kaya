@@ -12,7 +12,7 @@ import {
   getThemeById,
   type BuiltInThemeId,
   type ResolvedBoardTheme,
-} from '../themes';
+} from './themes';
 
 const BOARD_THEME_STORAGE_KEY = 'kaya-board-theme';
 const THEME_STYLE_ID = 'kaya-board-theme-styles';

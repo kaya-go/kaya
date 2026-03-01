@@ -17,7 +17,7 @@ import {
   isWebNNOptimized,
 } from '@kaya/ai-engine';
 import { useGameTree } from './GameTreeContext';
-import { isTauriApp } from '../services/fileSave';
+import { isTauriApp } from '@kaya/platform';
 import { loadModelData } from '../services/modelStorage';
 import { createEngine, type CreateEngineOptions } from '../workers/engineFactory';
 

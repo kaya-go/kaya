@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
-import type { LibraryItem, LibraryItemId, ImportResult } from '../services/library/types';
-import { getLibraryStorage } from '../services/library';
-import { makeUniqueName } from '../services/library/utils';
+import type { LibraryItem, LibraryItemId, ImportResult } from '@kaya/game-library';
+import { getLibraryStorage } from '@kaya/game-library';
+import { makeUniqueName } from '@kaya/game-library';
 
 interface UseLibraryFileOpsParams {
   refresh: () => Promise<void>;

@@ -1,0 +1,21 @@
+{
+  "name": "@kaya/game-library",
+  "version": "0.2.5-dev",
+  "description": "Game library storage for Kaya - IndexedDB-based SGF file management",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build --force",
+    "dev": "tsc --build --force --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@kaya/sgf": "workspace:*",
+    "jszip": "^3.10.1"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.6.0"
+  }
+}

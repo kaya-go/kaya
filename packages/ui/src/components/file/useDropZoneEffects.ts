@@ -4,7 +4,7 @@
 
 import { useEffect, useCallback, MutableRefObject, useRef } from 'react';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
-import { readClipboardText } from '../../services/clipboard';
+import { readClipboardText } from '@kaya/platform';
 
 // Check if running in Tauri
 const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;

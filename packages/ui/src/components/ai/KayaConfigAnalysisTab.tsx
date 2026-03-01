@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuSettings } from 'react-icons/lu';
-import { isTauriApp } from '../../services/fileSave';
+import { isTauriApp } from '@kaya/platform';
 import { KayaConfigModelList } from './KayaConfigModelList';
 import type { UseKayaConfigReturn } from './useKayaConfig';
 import './KayaConfigSettings.css';

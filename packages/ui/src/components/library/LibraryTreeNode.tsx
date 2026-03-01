@@ -7,8 +7,8 @@ import type { NodeRendererProps, DragPreviewProps } from 'react-arborist';
 import { LuFolder, LuFile, LuChevronRight, LuFolderOpen } from 'react-icons/lu';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useGameTreeFile } from '../../contexts/selectors';
-import type { LibraryItem, LibraryItemId } from '../../services/library/types';
-import { formatFileSize } from '../../services/library/utils';
+import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
+import { formatFileSize } from '@kaya/game-library';
 
 export interface TreeNode {
   id: string;

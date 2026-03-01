@@ -66,3 +66,6 @@ export * from './analyze';
 // Performance Report
 export * from './performance-types';
 export * from './performance-report';
+
+// GTP Protocol (Go Text Protocol)
+export * from './gtp';

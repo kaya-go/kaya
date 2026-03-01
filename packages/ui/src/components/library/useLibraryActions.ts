@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useRef, useEffect, type DragEvent, type MouseEvent } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
-import type { LibraryItem, LibraryItemId } from '../../services/library/types';
+import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import type { ConfirmDialogState } from './LibraryDialogs';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
