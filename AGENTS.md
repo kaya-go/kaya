@@ -4,7 +4,7 @@
 
 **Kaya**: Desktop + Web Go (Baduk/Weiqi) game application with AI analysis  
 **Stack**: Bun + TypeScript + Tauri v2 + React 18 + Rsbuild  
-**Architecture**: Monorepo with 9 core packages + 2 apps
+**Architecture**: Monorepo with 10 core packages + 2 apps
 
 ## Agent Behavior Rules
 
@@ -71,6 +71,7 @@ kaya/
     ├── boardmatcher/    # Pattern matching
     ├── deadstones/      # Rust/WASM Monte Carlo
     ├── ai-engine/       # KataGo via ONNX Runtime
+    ├── board-recognition/ # Photo → SGF (classic CV + Moku AI)
     └── ui/              # Shared React components (GameTreeContext)
 ```
 

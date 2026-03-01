@@ -15,7 +15,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 ## Package Structure
 
 ```
-9 Library Packages:
+10 Library Packages:
   @kaya/goboard      - Core Go game logic
   @kaya/sgf          - SGF parser/stringifier
   @kaya/gametree     - Immutable game tree with structural sharing
@@ -24,6 +24,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
   @kaya/boardmatcher - Pattern matching and move naming
   @kaya/deadstones   - Dead stone detection (Rust/WASM)
   @kaya/ai-engine    - KataGo via ONNX Runtime
+  @kaya/board-recognition - Photo-to-SGF board recognition (classic CV + Moku AI)
   @kaya/ui           - Shared React components
 
 2 Application Packages:
@@ -64,6 +65,17 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 - **Configurable Keyboard Shortcuts**: Customize all shortcuts via Settings
 - **Internationalization**: Full i18n support with 8 languages (EN, ZH, KO, JA, FR, DE, ES, IT)
 - **Mobile/Tablet Responsive**: Touch-friendly layout with swipe navigation and orientation support
+
+### Board Recognition
+
+- **Photo Import**: Recognize board positions from photos and import as SGF
+- **Dual Backend**: Classic computer-vision pipeline and Moku AI (RT-DETR) detection
+- **Moku AI**: ONNX-based RT-DETR model detects corners and stones directly with configurable confidence threshold
+- **Model Caching**: Browser Cache API with hash-based invalidation and download progress tracking
+- **Corner Dragging**: Interactive perspective warp with deferred worker-based warping
+- **Custom Board Sizes**: Support for arbitrary board sizes (2–52) in addition to standard 9/13/19
+- **Manual Calibration**: Click-to-toggle stone color corrections and grid alignment
+- **Web Worker**: All heavy computation runs off the main thread
 
 ### Edit Mode
 
