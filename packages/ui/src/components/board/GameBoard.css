@@ -104,19 +104,13 @@
 }
 
 /* Actions bar */
+/* Actions bar — now an OverflowMenu container */
 .gameboard-actions-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background-color: var(--background);
-  border-bottom: 1px solid var(--border);
+  padding: 0.25rem 0.5rem;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-}
-
-.gameboard-actions-spacer {
-  flex: 1 1 0;
-  min-width: 0;
+  flex-grow: 0;
 }
 
 /* GameBoard action buttons */
@@ -246,22 +240,16 @@
  * Mobile Action Toolbar
  * ========================= */
 @media (max-width: 767px), (max-height: 500px) {
-  /* Action buttons container - wrap to multiple lines */
+  /* Action bar padding */
   .gameboard-actions-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem;
     padding: 0.375rem 0.5rem;
-    flex-shrink: 0;
   }
 
   /* Compact action buttons on mobile - icons only but with larger touch target */
   .gameboard-action-button {
     padding: 0;
     min-width: 44px;
-    /* Minimum touch target size */
     height: 44px;
-    /* Minimum touch target size */
     flex-shrink: 0;
     font-size: 0.75rem;
     justify-content: center;

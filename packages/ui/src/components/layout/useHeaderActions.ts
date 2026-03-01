@@ -40,16 +40,17 @@ export function useHeaderActions() {
   } = useLibrary();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const scanBoardInputRef = useRef<HTMLInputElement>(null);
   const filenameInputRef = useRef<HTMLInputElement>(null);
-  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   const [recognitionFile, setRecognitionFile] = useState<File | null>(null);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
   const [isSaveToLibraryDialogOpen, setIsSaveToLibraryDialogOpen] = useState(false);
   const [isEditingFilename, setIsEditingFilename] = useState(false);
   const [editedFilename, setEditedFilename] = useState('');
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
+
   const { messages, showToast, closeToast } = useToast();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -114,6 +115,25 @@ export function useHeaderActions() {
 
   const handleOpenClick = useCallback(() => {
     fileInputRef.current?.click();
+  }, []);
+
+  const handleScanBoardClick = useCallback(() => {
+    setIsScanModalOpen(true);
+  }, []);
+
+  const handleScanFileSelected = useCallback((file: File) => {
+    setRecognitionFile(file);
+    setIsScanModalOpen(false);
+  }, []);
+
+  const handleScanBoardInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setRecognitionFile(file);
+    }
+    if (scanBoardInputRef.current) {
+      scanBoardInputRef.current.value = '';
+    }
   }, []);
 
   const handleFileInputChange = useCallback(
@@ -372,18 +392,6 @@ export function useHeaderActions() {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
-        setShowMoreMenu(false);
-      }
-    };
-    if (showMoreMenu) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [showMoreMenu]);
-
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
@@ -447,8 +455,8 @@ export function useHeaderActions() {
 
   return {
     fileInputRef,
+    scanBoardInputRef,
     filenameInputRef,
-    moreMenuRef,
     t,
     theme,
     toggleTheme,
@@ -471,8 +479,7 @@ export function useHeaderActions() {
     setIsSaveToLibraryDialogOpen,
     isEditingFilename,
     editedFilename,
-    showMoreMenu,
-    setShowMoreMenu,
+
     messages,
     closeToast,
     isFullscreen,
@@ -481,7 +488,12 @@ export function useHeaderActions() {
     defaultSaveFileName,
     handleRecognitionImport,
     handleOpenClick,
+    handleScanBoardClick,
+    handleScanFileSelected,
+    isScanModalOpen,
+    setIsScanModalOpen,
     handleFileInputChange,
+    handleScanBoardInputChange,
     handleSaveClick,
     handleSaveAsClick,
     handleExportClick,

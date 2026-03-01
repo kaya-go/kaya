@@ -65,6 +65,16 @@
   "saveGame": "保存对局",
   "saveToFolder": "保存到文件夹：",
   "saveToLibrary": "保存到棋库",
+  "scanBoard": "扫描",
+  "scanBoardTooltip": "从照片导入棋盘局面",
+  "scan": {
+    "chooseSource": "扫描棋盘",
+    "fromPhoto": "选择照片",
+    "fromPhotoDesc": "从设备中选择图片文件",
+    "fromCamera": "使用相机",
+    "fromCameraDesc": "使用设备相机拍摄照片",
+    "cameraNotAvailable": "此设备不支持相机"
+  },
   "settings": "设置",
   "showLibrary": "显示棋库",
   "showSidebar": "显示侧边栏",

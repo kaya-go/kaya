@@ -65,6 +65,16 @@
   "saveGame": "Spiel speichern",
   "saveToFolder": "In Ordner speichern:",
   "saveToLibrary": "In Bibliothek speichern",
+  "scanBoard": "Scannen",
+  "scanBoardTooltip": "Brettposition aus einem Foto importieren",
+  "scan": {
+    "chooseSource": "Brett scannen",
+    "fromPhoto": "Foto auswählen",
+    "fromPhotoDesc": "Bilddatei von Ihrem Gerät auswählen",
+    "fromCamera": "Kamera verwenden",
+    "fromCameraDesc": "Foto mit der Gerätekamera aufnehmen",
+    "cameraNotAvailable": "Kamera auf diesem Gerät nicht verfügbar"
+  },
   "settings": "Einstellungen",
   "showLibrary": "Bibliothek anzeigen",
   "showSidebar": "Seitenleiste anzeigen",

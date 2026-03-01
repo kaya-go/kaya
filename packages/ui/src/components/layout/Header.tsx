@@ -6,6 +6,7 @@ import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { SaveToLibraryDialog } from '../dialogs/SaveToLibraryDialog';
 import { ToastContainer } from '../ui/Toast';
 import { BoardRecognitionDialog } from '../dialogs/BoardRecognitionDialog';
+import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
 import { useHeaderActions } from './useHeaderActions';
 import { HeaderFileControls } from './HeaderFileControls';
 import { HeaderRightGroup } from './HeaderRightGroup';
@@ -46,9 +47,15 @@ export const Header: React.FC<HeaderProps> = ({
           style={{ display: 'none' }}
           onChange={actions.handleFileInputChange}
         />
+        <input
+          ref={actions.scanBoardInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.bmp"
+          style={{ display: 'none' }}
+          onChange={actions.handleScanBoardInputChange}
+        />
 
         <HeaderFileControls
-          moreMenuRef={actions.moreMenuRef}
           filenameInputRef={actions.filenameInputRef}
           currentBoardWidth={actions.currentBoard.width}
           currentBoardHeight={actions.currentBoard.height}
@@ -57,12 +64,11 @@ export const Header: React.FC<HeaderProps> = ({
           loadedFileId={actions.loadedFileId}
           isEditingFilename={actions.isEditingFilename}
           editedFilename={actions.editedFilename}
-          showMoreMenu={actions.showMoreMenu}
-          setShowMoreMenu={actions.setShowMoreMenu}
           onOpenMobileMenu={() => actions.setIsMobileMenuOpen(true)}
           onQuickNewGame={actions.handleQuickNewGame}
           onNewGame={actions.handleNewGame}
           onOpenClick={actions.handleOpenClick}
+          onScanBoardClick={actions.handleScanBoardClick}
           onSaveClick={actions.handleSaveClick}
           onSaveAsClick={actions.handleSaveAsClick}
           onExportClick={actions.handleExportClick}
@@ -126,6 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
           onNewGame={() => actions.setIsNewGameDialogOpen(true)}
           onQuickNewGame={actions.handleQuickNewGame}
           onOpen={actions.handleOpenClick}
+          onScanBoard={actions.handleScanBoardClick}
           onSave={actions.handleSaveClick}
           onSaveAs={actions.handleSaveAsClick}
           onExport={actions.handleExportClick}
@@ -136,6 +143,11 @@ export const Header: React.FC<HeaderProps> = ({
           isInLibrary={actions.loadedFileId !== null}
         />
       </header>
+      <ScanOptionsModal
+        isOpen={actions.isScanModalOpen}
+        onClose={() => actions.setIsScanModalOpen(false)}
+        onSelectFile={actions.handleScanFileSelected}
+      />
       {actions.recognitionFile && (
         <BoardRecognitionDialog
           file={actions.recognitionFile}

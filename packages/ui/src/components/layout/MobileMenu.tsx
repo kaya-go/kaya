@@ -18,6 +18,7 @@ import {
   LuGlobe,
   LuCheck,
   LuChevronRight,
+  LuCamera,
 } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -46,6 +47,7 @@ interface MobileMenuProps {
   onNewGame: () => void;
   onQuickNewGame: () => void;
   onOpen: () => void;
+  onScanBoard: () => void;
   onSave: () => void;
   onSaveAs: () => void;
   onExport: () => void;
@@ -64,6 +66,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   onNewGame,
   onQuickNewGame,
   onOpen,
+  onScanBoard,
   onSave,
   onSaveAs,
   onExport,
@@ -146,6 +149,16 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
             >
               <LuFolderOpen size={20} />
               <span>{t('openSgf')}</span>
+            </button>
+            <button
+              className="mobile-menu-item"
+              onClick={() => {
+                onScanBoard();
+                onClose();
+              }}
+            >
+              <LuCamera size={20} />
+              <span>{t('scanBoard')}</span>
             </button>
             <button
               className="mobile-menu-item"

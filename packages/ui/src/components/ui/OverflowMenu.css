@@ -1,0 +1,140 @@
+/* OverflowMenu styles */
+.overflow-menu-container {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.overflow-menu-items {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.overflow-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.overflow-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  height: 32px;
+}
+
+.overflow-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.overflow-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.overflow-item.active {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.overflow-trailing {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* More button */
+.overflow-more-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+
+.overflow-more-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.overflow-more-button:hover {
+  background-color: var(--bg-tertiary);
+}
+
+/* Dropdown */
+.overflow-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 0.375rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  z-index: 200;
+  min-width: 180px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.overflow-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  color: var(--text-primary);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+  text-align: left;
+}
+
+.overflow-dropdown-item:hover {
+  background-color: var(--bg-tertiary);
+}
+
+.overflow-dropdown-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.overflow-dropdown-item.active {
+  color: var(--accent-color, var(--accent));
+  font-weight: 600;
+}
+
+/* On mobile hide the overflow container entirely — mobile has its own menu */
+@media (max-width: 1024px) {
+  .header-overflow-menu .overflow-more-wrapper {
+    display: none;
+  }
+}

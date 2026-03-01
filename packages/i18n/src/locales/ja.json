@@ -65,6 +65,16 @@
   "saveGame": "対局を保存",
   "saveToFolder": "フォルダに保存:",
   "saveToLibrary": "ライブラリに保存",
+  "scanBoard": "スキャン",
+  "scanBoardTooltip": "写真から盤面の局面を読み取る",
+  "scan": {
+    "chooseSource": "盤面をスキャン",
+    "fromPhoto": "写真を選択",
+    "fromPhotoDesc": "デバイスから画像ファイルを選択",
+    "fromCamera": "カメラを使用",
+    "fromCameraDesc": "デバイスのカメラで写真を撮影",
+    "cameraNotAvailable": "このデバイスではカメラが利用できません"
+  },
   "settings": "設定",
   "showLibrary": "ライブラリを表示",
   "showSidebar": "サイドバーを表示",

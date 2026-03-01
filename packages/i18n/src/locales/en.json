@@ -63,6 +63,16 @@
   "saveAs": "Save As...",
   "saveAsShort": "Save As",
   "saveGame": "Save Game",
+  "scanBoard": "Scan",
+  "scanBoardTooltip": "Import a board position from a photo",
+  "scan": {
+    "chooseSource": "Scan Board",
+    "fromPhoto": "Choose a Photo",
+    "fromPhotoDesc": "Select an image file from your device",
+    "fromCamera": "Use Camera",
+    "fromCameraDesc": "Take a photo with your device camera",
+    "cameraNotAvailable": "Camera not available on this device"
+  },
   "saveToFolder": "Save to folder:",
   "saveToLibrary": "Save to Library",
   "settings": "Settings",

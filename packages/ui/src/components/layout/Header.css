@@ -10,7 +10,6 @@
   gap: 1rem;
   z-index: 50;
   position: relative;
-  /* Needed for center actions */
 }
 
 .header-file-controls {
@@ -18,8 +17,8 @@
   gap: 0.375rem;
   align-items: center;
   flex-wrap: nowrap;
-  /* Ensure it doesn't shrink too much */
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 
 .header-btn-primary {
@@ -56,39 +55,7 @@
 
 /* Secondary Actions Container */
 .header-secondary-actions {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
-  margin-left: 0.5rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--border-color);
-}
-
-.header-btn-secondary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 0.375rem 0.5rem;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-  height: 32px;
-}
-
-.header-btn-secondary:hover {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.header-btn-secondary:active {
-  transform: translateY(1px);
-  background-color: var(--bg-active, #e5e5e5);
+  display: none;
 }
 
 /* Filename Input */
@@ -138,7 +105,6 @@
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
-  /* Add this */
 }
 
 .header-toggles button,
@@ -173,32 +139,6 @@
   margin-left: 0.25rem;
 }
 
-.header-more-menu-container {
-  display: none;
-  position: relative;
-}
-
-.header-more-menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  background-color: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  z-index: 100;
-  min-width: 160px;
-}
-
-.header-more-menu button {
-  width: 100%;
-  justify-content: flex-start !important;
-}
-
 /* Quick New Button - Special style */
 .quick-new-button {
   display: flex;
@@ -223,27 +163,22 @@
   color: var(--accent-color);
 }
 
+/* Quick-new inside the overflow menu hides the text label */
+.quick-new-button .btn-text {
+  display: none;
+}
+
+/* Mobile filename — hidden on desktop, visible on mobile */
+.header-mobile-filename {
+  display: none;
+}
+
 /* Mobile Menu Button - Hidden by default */
 .header-mobile-menu-btn {
   display: none !important;
-  /* Force hidden on desktop */
 }
 
-/* Responsive Styles */
-@media (max-width: 1024px) {
-  .btn-text {
-    display: none;
-  }
-
-  .header-btn-primary {
-    padding: 0.375rem;
-  }
-
-  .header-filename {
-    max-width: 120px;
-  }
-}
-
+/* Responsive Styles — tablet and below (≤1024px) */
 @media (max-width: 1024px) {
   .app-header {
     padding: 0 0.5rem;
@@ -257,54 +192,25 @@
   .header-mobile-menu-btn {
     display: flex !important;
     padding: 0.5rem !important;
+    color: var(--text-primary) !important;
+    background: transparent !important;
+    border: none !important;
   }
 
-  /* Adjust Center actions for mobile */
-  /* On mobile, we might want to just flex-grow the sides and center this naturally if possible, or keep absolute */
-  /* Absolute centering assumes there's space. 
-     Left side has Menu + Filename. Right side has nothing (toggles hidden?).
-     Wait, Toggles are hidden on mobile?
-  */
-}
+  .header-mobile-filename {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
 
-/* If header-toggles are hidden on mobile as per previous implementation logic in Header.tsx (no, logic is in CSS likely) */
-/* Checking Header.tsx logic: <div className="header-toggles"> is always rendered if showThemeToggle=true */
-/* Need CSS to hide toggles on mobile if we want that. */
-
-@media (max-width: 1024px) {
-  .header-secondary-actions {
-    display: none;
+  .header-mobile-filename .header-filename {
+    max-width: none;
+    flex: 1;
+    min-width: 0;
   }
 
   .header-toggles {
     display: none;
-    /* Hide desktop toggles on mobile as requested previously */
-  }
-
-  .header-more-menu-container {
-    display: none;
-    /* Also hide "More" menu as we have Mobile Menu */
-  }
-
-  /* Filename should take remaining space */
-  .header-filename {
-    max-width: none;
-    /* Let flex handle it */
-    flex: 1;
-    min-width: 0;
-    /* Allow shrinking */
-  }
-
-  .header-file-controls {
-    flex: 1;
-    /* Allow this container to grow/shrink */
-    overflow: hidden;
-    /* Prevent overflow */
-  }
-
-  .header-mobile-menu-btn {
-    color: var(--text-primary) !important;
-    background: transparent !important;
-    border: none !important;
   }
 }

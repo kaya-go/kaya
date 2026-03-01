@@ -65,6 +65,16 @@
   "saveGame": "Salva partita",
   "saveToFolder": "Salva nella cartella:",
   "saveToLibrary": "Salva nella libreria",
+  "scanBoard": "Scansiona",
+  "scanBoardTooltip": "Importa una posizione da una foto",
+  "scan": {
+    "chooseSource": "Scansiona tavola",
+    "fromPhoto": "Scegli una foto",
+    "fromPhotoDesc": "Seleziona un file immagine dal tuo dispositivo",
+    "fromCamera": "Usa fotocamera",
+    "fromCameraDesc": "Scatta una foto con la fotocamera del dispositivo",
+    "cameraNotAvailable": "Fotocamera non disponibile su questo dispositivo"
+  },
   "settings": "Impostazioni",
   "showLibrary": "Mostra libreria",
   "showSidebar": "Mostra barra laterale",

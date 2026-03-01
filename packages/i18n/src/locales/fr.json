@@ -65,6 +65,16 @@
   "saveGame": "Sauvegarder",
   "saveToFolder": "Dossier :",
   "saveToLibrary": "Sauver",
+  "scanBoard": "Scanner",
+  "scanBoardTooltip": "Importer une position depuis une photo",
+  "scan": {
+    "chooseSource": "Scanner le goban",
+    "fromPhoto": "Choisir une photo",
+    "fromPhotoDesc": "Sélectionner un fichier image depuis votre appareil",
+    "fromCamera": "Utiliser la caméra",
+    "fromCameraDesc": "Prendre une photo avec la caméra de votre appareil",
+    "cameraNotAvailable": "Caméra non disponible sur cet appareil"
+  },
   "settings": "Paramètres",
   "showLibrary": "Bibliothèque",
   "showSidebar": "Afficher",

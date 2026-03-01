@@ -1,0 +1,108 @@
+/* ScanOptionsModal – choose between photo and camera */
+
+.scan-options-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  backdrop-filter: blur(4px);
+}
+
+.scan-options-dialog {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 320px;
+  max-width: 420px;
+  width: 90vw;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.scan-options-dialog h2 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.scan-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scan-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.scan-option-btn:hover:not(:disabled) {
+  border-color: var(--accent-color);
+  background: var(--bg-primary);
+}
+
+.scan-option-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.scan-option-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+  width: 2.5rem;
+  text-align: center;
+}
+
+.scan-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.scan-option-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.scan-option-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.scan-options-cancel {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.scan-options-cancel button {
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  transition: all 0.15s ease;
+}
+
+.scan-options-cancel button:hover {
+  background-color: var(--bg-secondary);
+}
