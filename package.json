@@ -1,6 +1,6 @@
 {
   "name": "kaya",
-  "version": "0.3.1",
+  "version": "0.3.2-dev",
   "private": true,
   "type": "module",
   "description": "A modern, elegant Go (Baduk/Weiqi) game application with beautiful interface, SGF support, game tree navigation, and AI analysis powered by KataGo",

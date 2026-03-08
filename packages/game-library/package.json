@@ -1,6 +1,6 @@
 {
   "name": "@kaya/game-library",
-  "version": "0.3.1",
+  "version": "0.3.2-dev",
   "description": "Game library storage for Kaya - IndexedDB-based SGF file management",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
