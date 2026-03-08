@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] - 2026-03-08
+
+### <!-- 0 -->🚀 Features
+
+- *(ui)* Hide action button text when board panel is narrow using container query ([5922fd0](https://github.com/kaya-go/kaya/commit/5922fd091422a4645965cb1c7d5cc889dcd5df32)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- Add macOS camera entitlement for board scanning ([7169527](https://github.com/kaya-go/kaya/commit/716952720555d882dd62f7d1e9ac206fb02cd7a1)) by @hadim
+
+- *(ui)* Keep keyboard and wheel navigation active when board controls are collapsed ([79ce8ea](https://github.com/kaya-go/kaya/commit/79ce8ea7a74d1877b8eded2c6dbf82a74d7acb4f)) by @hadim
+
+### <!-- 3 -->📚 Documentation
+
+- Improve README branding with board recognition screenshot ([c3ea8dd](https://github.com/kaya-go/kaya/commit/c3ea8dd47616901c49a495fd5b4b4cdfbc4cf526)) by @hadim
+
+- Update branding across tauri, html meta tags, manifest, and package.json ([2687ee0](https://github.com/kaya-go/kaya/commit/2687ee019f7c41597fd418eceb01dc27478214bd)) by @hadim
+
+- Update og image and fix manifest dimensions ([6a976e0](https://github.com/kaya-go/kaya/commit/6a976e082dca4ef7c96e51ba6952e2ad060d9d2a)) by @hadim
+
+- Update app name and description in manifest.json ([5e16d4f](https://github.com/kaya-go/kaya/commit/5e16d4f45e9bba4eb2c67c3c3efc28df7262f5e3)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Improve release notes (exclude bots, remove installation section) ([d667ea0](https://github.com/kaya-go/kaya/commit/d667ea019e17a0df3e7f0745297f4bb71d4f4e74)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.1] - 2026-03-08
 
 ### <!-- 1 -->🐛 Bug Fixes
@@ -14,11 +45,13 @@ All notable changes to this project will be documented in this file.
 
 - Switch domain to kayago.app ([020923e](https://github.com/kaya-go/kaya/commit/020923e76891a605c8de1657dfa12b64be1f2090)) by @hadim
 
+- Release v0.3.1 ([fa34b72](https://github.com/kaya-go/kaya/commit/fa34b7200196f4e8bc9411b6e34ece05bb94a798)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @dependabot[bot]
-- @github-actions[bot]
 
 ## [0.3.0] - 2026-03-02
 

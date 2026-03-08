@@ -1,6 +1,6 @@
 {
   "name": "@kaya/sgf",
-  "version": "0.3.2-dev",
+  "version": "0.3.2",
   "description": "SGF parser and utilities (adapted from Sabaki sgf)",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
