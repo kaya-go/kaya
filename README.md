@@ -4,23 +4,17 @@
 
 # Kaya
 
-**A modern, elegant Go (Baduk/Weiqi) game application**
+**Play, study, and analyze Go — right from your browser or desktop.**
 
-[![GitHub Release](https://img.shields.io/github/v/release/kaya-go/kaya)](https://github.com/kaya-go/kaya/releases/latest)
-[![GitHub Downloads](https://img.shields.io/github/downloads/kaya-go/kaya/total)](https://github.com/kaya-go/kaya/releases)
-[![CI](https://github.com/kaya-go/kaya/workflows/CI/badge.svg)](https://github.com/kaya-go/kaya/actions)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
-
-[![React](https://img.shields.io/badge/React-18-61dafb.svg?logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![Tauri](https://img.shields.io/badge/Tauri-v2-24c8d8.svg?logo=tauri&logoColor=white)](https://tauri.app)
-[![Bun](https://img.shields.io/badge/Bun-1.x-f9f1e1.svg?logo=bun&logoColor=black)](https://bun.sh)
+Kaya is a free, open-source Go (Baduk/Weiqi) application with AI-powered analysis, board recognition from photos, and a beautiful modern interface. Available on **Windows**, **macOS**, **Linux**, and the **Web**.
 
 [![Download](https://img.shields.io/badge/Download-Desktop_App-2ea44f?style=for-the-badge&logo=github)](https://github.com/kaya-go/kaya/releases)
 [![Web App](https://img.shields.io/badge/Open-Web_App-3b82f6?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kayago.app)
 [![Next](https://img.shields.io/badge/Try-Next_Version-f97316?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kayago.app/next/)
 
-<img src="docs/images/screenshot.jpg" alt="Kaya Screenshot" width="800">
+<br>
+
+<img src="docs/images/screenshot.jpg" alt="Kaya — Go game with AI analysis" width="800">
 
 </div>
 
@@ -28,84 +22,116 @@
 
 ## ✨ Features
 
-- 🎯 **Complete Go Rules** - 9×9, 13×13, and 19×19 boards with full rule enforcement
-- 🌳 **Game Tree** - Visual tree viewer with variation support
-- 📄 **SGF Support** - Import/export games, drag & drop, OGS URL import
-- 🤖 **AI Analysis** - Live win rate, move suggestions, and full game analysis (KataGo via ONNX)
-- 📷 **Board Recognition** - Convert a photo or screenshot of a Go board into a playable game or SGF file
-- ✏️ **Edit Mode** - Add stones, markers, labels, and annotations
-- 🎯 **Score Estimation** - Interactive dead stone marking with territory calculation
-- 📚 **Game Library** - Organize games in folders with local storage
-- 🎮 **Input Options** - Keyboard shortcuts, gamepad support, mouse wheel navigation
-- 🎨 **Themes** - Dark and light modes
-- 🌍 **Multi-Language** - Available in 8 languages (EN, ZH, KO, JA, FR, DE, ES, IT)
+<table>
+<tr>
+<td width="50%">
+
+**Game & Study**
+
+- 🎯 Complete Go rules on 9×9, 13×13, and 19×19 boards
+- 🌳 Visual game tree with variation support
+- 📄 SGF import/export, drag & drop, OGS URL import
+- ✏️ Edit mode with stones, markers, labels, and annotations
+- 📚 Game library — organize games in folders
+- 🎯 Score estimation with interactive dead stone marking
+
+</td>
+<td width="50%">
+
+**AI & Analysis**
+
+- 🤖 Live win rate, move suggestions, and full game analysis (KataGo via ONNX)
+- 📊 Analysis graph with move quality colors
+- 🗺️ Ownership heatmap for territory visualization
+
+**Board Recognition**
+
+- 📷 Snap a photo of a real board → get a playable SGF
+- 🧠 Powered by Moku AI (RT-DETR model)
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+<img src="docs/images/screenshot-board-recognition.png" alt="Kaya — Board recognition from photo with Moku AI" width="700">
+<br>
+<em>Board recognition: snap a photo of any Go board and import it instantly</em>
+</div>
+
+### More
+
+- 🎮 Keyboard shortcuts, gamepad support, mouse wheel navigation
+- 🎨 6 board themes + dark/light mode
+- 🌍 8 languages (EN, ZH, KO, JA, FR, DE, ES, IT)
+- 📱 Responsive on mobile, tablet, and desktop
 
 ### Platform Support
 
-- 🖥️ **Desktop App** - Native performance on Windows, macOS, and Linux
-- 🌐 **Web Version** - Play directly in your browser (works on mobile and tablet too)
-  - [**Stable Version**](https://kayago.app) - Latest official release (Recommended)
-  - [**Next Version**](https://kayago.app/next/) - Built from `main` branch (Newest features, less stable)
-- 📱 **Installable PWA** - Install the web app on mobile or desktop for offline use (no app store needed)
+- 🖥️ **Desktop** — Native performance on Windows, macOS, and Linux via [Tauri](https://tauri.app)
+- 🌐 **Web** — Play directly in your browser (works on mobile and tablet too)
+  - [**Stable**](https://kayago.app) — Latest official release
+  - [**Next**](https://kayago.app/next/) — Built from `main` branch (newest features)
+- 📱 **PWA** — Install the web app on any device for offline use (no app store needed)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Get Started
 
-### Installation
-
-| Platform       | File        | Download                                                         |
-| -------------- | ----------- | ---------------------------------------------------------------- |
-| 🪟 **Windows** | `.exe`      | [Releases page](https://github.com/kaya-go/kaya/releases/latest) |
-| 🍎 **macOS**   | `.dmg`      | [Releases page](https://github.com/kaya-go/kaya/releases/latest) |
-| 🐧 **Linux**   | `.AppImage` | [Releases page](https://github.com/kaya-go/kaya/releases/latest) |
-| 🌐 **Web**     | —           | [Open in browser](https://kayago.app)                            |
+| Platform       | How                                                                     |
+| -------------- | ----------------------------------------------------------------------- |
+| 🌐 **Web**     | **[Open kayago.app](https://kayago.app)** — nothing to install          |
+| 🪟 **Windows** | [Download `.exe`](https://github.com/kaya-go/kaya/releases/latest)      |
+| 🍎 **macOS**   | [Download `.dmg`](https://github.com/kaya-go/kaya/releases/latest)      |
+| 🐧 **Linux**   | [Download `.AppImage`](https://github.com/kaya-go/kaya/releases/latest) |
 
 ---
 
 ## 🛠️ Tech Stack
 
-Kaya is built with modern, performant technologies:
+| Layer                 | Technology                                                         |
+| --------------------- | ------------------------------------------------------------------ |
+| **Frontend**          | React 19 + TypeScript 5 + Rsbuild                                  |
+| **Desktop**           | [Tauri v2](https://tauri.app) (Rust backend)                       |
+| **AI**                | [KataGo](https://github.com/lightvector/KataGo) via ONNX Runtime   |
+| **Board Recognition** | Moku AI (RT-DETR) + classic CV pipeline                            |
+| **Build**             | [Bun](https://bun.sh) workspaces (monorepo, 14 packages)           |
+| **Go logic**          | TypeScript ports from [Sabaki](https://github.com/SabakiHQ/Sabaki) |
 
-- **Frontend**: React 18 + TypeScript + Rsbuild
-- **Desktop**: Tauri v2 (Rust backend for native performance)
-- **Build System**: Bun workspaces (monorepo architecture)
-- **Core Libraries**: TypeScript ports from [Sabaki](https://github.com/SabakiHQ/Sabaki)
-- **Rendering**: Custom SVG-based board with optimized performance
+[![GitHub Release](https://img.shields.io/github/v/release/kaya-go/kaya)](https://github.com/kaya-go/kaya/releases/latest)
+[![GitHub Downloads](https://img.shields.io/github/downloads/kaya-go/kaya/total)](https://github.com/kaya-go/kaya/releases)
+[![CI](https://github.com/kaya-go/kaya/workflows/CI/badge.svg)](https://github.com/kaya-go/kaya/actions)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! Whether it's bug reports, feature requests, or code contributions.
+Contributions are welcome — bug reports, feature ideas, or code!
 
 - 🐛 [Report a bug](https://github.com/kaya-go/kaya/issues/new?template=bug_report.md)
 - 💡 [Suggest a feature](https://github.com/kaya-go/kaya/issues/new?template=feature_request.md)
-- 🛠️ **[Contributing Guide](CONTRIBUTING.md)** - Get started with development
+- 🛠️ [Contributing guide](CONTRIBUTING.md)
 
 ---
 
 ## 📜 License
 
-AGPL-3.0 © 2025 [Hadim](https://github.com/hadim)
-
-See [LICENSE](LICENSE) for details.
+[AGPL-3.0](LICENSE) © 2025-2026 [Hadim](https://github.com/hadim)
 
 ---
 
 ## 🙏 Acknowledgments
 
-Kaya stands on the shoulders of giants:
-
-- **[Sabaki](https://github.com/SabakiHQ/Sabaki)** - Core Go libraries and inspiration
-- **[Tauri](https://tauri.app)** - Modern desktop app framework
-- **[KataGo](https://github.com/lightvector/KataGo)** - AI analysis engine (via ONNX Runtime)
+- **[Sabaki](https://github.com/SabakiHQ/Sabaki)** — Core Go libraries and inspiration
+- **[Tauri](https://tauri.app)** — Lightweight desktop framework
+- **[KataGo](https://github.com/lightvector/KataGo)** — AI analysis engine
 
 ---
 
 <div align="center">
 
-**Enjoy playing Go!** 🎋
+**"Kaya" (榧) — the Japanese nutmeg tree, whose wood makes the finest Go boards.**
 
 Made with ❤️ for the Go community
 
