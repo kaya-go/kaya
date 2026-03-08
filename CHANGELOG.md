@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] - 2026-03-08
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(rust)* Enforce zero warnings and fix all unused code warnings ([2f69c71](https://github.com/kaya-go/kaya/commit/2f69c7115ed513df110c40ad21859281166ca646)) by @hadim
+
+- *(ui)* Keep theme/sound toggles visible on mobile header and maximize board width ([657a8c4](https://github.com/kaya-go/kaya/commit/657a8c45e0e50d6e1e7412074babcb9370e68165)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Switch domain to kayago.app ([020923e](https://github.com/kaya-go/kaya/commit/020923e76891a605c8de1657dfa12b64be1f2090)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @dependabot[bot]
+- @github-actions[bot]
+
 ## [0.3.0] - 2026-03-02
 
 ### <!-- 0 -->🚀 Features
@@ -50,13 +68,15 @@ All notable changes to this project will be documented in this file.
 
 - Fix release Linux build failing on cargo install tauri-cli ([#74](https://github.com/kaya-go/kaya/issues/74)) by @Copilot
 
+- Release v0.3.0 ([2f842a9](https://github.com/kaya-go/kaya/commit/2f842a9c0eb9a29d80f8d8c3496a29b7611fe441)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @Copilot *(first contribution)* 🎉
 - @hadim
 - @dependabot[bot]
 - @Aitai *(first contribution)* 🎉
-- @github-actions[bot]
 
 ## [0.2.4] - 2026-01-03
 
