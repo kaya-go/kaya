@@ -12,7 +12,7 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "category": "Game",
-    "copyright": "Copyright © 2025",
+    "copyright": "Copyright © 2025-2026 Hadim",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -20,8 +20,8 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "longDescription": "A beautiful Go game application with AI analysis powered by KataGo",
-    "shortDescription": "Go game with AI analysis",
+    "longDescription": "Play, study, and analyze Go with AI-powered analysis (KataGo), board recognition from photos, and a modern interface. Free and open source.",
+    "shortDescription": "Go game with AI analysis and board recognition",
     "resources": {
       "scripts/pytorch_inference.py": "scripts/pytorch_inference.py"
     },

@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Kaya - Modern Go Game",
+  "name": "Kaya — Play, Study & Analyze Go",
   "short_name": "Kaya",
-  "description": "A beautiful Go (Baduk/Weiqi) game application with SGF support and game tree navigation",
+  "description": "Free, open-source Go (Baduk/Weiqi) app with AI analysis, board recognition from photos, SGF support, and game tree navigation.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

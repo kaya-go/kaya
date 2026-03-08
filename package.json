@@ -3,7 +3,7 @@
   "version": "0.3.2-dev",
   "private": true,
   "type": "module",
-  "description": "A modern, elegant Go (Baduk/Weiqi) game application with beautiful interface, SGF support, game tree navigation, and AI analysis powered by KataGo",
+  "description": "Free, open-source Go (Baduk/Weiqi) application with AI analysis (KataGo), board recognition from photos, SGF support, and game tree navigation",
   "keywords": [
     "go",
     "baduk",
@@ -17,7 +17,11 @@
     "typescript",
     "desktop-app",
     "pwa",
-    "cross-platform"
+    "cross-platform",
+    "katago",
+    "ai-analysis",
+    "board-recognition",
+    "onnx"
   ],
   "homepage": "https://kayago.app",
   "repository": {
