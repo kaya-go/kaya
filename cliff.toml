@@ -99,4 +99,4 @@ repo = "kaya"
 
 # Exclude bots from the contributors list
 [remote.github.ignore]
-usernames = ["github-actions[bot]"]
+usernames = ["github-actions[bot]", "dependabot[bot]"]

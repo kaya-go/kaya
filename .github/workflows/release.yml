@@ -422,6 +422,8 @@ jobs:
 
       - name: Generate changelog from commits
         id: changelog
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Generate full changelog (skip_tags in cliff.toml handles old versions)
           bun run git-cliff --tag "v${{ github.event.inputs.version }}" -o CHANGELOG.md
@@ -498,10 +500,6 @@ jobs:
             | **Linux** (AppImage) | [.AppImage](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage.sig) |
             | **Linux** (Debian/Ubuntu) | [.deb](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya_${{ github.event.inputs.version }}_amd64.deb) | - |
             | **Linux** (Fedora/RHEL) | [.rpm](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya-${{ github.event.inputs.version }}-1.x86_64.rpm) | - |
-
-            ## Installation
-
-            Download the appropriate file for your platform and follow the installation instructions.
 
   bump-dev-version:
     name: Bump to Next Dev Version
