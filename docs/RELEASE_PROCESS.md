@@ -9,13 +9,13 @@ Kaya uses a **fully automated GitHub Actions workflow** for releases. Everything
 We maintain two versions of the web app on GitHub Pages:
 
 1. **Stable Version** (`/`)
-   - **URL**: https://kaya-go.github.io/kaya/
+   - **URL**: https://kayago.app/
    - **Source**: Latest tagged release
    - **Workflow**: `release.yml`
    - **Details**: Deployed to the root directory.
 
 2. **Next Version** (`/next/`)
-   - **URL**: https://kaya-go.github.io/kaya/next/
+   - **URL**: https://kayago.app/next/
    - **Source**: `main` branch (latest commits)
    - **Workflow**: `ci.yml`
    - **Details**: Deployed to the `/next` subdirectory.

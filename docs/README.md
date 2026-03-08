@@ -22,6 +22,6 @@
 ## Quick Links
 
 - [GitHub Repository](https://github.com/kaya-go/kaya)
-- [Web App](https://kaya-go.github.io/kaya)
-- [Next Version](https://kaya-go.github.io/kaya/next/)
+- [Web App](https://kayago.app)
+- [Next Version](https://kayago.app/next/)
 - [Releases](https://github.com/kaya-go/kaya/releases)

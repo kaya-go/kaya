@@ -69,8 +69,8 @@ jobs:
     name: Web App
     runs-on: ubuntu-latest
     env:
-      # Use /kaya/next/ for main branch, / for PRs
-      ASSET_PREFIX: ${{ github.ref == 'refs/heads/main' && '/kaya/next/' || '/' }}
+      # Use /next/ for main branch (deployed to kayago.app/next/), / for PRs
+      ASSET_PREFIX: ${{ github.ref == 'refs/heads/main' && '/next/' || '/' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -337,4 +337,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./gh-pages
+          cname: kayago.app
           keep_files: false

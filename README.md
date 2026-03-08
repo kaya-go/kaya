@@ -17,8 +17,8 @@
 [![Bun](https://img.shields.io/badge/Bun-1.x-f9f1e1.svg?logo=bun&logoColor=black)](https://bun.sh)
 
 [![Download](https://img.shields.io/badge/Download-Desktop_App-2ea44f?style=for-the-badge&logo=github)](https://github.com/kaya-go/kaya/releases)
-[![Web App](https://img.shields.io/badge/Open-Web_App-3b82f6?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kaya-go.github.io/kaya)
-[![Next](https://img.shields.io/badge/Try-Next_Version-f97316?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kaya-go.github.io/kaya/next/)
+[![Web App](https://img.shields.io/badge/Open-Web_App-3b82f6?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kayago.app)
+[![Next](https://img.shields.io/badge/Try-Next_Version-f97316?style=for-the-badge&logo=googlechrome&logoColor=white)](https://kayago.app/next/)
 
 <img src="docs/images/screenshot.jpg" alt="Kaya Screenshot" width="800">
 
@@ -44,8 +44,8 @@
 
 - 🖥️ **Desktop App** - Native performance on Windows, macOS, and Linux
 - 🌐 **Web Version** - Play directly in your browser (works on mobile and tablet too)
-  - [**Stable Version**](https://kaya-go.github.io/kaya) - Latest official release (Recommended)
-  - [**Next Version**](https://kaya-go.github.io/kaya/next/) - Built from `main` branch (Newest features, less stable)
+  - [**Stable Version**](https://kayago.app) - Latest official release (Recommended)
+  - [**Next Version**](https://kayago.app/next/) - Built from `main` branch (Newest features, less stable)
 - 📱 **Installable PWA** - Install the web app on mobile or desktop for offline use (no app store needed)
 
 ---
@@ -59,7 +59,7 @@
 | 🪟 **Windows** | `.exe`      | [Releases page](https://github.com/kaya-go/kaya/releases/latest) |
 | 🍎 **macOS**   | `.dmg`      | [Releases page](https://github.com/kaya-go/kaya/releases/latest) |
 | 🐧 **Linux**   | `.AppImage` | [Releases page](https://github.com/kaya-go/kaya/releases/latest) |
-| 🌐 **Web**     | —           | [Open in browser](https://kaya-go.github.io/kaya)                |
+| 🌐 **Web**     | —           | [Open in browser](https://kayago.app)                            |
 
 ---
 

@@ -81,7 +81,7 @@ jobs:
       contents: write
     env:
       NODE_ENV: production
-      ASSET_PREFIX: /kaya/
+      ASSET_PREFIX: /
     steps:
       - uses: actions/checkout@v6
 
@@ -152,6 +152,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./gh-pages
+          cname: kayago.app
           keep_files: false
 
   build-desktop:

@@ -14,7 +14,7 @@ bun run dev
 
 **Web (Browser):**
 
-Visit [kaya-go.github.io/kaya](https://kaya-go.github.io/kaya) or run locally:
+Visit [kayago.app](https://kayago.app) or run locally:
 
 ```bash
 bun run dev:web
