@@ -48,6 +48,7 @@ import {
   useVertexRightClickHandler,
   useScoringData,
 } from './gameboard-interactions';
+import { useBoardControlsKeyNav } from './useBoardControlsKeyNav';
 import './GameBoard.css';
 import './GameBoardAnalysisSummary.css';
 
@@ -88,6 +89,9 @@ export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
   const swipeHandlers = useBoardSwipeNavigation(goBack, goForward, swipeEnabled);
 
   const [showResignConfirm, setShowResignConfirm] = useState(false);
+
+  // Keyboard and wheel navigation (always active, even when board controls are collapsed)
+  useBoardControlsKeyNav();
 
   // AI Analysis integration (for heatMap/ownershipMap on the board)
   const { isModelLoaded } = useGameTree();
@@ -298,6 +302,7 @@ export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
       <button
         className="board-controls-collapse-bar"
         onClick={handleToggleBoardControls}
+        tabIndex={-1}
         title={
           gameSettings.showBoardControls
             ? t('gameboardActions.hideControls')

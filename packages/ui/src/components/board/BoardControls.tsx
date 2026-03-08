@@ -21,7 +21,6 @@ import {
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { BoardControlsNavigation } from './BoardControlsNavigation';
 import { BoardControlsScoring } from './BoardControlsScoring';
-import { useBoardControlsKeyNav } from './useBoardControlsKeyNav';
 import './BoardControls.css';
 
 export const BoardControls: React.FC = memo(() => {
@@ -32,9 +31,6 @@ export const BoardControls: React.FC = memo(() => {
   const { playMove, resign } = useGameTreeActions();
   const { scoringMode } = useGameTreeScore();
   const [showResignConfirm, setShowResignConfirm] = useState(false);
-
-  // Keyboard and wheel navigation
-  useBoardControlsKeyNav();
 
   // Determine whose turn it is
   // Check PL property first, then handicap, then alternate based on move number

@@ -90,6 +90,10 @@
   flex-shrink: 0;
 }
 
+.board-controls-collapse-bar:focus {
+  outline: none;
+}
+
 .board-controls-collapse-bar:hover {
   background-color: var(--bg-hover);
   color: var(--foreground);
