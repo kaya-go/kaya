@@ -225,6 +225,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-android-
 
+      - name: Copy assets
+        run: bun run copy-assets
+
       - name: Download ONNX Runtime Android
         run: |
           cd apps/desktop
