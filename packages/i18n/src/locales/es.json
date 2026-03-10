@@ -41,6 +41,11 @@
   "menu": "Menú",
   "moreActions": "Más",
   "muteSounds": "Silenciar",
+  "sound": {
+    "initError": "La reproducción de sonido no está disponible en este sistema. El sonido se ha desactivado automáticamente.",
+    "copyError": "Copiar error",
+    "errorCopied": "Detalles del error copiados al portapapeles"
+  },
   "new": "Nuevo",
   "newGame": "Nueva partida",
   "newGameEllipsis": "Nueva partida...",

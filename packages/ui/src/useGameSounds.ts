@@ -13,7 +13,7 @@ const getAssetPath = (path: string) => {
   return path;
 };
 
-// All sound paths organized by type
+// All sound paths organized by type (used by web backends only)
 const SOUND_PATHS = {
   move: Array.from({ length: 5 }, (_, i) => getAssetPath(`assets/move-${i}.ogg`)),
   capture: Array.from({ length: 5 }, (_, i) => getAssetPath(`assets/capture${i}.ogg`)),
@@ -26,14 +26,74 @@ const SOUND_PATHS = {
 // ============================================================================
 
 interface SoundBackend {
-  init(): void;
+  init(): Promise<void> | void;
   preload(): Promise<void>;
-  play(path: string): void;
+  play(type: SoundType, variant: number): void;
   readonly ready: boolean;
 }
 
 // ============================================================================
-// Web Audio API Backend (primary — low latency)
+// Tauri Native Audio Backend (rodio — bypasses WebKitGTK/GStreamer)
+// ============================================================================
+
+class TauriAudioBackend implements SoundBackend {
+  private initialized = false;
+  private initError: string | null = null;
+
+  get ready() {
+    return this.initialized;
+  }
+
+  async init(): Promise<void> {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invoke =
+        (window as any).__TAURI__?.core?.invoke ??
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__TAURI_INTERNALS__?.invoke;
+      if (!invoke) throw new Error('Tauri invoke not available');
+
+      await invoke('audio_init');
+      this.initialized = true;
+      if (DEBUG_SOUND) console.log('[SOUND:Tauri] Initialized native audio (rodio)');
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      this.initError = msg;
+      console.warn('[SOUND:Tauri] Failed to init native audio:', msg);
+      throw e;
+    }
+  }
+
+  async preload(): Promise<void> {
+    // Sounds are preloaded in Rust during audio_init
+  }
+
+  play(type: SoundType, variant: number): void {
+    if (!this.initialized) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const invoke =
+        (window as any).__TAURI__?.core?.invoke ??
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).__TAURI_INTERNALS__?.invoke;
+      if (!invoke) return;
+
+      // Fire-and-forget — don't await, don't block UI
+      invoke('audio_play_sound', { soundType: type, variant }).catch(() => {
+        // Playback error — silently ignore (sound is non-critical)
+      });
+    } catch {
+      // invoke setup failed — ignore
+    }
+  }
+
+  getInitError(): string | null {
+    return this.initError;
+  }
+}
+
+// ============================================================================
+// Web Audio API Backend (primary for web — low latency)
 // ============================================================================
 
 class WebAudioBackend implements SoundBackend {
@@ -42,7 +102,7 @@ class WebAudioBackend implements SoundBackend {
   private loading = false;
   private loaded = false;
   private loadPromise: Promise<void> | null = null;
-  private pendingSound: { path: string; timestamp: number } | null = null;
+  private pendingSound: { type: SoundType; variant: number; timestamp: number } | null = null;
   private resumeFailures = 0;
 
   get ready() {
@@ -56,9 +116,9 @@ class WebAudioBackend implements SoundBackend {
       const Ctor = window.AudioContext || (window as any).webkitAudioContext;
       if (!Ctor) throw new Error('AudioContext not available');
       this.context = new Ctor({ latencyHint: 'interactive' });
-      if (DEBUG_SOUND) console.log('[SOUND:WebAudio] ✅ AudioContext created');
+      if (DEBUG_SOUND) console.log('[SOUND:WebAudio] AudioContext created');
     } catch (e) {
-      if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] ❌ Failed to create AudioContext:', e);
+      if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] Failed to create AudioContext:', e);
       this.context = null;
       throw e;
     }
@@ -80,35 +140,37 @@ class WebAudioBackend implements SoundBackend {
           const buffer = await this.context!.decodeAudioData(arrayBuffer);
           this.buffers.set(path, buffer);
         } catch (e) {
-          if (DEBUG_SOUND) console.warn(`[SOUND:WebAudio] ❌ Failed to load ${path}:`, e);
+          if (DEBUG_SOUND) console.warn(`[SOUND:WebAudio] Failed to load ${path}:`, e);
         }
       })
     ).then(() => {
       this.loaded = true;
       this.loading = false;
       if (DEBUG_SOUND)
-        console.log(`[SOUND:WebAudio] ✅ Preloaded ${this.buffers.size}/${allPaths.length} sounds`);
+        console.log(`[SOUND:WebAudio] Preloaded ${this.buffers.size}/${allPaths.length} sounds`);
 
       // Play pending sound if still recent
       if (this.pendingSound) {
         const elapsed = performance.now() - this.pendingSound.timestamp;
-        if (elapsed < 500) this.play(this.pendingSound.path);
+        if (elapsed < 500) this.play(this.pendingSound.type, this.pendingSound.variant);
         this.pendingSound = null;
       }
     });
     return this.loadPromise;
   }
 
-  play(path: string): void {
+  play(type: SoundType, variant: number): void {
     const ctx = this.context;
     if (!ctx) return;
+
+    const path = getSoundPath(type, variant);
 
     // Resume if suspended
     if (ctx.state === 'suspended') {
       ctx.resume().catch(e => {
         this.resumeFailures++;
         if (this.resumeFailures <= 1) {
-          console.warn('[SOUND:WebAudio] ⚠️ Failed to resume AudioContext:', e);
+          console.warn('[SOUND:WebAudio] Failed to resume AudioContext:', e);
         }
       });
     }
@@ -116,7 +178,7 @@ class WebAudioBackend implements SoundBackend {
     const buffer = this.buffers.get(path);
     if (!buffer) {
       if (this.loading && !this.pendingSound) {
-        this.pendingSound = { path, timestamp: performance.now() };
+        this.pendingSound = { type, variant, timestamp: performance.now() };
       }
       return;
     }
@@ -127,7 +189,7 @@ class WebAudioBackend implements SoundBackend {
       source.connect(ctx.destination);
       source.start(0);
     } catch {
-      // Play failed — caller can fall back
+      // Play failed
     }
   }
 
@@ -136,13 +198,12 @@ class WebAudioBackend implements SoundBackend {
     if (!this.context) return false;
     try {
       if (this.context.state === 'suspended') {
-        // Race resume() against a timeout — WebKitGTK can hang forever
         const resumed = await Promise.race([
           this.context.resume().then(() => true),
           new Promise<false>(resolve => setTimeout(() => resolve(false), 2000)),
         ]);
         if (!resumed) {
-          if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] ⏱️ resume() timed out');
+          if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] resume() timed out');
           return false;
         }
       }
@@ -169,7 +230,7 @@ class WebAudioBackend implements SoundBackend {
 }
 
 // ============================================================================
-// HTMLAudioElement Backend (fallback — lazy, no preloading)
+// HTMLAudioElement Backend (web fallback — lazy, no preloading)
 // ============================================================================
 
 class HtmlAudioBackend implements SoundBackend {
@@ -186,11 +247,13 @@ class HtmlAudioBackend implements SoundBackend {
 
   async preload(): Promise<void> {
     // No preloading — creating Audio elements can trigger GStreamer init
-    // which may hang if plugins are missing (e.g. AppImage without gst-plugins)
+    // which may hang if plugins are missing
   }
 
-  play(path: string): void {
+  play(type: SoundType, variant: number): void {
     if (this.failed) return;
+
+    const path = getSoundPath(type, variant);
 
     try {
       let el = this.cache.get(path);
@@ -206,9 +269,26 @@ class HtmlAudioBackend implements SoundBackend {
         // Playback failed — silently ignore
       });
     } catch {
-      // Audio constructor or play threw — GStreamer likely broken
       this.failed = true;
     }
+  }
+}
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/** Resolve a SoundType + variant to a URL path (for web backends) */
+function getSoundPath(type: SoundType, variant: number): string {
+  switch (type) {
+    case 'move':
+      return SOUND_PATHS.move[variant % 5];
+    case 'capture':
+      return SOUND_PATHS.capture[variant % 5];
+    case 'pass':
+      return SOUND_PATHS.pass;
+    case 'newgame':
+      return SOUND_PATHS.newgame;
   }
 }
 
@@ -228,26 +308,67 @@ const MIN_SOUND_INTERVAL = 50;
 let moveVariantIndex = 0;
 let captureVariantIndex = 0;
 
+// ============================================================================
+// Global Error Callback — notifies React when audio init fails
+// ============================================================================
+
+/** Error details for sound init failure */
+export interface SoundInitError {
+  message: string;
+  platform: string;
+  backend: string;
+}
+
+/** Callback set by the React hook to receive init errors */
+let onSoundInitError: ((error: SoundInitError) => void) | null = null;
+
+/** Register an error handler (called from useGameSounds hook) */
+export const setSoundInitErrorHandler = (handler: ((error: SoundInitError) => void) | null) => {
+  onSoundInitError = handler;
+};
+
+const reportSoundError = (message: string, backend: string) => {
+  const platform = typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown';
+  const error: SoundInitError = { message, platform, backend };
+  console.warn('[SOUND] Audio initialization failed:', error);
+
+  // Auto-disable sound
+  setGlobalSoundEnabled(false);
+
+  // Notify React (if handler registered)
+  onSoundInitError?.(error);
+};
+
+// Detect Tauri environment
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+
 const initSoundBackend = (): void => {
   if (backendInitialized) return;
   backendInitialized = true;
 
-  // Always set up lazy HTML Audio as the immediate backend.
-  // Its play() is async and won't freeze even with broken GStreamer.
-  const htmlAudio = new HtmlAudioBackend();
-  activeBackend = htmlAudio;
-
-  // In Tauri on Linux, new AudioContext() is synchronous and can freeze
-  // the entire WebKitWebProcess when GStreamer plugins are missing.
-  // Skip Web Audio entirely in Tauri — HTML Audio works fine.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
   if (isTauri) {
-    if (DEBUG_SOUND) console.log('[SOUND] Tauri detected, using HTML Audio backend');
+    // Desktop (Tauri): use native audio via rodio (bypasses WebKitGTK/GStreamer).
+    // Do NOT fall back to WebAudio or HtmlAudio — they both go through GStreamer
+    // and will either fail or freeze the WebKitWebProcess on Linux.
+    const tauriBackend = new TauriAudioBackend();
+    backendInitPromise = (async () => {
+      try {
+        await tauriBackend.init();
+        activeBackend = tauriBackend;
+        if (DEBUG_SOUND) console.log('[SOUND] Using Tauri native audio (rodio)');
+      } catch {
+        const errorMsg = tauriBackend.getInitError() || 'Unknown audio error';
+        reportSoundError(errorMsg, 'tauri-rodio');
+      }
+    })();
     return;
   }
 
-  // In browsers, try to upgrade to Web Audio API (lower latency).
+  // Web browser: use WebAudio (low latency) with HtmlAudio fallback.
+  const htmlAudio = new HtmlAudioBackend();
+  activeBackend = htmlAudio;
+
   backendInitPromise = (async () => {
     try {
       const webAudio = new WebAudioBackend();
@@ -256,7 +377,7 @@ const initSoundBackend = (): void => {
       if (works) {
         await webAudio.preload();
         activeBackend = webAudio;
-        if (DEBUG_SOUND) console.log('[SOUND] ✅ Upgraded to Web Audio API backend');
+        if (DEBUG_SOUND) console.log('[SOUND] Upgraded to Web Audio API backend');
         return;
       }
       webAudio.dispose();
@@ -267,15 +388,14 @@ const initSoundBackend = (): void => {
   })();
 };
 
-const playSound_ = (path: string): void => {
-  // If backend is ready, play immediately
+const playSound_ = (type: SoundType, variant: number): void => {
   if (activeBackend) {
-    activeBackend.play(path);
+    activeBackend.play(type, variant);
     return;
   }
-  // Otherwise wait for init (fire-and-forget, first sound may be missed)
+  // Wait for init (fire-and-forget, first sound may be missed)
   backendInitPromise?.then(() => {
-    activeBackend?.play(path);
+    activeBackend?.play(type, variant);
   });
 };
 
@@ -367,37 +487,28 @@ export const useGameSounds = () => {
     const timeSinceLast = now - lastTime;
 
     if (timeSinceLast < MIN_SOUND_INTERVAL) {
-      if (DEBUG_SOUND) console.log(`[SOUND] ⏭️ Skipped (debounce: ${Math.round(timeSinceLast)}ms)`);
+      if (DEBUG_SOUND) console.log(`[SOUND] Skipped (debounce: ${Math.round(timeSinceLast)}ms)`);
       return;
     }
     lastPlayTime.set(type, now);
 
-    // Select sound path
-    let soundPath = '';
-
+    // Select variant (rotating for variety)
+    let selectedVariant: number;
     switch (type) {
-      case 'move': {
-        const moveVariant = variant ?? moveVariantIndex;
+      case 'move':
+        selectedVariant = variant ?? moveVariantIndex;
         moveVariantIndex = (moveVariantIndex + 1) % 5;
-        soundPath = SOUND_PATHS.move[moveVariant];
         break;
-      }
-      case 'capture': {
-        const captureVariant = variant ?? captureVariantIndex;
+      case 'capture':
+        selectedVariant = variant ?? captureVariantIndex;
         captureVariantIndex = (captureVariantIndex + 1) % 5;
-        soundPath = SOUND_PATHS.capture[captureVariant];
         break;
-      }
-      case 'pass':
-        soundPath = SOUND_PATHS.pass;
-        break;
-      case 'newgame':
-        soundPath = SOUND_PATHS.newgame;
+      default:
+        selectedVariant = 0;
         break;
     }
 
-    // Play the sound
-    playSound_(soundPath);
+    playSound_(type, selectedVariant);
   }, []);
 
   const toggleSound = useCallback(() => {

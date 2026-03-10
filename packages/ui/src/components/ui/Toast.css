@@ -64,3 +64,27 @@
 .toast-close:hover {
   opacity: 1;
 }
+
+.toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.toast-action {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background 0.2s;
+}
+
+.toast-action:hover {
+  background: var(--bg-tertiary, rgba(128, 128, 128, 0.15));
+}

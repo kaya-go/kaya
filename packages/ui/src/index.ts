@@ -122,7 +122,8 @@ export type { TauriSaveAPI } from '@kaya/platform';
 export { readClipboardText, writeClipboardText } from '@kaya/platform';
 
 // Hooks
-export { useGameSounds } from './useGameSounds';
+export { useGameSounds, setSoundInitErrorHandler } from './useGameSounds';
+export type { SoundInitError } from './useGameSounds';
 export { useGamepads } from './useGamepads';
 export type { GamepadInfo } from './useGamepads';
 export { useGameController } from './useGameController';

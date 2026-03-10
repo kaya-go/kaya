@@ -41,6 +41,11 @@
   "menu": "メニュー",
   "moreActions": "その他",
   "muteSounds": "音を消す",
+  "sound": {
+    "initError": "このシステムでは音声再生ができません。サウンドは自動的に無効化されました。",
+    "copyError": "エラーをコピー",
+    "errorCopied": "エラー詳細がクリップボードにコピーされました"
+  },
   "new": "新規",
   "newGame": "新規対局",
   "newGameEllipsis": "新規対局...",

@@ -41,6 +41,11 @@
   "menu": "Menu",
   "moreActions": "Plus",
   "muteSounds": "Couper sons",
+  "sound": {
+    "initError": "La lecture audio n'est pas disponible sur ce système. Le son a été automatiquement désactivé.",
+    "copyError": "Copier l'erreur",
+    "errorCopied": "Détails de l'erreur copiés dans le presse-papiers"
+  },
   "new": "Nouveau",
   "newGame": "Nouvelle partie",
   "newGameEllipsis": "Nouvelle partie...",

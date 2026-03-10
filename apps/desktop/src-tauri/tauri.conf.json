@@ -23,7 +23,19 @@
     "longDescription": "Play, study, and analyze Go with AI-powered analysis (KataGo), board recognition from photos, and a modern interface. Free and open source.",
     "shortDescription": "Go game with AI analysis and board recognition",
     "resources": {
-      "scripts/pytorch_inference.py": "scripts/pytorch_inference.py"
+      "scripts/pytorch_inference.py": "scripts/pytorch_inference.py",
+      "../public/assets/move-0.ogg": "sounds/move-0.ogg",
+      "../public/assets/move-1.ogg": "sounds/move-1.ogg",
+      "../public/assets/move-2.ogg": "sounds/move-2.ogg",
+      "../public/assets/move-3.ogg": "sounds/move-3.ogg",
+      "../public/assets/move-4.ogg": "sounds/move-4.ogg",
+      "../public/assets/capture0.ogg": "sounds/capture0.ogg",
+      "../public/assets/capture1.ogg": "sounds/capture1.ogg",
+      "../public/assets/capture2.ogg": "sounds/capture2.ogg",
+      "../public/assets/capture3.ogg": "sounds/capture3.ogg",
+      "../public/assets/capture4.ogg": "sounds/capture4.ogg",
+      "../public/assets/pass.ogg": "sounds/pass.ogg",
+      "../public/assets/newgame.ogg": "sounds/newgame.ogg"
     },
     "macOS": {
       "entitlements": "Entitlements.plist",

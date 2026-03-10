@@ -11,11 +11,16 @@ export interface ToastMessage {
   id: string;
   message: string;
   type: ToastType;
+  action?: { label: string; onClick: () => void };
 }
 
 interface ToastContextValue {
   messages: ToastMessage[];
-  showToast: (message: string, type: ToastType) => void;
+  showToast: (
+    message: string,
+    type: ToastType,
+    action?: { label: string; onClick: () => void }
+  ) => void;
   closeToast: (id: string) => void;
 }
 
@@ -24,15 +29,23 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [messages, setMessages] = useState<ToastMessage[]>([]);
 
-  const showToast = useCallback((message: string, type: ToastType = 'info') => {
-    const id = `toast-${Date.now()}`;
-    setMessages(prev => [...prev, { id, message, type }]);
+  const showToast = useCallback(
+    (
+      message: string,
+      type: ToastType = 'info',
+      action?: { label: string; onClick: () => void }
+    ) => {
+      const id = `toast-${Date.now()}`;
+      setMessages(prev => [...prev, { id, message, type, action }]);
 
-    // Auto-dismiss after 3 seconds
-    setTimeout(() => {
-      setMessages(prev => prev.filter(m => m.id !== id));
-    }, 3000);
-  }, []);
+      // Longer timeout for actionable toasts (10s vs 3s)
+      const timeout = action ? 10000 : 3000;
+      setTimeout(() => {
+        setMessages(prev => prev.filter(m => m.id !== id));
+      }, timeout);
+    },
+    []
+  );
 
   const closeToast = useCallback((id: string) => {
     setMessages(prev => prev.filter(m => m.id !== id));
@@ -63,9 +76,16 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onClos
 
   return (
     <div className="toast-container">
-      {messages.map(({ id, message, type }) => (
+      {messages.map(({ id, message, type, action }) => (
         <div key={id} className={`toast toast-${type}`}>
-          <span>{message}</span>
+          <div className="toast-content">
+            <span>{message}</span>
+            {action && (
+              <button onClick={action.onClick} className="toast-action">
+                {action.label}
+              </button>
+            )}
+          </div>
           <button onClick={() => onClose(id)} className="toast-close">
             ×
           </button>

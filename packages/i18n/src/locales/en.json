@@ -41,6 +41,11 @@
   "menu": "Menu",
   "moreActions": "More actions",
   "muteSounds": "Mute Sounds",
+  "sound": {
+    "initError": "Sound playback is not available on this system. Sound has been automatically disabled.",
+    "copyError": "Copy Error",
+    "errorCopied": "Error details copied to clipboard"
+  },
   "new": "New",
   "newGame": "New Game",
   "newGameEllipsis": "New Game...",

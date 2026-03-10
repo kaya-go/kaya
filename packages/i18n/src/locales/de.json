@@ -41,6 +41,11 @@
   "menu": "Menü",
   "moreActions": "Mehr",
   "muteSounds": "Stumm",
+  "sound": {
+    "initError": "Soundwiedergabe ist auf diesem System nicht verfügbar. Sound wurde automatisch deaktiviert.",
+    "copyError": "Fehler kopieren",
+    "errorCopied": "Fehlerdetails in die Zwischenablage kopiert"
+  },
   "new": "Neu",
   "newGame": "Neues Spiel",
   "newGameEllipsis": "Neues Spiel...",

@@ -13,7 +13,9 @@ import {
   AIAnalysisProvider,
   type MobileTab,
   KeyboardShortcutsProvider,
+  setSoundInitErrorHandler,
 } from '@kaya/ui';
+import { useTranslation } from 'react-i18next';
 import WebUpdater from './WebUpdater';
 import AppContent from './AppContent';
 
@@ -40,10 +42,33 @@ function App() {
 
 function AppWithToast({ versionData }: { versionData: VersionData | undefined }) {
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const handleAutoSaveDisabled = useCallback(() => {
     showToast('Game is too large for auto-save (max 5MB)', 'info');
   }, [showToast]);
+
+  // Register sound error handler — auto-disables sound and shows toast with copy button
+  useEffect(() => {
+    setSoundInitErrorHandler(error => {
+      const errorDetails = [
+        `Sound Error: ${error.message}`,
+        `Backend: ${error.backend}`,
+        `Platform: ${error.platform}`,
+      ].join('\n');
+
+      showToast(t('sound.initError'), 'error', {
+        label: t('sound.copyError'),
+        onClick: () => {
+          navigator.clipboard.writeText(errorDetails).then(
+            () => showToast(t('sound.errorCopied'), 'success'),
+            () => {}
+          );
+        },
+      });
+    });
+    return () => setSoundInitErrorHandler(null);
+  }, [showToast, t]);
 
   return (
     <KeyboardShortcutsProvider>

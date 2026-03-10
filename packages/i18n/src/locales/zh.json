@@ -41,6 +41,11 @@
   "menu": "菜单",
   "moreActions": "更多",
   "muteSounds": "静音",
+  "sound": {
+    "initError": "此系统不支持音频播放。声音已自动禁用。",
+    "copyError": "复制错误",
+    "errorCopied": "错误详情已复制到剪贴板"
+  },
   "new": "新建",
   "newGame": "新对局",
   "newGameEllipsis": "新对局...",

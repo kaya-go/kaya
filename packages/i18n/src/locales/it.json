@@ -41,6 +41,11 @@
   "menu": "Menu",
   "moreActions": "Altro",
   "muteSounds": "Muto",
+  "sound": {
+    "initError": "La riproduzione audio non è disponibile su questo sistema. L'audio è stato disattivato automaticamente.",
+    "copyError": "Copia errore",
+    "errorCopied": "Dettagli dell'errore copiati negli appunti"
+  },
   "new": "Nuovo",
   "newGame": "Nuova partita",
   "newGameEllipsis": "Nuova partita...",

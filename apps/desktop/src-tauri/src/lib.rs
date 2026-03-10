@@ -5,6 +5,7 @@ use tauri::Manager;
 #[cfg(desktop)]
 use tauri::Emitter;
 
+mod audio;
 mod commands;
 mod onnx_engine;
 #[cfg(target_os = "linux")]
@@ -44,6 +45,9 @@ pub fn run() {
             commands::pytorch_benchmark,
             commands::pytorch_dispose,
             commands::download_file,
+            audio::audio_init,
+            audio::audio_play_sound,
+            audio::audio_check,
         ]);
 
     // Desktop-only plugins
@@ -53,6 +57,9 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_window_state::Builder::default().build());
+
+    let builder = builder
+        .manage(audio::AudioState(std::sync::Mutex::new(None)));
 
     let builder = builder.setup(|app| {
         // Restore window state for the current monitor setup (desktop only)

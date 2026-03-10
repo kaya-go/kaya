@@ -41,6 +41,11 @@
   "menu": "메뉴",
   "moreActions": "더보기",
   "muteSounds": "소리 끄기",
+  "sound": {
+    "initError": "이 시스템에서 소리를 재생할 수 없습니다. 소리가 자동으로 비활성화되었습니다.",
+    "copyError": "오류 복사",
+    "errorCopied": "오류 세부 정보가 클립보드에 복사되었습니다"
+  },
   "new": "새로",
   "newGame": "새 대국",
   "newGameEllipsis": "새 대국...",
