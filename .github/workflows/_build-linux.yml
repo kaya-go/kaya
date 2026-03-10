@@ -35,6 +35,7 @@ jobs:
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed \
             git curl wget unzip \
+            clang cmake \
             webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
             patchelf dpkg rpm-tools \
             nodejs npm
