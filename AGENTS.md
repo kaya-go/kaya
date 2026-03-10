@@ -49,6 +49,10 @@ bun run build:packages # Rebuild all packages
 bun run format         # Prettier + markdownlint
 bun run type-check     # All packages + apps
 bun run clean          # Remove build artifacts
+
+# Testing
+bun run test           # Unit tests (bun test)
+bun run test:e2e       # E2E tests (Playwright)
 ```
 
 ## Documentation Index
@@ -59,6 +63,7 @@ bun run clean          # Remove build artifacts
 - **[THEMES.md](docs/THEMES.md)** - Board theme system
 - **[ASSET_MANAGEMENT.md](docs/ASSET_MANAGEMENT.md)** - No symlinks! Copy-based assets
 - **[PERFORMANCE.md](docs/PERFORMANCE.md)** - Navigation performance guide
+- **[PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md)** - Game performance report and move classification
 - **[MOBILE_RESPONSIVE.md](docs/MOBILE_RESPONSIVE.md)** - Mobile/tablet layout and touch interactions
 - **[I18N.md](docs/I18N.md)** - Internationalization guidelines and translation workflow
 
@@ -83,8 +88,9 @@ kaya/
     ├── i18n/            # Internationalization (8 languages)
     ├── themes/          # Board theme system (6 built-in themes)
     ├── game-library/    # IndexedDB-based SGF file storage
+    ├── gtp/             # GTP protocol (legacy, see ai-engine)
     ├── platform/        # File save, clipboard, Tauri detection
-    └── ui/              # Shared React components (GameTreeContext)
+    └── ui/              # Shared React components, contexts, and hooks
 ```
 
 ### Key Architecture Points

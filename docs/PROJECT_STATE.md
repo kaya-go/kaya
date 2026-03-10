@@ -54,6 +54,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 - **Analysis Graph**: Visual win rate chart across all moves
 - **Move Quality Colors**: Chess.com-style move classification (best/great/good/okay/poor)
 - **Ownership Heatmap**: Territory control visualization
+- **Game Performance Report**: Per-move quality analysis with rank+probability classification (see [PERFORMANCE_REPORT.md](PERFORMANCE_REPORT.md))
 - **Persistence**: Analysis results saved to SGF (`KA` property) and localStorage
 
 ### UI/UX
@@ -69,6 +70,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 - **Configurable Keyboard Shortcuts**: Customize all shortcuts via Settings
 - **Internationalization**: Full i18n support with 8 languages (EN, ZH, KO, JA, FR, DE, ES, IT)
 - **Mobile/Tablet Responsive**: Touch-friendly layout with swipe navigation and orientation support
+- **Overflow Menu**: Additional board actions (scan board, etc.) accessible via overflow button
 
 ### Board Recognition
 
@@ -123,4 +125,5 @@ bun run clean          # Remove build artifacts
 - `RELEASE_PROCESS.md` - Release workflow
 - `BRAND_GUIDE.md` - Brand guidelines
 - `MOBILE_RESPONSIVE.md` - Mobile/tablet responsive design
+- `PERFORMANCE_REPORT.md` - Game performance report and move classification
 - `I18N.md` - Internationalization and translation guide

@@ -48,6 +48,15 @@ bun run format:check      # Check formatting without changes
 bun run type-check        # TypeScript type checking across all packages
 ```
 
+### Testing
+
+```bash
+bun run test              # Unit tests (bun test)
+bun run test:e2e          # E2E tests (Playwright)
+bun run test:e2e:headed   # E2E tests with browser visible
+bun run test:e2e:desktop  # Desktop E2E tests
+```
+
 ### Maintenance
 
 ```bash
@@ -81,8 +90,9 @@ kaya/
     ├── i18n/               # Internationalization (8 languages)
     ├── themes/             # Board theme system (6 themes)
     ├── game-library/       # IndexedDB-based SGF file storage
+    ├── gtp/                # GTP protocol (legacy, see ai-engine)
     ├── platform/           # File save, clipboard, Tauri detection
-    └── ui/                 # Shared React components
+    └── ui/                 # Shared React components, contexts, and hooks
 ```
 
 ### Data Flow
@@ -308,7 +318,7 @@ return <button>{t('save')}</button>;
 
 ### Adding New Text
 
-1. Add key to `packages/ui/src/i18n/locales/en.json`
+1. Add key to `packages/i18n/src/locales/en.json`
 2. Add translations to all 7 other locale files (zh, ko, ja, fr, de, es, it)
 3. Use `t('key')` in your component
 
