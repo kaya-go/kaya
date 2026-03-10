@@ -119,7 +119,7 @@
     "inferenceBackendDescription": "Choose how the AI model runs. Native is fastest on desktop, WebGPU uses your graphics card, WASM runs on CPU (most compatible).",
     "webgpuBatchSize": "Batch Size",
     "webgpuBatchSizeDescription": "Positions evaluated per inference call. Higher = faster analysis. WebGPU uses more memory at larger sizes; WebNN does not.",
-    "nativeAuto": "Native - Auto (GPU if available)",
+    "nativeGpu": "Native - GPU",
     "nativeCpu": "Native - CPU only",
     "pytorch": "PyTorch GPU (ROCm/CUDA)",
     "pytorchUnavailable": "PyTorch GPU (not detected)",
@@ -155,7 +155,21 @@
     "switchToModel": "Switch to {{quant}}",
     "downloadAndSwitch": "Download {{quant}} model",
     "openSettings": "Open AI Settings",
-    "precisionMismatch": "Model running at different precision than selected ({{expected}} → {{actual}})."
+    "precisionMismatch": "Model running at different precision than selected ({{expected}} → {{actual}}).",
+    "backendDesc": {
+      "native": "Uses GPU acceleration for fastest inference on desktop.",
+      "nativeCpu": "Runs on CPU only. Most stable option on desktop.",
+      "pytorch": "GPU acceleration via ROCm or CUDA drivers.",
+      "webgpu": "Leverages your graphics card directly in the browser.",
+      "webnn": "Delegates to Chrome's built-in ML acceleration layer.",
+      "wasm": "Runs on CPU. Slower but works everywhere."
+    },
+    "backendUnavailable": {
+      "webgpu": "Your browser doesn't support WebGPU",
+      "pytorch": "ROCm/CUDA not detected on this system",
+      "webnn": "Requires Chrome with WebNN support"
+    },
+    "backendRecommended": "Recommended"
   },
   "kayaConfig": {
     "title": "Settings",

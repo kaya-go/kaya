@@ -142,27 +142,6 @@
 }
 
 /* Form Controls */
-.ai-select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--border-color, #ccc);
-  background-color: var(--bg-secondary, #fff);
-  color: var(--text-primary, #333);
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.ai-select:hover {
-  border-color: var(--accent-color, #007bff);
-}
-
-.ai-select:focus {
-  outline: none;
-  border-color: var(--accent-color, #007bff);
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-}
 
 .ai-slider {
   width: 100%;
@@ -240,12 +219,6 @@
 
 [data-theme='dark'] .toggle-switch.active:hover {
   background-color: #3b82f6;
-}
-
-[data-theme='dark'] .ai-select {
-  background-color: #2d2d2d;
-  border-color: #444;
-  color: #eee;
 }
 
 [data-theme='dark'] .ai-slider {

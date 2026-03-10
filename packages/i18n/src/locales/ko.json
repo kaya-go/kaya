@@ -155,7 +155,21 @@
     "switchToModel": "{{quant}}로 전환",
     "downloadAndSwitch": "{{quant}} 모델 다운로드",
     "openSettings": "AI 설정 열기",
-    "precisionMismatch": "모델이 선택한 것과 다른 정밀도로 실행 중입니다 ({{expected}} → {{actual}})."
+    "precisionMismatch": "모델이 선택한 것과 다른 정밀도로 실행 중입니다 ({{expected}} → {{actual}}).",
+    "backendDesc": {
+      "native": "가장 빠른 옵션. GPU가 있으면 자동으로 사용하고, 없으면 CPU로 전환합니다.",
+      "nativeCpu": "CPU만 사용합니다. 데스크톱에서 가장 안정적인 옵션입니다.",
+      "pytorch": "ROCm 또는 CUDA 드라이버를 통한 GPU 가속.",
+      "webgpu": "브라우저에서 그래픽 카드를 직접 활용합니다.",
+      "webnn": "Chrome 내장 ML 가속 레이어에 위임합니다.",
+      "wasm": "CPU에서 실행됩니다. 느리지만 어디서나 작동합니다."
+    },
+    "backendUnavailable": {
+      "webgpu": "브라우저가 WebGPU를 지원하지 않습니다",
+      "pytorch": "이 시스템에서 ROCm/CUDA가 감지되지 않았습니다",
+      "webnn": "WebNN을 지원하는 Chrome이 필요합니다"
+    },
+    "backendRecommended": "추천"
   },
   "kayaConfig": {
     "title": "설정",

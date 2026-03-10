@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuSettings } from 'react-icons/lu';
 import type { AISettings } from '../../types/game';
-import { isTauriApp } from '@kaya/platform';
+import { BackendSelector } from './BackendSelector';
 
 export interface AIAnalysisConfigSettingsPanelProps {
   aiSettings: AISettings;
@@ -23,44 +23,19 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
       </div>
 
       <div className="settings-list">
-        {/* Backend Selection - Full width */}
+        {/* Backend Selection + Batch Size - Full width */}
         <div className="setting-item setting-item-full">
           <div className="setting-info">
-            <label htmlFor="backend-select" className="setting-label">
-              {t('aiConfig.inferenceBackend')}
-            </label>
+            <label className="setting-label">{t('aiConfig.inferenceBackend')}</label>
             <p className="setting-description">{t('aiConfig.inferenceBackendDescription')}</p>
           </div>
-          <select
-            id="backend-select"
-            value={
-              // If GPU was selected but not available, show WASM as selected
-              aiSettings.backend === 'webgpu' &&
-              !(typeof navigator !== 'undefined' && (navigator as any).gpu)
-                ? 'wasm'
-                : aiSettings.backend
-            }
-            onChange={e => setAISettings({ backend: e.target.value as any })}
-            className="ai-select"
+          <BackendSelector
+            value={aiSettings.backend}
+            onChange={backend => setAISettings({ backend })}
+          />
+          <div
+            className={`batch-size-setting${aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn' ? '' : ' batch-size-disabled'}`}
           >
-            {/* Native backends: fastest, only available in Tauri desktop app */}
-            {isTauriApp() && (
-              <>
-                <option value="native">{t('aiConfig.nativeAuto')}</option>
-                <option value="native-cpu">{t('aiConfig.nativeCpu')}</option>
-              </>
-            )}
-            {/* WebGPU/WASM only available in browser (not in Tauri WKWebView) */}
-            {!isTauriApp() && typeof navigator !== 'undefined' && (navigator as any).gpu && (
-              <option value="webgpu">{t('aiConfig.webgpu')}</option>
-            )}
-            {!isTauriApp() && <option value="wasm">{t('aiConfig.wasm')}</option>}
-          </select>
-        </div>
-
-        {/* Batch Size - visible when WebGPU or WebNN is selected */}
-        {(aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn') && (
-          <div className="setting-item setting-item-full">
             <div className="setting-info">
               <label htmlFor="webgpu-batch-slider" className="setting-label">
                 {t('aiConfig.webgpuBatchSize')}
@@ -77,9 +52,10 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
               value={aiSettings.webgpuBatchSize}
               onChange={e => setAISettings({ webgpuBatchSize: parseInt(e.target.value) })}
               className="ai-slider"
+              disabled={aiSettings.backend !== 'webgpu' && aiSettings.backend !== 'webnn'}
             />
           </div>
-        )}
+        </div>
 
         {/* Max Top Moves - Left column */}
         <div className="setting-item">

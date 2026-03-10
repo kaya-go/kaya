@@ -155,7 +155,21 @@
     "switchToModel": "Passer en {{quant}}",
     "downloadAndSwitch": "Télécharger le modèle {{quant}}",
     "openSettings": "Ouvrir les paramètres IA",
-    "precisionMismatch": "Le modèle fonctionne à une précision différente de celle sélectionnée ({{expected}} → {{actual}})."
+    "precisionMismatch": "Le modèle fonctionne à une précision différente de celle sélectionnée ({{expected}} → {{actual}}).",
+    "backendDesc": {
+      "native": "Option la plus rapide. Utilise le GPU automatiquement si disponible, sinon le CPU.",
+      "nativeCpu": "Exécution sur CPU uniquement. Option la plus stable sur desktop.",
+      "pytorch": "Accélération GPU via les pilotes ROCm ou CUDA.",
+      "webgpu": "Utilise directement votre carte graphique dans le navigateur.",
+      "webnn": "Délègue à la couche d'accélération ML intégrée de Chrome.",
+      "wasm": "Exécution sur CPU. Plus lent mais fonctionne partout."
+    },
+    "backendUnavailable": {
+      "webgpu": "Votre navigateur ne supporte pas WebGPU",
+      "pytorch": "ROCm/CUDA non détecté sur ce système",
+      "webnn": "Nécessite Chrome avec le support WebNN"
+    },
+    "backendRecommended": "Recommandé"
   },
   "kayaConfig": {
     "title": "Paramètres",

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuSettings } from 'react-icons/lu';
-import { isTauriApp } from '@kaya/platform';
+import { BackendSelector } from './BackendSelector';
 import { KayaConfigModelList } from './KayaConfigModelList';
 import type { UseKayaConfigReturn } from './useKayaConfig';
 import './KayaConfigSettings.css';
@@ -79,49 +79,22 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
         </div>
 
         <div className="settings-list">
-          {/* Backend Selection - Full width */}
+          {/* Backend Selection + Batch Size - Full width */}
           <div className="setting-item setting-item-full">
             <div className="setting-info">
-              <label htmlFor="backend-select" className="setting-label">
-                {t('aiConfig.inferenceBackend')}
-              </label>
+              <label className="setting-label">{t('aiConfig.inferenceBackend')}</label>
               <p className="setting-description">{t('aiConfig.inferenceBackendDescription')}</p>
             </div>
-            <select
-              id="backend-select"
-              value={
-                aiSettings.backend === 'webgpu' &&
-                !(typeof navigator !== 'undefined' && (navigator as any).gpu)
-                  ? 'wasm'
-                  : aiSettings.backend
-              }
-              onChange={e => setAISettings({ backend: e.target.value as any })}
-              className="ai-select"
+            <BackendSelector
+              value={aiSettings.backend}
+              onChange={backend => setAISettings({ backend })}
+              isLinuxDesktop={isLinuxDesktop}
+              pytorchAvailable={pytorchAvailable}
+              webnnAvailable={webnnAvailable}
+            />
+            <div
+              className={`batch-size-setting${aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn' ? '' : ' batch-size-disabled'}`}
             >
-              {isTauriApp() && (
-                <>
-                  <option value="native">{t('aiConfig.nativeAuto')}</option>
-                  <option value="native-cpu">{t('aiConfig.nativeCpu')}</option>
-                </>
-              )}
-              {isLinuxDesktop && (
-                <option value="pytorch" disabled={!pytorchAvailable}>
-                  {pytorchAvailable ? t('aiConfig.pytorch') : t('aiConfig.pytorchUnavailable')}
-                </option>
-              )}
-              {!isTauriApp() && typeof navigator !== 'undefined' && (navigator as any).gpu && (
-                <option value="webgpu">{t('aiConfig.webgpu')}</option>
-              )}
-              {webnnAvailable && !isTauriApp() && (
-                <option value="webnn">{t('aiConfig.webnn')}</option>
-              )}
-              {!isTauriApp() && <option value="wasm">{t('aiConfig.wasm')}</option>}
-            </select>
-          </div>
-
-          {/* Batch Size - visible when WebGPU or WebNN is selected */}
-          {(aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn') && (
-            <div className="setting-item setting-item-full">
               <div className="setting-info">
                 <label htmlFor="webgpu-batch-slider" className="setting-label">
                   {t('aiConfig.webgpuBatchSize')}
@@ -138,9 +111,10 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
                 value={aiSettings.webgpuBatchSize}
                 onChange={e => setAISettings({ webgpuBatchSize: parseInt(e.target.value) })}
                 className="ai-slider"
+                disabled={aiSettings.backend !== 'webgpu' && aiSettings.backend !== 'webnn'}
               />
             </div>
-          )}
+          </div>
 
           {/* Max Top Moves */}
           <div className="setting-item">

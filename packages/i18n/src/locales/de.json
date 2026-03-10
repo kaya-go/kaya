@@ -155,7 +155,21 @@
     "switchToModel": "Zu {{quant}} wechseln",
     "downloadAndSwitch": "{{quant}}-Modell herunterladen",
     "openSettings": "KI-Einstellungen öffnen",
-    "precisionMismatch": "Modell läuft mit anderer Präzision als ausgewählt ({{expected}} → {{actual}})."
+    "precisionMismatch": "Modell läuft mit anderer Präzision als ausgewählt ({{expected}} → {{actual}}).",
+    "backendDesc": {
+      "native": "Schnellste Option. Nutzt automatisch GPU wenn verfügbar, sonst CPU.",
+      "nativeCpu": "Nur CPU-Ausführung. Stabilste Option auf dem Desktop.",
+      "pytorch": "GPU-Beschleunigung über ROCm- oder CUDA-Treiber.",
+      "webgpu": "Nutzt Ihre Grafikkarte direkt im Browser.",
+      "webnn": "Delegiert an Chromes integrierte ML-Beschleunigung.",
+      "wasm": "Läuft auf CPU. Langsamer, funktioniert aber überall."
+    },
+    "backendUnavailable": {
+      "webgpu": "Ihr Browser unterstützt kein WebGPU",
+      "pytorch": "ROCm/CUDA auf diesem System nicht erkannt",
+      "webnn": "Erfordert Chrome mit WebNN-Unterstützung"
+    },
+    "backendRecommended": "Empfohlen"
   },
   "kayaConfig": {
     "title": "Einstellungen",

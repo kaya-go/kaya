@@ -155,7 +155,21 @@
     "switchToModel": "切换到 {{quant}}",
     "downloadAndSwitch": "下载 {{quant}} 模型",
     "openSettings": "打开 AI 设置",
-    "precisionMismatch": "模型运行精度与所选不同（{{expected}} → {{actual}}）。"
+    "precisionMismatch": "模型运行精度与所选不同（{{expected}} → {{actual}}）。",
+    "backendDesc": {
+      "native": "最快选项。自动使用 GPU（如可用），否则回退到 CPU。",
+      "nativeCpu": "仅使用 CPU 运行。桌面端最稳定的选项。",
+      "pytorch": "通过 ROCm 或 CUDA 驱动进行 GPU 加速。",
+      "webgpu": "在浏览器中直接调用显卡进行计算。",
+      "webnn": "委托给 Chrome 内置的 ML 加速层处理。",
+      "wasm": "使用 CPU 运行。较慢但兼容性最好。"
+    },
+    "backendUnavailable": {
+      "webgpu": "您的浏览器不支持 WebGPU",
+      "pytorch": "未检测到 ROCm/CUDA",
+      "webnn": "需要支持 WebNN 的 Chrome 浏览器"
+    },
+    "backendRecommended": "推荐"
   },
   "kayaConfig": {
     "title": "设置",
