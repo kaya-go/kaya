@@ -9,7 +9,12 @@
  */
 
 import type { SignMap } from '@kaya/goboard';
-import { Engine, type EngineAnalysisOptions, type EngineCapabilities } from './base-engine';
+import {
+  Engine,
+  type EngineAnalysisOptions,
+  type EngineCapabilities,
+  type EngineRuntimeInfo,
+} from './base-engine';
 import type { AnalysisResult } from './types';
 import {
   type UploadProgress,
@@ -43,6 +48,8 @@ export class TauriEngine extends Engine {
   private invoke: TauriInvokeFn | null = null;
   private onProgress?: (progress: UploadProgress) => void;
   private executionProvider: ExecutionProviderPreference;
+  private providerIsGpu = false;
+  private modelIsFp16 = false;
 
   constructor(config: TauriEngineConfig = {}) {
     super(config);
@@ -52,6 +59,9 @@ export class TauriEngine extends Engine {
     this.modelId = config.modelId;
     this.onProgress = config.onProgress;
     this.executionProvider = config.executionProvider ?? 'auto';
+    // Detect fp16 from model identifier
+    const modelName = (config.modelId ?? config.modelPath ?? '').toLowerCase();
+    this.modelIsFp16 = modelName.includes('fp16') || modelName.includes('float16');
 
     // Get invoke function immediately in constructor
     this.invoke = getTauriInvoke();
@@ -99,6 +109,7 @@ export class TauriEngine extends Engine {
           // Log model loaded info
           const initTime = performance.now() - initStart;
           const providerInfo = await this.getProviderInfo();
+          this.providerIsGpu = providerInfo?.isGpu ?? false;
           const backend = providerInfo?.isGpu ? 'NATIVE/GPU' : 'NATIVE/CPU';
           const provider = providerInfo?.name ? ` (${providerInfo.name})` : '';
           const timeStr =
@@ -169,6 +180,7 @@ export class TauriEngine extends Engine {
 
       // Log model loaded info (single consistent message)
       const providerInfo = await this.getProviderInfo();
+      this.providerIsGpu = providerInfo?.isGpu ?? false;
       const backend = providerInfo?.isGpu ? 'NATIVE/GPU' : 'NATIVE/CPU';
       const provider = providerInfo?.name ? ` (${providerInfo.name})` : '';
       const timeStr =
@@ -180,6 +192,13 @@ export class TauriEngine extends Engine {
       console.error('[TauriEngine] Failed to initialize:', e);
       throw e;
     }
+  }
+
+  getRuntimeInfo(): EngineRuntimeInfo {
+    return {
+      backend: this.providerIsGpu ? 'native' : 'native-cpu',
+      inputDataType: this.modelIsFp16 ? 'float16' : 'float32',
+    };
   }
 
   getCapabilities(): EngineCapabilities {

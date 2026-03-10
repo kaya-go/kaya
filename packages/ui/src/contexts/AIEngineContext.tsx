@@ -18,8 +18,9 @@ import {
   convertModelForWebNN,
   isWebNNOptimized,
 } from '@kaya/ai-engine';
+import { useTranslation } from 'react-i18next';
 import { useGameTree } from './GameTreeContext';
-import { isTauriApp } from '@kaya/platform';
+import { isTauriApp, writeClipboardText } from '@kaya/platform';
 import { loadModelData } from '../services/modelStorage';
 import { createEngine, type CreateEngineOptions } from '../workers/engineFactory';
 import { useToast } from '../components/ui/Toast';
@@ -77,8 +78,9 @@ export function useAIEngineOptional(): AIEngineContextValue | null {
  */
 function buildFallbackChain(startingBackend: string, isTauri: boolean): string[] {
   // Full ordered chain per platform
+  // PyTorch is an explicit user choice (not part of the fallback chain)
   const webChain = ['webgpu', 'wasm'];
-  const desktopChain = ['native', 'pytorch'];
+  const desktopChain = ['native', 'native-cpu'];
 
   const fullChain = isTauri ? desktopChain : webChain;
   const startIndex = fullChain.indexOf(startingBackend);
@@ -214,6 +216,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const boardSize = gameInfo?.boardSize ?? 19;
 
   const { showToast } = useToast();
+  const { t } = useTranslation();
 
   const [engine, setEngine] = useState<Engine | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -342,6 +345,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           // Build fallback chain starting from the user's selected backend
           const fallbackChain = buildFallbackChain(aiSettings.backend, isTauri);
           let lastError: Error | null = null;
+          let fallbackErrorLog: string | null = null;
 
           for (const backend of fallbackChain) {
             try {
@@ -402,27 +406,12 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 }
               }
 
-              // For native backend, check if PyTorch is available
-              let engineType = cfg.engineType;
-              if (isTauri && backend === 'native') {
-                try {
-                  const { isPyTorchAvailable } =
-                    await import('@kaya/ai-engine/pytorch-tauri-engine');
-                  if (await isPyTorchAvailable()) {
-                    console.log('[AIEngine] PyTorch GPU available, using it for native backend');
-                    engineType = 'pytorch';
-                  }
-                } catch {
-                  // PyTorch not available, use native ONNX
-                }
-              }
-
               const newEngine = await createEngine(
                 {
                   modelBuffer: buffer,
                   modelId,
                   executionProvider: backend === 'native-cpu' ? 'cpu' : 'auto',
-                  engineType,
+                  engineType: cfg.engineType,
                   wasmPath,
                   executionProviders: cfg.executionProviders as string[],
                   enableGraphCapture: cfg.enableGraphCapture,
@@ -452,8 +441,9 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               const actualBackend = runtimeInfo.backend;
 
               // For GPU backends, run a warm-up inference to catch silent failures
-              // (WebGPU validation errors are async and don't throw in JS)
-              if (['webgpu', 'webgpu-gc', 'webnn'].includes(actualBackend)) {
+              // Web: WebGPU validation errors are async and don't throw in JS
+              // Desktop: ONNX Runtime may silently fall back to CPU for incompatible models (e.g. fp16)
+              if (['webgpu', 'webgpu-gc', 'webnn', 'native'].includes(actualBackend)) {
                 console.log(`[AIEngine] Running warm-up validation for ${actualBackend}...`);
                 try {
                   await validateWarmUpInference(newEngine, boardSize);
@@ -479,7 +469,26 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 const typedBackend = backend as AISettings['backend'];
                 currentConfig.backend = typedBackend;
                 setAISettings({ backend: typedBackend });
-                showToast(`AI running on ${backendDisplayName(actualBackend)}`, 'info');
+
+                // GPU → CPU fallback on desktop: show detailed toast with copy-error
+                if (
+                  aiSettings.backend === 'native' &&
+                  backend === 'native-cpu' &&
+                  fallbackErrorLog
+                ) {
+                  const errorLog = fallbackErrorLog;
+                  showToast(t('aiConfig.gpuIncompatible'), 'error', {
+                    label: t('aiConfig.copyError'),
+                    onClick: () => {
+                      writeClipboardText(errorLog);
+                      showToast(t('aiConfig.errorCopied'), 'success');
+                    },
+                  });
+                  // Suggest switching to FP32/UINT8 model for GPU
+                  showToast(t('aiConfig.gpuModelHint'), 'info');
+                } else {
+                  showToast(`AI running on ${backendDisplayName(actualBackend)}`, 'info');
+                }
               }
 
               console.log(`[AIEngine] Engine initialized with backend: ${actualBackend}`);
@@ -488,6 +497,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               const message = err instanceof Error ? err.message : String(err);
               console.warn(`[AIEngine] Backend '${backend}' failed: ${message}`);
               lastError = err instanceof Error ? err : new Error(message);
+              fallbackErrorLog = `[${backend}] ${message}`;
               // Continue to next backend in chain
             }
           }
@@ -521,6 +531,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     boardSize,
     setAIConfigOpen,
     showToast,
+    t,
   ]);
 
   // Auto-initialize when model becomes available
@@ -530,7 +541,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [isModelLoaded, customAIModel, engine, isInitializing, error, initializeEngine]);
 
-  // Re-initialize when backend, batch size, or board size changes (if we already have an engine)
+  // Re-initialize when backend, batch size, or board size changes (if we already have an engine OR in error state)
   useEffect(() => {
     if (engine && globalEngineConfig) {
       const currentBackend = aiSettings.backend;
@@ -544,8 +555,22 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         globalEnginePromise = null;
         initializeEngine();
       }
+    } else if (error && isModelLoaded && customAIModel && !isInitializing) {
+      // After a failure, allow re-initialization when the user changes settings
+      setError(null);
+      globalEnginePromise = null;
     }
-  }, [aiSettings.backend, aiSettings.webgpuBatchSize, boardSize, engine, initializeEngine]);
+  }, [
+    aiSettings.backend,
+    aiSettings.webgpuBatchSize,
+    boardSize,
+    engine,
+    error,
+    isModelLoaded,
+    customAIModel,
+    isInitializing,
+    initializeEngine,
+  ]);
 
   // Re-initialize when model changes (if we already have an engine)
   useEffect(() => {
