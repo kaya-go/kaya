@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] - 2026-03-10
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ci)* Switch linux build to arch container for appimage compatibility ([9734119](https://github.com/kaya-go/kaya/commit/9734119b604055cb008c236e6ae31d43e8c00af3)) by @hadim
+
+- *(ci)* Add clang and cmake to linux build dependencies ([f6396d4](https://github.com/kaya-go/kaya/commit/f6396d491dafb649f38654765ffc368e323ada3f)) by @hadim
+
+- *(ci)* Install mold linker in linux build container ([5ddfb4d](https://github.com/kaya-go/kaya/commit/5ddfb4db26e0657c974fc8fd35b78f58317113f7)) by @hadim
+
+- *(ci)* Add missing dependencies for quick-sharun AppImage bundler ([28218e6](https://github.com/kaya-go/kaya/commit/28218e61b4c6a28e186becb98e5098da2b5ae63f)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(board-recognition)* Restructure dialog, add import modes, and optimize worker ([64fc031](https://github.com/kaya-go/kaya/commit/64fc031197aa2c39d3c05dfec49df510b1c1c64f)) by @hadim
+
+- *(ci)* Split desktop builds into reusable per-platform workflows ([9efa301](https://github.com/kaya-go/kaya/commit/9efa301f1e6ff17489daf817d4c6d1f3a64bf243)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.2] - 2026-03-08
 
 ### <!-- 0 -->🚀 Features
@@ -28,10 +51,12 @@ All notable changes to this project will be documented in this file.
 
 - Improve release notes (exclude bots, remove installation section) ([d667ea0](https://github.com/kaya-go/kaya/commit/d667ea019e17a0df3e7f0745297f4bb71d4f4e74)) by @hadim
 
+- Release v0.3.2 ([1712c0f](https://github.com/kaya-go/kaya/commit/1712c0fb9a6976c50fb374ca3401c3a12cadcb7d)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.1] - 2026-03-08
 
