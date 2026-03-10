@@ -31,6 +31,8 @@ base64 = "0.22"
 
 # Audio playback — bypasses WebKitGTK/GStreamer entirely (which is broken in AppImage)
 # Uses ALSA/PulseAudio on Linux, CoreAudio on macOS, WASAPI on Windows
+# Not needed on Android (audio is handled via WebView)
+[target.'cfg(not(target_os = "android"))'.dependencies]
 rodio = { version = "0.20", default-features = false, features = ["vorbis"] }
 
 # ONNX Runtime - shared dependencies

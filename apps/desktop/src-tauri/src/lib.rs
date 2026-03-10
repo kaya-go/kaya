@@ -5,6 +5,10 @@ use tauri::Manager;
 #[cfg(desktop)]
 use tauri::Emitter;
 
+#[cfg(not(target_os = "android"))]
+mod audio;
+#[cfg(target_os = "android")]
+#[path = "audio_stub.rs"]
 mod audio;
 mod commands;
 mod onnx_engine;

@@ -37,6 +37,7 @@ jobs:
             git curl wget unzip \
             clang cmake mold \
             webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
+            alsa-lib \
             patchelf dpkg rpm-tools \
             nodejs npm \
             xorg-server-xvfb zsync
