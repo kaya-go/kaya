@@ -154,7 +154,8 @@
     "allBackendsFailed": "Failed to load AI model with all available engines.",
     "switchToModel": "Switch to {{quant}}",
     "downloadAndSwitch": "Download {{quant}} model",
-    "openSettings": "Open AI Settings"
+    "openSettings": "Open AI Settings",
+    "precisionMismatch": "Model running at different precision than selected ({{expected}} → {{actual}})."
   },
   "kayaConfig": {
     "title": "Settings",

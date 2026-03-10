@@ -154,7 +154,8 @@
     "allBackendsFailed": "すべてのエンジンでAIモデルの読み込みに失敗しました。",
     "switchToModel": "{{quant}}に切り替え",
     "downloadAndSwitch": "{{quant}}モデルをダウンロード",
-    "openSettings": "AI設定を開く"
+    "openSettings": "AI設定を開く",
+    "precisionMismatch": "モデルが選択と異なる精度で実行中です（{{expected}} → {{actual}}）。"
   },
   "kayaConfig": {
     "title": "設定",

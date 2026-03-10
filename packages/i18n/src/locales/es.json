@@ -154,7 +154,8 @@
     "allBackendsFailed": "No se pudo cargar el modelo de IA con ningún motor disponible.",
     "switchToModel": "Cambiar a {{quant}}",
     "downloadAndSwitch": "Descargar modelo {{quant}}",
-    "openSettings": "Abrir configuración de IA"
+    "openSettings": "Abrir configuración de IA",
+    "precisionMismatch": "El modelo funciona con una precisión diferente a la seleccionada ({{expected}} → {{actual}})."
   },
   "kayaConfig": {
     "title": "Configuración",

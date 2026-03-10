@@ -154,7 +154,8 @@
     "allBackendsFailed": "KI-Modell konnte mit keiner verfügbaren Engine geladen werden.",
     "switchToModel": "Zu {{quant}} wechseln",
     "downloadAndSwitch": "{{quant}}-Modell herunterladen",
-    "openSettings": "KI-Einstellungen öffnen"
+    "openSettings": "KI-Einstellungen öffnen",
+    "precisionMismatch": "Modell läuft mit anderer Präzision als ausgewählt ({{expected}} → {{actual}})."
   },
   "kayaConfig": {
     "title": "Einstellungen",

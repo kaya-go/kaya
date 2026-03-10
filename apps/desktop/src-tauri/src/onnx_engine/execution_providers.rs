@@ -42,6 +42,8 @@ pub struct ExecutionProviderInfo {
     pub name: String,
     /// Whether it's using GPU acceleration
     pub is_gpu: bool,
+    /// Whether the model uses fp16 I/O tensors
+    pub is_fp16: bool,
     /// Human-readable description
     pub description: String,
 }
@@ -305,6 +307,7 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     providers.push(ExecutionProviderInfo {
         name: "auto".to_string(),
         is_gpu: true,
+        is_fp16: false,
         description: "Auto-select best available (recommended)".to_string(),
     });
     
@@ -313,6 +316,7 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     providers.push(ExecutionProviderInfo {
         name: "nnapi".to_string(),
         is_gpu: true,
+        is_fp16: false,
         description: "Android NNAPI (Neural Networks API)".to_string(),
     });
     
@@ -320,6 +324,7 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     providers.push(ExecutionProviderInfo {
         name: "coreml".to_string(),
         is_gpu: true,
+        is_fp16: false,
         description: "Apple CoreML (Metal/Neural Engine)".to_string(),
     });
     
@@ -328,11 +333,13 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
         providers.push(ExecutionProviderInfo {
             name: "directml".to_string(),
             is_gpu: true,
+            is_fp16: false,
             description: "DirectML (Windows GPU)".to_string(),
         });
         providers.push(ExecutionProviderInfo {
             name: "cuda".to_string(),
             is_gpu: true,
+            is_fp16: false,
             description: "NVIDIA CUDA (requires CUDA toolkit)".to_string(),
         });
     }
@@ -342,11 +349,13 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
         providers.push(ExecutionProviderInfo {
             name: "migraphx".to_string(),
             is_gpu: true,
+            is_fp16: false,
             description: "AMD MIGraphX (ROCm GPU, requires ROCm + MIGraphX)".to_string(),
         });
         providers.push(ExecutionProviderInfo {
             name: "cuda".to_string(),
             is_gpu: true,
+            is_fp16: false,
             description: "NVIDIA CUDA (requires CUDA toolkit)".to_string(),
         });
     }
@@ -355,6 +364,7 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     providers.push(ExecutionProviderInfo {
         name: "cpu".to_string(),
         is_gpu: false,
+        is_fp16: false,
         description: "CPU only (most compatible)".to_string(),
     });
     

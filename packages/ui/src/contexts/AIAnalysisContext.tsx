@@ -54,7 +54,13 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   } = useGameTree();
 
   // Get engine from AIEngineContext
-  const { engine, isInitializing, error: engineError, nativeUploadProgress } = useAIEngine();
+  const {
+    engine,
+    isInitializing,
+    error: engineError,
+    nativeUploadProgress,
+    selectedQuantization,
+  } = useAIEngine();
 
   // Shared refs
   const currentNodeIdRef = useRef(currentNodeId);
@@ -86,6 +92,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     updateAnalysisCacheSize,
     setAnalysisResult,
     isFullGameAnalyzingRef,
+    selectedQuantization,
   });
 
   // Full game analysis hook
@@ -116,6 +123,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     currentNodeIdRef,
     setIsAnalyzing,
     isFullGameAnalyzingRef,
+    selectedQuantization,
   });
 
   // Keep cache size in sync on game change

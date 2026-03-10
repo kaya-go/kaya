@@ -17,6 +17,7 @@ import {
   generateAnalysisCacheKey,
 } from '../utils/aiAnalysis';
 import { analysisGlobals } from './ai-analysis-types';
+import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 
 interface UseFullGameAnalysisParams {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,6 +36,7 @@ interface UseFullGameAnalysisParams {
   currentNodeIdRef: MutableRefObject<number | string | null | undefined>;
   setIsAnalyzing: (v: boolean) => void;
   isFullGameAnalyzingRef: MutableRefObject<boolean>;
+  selectedQuantization: ModelQuantization | null;
 }
 
 export function useFullGameAnalysis({
@@ -52,6 +54,7 @@ export function useFullGameAnalysis({
   currentNodeIdRef,
   setIsAnalyzing,
   isFullGameAnalyzingRef,
+  selectedQuantization,
 }: UseFullGameAnalysisParams) {
   const [isFullGameAnalyzing, setIsFullGameAnalyzing] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -226,7 +229,8 @@ export function useFullGameAnalysis({
             progress: `${processedCount + batch.length}/${fullSequence.length}`,
             eta: remainingPositions > 0 ? etaStr : 'done',
             backend: runtimeInfo.backend ?? 'unknown',
-            precision: runtimeInfo.inputDataType ?? 'unknown',
+            selectedPrecision: selectedQuantization ?? 'unknown',
+            runtimePrecision: runtimeInfo.inputDataType ?? 'unknown',
             results: positionDetails,
           });
 

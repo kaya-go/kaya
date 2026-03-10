@@ -31,6 +31,8 @@ export interface ExecutionProviderInfo {
   name: string;
   /** Whether it uses GPU acceleration */
   isGpu: boolean;
+  /** Whether the loaded model uses fp16 I/O tensors */
+  isFp16: boolean;
   /** Human-readable description */
   description: string;
 }

@@ -154,7 +154,8 @@
     "allBackendsFailed": "所有可用引擎均无法加载 AI 模型。",
     "switchToModel": "切换到 {{quant}}",
     "downloadAndSwitch": "下载 {{quant}} 模型",
-    "openSettings": "打开 AI 设置"
+    "openSettings": "打开 AI 设置",
+    "precisionMismatch": "模型运行精度与所选不同（{{expected}} → {{actual}}）。"
   },
   "kayaConfig": {
     "title": "设置",

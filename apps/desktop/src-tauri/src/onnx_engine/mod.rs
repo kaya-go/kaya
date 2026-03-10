@@ -324,6 +324,7 @@ pub fn get_provider_info() -> Option<ExecutionProviderInfo> {
     Some(ExecutionProviderInfo {
         name: name.to_string(),
         is_gpu,
+        is_fp16: engine.is_fp16,
         description: description.to_string(),
     })
 }

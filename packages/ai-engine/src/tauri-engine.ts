@@ -59,7 +59,7 @@ export class TauriEngine extends Engine {
     this.modelId = config.modelId;
     this.onProgress = config.onProgress;
     this.executionProvider = config.executionProvider ?? 'auto';
-    // Detect fp16 from model identifier
+    // Detect fp16 from model identifier (initial guess, updated after init from Rust)
     const modelName = (config.modelId ?? config.modelPath ?? '').toLowerCase();
     this.modelIsFp16 = modelName.includes('fp16') || modelName.includes('float16');
 
@@ -110,6 +110,7 @@ export class TauriEngine extends Engine {
           const initTime = performance.now() - initStart;
           const providerInfo = await this.getProviderInfo();
           this.providerIsGpu = providerInfo?.isGpu ?? false;
+          this.modelIsFp16 = providerInfo?.isFp16 ?? this.modelIsFp16;
           const backend = providerInfo?.isGpu ? 'NATIVE/GPU' : 'NATIVE/CPU';
           const provider = providerInfo?.name ? ` (${providerInfo.name})` : '';
           const dtypeInfo = this.modelIsFp16 ? ' [FP16]' : '';
@@ -182,6 +183,7 @@ export class TauriEngine extends Engine {
       // Log model loaded info (single consistent message)
       const providerInfo = await this.getProviderInfo();
       this.providerIsGpu = providerInfo?.isGpu ?? false;
+      this.modelIsFp16 = providerInfo?.isFp16 ?? this.modelIsFp16;
       const backend = providerInfo?.isGpu ? 'NATIVE/GPU' : 'NATIVE/CPU';
       const provider = providerInfo?.name ? ` (${providerInfo.name})` : '';
       const dtypeInfo = this.modelIsFp16 ? ' [FP16]' : '';

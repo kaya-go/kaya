@@ -154,7 +154,8 @@
     "allBackendsFailed": "모든 엔진으로 AI 모델 로드에 실패했습니다.",
     "switchToModel": "{{quant}}로 전환",
     "downloadAndSwitch": "{{quant}} 모델 다운로드",
-    "openSettings": "AI 설정 열기"
+    "openSettings": "AI 설정 열기",
+    "precisionMismatch": "모델이 선택한 것과 다른 정밀도로 실행 중입니다 ({{expected}} → {{actual}})."
   },
   "kayaConfig": {
     "title": "설정",

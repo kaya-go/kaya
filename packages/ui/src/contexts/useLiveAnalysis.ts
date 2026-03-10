@@ -16,6 +16,7 @@ import {
   type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
 import { analysisGlobals } from './ai-analysis-types';
+import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 
 interface UseLiveAnalysisParams {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +35,7 @@ interface UseLiveAnalysisParams {
   updateAnalysisCacheSize: () => void;
   setAnalysisResult: (result: AnalysisResult | null) => void;
   isFullGameAnalyzingRef: MutableRefObject<boolean>;
+  selectedQuantization: ModelQuantization | null;
 }
 
 export function useLiveAnalysis({
@@ -49,6 +51,7 @@ export function useLiveAnalysis({
   updateAnalysisCacheSize,
   setAnalysisResult,
   isFullGameAnalyzingRef,
+  selectedQuantization,
 }: UseLiveAnalysisParams) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -337,7 +340,8 @@ export function useLiveAnalysis({
           msPerInference:
             toAnalyze.length > 0 ? Math.round(analysisDuration / toAnalyze.length) : 0,
           backend: liveRuntimeInfo.backend ?? 'unknown',
-          precision: liveRuntimeInfo.inputDataType ?? 'unknown',
+          selectedPrecision: selectedQuantization ?? 'unknown',
+          runtimePrecision: liveRuntimeInfo.inputDataType ?? 'unknown',
         });
       }
     } catch (err) {

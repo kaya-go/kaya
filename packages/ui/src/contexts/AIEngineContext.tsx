@@ -50,6 +50,8 @@ export interface AIEngineContextValue {
   activeBackend: string | null;
   /** Progress info for native engine upload (Tauri only) */
   nativeUploadProgress: { stage: string; progress: number; message: string } | null;
+  /** The quantization type selected in settings (e.g. 'fp32', 'fp16', 'uint8'), or null */
+  selectedQuantization: ModelQuantization | null;
   /** Manually trigger engine initialization (useful if model wasn't loaded on mount) */
   initializeEngine: () => void;
   /** Dispose the engine and reset state */
@@ -620,6 +622,27 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               console.log(
                 `[AIEngine] Engine initialized | backend: ${actualBackend} | precision: ${runtimeInfo.inputDataType} | model: ${modelName || 'custom'}`
               );
+
+              // Check precision consistency: compare expected vs actual
+              if (selectedModelId) {
+                const parsed = parseModelId(selectedModelId);
+                if (parsed) {
+                  const expectedDataType = parsed.quantization === 'fp16' ? 'float16' : 'float32';
+                  if (runtimeInfo.inputDataType !== expectedDataType) {
+                    console.warn(
+                      `[AIEngine] Precision mismatch: selected ${parsed.quantization} (expected ${expectedDataType}), actual ${runtimeInfo.inputDataType}`
+                    );
+                    showToast(
+                      t('aiConfig.precisionMismatch', {
+                        expected: QUANT_LABELS[parsed.quantization],
+                        actual: runtimeInfo.inputDataType,
+                      }),
+                      'info'
+                    );
+                  }
+                }
+              }
+
               return newEngine;
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);
@@ -726,6 +749,10 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     initializeEngine,
   ]);
 
+  const selectedQuantization: ModelQuantization | null = selectedModelId
+    ? (parseModelId(selectedModelId)?.quantization ?? null)
+    : null;
+
   const value: AIEngineContextValue = {
     engine,
     isEngineReady: engine !== null,
@@ -733,6 +760,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     error,
     activeBackend,
     nativeUploadProgress,
+    selectedQuantization,
     initializeEngine,
     disposeEngine,
   };
