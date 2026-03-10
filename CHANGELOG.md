@@ -2,6 +2,71 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.4] - 2026-03-10
+
+### <!-- 0 -->🚀 Features
+
+- *(ai-engine)* Automatic GPU→WASM fallback with warm-up validation ([b8e38de](https://github.com/kaya-go/kaya/commit/b8e38de9cc57d69788d25c230e38a784a61d68df)) by @hadim
+
+- Native audio via rodio, bypass WebKitGTK/GStreamer ([a5668f3](https://github.com/kaya-go/kaya/commit/a5668f3ec208830d3ede490764b584fc9bbdd5d6)) by @hadim
+
+- *(ui)* Add smart error recovery for AI engine initialization failures ([429d601](https://github.com/kaya-go/kaya/commit/429d601e9cac8581fe67a0589836b2a24fa6bfcc)) by @hadim
+
+- *(ai)* Add precision consistency check and report both selected/runtime precision in logs ([7a4d36b](https://github.com/kaya-go/kaya/commit/7a4d36bb391d3151b6281cefe4839501740a18ac)) by @hadim
+
+- *(ui)* Replace backend selector dropdown with card-based radio widget ([fe62acb](https://github.com/kaya-go/kaya/commit/fe62acb50bae3c3c549f83d300d3b8feae64ff8b)) by @hadim
+
+- *(ui)* Add MCTS visits button, cache-aware re-analysis, and enable web backends on desktop ([cae8558](https://github.com/kaya-go/kaya/commit/cae8558299e8f122fef6bf89f74be8a1747ea35d)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(desktop)* Fix model download and ONNX Runtime on Linux ([73da560](https://github.com/kaya-go/kaya/commit/73da5605f42889709c4f994f43495966c04733e3)) by @hadim
+
+- *(audio)* Switch from MP3 to OGG Vorbis for Linux compatibility ([9fdcdf8](https://github.com/kaya-go/kaya/commit/9fdcdf846f1acc4cf2c487093517ed218b5da6be)) by @hadim
+
+- Add mobile stub for download_file command ([5434954](https://github.com/kaya-go/kaya/commit/54349546b13fca66148d5800a4718159b9a82ec4)) by @hadim
+
+- *(ui)* Retry AudioContext resume with backoff instead of failing permanently ([0e5636b](https://github.com/kaya-go/kaya/commit/0e5636b6973d0393a4de6c3b5373685749cc90e1)) by @hadim
+
+- *(ui)* Add HTMLAudioElement fallback when Web Audio API device fails ([c8bf1b6](https://github.com/kaya-go/kaya/commit/c8bf1b69fcad58c307a7aa5e2b531787daaf55e2)) by @hadim
+
+- *(ui)* Prevent AudioContext.resume() from freezing AppImage ([82fdc1e](https://github.com/kaya-go/kaya/commit/82fdc1ed7b3f49f1e6d788381783397c72ee8a35)) by @hadim
+
+- *(desktop)* Prevent audio freeze in AppImage by skipping WebAudio in Tauri ([7f0d90c](https://github.com/kaya-go/kaya/commit/7f0d90c6fb4dd0affa60e61966ef3f7c231ea139)) by @hadim
+
+- *(desktop)* Disable WebKitGTK DMA-BUF renderer and GPU compositing on Linux ([175378a](https://github.com/kaya-go/kaya/commit/175378aa3945b590ca8c6674fad58151f2c2c988)) by @hadim
+
+- *(ai-engine)* Detect WebGPU errors via error scopes and fallback to WASM ([80e0293](https://github.com/kaya-go/kaya/commit/80e029341a0d1c0d8d376ca0652873ae8e0492f0)) by @hadim
+
+- *(ci)* Add ALSA deps and exclude rodio from Android builds ([6271603](https://github.com/kaya-go/kaya/commit/6271603afcd1feedaa49512930187cc2cf3c7197)) by @hadim
+
+- *(ci)* Copy assets before android cargo check ([93eb6e7](https://github.com/kaya-go/kaya/commit/93eb6e714de57c3926f47a28ddadfe84f4eb18dd)) by @hadim
+
+- *(ai-engine)* Add GPU→CPU fallback for native desktop ONNX engine ([6d17816](https://github.com/kaya-go/kaya/commit/6d17816add5e6b390403e862bf664ba9f1cd84f9)) by @hadim
+
+- Allow dead_code on AudioState stub for Android builds ([a0533b2](https://github.com/kaya-go/kaya/commit/a0533b2e146be8955cd3827c50f6adfde885f453)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ai)* Centralize GPU fallback in AIEngineContext and fix backend switching ([7dc0c79](https://github.com/kaya-go/kaya/commit/7dc0c798a0c6f997f7d5796423dd7ad4b5549965)) by @hadim
+
+- Split Rust modules and improve PyTorch GPU UI ([ce7472b](https://github.com/kaya-go/kaya/commit/ce7472be74bf2860f91fef8375d45a7038cc671e)) by @hadim
+
+- *(ui)* Replace technical AI model jargon with user-friendly labels ([df645bd](https://github.com/kaya-go/kaya/commit/df645bd8473f29ceb0163bb6ff215ad42cd544a9)) by @hadim
+
+- Remove GST_PLUGIN_SYSTEM_PATH workaround ([e1afba8](https://github.com/kaya-go/kaya/commit/e1afba8afc159fd4ff68ddcefcc31b518ec8f4b1)) by @hadim
+
+### <!-- 3 -->📚 Documentation
+
+- Add copy-assets troubleshooting to contributing guide ([42fde7b](https://github.com/kaya-go/kaya/commit/42fde7b2782498eb259e04aff89520b81955aa7e)) by @hadim
+
+- Update documentation with missing features, fix stale i18n paths ([ec815bb](https://github.com/kaya-go/kaya/commit/ec815bb51050c5726646b2e6e4a1ea588a826742)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.3] - 2026-03-10
 
 ### <!-- 1 -->🐛 Bug Fixes
@@ -20,10 +85,14 @@ All notable changes to this project will be documented in this file.
 
 - *(ci)* Split desktop builds into reusable per-platform workflows ([9efa301](https://github.com/kaya-go/kaya/commit/9efa301f1e6ff17489daf817d4c6d1f3a64bf243)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.3.3 ([64bf74e](https://github.com/kaya-go/kaya/commit/64bf74eeac8d021f595bd9f594a51865711f4828)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.2] - 2026-03-08
 
