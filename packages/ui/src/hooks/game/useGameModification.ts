@@ -136,6 +136,33 @@ export function useGameModification({
     boardCache.clear();
   }, [gameTree, currentNodeId, setGameTree, setIsDirty]);
 
+  /** Add a new child node at the current position with AB/AW setup stones.
+   * If clearCoords is provided, AE (Add Empty) entries are added first to clear those intersections. */
+  const addSetupPosition = useCallback(
+    (blackCoords: string[], whiteCoords: string[], comment?: string, clearCoords?: string[]) => {
+      if (!gameTree || currentNodeId === null) return;
+
+      const data: SGFProperty = {};
+      if (clearCoords && clearCoords.length > 0) data.AE = clearCoords;
+      if (blackCoords.length > 0) data.AB = blackCoords;
+      if (whiteCoords.length > 0) data.AW = whiteCoords;
+      if (comment) data.C = [comment];
+
+      const newTree = gameTree.mutate(draft => {
+        draft.appendNode(currentNodeId, data, { disableMerging: true });
+      });
+
+      const parentNode = newTree.get(currentNodeId);
+      const newNode = parentNode?.children[parentNode.children.length - 1];
+
+      setGameTree(newTree);
+      if (newNode) setCurrentNodeId(newNode.id);
+      setIsDirty(true);
+      boardCache.clear();
+    },
+    [gameTree, currentNodeId, setGameTree, setCurrentNodeId, setIsDirty]
+  );
+
   const addMarker = useCallback(
     (vertex: Vertex, markerOrType: Marker | null | string) => {
       if (!gameTree || currentNodeId === null) return;
@@ -442,6 +469,7 @@ export function useGameModification({
   return {
     makeMove: playMove,
     addSetupStone,
+    addSetupPosition,
     addMarker,
     setNodeName,
     setNodeComment,

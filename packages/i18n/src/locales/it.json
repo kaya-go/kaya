@@ -429,6 +429,7 @@
     "failedToLoadSgf": "Caricamento file SGF fallito: {{error}}"
   },
   "loading": {
+    "loading": "Caricamento…",
     "loadingSgfFile": "Caricamento file SGF"
   },
   "dropzone": {
@@ -615,13 +616,26 @@
     "selectSize": "Dimensione tavola:",
     "photo": "Foto",
     "preview": "Tavola riconosciuta",
-    "dragHint": "Trascina gli angoli per delimitare l'area del tavoliere",
+    "dragHint": "Trascina gli angoli per allinearli esattamente ai bordi della tavola",
     "analyzing": "Analisi in corso…",
     "chooseSizeFirst": "Seleziona prima la dimensione della tavola",
     "importSGF": "Importa come SGF",
+    "addToBoard": "Aggiungi alla scacchiera",
+    "addBlankBoard": "Su scacchiera vuota",
+    "addMerge": "Unisci con la posizione attuale",
+    "addAsMove": "Aggiungi come mossa",
+    "addAsMoveNoDelta": "Nessuna differenza con il tavoliere attuale",
+    "addAsMoveMultiDelta": "Impossibile aggiungere come mossa: {{count}} differenze rilevate (deve essere esattamente 1)",
+    "deltaAdded": "{{count}} aggiunta/e",
+    "deltaRemoved": "{{count}} rimossa/e",
+    "showDelta": "Mostra differenze",
+    "sizeMismatch": "Dimensioni diverse: rilevato {{detected}}×{{detected}}, attuale {{current}}",
+    "rotateImage": "Ruota 90°",
     "cornersManual": "Rilevamento automatico fallito – regola manualmente gli angoli",
     "loadError": "Impossibile caricare l'immagine",
     "analysisError": "Analisi fallita",
+    "stepCorners": "Allinea gli angoli",
+    "stepReview": "Verifica e calibra le pietre",
     "alignGrid": "Griglia:",
     "resetGrid": "Reimposta allineamento griglia",
     "gridClickHint": "Clicca sui 4 angoli della griglia nell'anteprima ({{count}}/4)",
@@ -632,14 +646,13 @@
     "markEmpty": "Segna intersezione vuota",
     "resetCalibration": "Reimposta calibrazione",
     "calibrateHint": "Clicca sulle intersezioni nell'anteprima per correggere gli errori",
-    "backend": "Rilevamento:",
-    "backendClassic": "Classico",
-    "backendMoku": "Moku (IA)",
-    "threshold": "Soglia:",
+    "sensitivity": "Sensibilità:",
     "loadingModel": "Caricamento modello IA…",
     "mokuError": "Impossibile caricare il modello di rilevamento IA",
     "selectSizePrompt": "Seleziona la dimensione della tavola per avviare l'analisi",
     "customSize": "Personalizzato",
-    "apply": "Applica"
+    "apply": "Applica",
+    "resetCorners": "Ripristina angoli",
+    "poweredBy": "Sviluppato con"
   }
 }

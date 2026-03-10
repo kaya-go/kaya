@@ -4,6 +4,7 @@
 
 import { useState, useCallback, useRef, useEffect, type DragEvent, type MouseEvent } from 'react';
 import { useLibrary } from '../../contexts/LibraryContext';
+import { buildSGF } from '@kaya/board-recognition';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import type { ConfirmDialogState } from './LibraryDialogs';
 
@@ -160,9 +161,11 @@ export function useLibraryActions() {
   );
 
   const handleLibraryRecognitionImport = useCallback(
-    async (sgf: string, filename: string) => {
+    async (stones: { x: number; y: number; color: 'black' | 'white' }[], boardSize: number) => {
       setRecognitionFile(null);
       try {
+        const sgf = buildSGF(boardSize, stones);
+        const filename = `scan-${boardSize}x${boardSize}.sgf`;
         await createFile(filename, sgf, null);
       } catch {
         // Ignore

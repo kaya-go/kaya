@@ -429,6 +429,7 @@
     "failedToLoadSgf": "Échec du chargement SGF : {{error}}"
   },
   "loading": {
+    "loading": "Chargement…",
     "loadingSgfFile": "Chargement du fichier SGF"
   },
   "dropzone": {
@@ -615,13 +616,26 @@
     "selectSize": "Taille du goban :",
     "photo": "Photo",
     "preview": "Goban reconnu",
-    "dragHint": "Faites glisser les coins pour délimiter la zone du plateau",
+    "dragHint": "Faites glisser les coins pour qu'ils correspondent aux bords du plateau",
     "analyzing": "Analyse en cours…",
     "chooseSizeFirst": "Choisissez d'abord la taille du goban",
     "importSGF": "Importer en SGF",
+    "addToBoard": "Ajouter au plateau",
+    "addBlankBoard": "Sur un plateau vierge",
+    "addMerge": "Fusionner avec l'existant",
+    "addAsMove": "Ajouter comme coup",
+    "addAsMoveNoDelta": "Aucune différence avec le plateau actuel",
+    "addAsMoveMultiDelta": "Impossible d'ajouter comme coup : {{count}} différences détectées (1 seule attendue)",
+    "deltaAdded": "{{count}} ajoutée(s)",
+    "deltaRemoved": "{{count}} retirée(s)",
+    "showDelta": "Afficher les différences",
+    "sizeMismatch": "Tailles différentes : détecté {{detected}}×{{detected}}, actuel {{current}}",
+    "rotateImage": "Rotation 90°",
     "cornersManual": "Détection auto échouée – ajustez les coins manuellement",
     "loadError": "Échec du chargement de l'image",
     "analysisError": "Échec de l'analyse",
+    "stepCorners": "Aligner les coins",
+    "stepReview": "Vérifier et calibrer les pierres",
     "alignGrid": "Grille :",
     "resetGrid": "Réinitialiser l'alignement de la grille",
     "gridClickHint": "Cliquez sur les 4 intersections d'angle de la grille ({{count}}/4)",
@@ -632,14 +646,13 @@
     "markEmpty": "Marquer intersection vide",
     "resetCalibration": "Réinitialiser la calibration",
     "calibrateHint": "Cliquez sur les intersections de l'aperçu pour corriger les erreurs",
-    "backend": "Détection :",
-    "backendClassic": "Classique",
-    "backendMoku": "Moku (IA)",
-    "threshold": "Seuil :",
+    "sensitivity": "Sensibilité :",
     "loadingModel": "Chargement du modèle IA…",
     "mokuError": "Échec du chargement du modèle de détection IA",
     "selectSizePrompt": "Sélectionnez la taille du goban pour commencer l'analyse",
     "customSize": "Personnalisé",
-    "apply": "Appliquer"
+    "apply": "Appliquer",
+    "resetCorners": "Réinitialiser les coins",
+    "poweredBy": "Propulsé par"
   }
 }

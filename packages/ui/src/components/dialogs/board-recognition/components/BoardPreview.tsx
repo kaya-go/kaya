@@ -1,25 +1,30 @@
 /**
  * BoardPreview – warped board preview with stone overlay
  *
- * Sub-component of BoardRecognitionDialog that renders the warped
- * board image on a canvas with grid lines, detected stones, hints,
- * and grid corner markers overlaid.
+ * Uses CSS matrix3d for the perspective warp (GPU-accelerated) instead of
+ * pixel-by-pixel warpPerspective. The original photo is displayed with a CSS
+ * transform computed from the 3×3 homography, and an overlay canvas draws
+ * the grid, detected stones, hints, and markers on top.
  */
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   BoardCorners,
   CalibrationHint,
   Point,
   RecognitionResult,
-  RawImage,
 } from '@kaya/board-recognition';
+import { computeHomography } from '@kaya/board-recognition';
+import type { DeltaStone } from '../BoardRecognitionDialog';
 
 const WARP_SIZE = 800;
+const WARP_MARGIN = 0.08;
 
 type CalibrationMode = 'black' | 'white' | 'empty' | null;
 
 interface PreviewProps {
   result: RecognitionResult;
+  objectURL: string | null;
+  corners: BoardCorners | null;
   hints: CalibrationHint[];
   calibrationMode: CalibrationMode;
   onIntersectionClick: (col: number, row: number) => void;
@@ -27,6 +32,10 @@ interface PreviewProps {
   settingGrid: boolean;
   gridClicks: Point[];
   onGridClick: (warpX: number, warpY: number) => void;
+  /** Single move stone to highlight when "add as move" is available */
+  moveMarker?: DeltaStone | null;
+  /** All delta stones to show (when the user toggles the delta view) */
+  delta?: DeltaStone[];
 }
 
 /** Compute canvas position for a grid intersection. */
@@ -54,6 +63,8 @@ function gridToCanvas(
 
 export const BoardPreview: React.FC<PreviewProps> = ({
   result,
+  objectURL,
+  corners,
   hints,
   calibrationMode,
   onIntersectionClick,
@@ -61,17 +72,49 @@ export const BoardPreview: React.FC<PreviewProps> = ({
   settingGrid,
   gridClicks,
   onGridClick,
+  moveMarker,
+  delta,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const bitmapRef = useRef<ImageBitmap | null>(null);
-  const warpedImageRef = useRef<RawImage | null>(null);
   const paintRef = useRef<() => void>(() => {});
+  const [containerSize, setContainerSize] = useState(0);
+
+  // Measure container size with ResizeObserver
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(entries => {
+      const w = entries[0].contentRect.width;
+      if (w > 0) setContainerSize(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Compute CSS matrix3d for the image perspective transform
+  const cssTransform = useMemo(() => {
+    if (!corners || !containerSize) return '';
+
+    const m = containerSize * WARP_MARGIN;
+    const dstCorners: [Point, Point, Point, Point] = [
+      [m, m],
+      [containerSize - 1 - m, m],
+      [containerSize - 1 - m, containerSize - 1 - m],
+      [m, containerSize - 1 - m],
+    ];
+
+    const H = computeHomography(corners, dstCorners);
+    if (!H) return '';
+
+    // Convert 3×3 homography to CSS matrix3d (column-major 4×4)
+    return `matrix3d(${H[0]},${H[3]},0,${H[6]},${H[1]},${H[4]},0,${H[7]},0,0,1,0,${H[2]},${H[5]},0,${H[8]})`;
+  }, [corners, containerSize]);
 
   const paintCanvas = useCallback(() => {
     const canvas = canvasRef.current;
-    const img = bitmapRef.current;
-    if (!canvas || !img) return;
-    const size = canvas.clientWidth || 360;
+    if (!canvas || !containerSize) return;
+    const size = containerSize;
     if (canvas.width !== size || canvas.height !== size) {
       canvas.width = size;
       canvas.height = size;
@@ -79,7 +122,8 @@ export const BoardPreview: React.FC<PreviewProps> = ({
     const ctx = canvas.getContext('2d')!;
     const scale = size / WARP_SIZE;
 
-    ctx.drawImage(img, 0, 0, size, size);
+    // Clear — no image drawn, it's handled by the CSS-transformed <img>
+    ctx.clearRect(0, 0, size, size);
 
     const bs = result.boardSize;
 
@@ -149,71 +193,93 @@ export const BoardPreview: React.FC<PreviewProps> = ({
     // Draw grid corner handles (when gridCorners are set)
     if (gridCorners) {
       const CORNER_LABELS = ['TL', 'TR', 'BR', 'BL'];
-      const CORNER_COLORS = ['#ff4444', '#ffaa00', '#ff4444', '#ffaa00'];
+      const CORNER_COLORS = ['#00e5ff', '#ff4081', '#76ff03', '#ffd740'];
+      const CROSS = 6;
       for (let i = 0; i < 4; i++) {
         const cx = gridCorners[i][0] * scale;
         const cy = gridCorners[i][1] * scale;
+        const color = CORNER_COLORS[i];
+
+        // Semi-transparent circle
         ctx.beginPath();
-        ctx.arc(cx, cy, 7, 0, Math.PI * 2);
-        ctx.fillStyle = CORNER_COLORS[i];
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fillStyle = color + '30';
         ctx.fill();
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
         ctx.stroke();
+
+        // Crosshair
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cx - CROSS, cy);
+        ctx.lineTo(cx + CROSS, cy);
+        ctx.moveTo(cx, cy - CROSS);
+        ctx.lineTo(cx, cy + CROSS);
+        ctx.stroke();
+
+        // Label
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 8px sans-serif';
+        ctx.font = 'bold 7px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(CORNER_LABELS[i], cx, cy);
+        ctx.fillText(CORNER_LABELS[i], cx, cy - 13);
       }
     }
-  }, [result, hints, gridCorners, gridClicks, settingGrid]);
 
-  // Keep paintRef in sync so the bitmap effect can call the latest paint
+    // Draw delta markers (added / removed) — same style as detected stones
+    if (delta && delta.length > 0) {
+      for (const d of delta) {
+        const [cx, cy] = gridToCanvas(d.x, d.y, bs, scale, gridCorners);
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fillStyle = d.type === 'added' ? 'rgba(0, 220, 80, 0.55)' : 'rgba(220, 40, 40, 0.55)';
+        ctx.fill();
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+
+    // Draw single move marker (prominent ring) when add-as-move is available
+    if (moveMarker) {
+      const [cx, cy] = gridToCanvas(moveMarker.x, moveMarker.y, bs, scale, gridCorners);
+      const rMove = Math.max(5, cellPx * 0.36);
+      // Outer glow
+      ctx.beginPath();
+      ctx.arc(cx, cy, rMove + 2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      // Main ring
+      ctx.beginPath();
+      ctx.arc(cx, cy, rMove, 0, Math.PI * 2);
+      ctx.fillStyle =
+        moveMarker.color === 'black' ? 'rgba(0, 220, 80, 0.7)' : 'rgba(0, 220, 80, 0.7)';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Triangle pointer inside
+      const tri = rMove * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(cx - tri * 0.7, cy - tri * 0.5);
+      ctx.lineTo(cx + tri * 0.7, cy);
+      ctx.lineTo(cx - tri * 0.7, cy + tri * 0.5);
+      ctx.closePath();
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+  }, [result, hints, gridCorners, gridClicks, settingGrid, delta, moveMarker, containerSize]);
+
+  // Keep paintRef in sync
   paintRef.current = paintCanvas;
 
-  // Create ImageBitmap asynchronously when warpedImage reference changes
-  useEffect(() => {
-    const raw = result.warpedImage;
-    if (raw === warpedImageRef.current) return;
-    warpedImageRef.current = raw;
-
-    let cancelled = false;
-    const imageData = new ImageData(
-      new Uint8ClampedArray(
-        raw.data.buffer as ArrayBuffer,
-        raw.data.byteOffset,
-        raw.data.byteLength
-      ),
-      raw.width,
-      raw.height
-    );
-    createImageBitmap(imageData).then(bmp => {
-      if (cancelled) {
-        bmp.close();
-        return;
-      }
-      bitmapRef.current?.close();
-      bitmapRef.current = bmp;
-      paintRef.current();
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [result.warpedImage]);
-
-  // Clean up bitmap on unmount
-  useEffect(() => {
-    return () => {
-      bitmapRef.current?.close();
-    };
-  }, []);
-
-  // Repaint when overlay data changes
+  // Repaint when overlay data or container size changes
   useEffect(() => {
     paintCanvas();
-  }, [result, hints, paintCanvas, gridCorners, gridClicks, settingGrid]);
+  }, [paintCanvas]);
 
   const onClick = useCallback(
     (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -257,11 +323,22 @@ export const BoardPreview: React.FC<PreviewProps> = ({
   );
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="brd-preview-canvas"
-      style={{ cursor: settingGrid || calibrationMode ? 'crosshair' : 'default' }}
-      onClick={onClick}
-    />
+    <div ref={containerRef} className="brd-preview-container">
+      {objectURL && cssTransform && (
+        <img
+          src={objectURL}
+          className="brd-preview-img"
+          style={{ transform: cssTransform }}
+          draggable={false}
+          alt=""
+        />
+      )}
+      <canvas
+        ref={canvasRef}
+        className="brd-preview-overlay"
+        style={{ cursor: settingGrid || calibrationMode ? 'crosshair' : 'default' }}
+        onClick={onClick}
+      />
+    </div>
   );
 };

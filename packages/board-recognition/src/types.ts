@@ -66,7 +66,7 @@ export interface RecognitionResult {
   corners: BoardCorners; // detected or fallback corners in original image coords
   cornersDetected: boolean; // false = fallback to image bounds
   sgf: string;
-  warpedImage: RawImage; // for preview
+  warpedImage: RawImage | null; // for preview (null while awaiting re-warp)
   /** Estimated grid corners within the warped image (inset from board boundary). */
   estimatedGridCorners?: BoardCorners;
   /** Raw moku detections in image coords (only set by moku backend, for corner re-mapping). */

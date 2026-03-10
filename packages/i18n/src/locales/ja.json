@@ -432,6 +432,7 @@
     "failedToLoadSgf": "SGFファイルの読み込みに失敗: {{error}}"
   },
   "loading": {
+    "loading": "読み込み中…",
     "loadingSgfFile": "SGFファイルを読み込み中"
   },
   "dropzone": {
@@ -618,13 +619,26 @@
     "selectSize": "碁盤サイズ：",
     "photo": "写真",
     "preview": "認識結果",
-    "dragHint": "コーナーをドラッグして碁盤の範囲を指定してください",
+    "dragHint": "コーナーをドラッグして碁盤の端に正確に合わせてください",
     "analyzing": "分析中…",
     "chooseSizeFirst": "まず碁盤のサイズを選択してください",
     "importSGF": "SGF としてインポート",
+    "addToBoard": "盤面に追加",
+    "addBlankBoard": "空の盤面に",
+    "addMerge": "現在の盤面に統合",
+    "addAsMove": "着手として追加",
+    "addAsMoveNoDelta": "現在の盤面と差異なし",
+    "addAsMoveMultiDelta": "着手として追加できません: {{count}}個の差異が検出されました（1個のみ可能）",
+    "deltaAdded": "{{count}}個追加",
+    "deltaRemoved": "{{count}}個削除",
+    "showDelta": "差分を表示",
+    "sizeMismatch": "盤面サイズが異なります: 検出 {{detected}}×{{detected}}、現在 {{current}}",
+    "rotateImage": "90°回転",
     "cornersManual": "自動検出失敗 – 手動でコーナーを調整してください",
     "loadError": "画像の読み込みに失敗しました",
     "analysisError": "分析に失敗しました",
+    "stepCorners": "コーナーの配置",
+    "stepReview": "石の確認と補正",
     "alignGrid": "グリッド：",
     "resetGrid": "グリッド位置をリセット",
     "gridClickHint": "プレビューでグリッドの4隅の交点をクリック ({{count}}/4)",
@@ -635,14 +649,13 @@
     "markEmpty": "空き交点を指定",
     "resetCalibration": "補正をリセット",
     "calibrateHint": "プレビュー上の交点をクリックして誤検出を修正",
-    "backend": "検出方法：",
-    "backendClassic": "クラシック",
-    "backendMoku": "Moku (AI)",
-    "threshold": "閾値：",
+    "sensitivity": "感度：",
     "loadingModel": "AIモデルを読み込み中…",
     "mokuError": "AI検出モデルの読み込みに失敗しました",
     "selectSizePrompt": "碁盤のサイズを選択して分析を開始",
     "customSize": "カスタム",
-    "apply": "適用"
+    "apply": "適用",
+    "resetCorners": "コーナーをリセット",
+    "poweredBy": "提供元"
   }
 }

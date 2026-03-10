@@ -29,12 +29,33 @@
   padding: 8px;
 }
 
-.brd-preview-canvas {
+.brd-preview-container {
+  position: relative;
   width: 100%;
   aspect-ratio: 1;
   max-height: 100%;
   display: block;
   border-radius: 4px;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.brd-preview-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+  backface-visibility: hidden;
+}
+
+.brd-preview-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
 }
 
 .brd-hint {
@@ -43,6 +64,73 @@
   text-align: center;
   padding: 4px 8px 8px;
   flex-shrink: 0;
+}
+
+/* ── Step titles ── */
+
+.brd-step-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.brd-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent, #4a9eff);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* ── Corner actions area (below photo canvas) ── */
+
+.brd-corner-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 2px 8px 8px;
+  flex-shrink: 0;
+  min-height: 28px;
+}
+
+.brd-corner-actions-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.brd-reset-corners-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #444);
+  background: var(--input-bg, #2a2a2a);
+  color: var(--text-secondary, #aaa);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+.brd-reset-corners-btn:hover {
+  border-color: var(--accent, #4a9eff);
+  color: var(--text-primary, #e0e0e0);
+}
+.brd-reset-corners-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: var(--border-color, #444);
+  color: var(--text-secondary, #aaa);
 }
 
 /* ── Analyzing spinner ── */
@@ -89,23 +177,4 @@
   border-top-color: var(--accent, #4a9eff);
   border-radius: 50%;
   animation: brd-spin 0.7s linear infinite;
-}
-
-/* Small spinner on the photo panel corner during warping */
-.brd-canvas-wrap.warping {
-  cursor: progress;
-}
-.brd-canvas-wrap.warping::after {
-  content: '';
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 20px;
-  height: 20px;
-  border: 2.5px solid rgba(255, 255, 255, 0.15);
-  border-top-color: var(--accent, #4a9eff);
-  border-radius: 50%;
-  animation: brd-spin 0.7s linear infinite;
-  pointer-events: none;
-  z-index: 2;
 }

@@ -171,6 +171,7 @@ export function useGameTreeEdit() {
         setEditPlayMode: ctx.setEditPlayMode,
         // Edit actions
         addSetupStone: ctx.addSetupStone,
+        addSetupPosition: ctx.addSetupPosition,
         addMarker: ctx.addMarker,
         removeMarker: ctx.removeMarker,
         setNodeName: ctx.setNodeName,

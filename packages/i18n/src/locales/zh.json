@@ -432,6 +432,7 @@
     "failedToLoadSgf": "加载 SGF 文件失败：{{error}}"
   },
   "loading": {
+    "loading": "加载中…",
     "loadingSgfFile": "正在加载 SGF 文件"
   },
   "dropzone": {
@@ -618,13 +619,26 @@
     "selectSize": "棋盘大小：",
     "photo": "图片",
     "preview": "识别结果",
-    "dragHint": "拖动角点以框选棋盘区域",
+    "dragHint": "拖动角点使其与棋盘边缘精确对齐",
     "analyzing": "正在分析…",
     "chooseSizeFirst": "请先选择棋盘大小",
     "importSGF": "导入为 SGF",
+    "addToBoard": "添加到棋盘",
+    "addBlankBoard": "放置到空棋盘",
+    "addMerge": "与当前合并",
+    "addAsMove": "作为落子添加",
+    "addAsMoveNoDelta": "与当前棋盘无差异",
+    "addAsMoveMultiDelta": "无法作为落子添加：检测到 {{count}} 处差异（必须恰好为 1 处）",
+    "deltaAdded": "{{count}} 处添加",
+    "deltaRemoved": "{{count}} 处移除",
+    "showDelta": "显示差异",
+    "sizeMismatch": "棋盘大小不匹配：检测到 {{detected}}×{{detected}}，当前为 {{current}}",
+    "rotateImage": "旋转90°",
     "cornersManual": "自动检测失败，请手动调整角点",
     "loadError": "图片加载失败",
     "analysisError": "分析失败",
+    "stepCorners": "对齐角点",
+    "stepReview": "检查并校准棋子",
     "alignGrid": "网格：",
     "resetGrid": "重置网格对齐",
     "gridClickHint": "在预览中点击网格的4个角点交叉 ({{count}}/4)",
@@ -635,14 +649,13 @@
     "markEmpty": "标记空位",
     "resetCalibration": "重置校准",
     "calibrateHint": "点击预览中的交叉点以修正误检",
-    "backend": "检测方式：",
-    "backendClassic": "经典",
-    "backendMoku": "Moku (AI)",
-    "threshold": "阈值：",
+    "sensitivity": "灵敏度：",
     "loadingModel": "正在加载 AI 模型…",
     "mokuError": "AI 检测模型加载失败",
     "selectSizePrompt": "请选择棋盘大小以开始分析",
     "customSize": "自定义",
-    "apply": "应用"
+    "apply": "应用",
+    "resetCorners": "重置角点",
+    "poweredBy": "技术支持"
   }
 }

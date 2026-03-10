@@ -13,7 +13,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
 import type { LibraryItemId } from '@kaya/game-library';
 import { formatFileSize } from '@kaya/game-library';
-import { BoardRecognitionDialog } from '../dialogs/BoardRecognitionDialog';
+import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
 import { LibraryContextMenu } from './LibraryContextMenu';
 import { NewFolderDialog, ConfirmDialog } from './LibraryDialogs';
 import { useLibraryActions } from './useLibraryActions';

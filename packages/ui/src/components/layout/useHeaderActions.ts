@@ -6,6 +6,7 @@ import {
   useGameTreeBoard,
   useGameTreeEdit,
   useGameTreeAI,
+  useGameTreeActions,
 } from '../../contexts/selectors';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useGameSounds } from '../../useGameSounds';
@@ -26,8 +27,9 @@ export function useHeaderActions() {
   const { loadSGFAsync, exportSGF, newGame, fileName, setFileName, isDirty, triggerAutoSave } =
     useGameTreeFile();
   const { currentBoard, gameInfo } = useGameTreeBoard();
-  const { makeMainVariation, undo, redo, canUndo, canRedo } = useGameTreeEdit();
+  const { makeMainVariation, undo, redo, canUndo, canRedo, addSetupPosition } = useGameTreeEdit();
   const { setAIConfigOpen } = useGameTreeAI();
+  const { playMove } = useGameTreeActions();
   const {
     clearLoadedFile,
     loadedFileId,
@@ -98,19 +100,46 @@ export function useHeaderActions() {
   );
 
   const handleRecognitionImport = useCallback(
-    async (sgf: string, filename: string) => {
+    (
+      stones: { x: number; y: number; color: 'black' | 'white' }[],
+      boardSize: number,
+      mode: 'blank' | 'merge'
+    ) => {
       setRecognitionFile(null);
-      const canProceed = await checkUnsavedChanges();
-      if (!canProceed) return;
-      try {
-        await loadSGFAsync(sgf);
-        setFileName(filename);
-        clearLoadedFile();
-      } catch (error) {
-        alert(`Failed to load recognized board: ${error}`);
+      const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
+      const coord = (col: number, row: number) => ALPHA[col] + ALPHA[row];
+      const blackCoords = stones.filter(s => s.color === 'black').map(s => coord(s.x, s.y));
+      const whiteCoords = stones.filter(s => s.color === 'white').map(s => coord(s.x, s.y));
+
+      // In 'blank' mode, clear all intersections first so the position starts from an empty board
+      let clearCoords: string[] | undefined;
+      if (mode === 'blank') {
+        clearCoords = [];
+        for (let x = 0; x < boardSize; x++) {
+          for (let y = 0; y < boardSize; y++) {
+            clearCoords.push(coord(x, y));
+          }
+        }
       }
+
+      addSetupPosition(
+        blackCoords,
+        whiteCoords,
+        `Board recognition (${boardSize}×${boardSize}, ${stones.length} stones)`,
+        clearCoords
+      );
     },
-    [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges]
+    [addSetupPosition]
+  );
+
+  const handleRecognitionImportSGF = useCallback(
+    (sgf: string) => {
+      setRecognitionFile(null);
+      clearLoadedFile();
+      loadSGFAsync(sgf);
+      setFileName('scan.sgf');
+    },
+    [loadSGFAsync, setFileName, clearLoadedFile]
   );
 
   const handleOpenClick = useCallback(() => {
@@ -487,6 +516,8 @@ export function useHeaderActions() {
     setIsMobileMenuOpen,
     defaultSaveFileName,
     handleRecognitionImport,
+    handleRecognitionImportSGF,
+    playMove,
     handleOpenClick,
     handleScanBoardClick,
     handleScanFileSelected,

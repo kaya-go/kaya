@@ -19,7 +19,7 @@
   display: flex;
   flex-direction: column;
   width: min(96vw, 1100px);
-  max-height: min(96vh, 860px);
+  height: min(92vh, 860px);
   overflow: hidden;
 }
 
@@ -101,11 +101,26 @@
 /* Footer */
 .brd-footer {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
   padding: 12px 20px;
   border-top: 1px solid var(--border-color, #333);
   flex-shrink: 0;
+}
+
+.brd-powered-by {
+  margin-right: auto;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #888);
+}
+.brd-powered-by a {
+  color: var(--accent, #4a9eff);
+  text-decoration: none;
+  font-weight: 600;
+}
+.brd-powered-by a:hover {
+  text-decoration: underline;
 }
 
 .brd-btn {
@@ -133,6 +148,15 @@
   background: var(--hover-bg, #333);
 }
 
+.brd-btn-secondary {
+  background: var(--input-bg, #2a2a2a);
+  color: var(--text-primary, #e0e0e0);
+  border: 1px solid var(--border-color, #444);
+}
+.brd-btn-secondary:hover:not(:disabled) {
+  background: var(--hover-bg, #333);
+}
+
 .brd-btn-import {
   background: var(--accent, #4a9eff);
   color: #fff;
@@ -141,10 +165,110 @@
   background: var(--accent-hover, #3a8aef);
 }
 
+/* Dropdown */
+.brd-dropdown {
+  position: relative;
+}
+.brd-dropdown-arrow {
+  margin-left: 6px;
+  font-size: 0.7em;
+}
+.brd-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  background: var(--panel-bg, #1e1e1e);
+  border: 1px solid var(--border-color, #444);
+  border-radius: 6px;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  z-index: 10;
+}
+.brd-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  color: var(--text-primary, #e0e0e0);
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+.brd-dropdown-item:hover {
+  background: var(--hover-bg, #333);
+}
+.brd-dropdown-item + .brd-dropdown-item {
+  border-top: 1px solid var(--border-color, #333);
+}
+.brd-dropdown-item-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.brd-dropdown-item-disabled:hover {
+  background: none;
+}
+.brd-dropdown-item-badge {
+  margin-left: 8px;
+  font-size: 1em;
+}
+
+/* Delta toggle + legend */
+.brd-delta-legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 14px 2px;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #888);
+}
+.brd-delta-toggle {
+  background: none;
+  border: 1px solid var(--border-color, #555);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.brd-delta-toggle:hover {
+  border-color: var(--text-primary, #ccc);
+  color: var(--text-primary, #ccc);
+}
+.brd-delta-toggle.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--text-primary, #ccc);
+  color: var(--text-primary, #ccc);
+}
+.brd-delta-summary {
+  display: flex;
+  gap: 10px;
+}
+.brd-delta-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.brd-delta-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.brd-delta-added .brd-delta-dot {
+  background: rgba(0, 220, 80, 0.7);
+}
+.brd-delta-removed .brd-delta-dot {
+  background: rgba(220, 40, 40, 0.7);
+}
+
 /* ── Mobile / narrow layout ─────────────────────────── */
 @media (max-width: 600px) {
   .brd-dialog {
-    max-height: 98vh;
+    height: 98vh;
     border-radius: 8px;
   }
 
@@ -162,7 +286,7 @@
 /* Landscape mobile */
 @media (max-height: 500px) and (orientation: landscape) {
   .brd-dialog {
-    max-height: 98vh;
+    height: 98vh;
     width: min(98vw, 1100px);
   }
 

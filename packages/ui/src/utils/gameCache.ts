@@ -117,13 +117,17 @@ export function reconstructBoard(
     // Performance impact is minimal since this is cached
     const disableKoCheck = false;
 
-    // Apply setup stones (AB, AW, AE)
+    // Apply setup stones (AE first, then AB, AW)
     if (data.AB || data.AW || data.AE) {
       if (!canMutate) {
         board = board.clone();
         boardIsOwned = true;
       }
 
+      for (const sgf of data.AE || []) {
+        const v = sgfToVertex(sgf);
+        if (v) board.set(v, 0);
+      }
       for (const sgf of data.AB || []) {
         const v = sgfToVertex(sgf);
         if (v) board.set(v, 1);
@@ -131,10 +135,6 @@ export function reconstructBoard(
       for (const sgf of data.AW || []) {
         const v = sgfToVertex(sgf);
         if (v) board.set(v, -1);
-      }
-      for (const sgf of data.AE || []) {
-        const v = sgfToVertex(sgf);
-        if (v) board.set(v, 0);
       }
     }
 

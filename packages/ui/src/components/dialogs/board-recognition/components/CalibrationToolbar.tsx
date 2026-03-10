@@ -16,7 +16,6 @@ type CalibrationMode = 'black' | 'white' | 'empty' | null;
 
 interface CalibrationToolbarProps {
   result: RecognitionResult;
-  detectionBackend: 'classic' | 'moku';
   calibrationMode: CalibrationMode;
   setCalibrationMode: React.Dispatch<React.SetStateAction<CalibrationMode>>;
   settingGrid: boolean;
@@ -32,7 +31,6 @@ interface CalibrationToolbarProps {
 
 export const CalibrationToolbar: React.FC<CalibrationToolbarProps> = ({
   result,
-  detectionBackend,
   calibrationMode,
   setCalibrationMode,
   settingGrid,
@@ -61,28 +59,6 @@ export const CalibrationToolbar: React.FC<CalibrationToolbarProps> = ({
         )}
       </div>
       <div className="brd-calibration-row">
-        {detectionBackend !== 'moku' && (
-          <>
-            <span className="brd-calibration-label">{t('boardRecognition.alignGrid')}</span>
-            <button
-              className={`brd-cal-btn brd-cal-grid${settingGrid ? ' active' : ''}`}
-              onClick={toggleGridMode}
-              title={t('boardRecognition.alignGrid')}
-            >
-              ⊞
-            </button>
-            {gridCorners && (
-              <button
-                className="brd-cal-btn brd-cal-reset"
-                onClick={resetGrid}
-                title={t('boardRecognition.resetGrid')}
-              >
-                ↺
-              </button>
-            )}
-            <span className="brd-calibration-sep" />
-          </>
-        )}
         <span className="brd-calibration-label">{t('boardRecognition.calibrate')}</span>
         <button
           className={`brd-cal-btn brd-cal-black${calibrationMode === 'black' ? ' active' : ''}`}

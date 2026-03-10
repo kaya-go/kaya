@@ -193,6 +193,10 @@ export function updateAnalysisState(
     // However, `GoBoard.set` does copy-on-write for rows.
     // But `makeMove` with `mutate: true` modifies in place.
 
+    for (const sgf of data.AE || []) {
+      const v = sgfToVertex(sgf);
+      if (v) board.set(v, 0);
+    }
     for (const sgf of data.AB || []) {
       const v = sgfToVertex(sgf);
       if (v) board.set(v, 1);
@@ -200,10 +204,6 @@ export function updateAnalysisState(
     for (const sgf of data.AW || []) {
       const v = sgfToVertex(sgf);
       if (v) board.set(v, -1);
-    }
-    for (const sgf of data.AE || []) {
-      const v = sgfToVertex(sgf);
-      if (v) board.set(v, 0);
     }
   }
 

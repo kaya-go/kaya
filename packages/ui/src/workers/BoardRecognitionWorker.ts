@@ -38,6 +38,7 @@ function deserializeResult(s: SerializedResult): RecognitionResult {
       height: s.warpedSize,
     },
     mokuRawDetections: s.mokuRawDetections,
+    estimatedGridCorners: s.estimatedGridCorners,
   };
 }
 
@@ -46,6 +47,7 @@ export class BoardRecognitionWorker {
   private nextId = 1;
   private pending = new Map<number, Pending>();
   private progressCallback: ((progress: number) => void) | null = null;
+  private lastImgData: Uint8ClampedArray | null = null;
 
   constructor() {
     this.worker = new Worker(new URL('./boardRecognition.worker.js', import.meta.url), {
@@ -73,6 +75,14 @@ export class BoardRecognitionWorker {
     };
   }
 
+  private _getImgBuffer(imgData: Uint8ClampedArray): ArrayBuffer | undefined {
+    if (this.lastImgData === imgData) {
+      return undefined; // already cached on worker
+    }
+    this.lastImgData = imgData;
+    return imgData.buffer.slice(0) as ArrayBuffer; // only clone once per unique image
+  }
+
   recognizeBoard(
     imgData: Uint8ClampedArray,
     width: number,
@@ -80,21 +90,18 @@ export class BoardRecognitionWorker {
     options: RecognitionOptions
   ): Promise<RecognitionResult> {
     const id = this.nextId++;
-    // Copy the buffer so we can transfer it without affecting the caller
-    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    const imgBuffer = this._getImgBuffer(imgData);
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage(
-        {
-          type: 'recognizeBoard',
-          id,
-          imgBuffer: copy,
-          width,
-          height,
-          options,
-        } satisfies WorkerRequest,
-        [copy]
-      );
+      this.worker.postMessage({
+        type: 'recognizeBoard',
+        id,
+        imgBuffer,
+        width,
+        height,
+        options,
+      } satisfies WorkerRequest);
     });
   }
 
@@ -106,21 +113,19 @@ export class BoardRecognitionWorker {
     options: RecognitionOptions
   ): Promise<RecognitionResult> {
     const id = this.nextId++;
-    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    const imgBuffer = this._getImgBuffer(imgData);
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage(
-        {
-          type: 'reclassifyWithCorners',
-          id,
-          imgBuffer: copy,
-          width,
-          height,
-          corners,
-          options,
-        } satisfies WorkerRequest,
-        [copy]
-      );
+      this.worker.postMessage({
+        type: 'reclassifyWithCorners',
+        id,
+        imgBuffer,
+        width,
+        height,
+        corners,
+        options,
+      } satisfies WorkerRequest);
     });
   }
 
@@ -133,22 +138,20 @@ export class BoardRecognitionWorker {
     options: RecognitionOptions
   ): Promise<RecognitionResult> {
     const id = this.nextId++;
-    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    const imgBuffer = this._getImgBuffer(imgData);
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage(
-        {
-          type: 'reclassifyWithHints',
-          id,
-          imgBuffer: copy,
-          width,
-          height,
-          corners,
-          hints,
-          options,
-        } satisfies WorkerRequest,
-        [copy]
-      );
+      this.worker.postMessage({
+        type: 'reclassifyWithHints',
+        id,
+        imgBuffer,
+        width,
+        height,
+        corners,
+        hints,
+        options,
+      } satisfies WorkerRequest);
     });
   }
 
@@ -202,26 +205,25 @@ export class BoardRecognitionWorker {
     options: MokuDetectOptions
   ): Promise<RecognitionResult> {
     const id = this.nextId++;
-    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    const imgBuffer = this._getImgBuffer(imgData);
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage(
-        {
-          type: 'mokuDetect' as const,
-          id,
-          imgBuffer: copy,
-          width,
-          height,
-          options,
-        },
-        [copy]
-      );
+      this.worker.postMessage({
+        type: 'mokuDetect' as const,
+        id,
+        imgBuffer,
+        width,
+        height,
+        options,
+      });
     });
   }
 
   /** Dispose the moku detector and free ONNX resources. */
   mokuDispose(): Promise<void> {
     const id = this.nextId++;
+    this.lastImgData = null; // Clear main thread cache
     return new Promise<void>((resolve, reject) => {
       this.pending.set(id, {
         resolve: () => resolve(),
@@ -244,22 +246,20 @@ export class BoardRecognitionWorker {
     insetDst?: [[number, number], [number, number], [number, number], [number, number]]
   ): Promise<RecognitionResult> {
     const id = this.nextId++;
-    const copy = imgData.buffer.slice(0) as ArrayBuffer;
+    const imgBuffer = this._getImgBuffer(imgData);
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage(
-        {
-          type: 'warpOnly' as const,
-          id,
-          imgBuffer: copy,
-          width,
-          height,
-          corners,
-          outputSize,
-          insetDst,
-        },
-        [copy]
-      );
+      this.worker.postMessage({
+        type: 'warpOnly' as const,
+        id,
+        imgBuffer,
+        width,
+        height,
+        corners,
+        outputSize,
+        insetDst,
+      });
     });
   }
 }

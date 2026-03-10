@@ -432,6 +432,7 @@
     "failedToLoadSgf": "SGF 파일 불러오기 실패: {{error}}"
   },
   "loading": {
+    "loading": "불러오는 중…",
     "loadingSgfFile": "SGF 파일 불러오는 중"
   },
   "dropzone": {
@@ -618,13 +619,26 @@
     "selectSize": "바둑판 크기:",
     "photo": "사진",
     "preview": "인식된 바둑판",
-    "dragHint": "모서리를 드래그하여 바둑판 영역을 지정하세요",
+    "dragHint": "코너를 드래그하여 바둑판 가장자리에 정확히 맞추세요",
     "analyzing": "분석 중…",
     "chooseSizeFirst": "바둑판 크기를 선택하세요",
     "importSGF": "SGF로 가져오기",
+    "addToBoard": "기보에 추가",
+    "addBlankBoard": "빈 바둑판에",
+    "addMerge": "현재와 병합",
+    "addAsMove": "수로 추가",
+    "addAsMoveNoDelta": "현재 바둑판과 차이 없음",
+    "addAsMoveMultiDelta": "수로 추가 불가: {{count}}개의 차이 감지 (정확히 1개여야 함)",
+    "deltaAdded": "{{count}}개 추가",
+    "deltaRemoved": "{{count}}개 제거",
+    "showDelta": "차이점 표시",
+    "sizeMismatch": "바둑판 크기 불일치: 감지 {{detected}}×{{detected}}, 현재 {{current}}",
+    "rotateImage": "90° 회전",
     "cornersManual": "자동 감지 실패 – 수동으로 모서리를 조정하세요",
     "loadError": "이미지 로드 실패",
     "analysisError": "분석 실패",
+    "stepCorners": "코너 정렬",
+    "stepReview": "돌 검토 및 보정",
     "alignGrid": "격자:",
     "resetGrid": "격자 정렬 초기화",
     "gridClickHint": "미리보기에서 격자의 4개 모서리 교차점을 클릭하세요 ({{count}}/4)",
@@ -635,14 +649,13 @@
     "markEmpty": "빈 교차점 표시",
     "resetCalibration": "보정 초기화",
     "calibrateHint": "미리보기에서 교차점을 클릭하여 오류를 수정하세요",
-    "backend": "감지 방식:",
-    "backendClassic": "클래식",
-    "backendMoku": "Moku (AI)",
-    "threshold": "임계값:",
+    "sensitivity": "감도:",
     "loadingModel": "AI 모델 로딩 중…",
     "mokuError": "AI 감지 모델 로드 실패",
     "selectSizePrompt": "분석을 시작하려면 바둑판 크기를 선택하세요",
     "customSize": "사용자 지정",
-    "apply": "적용"
+    "apply": "적용",
+    "resetCorners": "코너 초기화",
+    "poweredBy": "제공"
   }
 }

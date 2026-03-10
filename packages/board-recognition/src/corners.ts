@@ -154,3 +154,42 @@ export function imageCorners(width: number, height: number): BoardCorners {
     [0, height - 1],
   ];
 }
+
+/**
+ * Detect when 2+ corners have collapsed onto each other (distance < minDistFraction
+ * of the image diagonal) and spread them to default inset positions.
+ * Returns the original corners if no collapse is detected.
+ */
+export function spreadCollapsedCorners(
+  corners: BoardCorners,
+  width: number,
+  height: number,
+  minDistFraction: number = 0.05
+): { corners: BoardCorners; wasCollapsed: boolean } {
+  const diag = Math.hypot(width, height);
+  const minDist = diag * minDistFraction;
+
+  // Check all pairs for collapse
+  let collapsed = false;
+  for (let i = 0; i < 4 && !collapsed; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      const d = Math.hypot(corners[i][0] - corners[j][0], corners[i][1] - corners[j][1]);
+      if (d < minDist) {
+        collapsed = true;
+        break;
+      }
+    }
+  }
+
+  if (!collapsed) return { corners, wasCollapsed: false };
+
+  // Spread to default inset corners (5% margin)
+  const m = Math.min(width, height) * 0.05;
+  const fallback: BoardCorners = [
+    [m, m],
+    [width - 1 - m, m],
+    [width - 1 - m, height - 1 - m],
+    [m, height - 1 - m],
+  ];
+  return { corners: fallback, wasCollapsed: true };
+}

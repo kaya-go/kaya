@@ -28,7 +28,7 @@ import { warpPerspective } from './perspective';
 import { classifyIntersections, classifyWithHints } from './stones';
 import { buildSGF } from './sgf';
 
-export { orderCorners, estimateGridInWarped } from './corners';
+export { orderCorners, estimateGridInWarped, spreadCollapsedCorners } from './corners';
 export { warpPerspective, computeHomography, applyHomography } from './perspective';
 export { classifyIntersections, classifyWithHints } from './stones';
 export { buildSGF } from './sgf';

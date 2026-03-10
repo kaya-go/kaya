@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useGameTree } from '../../contexts/GameTreeContext';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
-import { BoardRecognitionDialog } from '../dialogs/BoardRecognitionDialog';
+import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
 import { useTauriDragDrop, usePasteHandler } from './useDropZoneEffects';
 import './AppDropZone.css';
 
@@ -32,7 +32,15 @@ const isInsideLibrary = (target: EventTarget | null): boolean => {
 
 export const AppDropZone: React.FC<AppDropZoneProps> = ({ children, onFileDrop }) => {
   const { t } = useTranslation();
-  const { loadSGF, loadSGFAsync, setFileName, setCustomAIModel } = useGameTree();
+  const {
+    loadSGF,
+    loadSGFAsync,
+    setFileName,
+    setCustomAIModel,
+    addSetupPosition,
+    currentBoard,
+    playMove,
+  } = useGameTree();
   const { clearLoadedFile, createFile, importZip, checkUnsavedChanges } = useLibrary();
   const { setTauriDragging, setOverLibrary } = useTauriDrag();
   const [isDragging, setIsDragging] = useState(false);
@@ -125,19 +133,45 @@ export const AppDropZone: React.FC<AppDropZoneProps> = ({ children, onFileDrop }
   );
 
   const handleRecognitionImport = useCallback(
-    async (sgf: string, filename: string) => {
+    (
+      stones: { x: number; y: number; color: 'black' | 'white' }[],
+      boardSize: number,
+      mode: 'blank' | 'merge'
+    ) => {
       setRecognitionFile(null);
-      const canProceed = await checkUnsavedChanges();
-      if (!canProceed) return;
-      try {
-        loadSGF(sgf);
-        setFileName(filename);
-        clearLoadedFile();
-      } catch (error) {
-        alert(`Failed to load recognized board: ${error}`);
+      const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
+      const coord = (col: number, row: number) => ALPHA[col] + ALPHA[row];
+      const blackCoords = stones.filter(s => s.color === 'black').map(s => coord(s.x, s.y));
+      const whiteCoords = stones.filter(s => s.color === 'white').map(s => coord(s.x, s.y));
+
+      let clearCoords: string[] | undefined;
+      if (mode === 'blank') {
+        clearCoords = [];
+        for (let x = 0; x < boardSize; x++) {
+          for (let y = 0; y < boardSize; y++) {
+            clearCoords.push(coord(x, y));
+          }
+        }
       }
+
+      addSetupPosition(
+        blackCoords,
+        whiteCoords,
+        `Board recognition (${boardSize}×${boardSize}, ${stones.length} stones)`,
+        clearCoords
+      );
     },
-    [loadSGF, setFileName, clearLoadedFile, checkUnsavedChanges]
+    [addSetupPosition]
+  );
+
+  const handleRecognitionImportSGF = useCallback(
+    (sgf: string) => {
+      setRecognitionFile(null);
+      clearLoadedFile();
+      loadSGFAsync(sgf);
+      setFileName('scan.sgf');
+    },
+    [loadSGFAsync, setFileName, clearLoadedFile]
   );
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -215,6 +249,9 @@ export const AppDropZone: React.FC<AppDropZoneProps> = ({ children, onFileDrop }
         <BoardRecognitionDialog
           file={recognitionFile}
           onImport={handleRecognitionImport}
+          onImportSGF={handleRecognitionImportSGF}
+          onPlayMove={playMove}
+          currentBoard={currentBoard}
           onClose={() => setRecognitionFile(null)}
         />
       )}

@@ -429,6 +429,7 @@
     "failedToLoadSgf": "SGF-Datei laden fehlgeschlagen: {{error}}"
   },
   "loading": {
+    "loading": "Wird geladen…",
     "loadingSgfFile": "SGF-Datei wird geladen"
   },
   "dropzone": {
@@ -615,13 +616,26 @@
     "selectSize": "Brettgröße:",
     "photo": "Foto",
     "preview": "Erkanntes Brett",
-    "dragHint": "Eckpunkte ziehen, um den Brettbereich zu markieren",
+    "dragHint": "Ziehen Sie die Ecken, um sie genau an den Brettrand anzupassen",
     "analyzing": "Analysiere…",
     "chooseSizeFirst": "Bitte zuerst Brettgröße wählen",
     "importSGF": "Als SGF importieren",
+    "addToBoard": "Zum Brett hinzufügen",
+    "addBlankBoard": "Auf leerem Brett",
+    "addMerge": "Mit aktuellem zusammenführen",
+    "addAsMove": "Als Zug hinzufügen",
+    "addAsMoveNoDelta": "Kein Unterschied zum aktuellen Brett",
+    "addAsMoveMultiDelta": "Kann nicht als Zug hinzugefügt werden: {{count}} Unterschiede erkannt (nur 1 erlaubt)",
+    "deltaAdded": "{{count}} hinzugefügt",
+    "deltaRemoved": "{{count}} entfernt",
+    "showDelta": "Unterschiede anzeigen",
+    "sizeMismatch": "Brettgrößen unterschiedlich: erkannt {{detected}}×{{detected}}, aktuell {{current}}",
+    "rotateImage": "90° drehen",
     "cornersManual": "Automatische Erkennung fehlgeschlagen – Ecken manuell anpassen",
     "loadError": "Bild konnte nicht geladen werden",
     "analysisError": "Analyse fehlgeschlagen",
+    "stepCorners": "Ecken ausrichten",
+    "stepReview": "Steine prüfen und kalibrieren",
     "alignGrid": "Gitter:",
     "resetGrid": "Gitterausrichtung zurücksetzen",
     "gridClickHint": "Klicken Sie auf die 4 Eck-Schnittpunkte des Gitters ({{count}}/4)",
@@ -632,14 +646,13 @@
     "markEmpty": "Leeren Schnittpunkt markieren",
     "resetCalibration": "Kalibrierung zurücksetzen",
     "calibrateHint": "Klicken Sie auf Schnittpunkte in der Vorschau, um Fehler zu korrigieren",
-    "backend": "Erkennung:",
-    "backendClassic": "Klassisch",
-    "backendMoku": "Moku (KI)",
-    "threshold": "Schwellenwert:",
+    "sensitivity": "Empfindlichkeit:",
     "loadingModel": "KI-Modell wird geladen…",
     "mokuError": "KI-Erkennungsmodell konnte nicht geladen werden",
     "selectSizePrompt": "Brettgröße auswählen, um die Analyse zu starten",
     "customSize": "Benutzerdefiniert",
-    "apply": "Anwenden"
+    "apply": "Anwenden",
+    "resetCorners": "Ecken zurücksetzen",
+    "poweredBy": "Unterstützt von"
   }
 }

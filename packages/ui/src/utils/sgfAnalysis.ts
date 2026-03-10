@@ -170,6 +170,10 @@ export function injectAnalysisToTree(
   if (node.data.AB || node.data.AW || node.data.AE) {
     // Clone board before modifying since we're using immutable pattern
     newBoard = newBoard.clone();
+    for (const sgf of node.data.AE || []) {
+      const v = sgfToVertex(sgf);
+      if (v) newBoard.set(v, 0);
+    }
     for (const sgf of node.data.AB || []) {
       const v = sgfToVertex(sgf);
       if (v) newBoard.set(v, 1);
@@ -177,10 +181,6 @@ export function injectAnalysisToTree(
     for (const sgf of node.data.AW || []) {
       const v = sgfToVertex(sgf);
       if (v) newBoard.set(v, -1);
-    }
-    for (const sgf of node.data.AE || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, 0);
     }
   }
 
@@ -292,12 +292,16 @@ export function extractAnalysisFromTree(
   let newHistory = [...history];
   let color: Sign = 0;
 
-  // Handle setup stones first (AB, AW, AE)
+  // Handle setup stones first (AE first, then AB, AW)
   // Setup stones change the board but don't add to move history
   // This must match updateAnalysisState behavior for cache key consistency
   if (node.data.AB || node.data.AW || node.data.AE) {
     // Clone board before modifying since we're using immutable pattern
     newBoard = newBoard.clone();
+    for (const sgf of node.data.AE || []) {
+      const v = sgfToVertex(sgf);
+      if (v) newBoard.set(v, 0);
+    }
     for (const sgf of node.data.AB || []) {
       const v = sgfToVertex(sgf);
       if (v) newBoard.set(v, 1);
@@ -305,10 +309,6 @@ export function extractAnalysisFromTree(
     for (const sgf of node.data.AW || []) {
       const v = sgfToVertex(sgf);
       if (v) newBoard.set(v, -1);
-    }
-    for (const sgf of node.data.AE || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, 0);
     }
   }
 

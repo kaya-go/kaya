@@ -429,6 +429,7 @@
     "failedToLoadSgf": "Error al cargar el archivo SGF: {{error}}"
   },
   "loading": {
+    "loading": "Cargando…",
     "loadingSgfFile": "Cargando archivo SGF"
   },
   "dropzone": {
@@ -615,13 +616,26 @@
     "selectSize": "Tamaño del tablero:",
     "photo": "Foto",
     "preview": "Tablero reconocido",
-    "dragHint": "Arrastra las esquinas para delimitar el área del tablero",
+    "dragHint": "Arrastra las esquinas para alinearlas con los bordes del tablero",
     "analyzing": "Analizando…",
     "chooseSizeFirst": "Elige primero el tamaño del tablero",
     "importSGF": "Importar como SGF",
+    "addToBoard": "Añadir al tablero",
+    "addBlankBoard": "En tablero vacío",
+    "addMerge": "Fusionar con el actual",
+    "addAsMove": "Añadir como jugada",
+    "addAsMoveNoDelta": "Sin diferencias con el tablero actual",
+    "addAsMoveMultiDelta": "No se puede añadir como jugada: {{count}} diferencias detectadas (se necesita exactamente 1)",
+    "deltaAdded": "{{count}} añadida(s)",
+    "deltaRemoved": "{{count}} eliminada(s)",
+    "showDelta": "Mostrar diferencias",
+    "sizeMismatch": "Tamaños diferentes: detectado {{detected}}×{{detected}}, actual {{current}}",
+    "rotateImage": "Rotar 90°",
     "cornersManual": "Detección automática fallida – ajusta las esquinas manualmente",
     "loadError": "Error al cargar la imagen",
     "analysisError": "Error de análisis",
+    "stepCorners": "Alinear esquinas",
+    "stepReview": "Revisar y calibrar piedras",
     "alignGrid": "Cuadrícula:",
     "resetGrid": "Restablecer alineación de cuadrícula",
     "gridClickHint": "Haz clic en las 4 intersecciones de las esquinas de la cuadrícula ({{count}}/4)",
@@ -632,14 +646,13 @@
     "markEmpty": "Marcar intersección vacía",
     "resetCalibration": "Restablecer calibración",
     "calibrateHint": "Haz clic en las intersecciones de la vista previa para corregir errores",
-    "backend": "Detección:",
-    "backendClassic": "Clásico",
-    "backendMoku": "Moku (IA)",
-    "threshold": "Umbral:",
+    "sensitivity": "Sensibilidad:",
     "loadingModel": "Cargando modelo de IA…",
     "mokuError": "Error al cargar el modelo de detección IA",
     "selectSizePrompt": "Selecciona el tamaño del tablero para iniciar el análisis",
     "customSize": "Personalizado",
-    "apply": "Aplicar"
+    "apply": "Aplicar",
+    "resetCorners": "Restablecer esquinas",
+    "poweredBy": "Desarrollado con"
   }
 }

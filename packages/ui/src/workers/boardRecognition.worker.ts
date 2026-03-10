@@ -26,7 +26,7 @@ export type WorkerRequest =
   | {
       type: 'recognizeBoard';
       id: number;
-      imgBuffer: ArrayBuffer;
+      imgBuffer?: ArrayBuffer;
       width: number;
       height: number;
       options: RecognitionOptions;
@@ -34,7 +34,7 @@ export type WorkerRequest =
   | {
       type: 'reclassifyWithCorners';
       id: number;
-      imgBuffer: ArrayBuffer;
+      imgBuffer?: ArrayBuffer;
       width: number;
       height: number;
       corners: BoardCorners;
@@ -43,7 +43,7 @@ export type WorkerRequest =
   | {
       type: 'reclassifyWithHints';
       id: number;
-      imgBuffer: ArrayBuffer;
+      imgBuffer?: ArrayBuffer;
       width: number;
       height: number;
       corners: BoardCorners;
@@ -58,7 +58,7 @@ export type WorkerRequest =
   | {
       type: 'mokuDetect';
       id: number;
-      imgBuffer: ArrayBuffer;
+      imgBuffer?: ArrayBuffer;
       width: number;
       height: number;
       options: MokuDetectOptions;
@@ -70,7 +70,7 @@ export type WorkerRequest =
   | {
       type: 'warpOnly';
       id: number;
-      imgBuffer: ArrayBuffer;
+      imgBuffer?: ArrayBuffer;
       width: number;
       height: number;
       corners: [number, number][];
@@ -100,6 +100,7 @@ export interface SerializedResult {
   warpedBuffer: ArrayBuffer;
   warpedSize: number; // width === height
   mokuRawDetections?: MokuRawDetection[];
+  estimatedGridCorners?: BoardCorners;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -112,7 +113,7 @@ function serializeResult(r: RecognitionResult): {
   serialized: SerializedResult;
   transfer: ArrayBuffer[];
 } {
-  const warpedBuffer = r.warpedImage.data.buffer as ArrayBuffer;
+  const warpedBuffer = r.warpedImage!.data.buffer as ArrayBuffer;
   return {
     serialized: {
       boardSize: r.boardSize,
@@ -121,8 +122,9 @@ function serializeResult(r: RecognitionResult): {
       cornersDetected: r.cornersDetected,
       sgf: r.sgf,
       warpedBuffer,
-      warpedSize: r.warpedImage.width,
+      warpedSize: r.warpedImage!.width,
       mokuRawDetections: r.mokuRawDetections,
+      estimatedGridCorners: r.estimatedGridCorners,
     },
     transfer: [warpedBuffer],
   };
@@ -131,6 +133,7 @@ function serializeResult(r: RecognitionResult): {
 // ── Moku detector singleton ──────────────────────────────────────────────────
 
 let mokuDetector: MokuDetector | null = null;
+let cachedRawImage: RawImage | null = null;
 
 // ── Handler ──────────────────────────────────────────────────────────────────
 
@@ -139,20 +142,26 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
   try {
     let result: RecognitionResult;
 
+    // Cache the image if provided
+    if ('imgBuffer' in msg && msg.imgBuffer) {
+      cachedRawImage = toRawImage(msg.imgBuffer, msg.width, msg.height);
+    }
+    const getImg = () => {
+      if (!cachedRawImage) throw new Error('No image buffer provided and no cached image found');
+      return cachedRawImage;
+    };
+
     switch (msg.type) {
       case 'recognizeBoard': {
-        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
-        result = await recognizeBoard(img, msg.options);
+        result = await recognizeBoard(getImg(), msg.options);
         break;
       }
       case 'reclassifyWithCorners': {
-        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
-        result = await reclassifyWithCorners(img, msg.corners, msg.options);
+        result = await reclassifyWithCorners(getImg(), msg.corners, msg.options);
         break;
       }
       case 'reclassifyWithHints': {
-        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
-        result = await reclassifyWithHints(img, msg.corners, msg.hints, msg.options);
+        result = await reclassifyWithHints(getImg(), msg.corners, msg.hints, msg.options);
         break;
       }
       case 'mokuInit': {
@@ -176,13 +185,13 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       }
       case 'mokuDetect': {
         if (!mokuDetector) throw new Error('Moku detector not initialized');
-        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
-        result = await mokuDetector.detect(img, msg.options);
+        result = await mokuDetector.detect(getImg(), msg.options);
         break;
       }
       case 'mokuDispose': {
         mokuDetector?.dispose();
         mokuDetector = null;
+        cachedRawImage = null; // Clear cache on dispose
         (self as unknown as Worker).postMessage({
           id: msg.id,
           result: undefined,
@@ -190,7 +199,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         return;
       }
       case 'warpOnly': {
-        const img = toRawImage(msg.imgBuffer, msg.width, msg.height);
+        const img = getImg();
         const corners = msg.corners as import('@kaya/board-recognition').BoardCorners;
         const warped = warpPerspective(img, corners, msg.outputSize, msg.insetDst);
         const warpedBuffer = warped.data.buffer as ArrayBuffer;

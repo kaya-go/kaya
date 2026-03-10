@@ -199,6 +199,12 @@ export interface GameTreeContextValue {
   stoneToolColor: Sign;
   setStoneToolColor: (color: Sign) => void;
   addSetupStone: (vertex: Vertex, sign: Sign) => void;
+  addSetupPosition: (
+    blackCoords: string[],
+    whiteCoords: string[],
+    comment?: string,
+    clearCoords?: string[]
+  ) => void;
   addMarker: (vertex: Vertex, marker: Marker | null | string) => void;
   setNodeName: (name: string) => void;
   setNodeComment: (comment: string) => void;

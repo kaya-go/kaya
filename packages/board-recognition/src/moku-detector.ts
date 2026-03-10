@@ -16,7 +16,7 @@ import type {
   MokuRawDetection,
   RecognitionResult,
 } from './types';
-import { orderCorners, imageCorners } from './corners';
+import { orderCorners, imageCorners, spreadCollapsedCorners } from './corners';
 import { computeHomography, applyHomography } from './perspective';
 import { warpPerspective } from './perspective';
 import { buildSGF } from './sgf';
@@ -343,6 +343,11 @@ function postprocess(
   if (areCornersDegenerate(corners, origImg.width, origImg.height)) {
     corners = insetImageCorners(origImg.width, origImg.height, 0.05);
   }
+
+  // Also spread collapsed corners (pairwise distance check) so the warp
+  // uses the same corners the main thread will display.
+  const spread = spreadCollapsedCorners(corners, origImg.width, origImg.height);
+  corners = spread.corners;
 
   // Warp for preview – map board corners to an inset region so there is
   // a visible margin around the board edges regardless of image bounds.

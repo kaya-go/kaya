@@ -432,6 +432,7 @@
     "failedToLoadSgf": "Failed to load SGF file: {{error}}"
   },
   "loading": {
+    "loading": "Loading...",
     "loadingSgfFile": "Loading SGF File"
   },
   "dropzone": {
@@ -618,13 +619,26 @@
     "selectSize": "Board size:",
     "photo": "Photo",
     "preview": "Recognized Board",
-    "dragHint": "Drag corners to outline the board area",
-    "analyzing": "Analyzing…",
+    "dragHint": "Drag the corners to match the board edges exactly",
+    "analyzing": "Analyzing\u2026",
     "chooseSizeFirst": "Select a board size to begin",
     "importSGF": "Import as SGF",
-    "cornersManual": "Auto-detection failed – adjust corners manually",
+    "addToBoard": "Add to Board",
+    "addBlankBoard": "On blank board",
+    "addMerge": "Merge with current",
+    "addAsMove": "Add as move",
+    "addAsMoveNoDelta": "No difference with current board",
+    "addAsMoveMultiDelta": "Cannot add as move: {{count}} differences detected (must be exactly 1)",
+    "deltaAdded": "{{count}} added",
+    "deltaRemoved": "{{count}} removed",
+    "showDelta": "Show differences",
+    "sizeMismatch": "Board sizes differ: detected {{detected}}×{{detected}}, current is {{current}}",
+    "rotateImage": "Rotate 90°",
+    "cornersManual": "Auto-detection failed \u2013 adjust corners manually",
     "loadError": "Failed to load image",
     "analysisError": "Analysis failed",
+    "stepCorners": "Align corners",
+    "stepReview": "Review & calibrate stones",
     "alignGrid": "Grid:",
     "resetGrid": "Reset grid alignment",
     "gridClickHint": "Click the 4 grid corner intersections on the preview ({{count}}/4)",
@@ -635,14 +649,13 @@
     "markEmpty": "Mark empty intersection",
     "resetCalibration": "Reset calibration",
     "calibrateHint": "Click intersections on the preview to correct misdetections",
-    "backend": "Detection:",
-    "backendClassic": "Classic",
-    "backendMoku": "Moku (AI)",
-    "threshold": "Threshold:",
+    "sensitivity": "Sensitivity:",
     "loadingModel": "Loading AI model…",
     "mokuError": "Failed to load AI detection model",
     "selectSizePrompt": "Select a board size to begin analysis",
     "customSize": "Custom",
-    "apply": "Apply"
+    "apply": "Apply",
+    "resetCorners": "Reset corners",
+    "poweredBy": "Powered by"
   }
 }

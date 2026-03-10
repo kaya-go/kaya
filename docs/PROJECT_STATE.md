@@ -72,14 +72,16 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 
 ### Board Recognition
 
-- **Photo Import**: Recognize board positions from photos and import as SGF
+- **Photo Import**: Recognize board positions from photos with multiple import modes (SGF, blank board, merge with current position, add as move)
 - **Dual Backend**: Classic computer-vision pipeline and Moku AI (RT-DETR) detection
-- **Moku AI**: ONNX-based RT-DETR model detects corners and stones directly with configurable confidence threshold
+- **Moku AI**: ONNX-based RT-DETR model detects corners and stones directly with configurable sensitivity
 - **Model Caching**: Browser Cache API with hash-based invalidation and download progress tracking
-- **Corner Dragging**: Interactive perspective warp with deferred worker-based warping
+- **Corner Dragging**: Interactive perspective warp with deferred worker-based warping and collapsed corner auto-spread
 - **Custom Board Sizes**: Support for arbitrary board sizes (2–52) in addition to standard 9/13/19
 - **Manual Calibration**: Click-to-toggle stone color corrections and grid alignment
-- **Web Worker**: All heavy computation runs off the main thread
+- **Two-Step Workflow**: Corner alignment step followed by review & stone calibration step
+- **Delta Visualization**: Show differences between recognized and current board position
+- **Web Worker**: All heavy computation runs off the main thread with image caching optimization
 
 ### Edit Mode
 

@@ -5,7 +5,7 @@ import { NewGameDialog } from '../dialogs/NewGameDialog';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { SaveToLibraryDialog } from '../dialogs/SaveToLibraryDialog';
 import { ToastContainer } from '../ui/Toast';
-import { BoardRecognitionDialog } from '../dialogs/BoardRecognitionDialog';
+import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
 import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
 import { useHeaderActions } from './useHeaderActions';
 import { HeaderFileControls } from './HeaderFileControls';
@@ -152,6 +152,9 @@ export const Header: React.FC<HeaderProps> = ({
         <BoardRecognitionDialog
           file={actions.recognitionFile}
           onImport={actions.handleRecognitionImport}
+          onImportSGF={actions.handleRecognitionImportSGF}
+          onPlayMove={actions.playMove}
+          currentBoard={actions.currentBoard}
           onClose={() => actions.setRecognitionFile(null)}
         />
       )}
