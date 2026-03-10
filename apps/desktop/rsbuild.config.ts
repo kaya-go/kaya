@@ -7,9 +7,6 @@ import { createRequire } from 'node:module';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-// Resolve coi-serviceworker path (handles monorepo hoisting)
-const coiServiceWorkerPath = path.dirname(require.resolve('coi-serviceworker/package.json'));
-
 export default defineConfig({
   plugins: [pluginReact()],
   source: {
@@ -27,10 +24,6 @@ export default defineConfig({
     copy: [
       {
         from: '../../version.json',
-        to: '.',
-      },
-      {
-        from: path.join(coiServiceWorkerPath, 'coi-serviceworker.js'),
         to: '.',
       },
       {

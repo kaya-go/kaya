@@ -54,13 +54,13 @@ class WebAudioBackend implements SoundBackend {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const Ctor = window.AudioContext || (window as any).webkitAudioContext;
-      if (Ctor) {
-        this.context = new Ctor();
-        if (DEBUG_SOUND) console.log('[SOUND:WebAudio] ✅ AudioContext created');
-      }
+      if (!Ctor) throw new Error('AudioContext not available');
+      this.context = new Ctor({ latencyHint: 'interactive' });
+      if (DEBUG_SOUND) console.log('[SOUND:WebAudio] ✅ AudioContext created');
     } catch (e) {
       if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] ❌ Failed to create AudioContext:', e);
-      throw e; // let caller know init failed
+      this.context = null;
+      throw e;
     }
   }
 
@@ -169,66 +169,46 @@ class WebAudioBackend implements SoundBackend {
 }
 
 // ============================================================================
-// HTMLAudioElement Backend (fallback — works when Web Audio device fails)
+// HTMLAudioElement Backend (fallback — lazy, no preloading)
 // ============================================================================
 
 class HtmlAudioBackend implements SoundBackend {
-  private pool = new Map<string, HTMLAudioElement[]>();
-  private loaded = false;
-  private loadPromise: Promise<void> | null = null;
-  private readonly POOL_SIZE = 3; // clones per sound for overlapping playback
+  private cache = new Map<string, HTMLAudioElement>();
+  private failed = false;
 
   get ready() {
-    return this.loaded;
+    return !this.failed;
   }
 
   init(): void {
-    // Nothing to initialize — Audio elements are always available
+    // No-op — elements created lazily on play()
   }
 
   async preload(): Promise<void> {
-    if (this.loaded) return;
-    if (this.loadPromise) return this.loadPromise;
-
-    const allPaths = Object.values(SOUND_PATHS).flat();
-
-    this.loadPromise = Promise.all(
-      allPaths.map(
-        path =>
-          new Promise<void>(resolve => {
-            const elements: HTMLAudioElement[] = [];
-            let loadedCount = 0;
-            for (let i = 0; i < this.POOL_SIZE; i++) {
-              const audio = new Audio(path);
-              audio.preload = 'auto';
-              const onReady = () => {
-                loadedCount++;
-                if (loadedCount === this.POOL_SIZE) resolve();
-              };
-              audio.addEventListener('canplaythrough', onReady, { once: true });
-              audio.addEventListener('error', onReady, { once: true }); // resolve anyway
-              elements.push(audio);
-            }
-            this.pool.set(path, elements);
-          })
-      )
-    ).then(() => {
-      this.loaded = true;
-      if (DEBUG_SOUND) console.log(`[SOUND:HTML] ✅ Preloaded ${this.pool.size} sounds`);
-    });
-    return this.loadPromise;
+    // No preloading — creating Audio elements can trigger GStreamer init
+    // which may hang if plugins are missing (e.g. AppImage without gst-plugins)
   }
 
   play(path: string): void {
-    const elements = this.pool.get(path);
-    if (!elements) return;
+    if (this.failed) return;
 
-    // Find an element that isn't currently playing, or reuse the first
-    const el = elements.find(e => e.paused || e.ended) ?? elements[0];
-    el.currentTime = 0;
-    el.play().catch(() => {
-      // Autoplay blocked or playback failed — silently ignore
-    });
+    try {
+      let el = this.cache.get(path);
+      if (!el) {
+        el = new Audio();
+        el.preload = 'none';
+        el.src = path;
+        this.cache.set(path, el);
+      } else {
+        el.currentTime = 0;
+      }
+      el.play().catch(() => {
+        // Playback failed — silently ignore
+      });
+    } catch {
+      // Audio constructor or play threw — GStreamer likely broken
+      this.failed = true;
+    }
   }
 }
 
@@ -238,6 +218,7 @@ class HtmlAudioBackend implements SoundBackend {
 
 let activeBackend: SoundBackend | null = null;
 let backendInitialized = false;
+let backendInitPromise: Promise<void> | null = null;
 
 // Track last play time per sound type to prevent overlapping sounds
 const lastPlayTime = new Map<SoundType, number>();
@@ -247,37 +228,55 @@ const MIN_SOUND_INTERVAL = 50;
 let moveVariantIndex = 0;
 let captureVariantIndex = 0;
 
-const initSoundBackend = async (): Promise<void> => {
+const initSoundBackend = (): void => {
   if (backendInitialized) return;
   backendInitialized = true;
 
-  // Start with HTML Audio immediately so sounds work right away
+  // Always set up lazy HTML Audio as the immediate backend.
+  // Its play() is async and won't freeze even with broken GStreamer.
   const htmlAudio = new HtmlAudioBackend();
-  htmlAudio.init();
   activeBackend = htmlAudio;
-  htmlAudio.preload(); // fire-and-forget
 
-  // Try to upgrade to Web Audio API in the background (lower latency)
-  try {
-    const webAudio = new WebAudioBackend();
-    webAudio.init();
-    const works = await webAudio.validate();
-    if (works) {
-      await webAudio.preload();
-      activeBackend = webAudio;
-      if (DEBUG_SOUND) console.log('[SOUND] ✅ Upgraded to Web Audio API backend');
-      return;
-    }
-    webAudio.dispose();
-  } catch {
-    // Web Audio init failed — keep HTML Audio
+  // In Tauri on Linux, new AudioContext() is synchronous and can freeze
+  // the entire WebKitWebProcess when GStreamer plugins are missing.
+  // Skip Web Audio entirely in Tauri — HTML Audio works fine.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+  if (isTauri) {
+    if (DEBUG_SOUND) console.log('[SOUND] Tauri detected, using HTML Audio backend');
+    return;
   }
 
-  if (DEBUG_SOUND) console.log('[SOUND] Using HTML Audio backend');
+  // In browsers, try to upgrade to Web Audio API (lower latency).
+  backendInitPromise = (async () => {
+    try {
+      const webAudio = new WebAudioBackend();
+      webAudio.init();
+      const works = await webAudio.validate();
+      if (works) {
+        await webAudio.preload();
+        activeBackend = webAudio;
+        if (DEBUG_SOUND) console.log('[SOUND] ✅ Upgraded to Web Audio API backend');
+        return;
+      }
+      webAudio.dispose();
+    } catch {
+      // Web Audio init failed — stay on HTML Audio
+    }
+    if (DEBUG_SOUND) console.log('[SOUND] Using HTML Audio backend');
+  })();
 };
 
 const playSound_ = (path: string): void => {
-  activeBackend?.play(path);
+  // If backend is ready, play immediately
+  if (activeBackend) {
+    activeBackend.play(path);
+    return;
+  }
+  // Otherwise wait for init (fire-and-forget, first sound may be missed)
+  backendInitPromise?.then(() => {
+    activeBackend?.play(path);
+  });
 };
 
 // ============================================================================
@@ -319,8 +318,11 @@ const initOnInteraction = () => {
     removeInitListeners();
     return;
   }
-  initSoundBackend();
   removeInitListeners();
+  // Defer audio init off the click handler's synchronous path.
+  // On WebKitGTK with missing GStreamer plugins, new AudioContext() can
+  // freeze the entire process — setTimeout ensures the UI stays responsive.
+  setTimeout(initSoundBackend, 0);
 };
 
 const removeInitListeners = () => {
