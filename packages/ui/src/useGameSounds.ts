@@ -131,14 +131,21 @@ class WebAudioBackend implements SoundBackend {
     }
   }
 
-  /** Test if the backend can actually produce audio */
+  /** Test if the backend can actually produce audio (with timeout to prevent hanging) */
   async validate(): Promise<boolean> {
     if (!this.context) return false;
     try {
       if (this.context.state === 'suspended') {
-        await this.context.resume();
+        // Race resume() against a timeout — WebKitGTK can hang forever
+        const resumed = await Promise.race([
+          this.context.resume().then(() => true),
+          new Promise<false>(resolve => setTimeout(() => resolve(false), 2000)),
+        ]);
+        if (!resumed) {
+          if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] ⏱️ resume() timed out');
+          return false;
+        }
       }
-      // If resume didn't throw, the audio device is accessible
       return this.context.state === 'running';
     } catch {
       return false;
@@ -244,30 +251,29 @@ const initSoundBackend = async (): Promise<void> => {
   if (backendInitialized) return;
   backendInitialized = true;
 
-  // Try Web Audio API first (lower latency)
-  const webAudio = new WebAudioBackend();
-  try {
-    webAudio.init();
-    const works = await webAudio.validate();
-    if (works) {
-      activeBackend = webAudio;
-      if (DEBUG_SOUND) console.log('[SOUND] Using Web Audio API backend');
-      await webAudio.preload();
-      return;
-    }
-  } catch {
-    // Web Audio init failed
-  }
-
-  // Clean up failed WebAudio
-  webAudio.dispose();
-
-  // Fallback to HTMLAudioElement
-  console.info('[SOUND] Web Audio API unavailable, falling back to HTML Audio');
+  // Start with HTML Audio immediately so sounds work right away
   const htmlAudio = new HtmlAudioBackend();
   htmlAudio.init();
   activeBackend = htmlAudio;
-  await htmlAudio.preload();
+  htmlAudio.preload(); // fire-and-forget
+
+  // Try to upgrade to Web Audio API in the background (lower latency)
+  try {
+    const webAudio = new WebAudioBackend();
+    webAudio.init();
+    const works = await webAudio.validate();
+    if (works) {
+      await webAudio.preload();
+      activeBackend = webAudio;
+      if (DEBUG_SOUND) console.log('[SOUND] ✅ Upgraded to Web Audio API backend');
+      return;
+    }
+    webAudio.dispose();
+  } catch {
+    // Web Audio init failed — keep HTML Audio
+  }
+
+  if (DEBUG_SOUND) console.log('[SOUND] Using HTML Audio backend');
 };
 
 const playSound_ = (path: string): void => {
