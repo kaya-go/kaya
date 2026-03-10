@@ -36,6 +36,12 @@ let isLoading = false;
 let isLoaded = false;
 let loadPromise: Promise<void> | null = null;
 
+// Audio device failure tracking with retry support
+let audioResumeFailures = 0;
+const MAX_RESUME_RETRIES = 3;
+let audioFailed = false;
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
 // Pending sound to play once loaded (for first stone)
 let pendingSound: { path: string; timestamp: number } | null = null;
 const PENDING_SOUND_TIMEOUT = 500; // Max ms to wait for loading before giving up
@@ -53,6 +59,7 @@ let captureVariantIndex = 0;
  */
 const initAudioContext = (): AudioContext | null => {
   if (audioContext) return audioContext;
+  if (audioFailed) return null;
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,21 +70,76 @@ const initAudioContext = (): AudioContext | null => {
     }
   } catch (e) {
     console.warn('[SOUND] ❌ Failed to create AudioContext:', e);
+    audioFailed = true;
   }
 
   return audioContext;
 };
 
 /**
+ * Try to recreate the AudioContext (used after a transient audio device failure).
+ * Closes the old context and resets loading state so sounds can be re-preloaded.
+ */
+const recreateAudioContext = (): void => {
+  if (audioContext) {
+    try {
+      audioContext.close();
+    } catch {
+      // ignore
+    }
+    audioContext = null;
+  }
+  audioBuffers.clear();
+  isLoaded = false;
+  isLoading = false;
+  loadPromise = null;
+
+  initAudioContext();
+  if (audioContext) {
+    preloadAllSounds();
+  }
+};
+
+/**
  * Resume AudioContext if suspended (required after user interaction)
  */
 const resumeAudioContext = async (): Promise<void> => {
-  if (audioContext && audioContext.state === 'suspended') {
+  if (audioFailed || !audioContext) return;
+  if (audioContext.state === 'suspended') {
     try {
       await audioContext.resume();
-      if (DEBUG_SOUND) console.log('[SOUND] ✅ AudioContext resumed');
+      // Success — reset failure counter
+      if (audioResumeFailures > 0) {
+        console.info('[SOUND] ✅ AudioContext resumed after previous failures');
+        audioResumeFailures = 0;
+      } else if (DEBUG_SOUND) {
+        console.log('[SOUND] ✅ AudioContext resumed');
+      }
     } catch (e) {
-      console.warn('[SOUND] ⚠️ Failed to resume AudioContext:', e);
+      if (e instanceof DOMException && e.name === 'InvalidStateError') {
+        audioResumeFailures++;
+        if (audioResumeFailures >= MAX_RESUME_RETRIES) {
+          // Give up after several attempts
+          console.warn(
+            `[SOUND] ⚠️ Audio device unavailable after ${MAX_RESUME_RETRIES} attempts, disabling sound`
+          );
+          audioFailed = true;
+          audioContext = null;
+        } else if (!retryTimer) {
+          // Schedule a retry: recreate AudioContext after exponential backoff
+          const delay = 1000 * Math.pow(2, audioResumeFailures - 1); // 1s, 2s, 4s
+          if (DEBUG_SOUND)
+            console.log(
+              `[SOUND] 🔄 Audio resume failed (attempt ${audioResumeFailures}/${MAX_RESUME_RETRIES}), retrying in ${delay}ms`
+            );
+          retryTimer = setTimeout(() => {
+            retryTimer = null;
+            recreateAudioContext();
+          }, delay);
+        }
+      } else {
+        console.warn('[SOUND] ⚠️ Failed to resume AudioContext:', e);
+      }
     }
   }
 };
@@ -111,7 +173,7 @@ const loadAudioBuffer = async (path: string): Promise<AudioBuffer | null> => {
  * Preload all sounds into memory
  */
 const preloadAllSounds = async (): Promise<void> => {
-  if (isLoaded) return;
+  if (audioFailed || isLoaded) return;
   if (loadPromise) return loadPromise;
 
   isLoading = true;
@@ -155,6 +217,7 @@ const preloadAllSounds = async (): Promise<void> => {
  * Play a sound using Web Audio API
  */
 const playSoundBuffer = (path: string): void => {
+  if (audioFailed) return;
   const ctx = audioContext;
   if (!ctx) {
     if (DEBUG_SOUND) console.warn('[SOUND] ⚠️ No AudioContext');
@@ -218,12 +281,23 @@ let initListenersAdded = false;
 
 // Initialize AudioContext and preload sounds - called once globally
 const initOnInteraction = () => {
-  if (audioContext && isLoaded) return; // Already fully initialized
+  if (audioFailed) return;
+  if (audioContext && isLoaded) {
+    // Already initialized — remove listeners
+    removeInitListeners();
+    return;
+  }
 
   initAudioContext();
   preloadAllSounds();
 
-  // Remove listeners after first interaction
+  // Only remove listeners once we successfully have a context
+  if (audioContext) {
+    removeInitListeners();
+  }
+};
+
+const removeInitListeners = () => {
   if (typeof document !== 'undefined') {
     document.removeEventListener('click', initOnInteraction, true);
     document.removeEventListener('keydown', initOnInteraction, true);
