@@ -1,6 +1,6 @@
 {
   "name": "@kaya/ai-engine",
-  "version": "0.3.4",
+  "version": "0.3.5-dev",
   "description": "AI engine for Go game analysis using KataGo models",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

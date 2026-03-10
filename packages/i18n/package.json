@@ -1,6 +1,6 @@
 {
   "name": "@kaya/i18n",
-  "version": "0.3.4",
+  "version": "0.3.5-dev",
   "description": "Internationalization for Kaya - 8 language translations and i18next configuration",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
