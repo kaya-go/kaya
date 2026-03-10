@@ -148,7 +148,13 @@
     "getStartedDescription": "モデルをダウンロードして、AIによる着手提案と局面分析を有効にしましょう。",
     "downloadRecommended": "おすすめモデルをダウンロード",
     "downloading": "ダウンロード中...",
-    "poweredBy": "AIエンジン:"
+    "poweredBy": "AIエンジン:",
+    "modelIncompatible": "{{quant}}モデルはこのデバイスと互換性がありません。",
+    "modelIncompatibleGeneric": "このモデルは利用可能なエンジンと互換性がありません。",
+    "allBackendsFailed": "すべてのエンジンでAIモデルの読み込みに失敗しました。",
+    "switchToModel": "{{quant}}に切り替え",
+    "downloadAndSwitch": "{{quant}}モデルをダウンロード",
+    "openSettings": "AI設定を開く"
   },
   "kayaConfig": {
     "title": "設定",

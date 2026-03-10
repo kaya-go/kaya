@@ -148,7 +148,13 @@
     "getStartedDescription": "下载模型以启用 AI 走法建议和对局分析。",
     "downloadRecommended": "下载推荐模型",
     "downloading": "下载中...",
-    "poweredBy": "AI 引擎基于"
+    "poweredBy": "AI 引擎基于",
+    "modelIncompatible": "{{quant}} 模型与此设备不兼容。",
+    "modelIncompatibleGeneric": "此模型与所有可用引擎都不兼容。",
+    "allBackendsFailed": "所有可用引擎均无法加载 AI 模型。",
+    "switchToModel": "切换到 {{quant}}",
+    "downloadAndSwitch": "下载 {{quant}} 模型",
+    "openSettings": "打开 AI 设置"
   },
   "kayaConfig": {
     "title": "设置",

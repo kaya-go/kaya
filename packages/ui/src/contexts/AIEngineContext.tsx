@@ -24,6 +24,8 @@ import { isTauriApp, writeClipboardText } from '@kaya/platform';
 import { loadModelData } from '../services/modelStorage';
 import { createEngine, type CreateEngineOptions } from '../workers/engineFactory';
 import { useToast } from '../components/ui/Toast';
+import { parseModelId, getModelId } from '../hooks/game/useAIAnalysis';
+import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 
 // Global state for singleton engine management
 let globalEngineInstance: Engine | null = null;
@@ -210,9 +212,125 @@ function backendDisplayName(backend: string): string {
   }
 }
 
+/** Quantization display labels for toasts */
+const QUANT_LABELS: Record<ModelQuantization, string> = {
+  fp32: 'FP32',
+  fp16: 'FP16',
+  uint8: 'UINT8',
+};
+
+/**
+ * Show a user-friendly toast when all backends fail for a model.
+ * Detects model compatibility issues (e.g., fp16) and suggests an alternative
+ * model variant with a one-click switch.
+ */
+function showModelErrorRecoveryToast(
+  errorMessage: string,
+  modelName: string,
+  selectedModelId: string | null,
+  modelLibrary: Array<{
+    id: string;
+    isDownloaded: boolean;
+    baseModelIndex?: number;
+    quantization?: ModelQuantization;
+  }>,
+  setSelectedModelId: (id: string | null) => void,
+  downloadModel: (id: string) => Promise<void>,
+  setAIConfigOpen: (open: boolean) => void,
+  showToast: (
+    message: string,
+    type: 'success' | 'error' | 'info',
+    action?: { label: string; onClick: () => void }
+  ) => void,
+  t: (key: string, opts?: Record<string, string>) => string
+): void {
+  const isFp16Error =
+    errorMessage.includes('float16') ||
+    errorMessage.includes('fp16') ||
+    errorMessage.includes('Float16');
+
+  // If we can identify the current model's base, suggest an alternative quantization
+  if (selectedModelId) {
+    const parsed = parseModelId(selectedModelId);
+    if (parsed) {
+      const currentQuant = parsed.quantization;
+      // Preferred alternatives: fp32 first, then uint8 (skip same quantization)
+      const alternatives: ModelQuantization[] = ['fp32', 'uint8', 'fp16'].filter(
+        q => q !== currentQuant
+      ) as ModelQuantization[];
+
+      // Find a downloaded alternative first
+      for (const alt of alternatives) {
+        const altId = getModelId(parsed.baseModelIndex, alt);
+        const altModel = modelLibrary.find(m => m.id === altId);
+        if (altModel?.isDownloaded) {
+          const label = QUANT_LABELS[alt];
+          showToast(
+            isFp16Error
+              ? t('aiConfig.modelIncompatible', { quant: QUANT_LABELS[currentQuant] })
+              : t('aiConfig.allBackendsFailed'),
+            'error',
+            {
+              label: t('aiConfig.switchToModel', { quant: label }),
+              onClick: () => {
+                setSelectedModelId(altId);
+              },
+            }
+          );
+          return;
+        }
+      }
+
+      // No downloaded alternative — offer to download fp32
+      const fp32Id = getModelId(parsed.baseModelIndex, 'fp32');
+      const fp32Model = modelLibrary.find(m => m.id === fp32Id);
+      if (fp32Model && !fp32Model.isDownloaded) {
+        showToast(
+          isFp16Error
+            ? t('aiConfig.modelIncompatible', { quant: QUANT_LABELS[currentQuant] })
+            : t('aiConfig.allBackendsFailed'),
+          'error',
+          {
+            label: t('aiConfig.downloadAndSwitch', { quant: 'FP32' }),
+            onClick: async () => {
+              try {
+                await downloadModel(fp32Id);
+                setSelectedModelId(fp32Id);
+              } catch {
+                showToast(t('aiConfig.modelDownloadFailed'), 'error');
+              }
+            },
+          }
+        );
+        return;
+      }
+    }
+  }
+
+  // Generic fallback: open settings
+  showToast(
+    isFp16Error ? t('aiConfig.modelIncompatibleGeneric') : t('aiConfig.allBackendsFailed'),
+    'error',
+    {
+      label: t('aiConfig.openSettings'),
+      onClick: () => setAIConfigOpen(true),
+    }
+  );
+}
+
 export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { customAIModel, isModelLoaded, aiSettings, setAISettings, setAIConfigOpen, gameInfo } =
-    useGameTree();
+  const {
+    customAIModel,
+    isModelLoaded,
+    aiSettings,
+    setAISettings,
+    setAIConfigOpen,
+    gameInfo,
+    modelLibrary,
+    selectedModelId,
+    setSelectedModelId,
+    downloadModel,
+  } = useGameTree();
   const boardSize = gameInfo?.boardSize ?? 19;
 
   const { showToast } = useToast();
@@ -230,6 +348,14 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Track if initialization is triggered to avoid duplicate requests
   const initializationTriggeredRef = useRef(false);
+
+  // Track previous settings to detect actual user changes (not just re-renders)
+  const prevSettingsRef = useRef({
+    backend: aiSettings.backend,
+    webgpuBatchSize: aiSettings.webgpuBatchSize,
+    boardSize,
+    modelName: customAIModel?.name || 'default',
+  });
 
   // Dispose the current engine instance
   const disposeEngine = useCallback(async () => {
@@ -502,7 +628,18 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           }
 
-          // All backends failed
+          // All backends failed — show actionable recovery toast
+          showModelErrorRecoveryToast(
+            lastError?.message || '',
+            modelName,
+            selectedModelId,
+            modelLibrary,
+            setSelectedModelId,
+            downloadModel,
+            setAIConfigOpen,
+            showToast,
+            t
+          );
           throw lastError || new Error('All AI backends failed to initialize');
         })();
       }
@@ -532,6 +669,10 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAIConfigOpen,
     showToast,
     t,
+    modelLibrary,
+    selectedModelId,
+    setSelectedModelId,
+    downloadModel,
   ]);
 
   // Auto-initialize when model becomes available
@@ -541,24 +682,35 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [isModelLoaded, customAIModel, engine, isInitializing, error, initializeEngine]);
 
-  // Re-initialize when backend, batch size, or board size changes (if we already have an engine OR in error state)
+  // Re-initialize when backend, batch size, board size, or model changes
   useEffect(() => {
+    const prevSettings = prevSettingsRef.current;
+    const currentModelName = customAIModel?.name || 'default';
+    const settingsChanged =
+      prevSettings.backend !== aiSettings.backend ||
+      prevSettings.webgpuBatchSize !== aiSettings.webgpuBatchSize ||
+      prevSettings.boardSize !== boardSize ||
+      prevSettings.modelName !== currentModelName;
+
+    // Always update the ref to track the latest settings
+    prevSettingsRef.current = {
+      backend: aiSettings.backend,
+      webgpuBatchSize: aiSettings.webgpuBatchSize,
+      boardSize,
+      modelName: currentModelName,
+    };
+
+    if (!settingsChanged) return;
+
     if (engine && globalEngineConfig) {
-      const currentBackend = aiSettings.backend;
-      const currentBatch = aiSettings.webgpuBatchSize;
-      if (
-        globalEngineConfig.backend !== currentBackend ||
-        globalEngineConfig.webgpuBatchSize !== currentBatch ||
-        globalEngineConfig.boardSize !== boardSize
-      ) {
-        // Force re-init by clearing the global promise so a new engine is created
-        globalEnginePromise = null;
-        initializeEngine();
-      }
+      // Engine is running but config changed — re-initialize
+      globalEnginePromise = null;
+      initializeEngine();
     } else if (error && isModelLoaded && customAIModel && !isInitializing) {
-      // After a failure, allow re-initialization when the user changes settings
+      // In error state and user changed settings/model — clear error and retry
       setError(null);
       globalEnginePromise = null;
+      initializeEngine();
     }
   }, [
     aiSettings.backend,
@@ -571,17 +723,6 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     isInitializing,
     initializeEngine,
   ]);
-
-  // Re-initialize when model changes (if we already have an engine)
-  useEffect(() => {
-    if (engine && globalEngineConfig && customAIModel) {
-      const currentModelName = customAIModel.name || 'default';
-      if (globalEngineConfig.modelName !== currentModelName) {
-        globalEnginePromise = null;
-        initializeEngine();
-      }
-    }
-  }, [customAIModel, engine, initializeEngine]);
 
   const value: AIEngineContextValue = {
     engine,

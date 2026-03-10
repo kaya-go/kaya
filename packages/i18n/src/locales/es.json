@@ -148,7 +148,13 @@
     "getStartedDescription": "Descarga un modelo para activar las sugerencias de jugadas y el análisis de partidas con IA.",
     "downloadRecommended": "Descargar modelo recomendado",
     "downloading": "Descargando...",
-    "poweredBy": "Motor de IA basado en"
+    "poweredBy": "Motor de IA basado en",
+    "modelIncompatible": "El modelo {{quant}} no es compatible con este dispositivo.",
+    "modelIncompatibleGeneric": "Este modelo no es compatible con ningún motor disponible.",
+    "allBackendsFailed": "No se pudo cargar el modelo de IA con ningún motor disponible.",
+    "switchToModel": "Cambiar a {{quant}}",
+    "downloadAndSwitch": "Descargar modelo {{quant}}",
+    "openSettings": "Abrir configuración de IA"
   },
   "kayaConfig": {
     "title": "Configuración",

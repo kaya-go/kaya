@@ -148,7 +148,13 @@
     "getStartedDescription": "Download a model to enable AI-powered move suggestions and game analysis.",
     "downloadRecommended": "Download Recommended Model",
     "downloading": "Downloading...",
-    "poweredBy": "AI engine powered by"
+    "poweredBy": "AI engine powered by",
+    "modelIncompatible": "{{quant}} model is not compatible with this device.",
+    "modelIncompatibleGeneric": "This model is not compatible with any available engine.",
+    "allBackendsFailed": "Failed to load AI model with all available engines.",
+    "switchToModel": "Switch to {{quant}}",
+    "downloadAndSwitch": "Download {{quant}} model",
+    "openSettings": "Open AI Settings"
   },
   "kayaConfig": {
     "title": "Settings",

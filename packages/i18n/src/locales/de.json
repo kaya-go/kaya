@@ -148,7 +148,13 @@
     "getStartedDescription": "Laden Sie ein Modell herunter, um KI-gestützte Zugvorschläge und Spielanalysen zu aktivieren.",
     "downloadRecommended": "Empfohlenes Modell herunterladen",
     "downloading": "Wird heruntergeladen...",
-    "poweredBy": "KI-Engine basiert auf"
+    "poweredBy": "KI-Engine basiert auf",
+    "modelIncompatible": "{{quant}}-Modell ist nicht kompatibel mit diesem Gerät.",
+    "modelIncompatibleGeneric": "Dieses Modell ist mit keiner verfügbaren Engine kompatibel.",
+    "allBackendsFailed": "KI-Modell konnte mit keiner verfügbaren Engine geladen werden.",
+    "switchToModel": "Zu {{quant}} wechseln",
+    "downloadAndSwitch": "{{quant}}-Modell herunterladen",
+    "openSettings": "KI-Einstellungen öffnen"
   },
   "kayaConfig": {
     "title": "Einstellungen",

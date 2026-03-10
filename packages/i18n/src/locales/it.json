@@ -148,7 +148,13 @@
     "getStartedDescription": "Scarica un modello per attivare i suggerimenti di mosse e l'analisi delle partite con l'IA.",
     "downloadRecommended": "Scarica il modello consigliato",
     "downloading": "Download in corso...",
-    "poweredBy": "Motore IA basato su"
+    "poweredBy": "Motore IA basato su",
+    "modelIncompatible": "Il modello {{quant}} non è compatibile con questo dispositivo.",
+    "modelIncompatibleGeneric": "Questo modello non è compatibile con nessun motore disponibile.",
+    "allBackendsFailed": "Impossibile caricare il modello IA con tutti i motori disponibili.",
+    "switchToModel": "Passa a {{quant}}",
+    "downloadAndSwitch": "Scarica modello {{quant}}",
+    "openSettings": "Apri impostazioni IA"
   },
   "kayaConfig": {
     "title": "Impostazioni",
