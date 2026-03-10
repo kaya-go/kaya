@@ -112,9 +112,10 @@ export class TauriEngine extends Engine {
           this.providerIsGpu = providerInfo?.isGpu ?? false;
           const backend = providerInfo?.isGpu ? 'NATIVE/GPU' : 'NATIVE/CPU';
           const provider = providerInfo?.name ? ` (${providerInfo.name})` : '';
+          const dtypeInfo = this.modelIsFp16 ? ' [FP16]' : '';
           const timeStr =
             initTime >= 1000 ? `${(initTime / 1000).toFixed(1)}s` : `${initTime.toFixed(0)}ms`;
-          console.log(`[AI] Model loaded: ${backend}${provider} in ${timeStr}`);
+          console.log(`[AI] Model loaded: ${backend}${provider}${dtypeInfo} in ${timeStr}`);
 
           this.initialized = true;
           return;
@@ -183,9 +184,10 @@ export class TauriEngine extends Engine {
       this.providerIsGpu = providerInfo?.isGpu ?? false;
       const backend = providerInfo?.isGpu ? 'NATIVE/GPU' : 'NATIVE/CPU';
       const provider = providerInfo?.name ? ` (${providerInfo.name})` : '';
+      const dtypeInfo = this.modelIsFp16 ? ' [FP16]' : '';
       const timeStr =
         initTime >= 1000 ? `${(initTime / 1000).toFixed(1)}s` : `${initTime.toFixed(0)}ms`;
-      console.log(`[AI] Model loaded: ${backend}${provider} in ${timeStr}`);
+      console.log(`[AI] Model loaded: ${backend}${provider}${dtypeInfo} in ${timeStr}`);
 
       this.initialized = true;
     } catch (e) {

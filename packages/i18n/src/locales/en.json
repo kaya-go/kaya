@@ -104,7 +104,7 @@
   "aiConfig": {
     "title": "Analysis Config",
     "modelLibrary": "Model Library",
-    "modelLibraryDescription": "Select a model for AI analysis. Expand to choose quantization level.",
+    "modelLibraryDescription": "Select a model for AI analysis. Expand to choose a quality variant.",
     "active": "Active",
     "recommended": "Recommended",
     "default": "Default",
@@ -141,7 +141,7 @@
     "modelDeletedSuccess": "Model deleted",
     "modelDeleteFailed": "Failed to delete model",
     "gpuIncompatible": "GPU acceleration failed — switched to CPU mode.",
-    "gpuModelHint": "For GPU acceleration, try using an FP32 or UINT8 model.",
+    "gpuModelHint": "To re-enable GPU, try a different model variant.",
     "copyError": "Copy error log",
     "errorCopied": "Error log copied to clipboard.",
     "getStartedTitle": "Get Started with AI Analysis",

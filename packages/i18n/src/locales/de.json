@@ -104,7 +104,7 @@
   "aiConfig": {
     "title": "Analyse-Einstellungen",
     "modelLibrary": "Modellbibliothek",
-    "modelLibraryDescription": "Wählen Sie ein Modell für die KI-Analyse. Erweitern Sie, um die Quantisierungsstufe auszuwählen.",
+    "modelLibraryDescription": "Wählen Sie ein Modell für die KI-Analyse. Erweitern Sie, um eine Qualitätsvariante auszuwählen.",
     "active": "Aktiv",
     "recommended": "Empfohlen",
     "default": "Standard",
@@ -141,7 +141,7 @@
     "modelDeletedSuccess": "Modell gelöscht",
     "modelDeleteFailed": "Modell löschen fehlgeschlagen",
     "gpuIncompatible": "GPU-Beschleunigung fehlgeschlagen — auf CPU-Modus umgeschaltet.",
-    "gpuModelHint": "Für GPU-Beschleunigung verwenden Sie ein FP32- oder UINT8-Modell.",
+    "gpuModelHint": "Versuchen Sie eine andere Modellvariante, um die GPU wieder zu aktivieren.",
     "copyError": "Fehlerlog kopieren",
     "errorCopied": "Fehlerlog in die Zwischenablage kopiert.",
     "getStartedTitle": "KI-Analyse starten",

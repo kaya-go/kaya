@@ -214,9 +214,9 @@ function backendDisplayName(backend: string): string {
 
 /** Quantization display labels for toasts */
 const QUANT_LABELS: Record<ModelQuantization, string> = {
-  fp32: 'FP32',
-  fp16: 'FP16',
-  uint8: 'UINT8',
+  fp32: 'Full Quality',
+  fp16: 'Balanced',
+  uint8: 'Compact',
 };
 
 /**
@@ -291,7 +291,7 @@ function showModelErrorRecoveryToast(
             : t('aiConfig.allBackendsFailed'),
           'error',
           {
-            label: t('aiConfig.downloadAndSwitch', { quant: 'FP32' }),
+            label: t('aiConfig.downloadAndSwitch', { quant: QUANT_LABELS['fp32'] }),
             onClick: async () => {
               try {
                 await downloadModel(fp32Id);
@@ -617,7 +617,9 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                 }
               }
 
-              console.log(`[AIEngine] Engine initialized with backend: ${actualBackend}`);
+              console.log(
+                `[AIEngine] Engine initialized | backend: ${actualBackend} | precision: ${runtimeInfo.inputDataType} | model: ${modelName || 'custom'}`
+              );
               return newEngine;
             } catch (err) {
               const message = err instanceof Error ? err.message : String(err);

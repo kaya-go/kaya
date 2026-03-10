@@ -317,6 +317,7 @@ export function useLiveAnalysis({
           }
         }
 
+        const liveRuntimeInfo = engine?.getRuntimeInfo?.() ?? {};
         console.log('[AI] Live analysis:', {
           move: moveNumber,
           inferences: toAnalyze.length,
@@ -335,6 +336,8 @@ export function useLiveAnalysis({
           durationMs: Math.round(analysisDuration),
           msPerInference:
             toAnalyze.length > 0 ? Math.round(analysisDuration / toAnalyze.length) : 0,
+          backend: liveRuntimeInfo.backend ?? 'unknown',
+          precision: liveRuntimeInfo.inputDataType ?? 'unknown',
         });
       }
     } catch (err) {

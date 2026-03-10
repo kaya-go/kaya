@@ -217,6 +217,7 @@ export function useFullGameAnalysis({
             };
           });
 
+          const runtimeInfo = engine?.getRuntimeInfo?.() ?? {};
           console.log('[AI] Batch analysis:', {
             moves: batch.length === 1 ? firstMove : `${firstMove}-${lastMove}`,
             positions: batch.length,
@@ -224,6 +225,8 @@ export function useFullGameAnalysis({
             msPerMove: Math.round(batchTime / batch.length),
             progress: `${processedCount + batch.length}/${fullSequence.length}`,
             eta: remainingPositions > 0 ? etaStr : 'done',
+            backend: runtimeInfo.backend ?? 'unknown',
+            precision: runtimeInfo.inputDataType ?? 'unknown',
             results: positionDetails,
           });
 

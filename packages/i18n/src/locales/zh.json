@@ -104,7 +104,7 @@
   "aiConfig": {
     "title": "分析配置",
     "modelLibrary": "模型库",
-    "modelLibraryDescription": "选择用于 AI 分析的模型。展开以选择量化级别。",
+    "modelLibraryDescription": "选择用于 AI 分析的模型。展开以选择质量版本。",
     "active": "当前使用",
     "recommended": "推荐",
     "default": "默认",
@@ -141,7 +141,7 @@
     "modelDeletedSuccess": "模型已删除",
     "modelDeleteFailed": "删除模型失败",
     "gpuIncompatible": "GPU 加速失败 — 已切换至 CPU 模式。",
-    "gpuModelHint": "如需 GPU 加速，请尝试使用 FP32 或 UINT8 模型。",
+    "gpuModelHint": "要重新启用 GPU，请尝试其他模型版本。",
     "copyError": "复制错误日志",
     "errorCopied": "错误日志已复制到剪贴板。",
     "getStartedTitle": "开始 AI 分析",

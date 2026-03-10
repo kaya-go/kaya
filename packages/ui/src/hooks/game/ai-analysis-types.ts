@@ -63,20 +63,20 @@ export const BASE_MODELS: BaseModelDefinition[] = [
 export const QUANTIZATION_OPTIONS: QuantizationVariant[] = [
   {
     quantization: 'fp32',
-    label: 'Full Precision (fp32)',
-    description: 'Highest accuracy, largest file size',
+    label: 'Full Quality',
+    description: 'Best accuracy, largest download',
     size: '~280 MB',
   },
   {
     quantization: 'fp16',
-    label: 'Half Precision (fp16)',
-    description: 'Good balance of accuracy and size',
+    label: 'Balanced',
+    description: 'Good accuracy, smaller download',
     size: '~140 MB',
   },
   {
     quantization: 'uint8',
-    label: 'Quantized (uint8)',
-    description: 'Smallest size, slightly reduced accuracy',
+    label: 'Compact',
+    description: 'Smallest download, slightly lower accuracy',
     size: '~75 MB',
   },
 ];
@@ -119,7 +119,7 @@ export const PREDEFINED_MODELS: Array<{
     const id = getModelId(modelIndex, variant.quantization);
     return {
       id,
-      name: `${model.displayName}${variant.quantization === 'fp32' ? '' : ` (${variant.quantization})`}`,
+      name: `${model.displayName}${variant.quantization === 'fp32' ? '' : ` (${variant.label})`}`,
       description: `${model.description}${variant.quantization === 'fp32' ? '' : ` - ${variant.description.toLowerCase()}`}`,
       url: getModelUrl(model.name, variant.quantization),
       size: variant.size,

@@ -104,7 +104,7 @@
   "aiConfig": {
     "title": "분석 설정",
     "modelLibrary": "모델 라이브러리",
-    "modelLibraryDescription": "AI 분석에 사용할 모델을 선택하세요. 확장하여 양자화 수준을 선택하세요.",
+    "modelLibraryDescription": "AI 분석에 사용할 모델을 선택하세요. 확장하여 품질 변형을 선택하세요.",
     "active": "활성",
     "recommended": "추천",
     "default": "기본",
@@ -141,7 +141,7 @@
     "modelDeletedSuccess": "모델 삭제 완료",
     "modelDeleteFailed": "모델 삭제 실패",
     "gpuIncompatible": "GPU 가속 실패 — CPU 모드로 전환되었습니다.",
-    "gpuModelHint": "GPU 가속을 사용하려면 FP32 또는 UINT8 모델을 사용해 보세요.",
+    "gpuModelHint": "GPU를 다시 활성화하려면 다른 모델 변형을 사용해 보세요.",
     "copyError": "오류 로그 복사",
     "errorCopied": "오류 로그가 클립보드에 복사되었습니다.",
     "getStartedTitle": "AI 분석 시작하기",

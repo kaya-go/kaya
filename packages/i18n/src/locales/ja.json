@@ -104,7 +104,7 @@
   "aiConfig": {
     "title": "分析設定",
     "modelLibrary": "モデルライブラリ",
-    "modelLibraryDescription": "AI分析に使用するモデルを選択。展開して量子化レベルを選択。",
+    "modelLibraryDescription": "AI分析に使用するモデルを選択。展開して品質バリエーションを選択。",
     "active": "使用中",
     "recommended": "推奨",
     "default": "デフォルト",
@@ -141,7 +141,7 @@
     "modelDeletedSuccess": "モデル削除完了",
     "modelDeleteFailed": "モデルの削除失敗",
     "gpuIncompatible": "GPUアクセラレーションに失敗しました — CPUモードに切り替えました。",
-    "gpuModelHint": "GPUアクセラレーションを使用するには、FP32またはUINT8モデルをお試しください。",
+    "gpuModelHint": "GPUを再度有効にするには、別のモデルバリエーションをお試しください。",
     "copyError": "エラーログをコピー",
     "errorCopied": "エラーログをクリップボードにコピーしました。",
     "getStartedTitle": "AI分析を始める",

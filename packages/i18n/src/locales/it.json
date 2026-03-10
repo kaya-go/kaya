@@ -104,7 +104,7 @@
   "aiConfig": {
     "title": "Impostazioni analisi",
     "modelLibrary": "Libreria modelli",
-    "modelLibraryDescription": "Seleziona un modello per l'analisi IA. Espandi per scegliere il livello di quantizzazione.",
+    "modelLibraryDescription": "Seleziona un modello per l'analisi IA. Espandi per scegliere una variante di qualità.",
     "active": "Attivo",
     "recommended": "Consigliato",
     "default": "Predefinito",
@@ -141,7 +141,7 @@
     "modelDeletedSuccess": "Modello eliminato",
     "modelDeleteFailed": "Eliminazione modello fallita",
     "gpuIncompatible": "Accelerazione GPU fallita — passaggio alla modalità CPU.",
-    "gpuModelHint": "Per l'accelerazione GPU, prova con un modello FP32 o UINT8.",
+    "gpuModelHint": "Per riattivare la GPU, prova un'altra variante di modello.",
     "copyError": "Copia registro errori",
     "errorCopied": "Registro errori copiato negli appunti.",
     "getStartedTitle": "Inizia con l'analisi IA",
