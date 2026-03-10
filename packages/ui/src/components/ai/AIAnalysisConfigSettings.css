@@ -62,6 +62,11 @@
   margin: 0;
 }
 
+.setting-warning {
+  color: var(--warning-color, #b8860b);
+  font-style: italic;
+}
+
 /* Mobile responsive: single column on small screens */
 @media (max-width: 520px) {
   .settings-list {

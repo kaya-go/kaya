@@ -134,6 +134,7 @@
     "saveAnalysisToSgfDescription": "SGF保存時にAI分析データ（勝率、目差、着手候補）を埋め込む。ファイルサイズは増加しますが分析結果を保持。",
     "numVisits": "探索回数",
     "numVisitsDescription": "一手あたりのMCTSシミュレーション回数。1 = ポリシーのみ（最速）。値が大きいほど着手の質は向上しますが、速度は低下します。強い対局には50–200を推奨。",
+    "numVisitsNativeWarning": "ネイティブバックエンドではMCTSは利用できません。検索訪問を使用するにはWebGPUまたはWASMに切り替えてください。",
     "modelUploadedSuccess": "モデルのアップロード成功",
     "modelUploadFailed": "モデルのアップロード失敗",
     "modelDownloadedSuccess": "モデルのダウンロード成功",
@@ -516,7 +517,12 @@
     "blackWinRate": "黒の勝率",
     "whiteWinRate": "白の勝率",
     "scoreLead": "形勢",
-    "analyzeFullGameLong": "全局分析（長い対局では数分かかる場合があります）"
+    "analyzeFullGameLong": "全局分析（長い対局では数分かかる場合があります）",
+    "visits": "訪問回数",
+    "visitsFresh": "設定された訪問回数で分析完了",
+    "visitsStale": "少ない訪問回数のキャッシュ — 再分析されます",
+    "visitsTooltip": "探索深度：{{count}}回訪問（クリックで変更、ダブルクリックでリセット）",
+    "visitsNativeDisabled": "ネイティブバックエンドではMCTSは利用できません。設定からWebGPUまたはWASMに切り替えてください。"
   },
   "panels": {
     "library": "ライブラリ",

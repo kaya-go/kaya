@@ -86,7 +86,9 @@ function buildFallbackChain(startingBackend: string, isTauri: boolean): string[]
   const webChain = ['webgpu', 'wasm'];
   const desktopChain = ['native', 'native-cpu'];
 
-  const fullChain = isTauri ? desktopChain : webChain;
+  // On desktop, if user selected a web backend (webgpu/wasm), use the web chain
+  const isWebBackend = webChain.includes(startingBackend);
+  const fullChain = isTauri && !isWebBackend ? desktopChain : webChain;
   const startIndex = fullChain.indexOf(startingBackend);
 
   if (startIndex >= 0) {

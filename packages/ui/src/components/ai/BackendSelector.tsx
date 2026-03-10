@@ -68,6 +68,23 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
           unavailableKey: 'aiConfig.backendUnavailable.pytorch',
         });
       }
+
+      // Web-based backends also available on desktop
+      opts.push({
+        value: 'webgpu',
+        labelKey: 'aiConfig.webgpu',
+        descKey: 'aiConfig.backendDesc.webgpu',
+        icon: <LuZap size={18} />,
+        available: hasWebGPU,
+        unavailableKey: hasWebGPU ? undefined : 'aiConfig.backendUnavailable.webgpu',
+      });
+      opts.push({
+        value: 'wasm',
+        labelKey: 'aiConfig.wasm',
+        descKey: 'aiConfig.backendDesc.wasm',
+        icon: <LuGlobe size={18} />,
+        available: true,
+      });
     } else {
       // Web browser
       opts.push({

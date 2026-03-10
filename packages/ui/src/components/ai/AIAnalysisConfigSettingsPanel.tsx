@@ -100,13 +100,20 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
         </div>
 
         {/* Search Visits - Full width */}
-        <div className="setting-item setting-item-full">
+        <div
+          className={`setting-item setting-item-full${['native', 'native-cpu', 'pytorch'].includes(aiSettings.backend) ? ' batch-size-disabled' : ''}`}
+        >
           <div className="setting-info">
             <label htmlFor="num-visits-slider" className="setting-label">
               {t('aiConfig.numVisits')}
               <span className="setting-value">{aiSettings.numVisits}</span>
             </label>
             <p className="setting-description">{t('aiConfig.numVisitsDescription')}</p>
+            {['native', 'native-cpu', 'pytorch'].includes(aiSettings.backend) && (
+              <p className="setting-description setting-warning">
+                {t('aiConfig.numVisitsNativeWarning')}
+              </p>
+            )}
           </div>
           <input
             id="num-visits-slider"
@@ -117,6 +124,7 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
             value={aiSettings.numVisits}
             onChange={e => setAISettings({ numVisits: parseInt(e.target.value) })}
             className="ai-slider"
+            disabled={['native', 'native-cpu', 'pytorch'].includes(aiSettings.backend)}
           />
         </div>
 

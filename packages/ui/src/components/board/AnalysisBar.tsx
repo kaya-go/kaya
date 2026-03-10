@@ -7,10 +7,12 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuMap, LuLayers, LuZap, LuSquare, LuTrash2, LuInfo } from 'react-icons/lu';
+import { LuMap, LuLayers, LuZap, LuSquare, LuTrash2, LuInfo, LuSearch } from 'react-icons/lu';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useGameTreeAI } from '../../contexts/selectors';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
+
+const VISITS_PRESETS = [1, 4, 10, 32, 64, 128, 256, 400];
 
 interface AnalysisBarProps {
   onShowLegend: () => void;
@@ -19,7 +21,8 @@ interface AnalysisBarProps {
 export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
   const { t } = useTranslation();
   const { bindingToDisplayString, getBinding } = useKeyboardShortcuts();
-  const { showAnalysisBar } = useGameTreeAI();
+  const { showAnalysisBar, setAISettings, aiSettings } = useGameTreeAI();
+  const isNativeBackend = ['native', 'native-cpu', 'pytorch'].includes(aiSettings.backend);
 
   const {
     showOwnership,
@@ -43,6 +46,7 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
     clearAnalysisCache,
     pendingFullGameAnalysis,
     nativeUploadProgress,
+    configuredNumVisits,
   } = useAIAnalysis();
 
   const formatWinRate = (value?: number | null) => {
@@ -121,6 +125,30 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
             </div>
 
             <div className="ai-analysis-summary__actions">
+              <button
+                className={`gameboard-action-button gameboard-visits-button ${configuredNumVisits > 1 && !isNativeBackend ? 'active' : ''}`}
+                title={
+                  isNativeBackend
+                    ? t('analysisBar.visitsNativeDisabled')
+                    : t('analysisBar.visitsTooltip', { count: configuredNumVisits })
+                }
+                onClick={() => {
+                  if (isNativeBackend) return;
+                  const idx = VISITS_PRESETS.indexOf(configuredNumVisits);
+                  const next = VISITS_PRESETS[(idx + 1) % VISITS_PRESETS.length];
+                  setAISettings({ numVisits: next });
+                }}
+                onDoubleClick={() => {
+                  if (isNativeBackend) return;
+                  setAISettings({ numVisits: 1 });
+                }}
+                disabled={isInitializing || isNativeBackend}
+              >
+                <LuSearch />
+                <span className="gameboard-visits-button__label">
+                  {isNativeBackend ? '—' : configuredNumVisits}
+                </span>
+              </button>
               <button
                 className={`gameboard-action-button gameboard-heatmap-button ${showOwnership ? 'active' : ''}`}
                 title={`${t('analysis.toggleOwnership')} (${bindingToDisplayString(getBinding('ai.toggleOwnership'))})`}

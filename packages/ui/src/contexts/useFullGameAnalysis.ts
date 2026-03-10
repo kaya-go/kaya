@@ -127,6 +127,9 @@ export function useFullGameAnalysis({
         koInfo: { sign: number; vertex: [number, number] };
       }[] = [];
 
+      // When numVisits > 1, MCTS is sequential per position, so reduce batch size
+      const numVisits = aiSettings.numVisits ?? 1;
+
       for (let i = 0; i < fullSequence.length; i++) {
         const node = fullSequence[i];
         state = updateAnalysisState(state, node, i);
@@ -138,16 +141,20 @@ export function useFullGameAnalysis({
           state.history
         );
 
-        if (!analysisCache.current.has(cacheKey)) {
-          positionsToAnalyze.push({
-            index: i,
-            signMap: state.board.clone().signMap,
-            history: [...state.history],
-            nextToPlay: state.nextToPlay,
-            cacheKey,
-            koInfo: state.board._koInfo as { sign: number; vertex: [number, number] },
-          });
+        // Skip positions that are already cached with enough visits
+        const cached = analysisCache.current.get(cacheKey);
+        if (cached && (cached.visits ?? 1) >= numVisits) {
+          continue;
         }
+
+        positionsToAnalyze.push({
+          index: i,
+          signMap: state.board.clone().signMap,
+          history: [...state.history],
+          nextToPlay: state.nextToPlay,
+          cacheKey,
+          koInfo: state.board._koInfo as { sign: number; vertex: [number, number] },
+        });
       }
 
       const cachedCount = fullSequence.length - positionsToAnalyze.length;
@@ -158,8 +165,6 @@ export function useFullGameAnalysis({
       }
 
       let processedCount = cachedCount;
-      // When numVisits > 1, MCTS is sequential per position, so reduce batch size
-      const numVisits = aiSettings.numVisits ?? 1;
       const BATCH_SIZE = numVisits > 1 ? 1 : aiSettings.webgpuBatchSize || 8;
       let totalBatchTime = 0;
       let totalBatchPositions = 0;

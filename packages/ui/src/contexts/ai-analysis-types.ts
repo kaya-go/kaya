@@ -46,6 +46,9 @@ export interface AIAnalysisContextValue {
 
   // Wait for the currently running live analysis to finish (resolves immediately if none)
   waitForCurrentAnalysis: () => Promise<void>;
+
+  // Configured number of visits for MCTS search
+  configuredNumVisits: number;
 }
 
 export const AIAnalysisContext = createContext<AIAnalysisContextValue | null>(null);

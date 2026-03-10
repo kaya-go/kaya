@@ -216,6 +216,7 @@ export async function processBatchResults(
       // Score lead from Black's perspective (positive = Black ahead)
       scoreLead: blackLead,
       currentTurn: pla === 1 ? 'B' : 'W',
+      visits: 1,
       ownership: ownership ? Array.from(ownership).map(v => v * pla) : undefined,
     });
   }

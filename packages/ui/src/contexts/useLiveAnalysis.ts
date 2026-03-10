@@ -93,13 +93,28 @@ export function useLiveAnalysis({
     }
 
     const currentResult = analysisCache.current.get(currentCacheKey.key)!;
+
+    // If cached result has fewer visits than configured, treat as cache miss
+    const requiredVisits = aiSettings.numVisits ?? 1;
+    if ((currentResult.visits ?? 1) < requiredVisits) {
+      return false;
+    }
+
     const prevCacheKey = cacheKeys.find(c => c.index === currentIndex - 1);
     const prevResult = prevCacheKey ? (analysisCache.current.get(prevCacheKey.key) ?? null) : null;
 
     const smoothed = smoothAnalysisResult(currentResult, prevResult);
     setAnalysisResult(smoothed);
     return true;
-  }, [gameTree, currentNodeId, currentBoard, gameInfo, analysisCache, setAnalysisResult]);
+  }, [
+    gameTree,
+    currentNodeId,
+    currentBoard,
+    gameInfo,
+    analysisCache,
+    setAnalysisResult,
+    aiSettings.numVisits,
+  ]);
 
   // Run analysis when mode is enabled and engine is ready
   const runAnalysis = useCallback(async () => {
@@ -166,15 +181,20 @@ export function useLiveAnalysis({
       }
     }
 
+    const numVisitsRequired = aiSettings.numVisits ?? 1;
     const cachedResults = {
       prev: positions.prev ? (analysisCache.current.get(positions.prev.cacheKey) ?? null) : null,
       current: analysisCache.current.get(positions.current.cacheKey) ?? null,
     };
 
-    if (cachedResults.current) {
+    // Treat cached result as miss if it has fewer visits than configured
+    const currentHasEnoughVisits =
+      cachedResults.current && (cachedResults.current.visits ?? 1) >= numVisitsRequired;
+
+    if (currentHasEnoughVisits) {
       const hasPrev = !positions.prev || cachedResults.prev !== null;
       if (hasPrev) {
-        const smoothed = smoothAnalysisResult(cachedResults.current, cachedResults.prev);
+        const smoothed = smoothAnalysisResult(cachedResults.current!, cachedResults.prev);
         setAnalysisResult(smoothed);
         analysisGlobals.isAnalyzing = false;
         return;
@@ -223,7 +243,7 @@ export function useLiveAnalysis({
         });
       }
 
-      if (!cachedResults.current) {
+      if (!currentHasEnoughVisits) {
         toAnalyze.push({
           key: 'current',
           signMap: positions.current.state.board.signMap,
@@ -267,7 +287,7 @@ export function useLiveAnalysis({
       if (currentRequestId === analysisGlobals.analysisId) {
         const finalResults = {
           prev: cachedResults.prev ?? newResults['prev'] ?? null,
-          current: cachedResults.current ?? newResults['current']!,
+          current: newResults['current'] ?? cachedResults.current!,
         };
 
         const smoothed = smoothAnalysisResult(finalResults.current, finalResults.prev);
@@ -334,6 +354,8 @@ export function useLiveAnalysis({
           nextToPlay: positions.current.state.nextToPlay,
           winRate: `${(currentResult.winRate * 100).toFixed(1)}%`,
           scoreLead: currentResult.scoreLead.toFixed(1),
+          visits: currentResult.visits ?? 1,
+          configuredVisits: aiSettings.numVisits ?? 1,
           topMoves,
           ...(invalidMoves.length > 0 ? { WARNING_INVALID_MOVES: invalidMoves } : {}),
           durationMs: Math.round(analysisDuration),

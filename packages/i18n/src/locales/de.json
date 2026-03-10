@@ -134,6 +134,7 @@
     "saveAnalysisToSgfDescription": "KI-Analysedaten (Gewinnrate, Punkte, Züge) beim Speichern als SGF einbetten. Erhöht die Dateigröße, behält aber die Analyse bei.",
     "numVisits": "Suchbesuche",
     "numVisitsDescription": "MCTS-Simulationen pro Zug. 1 = nur Richtlinie (schnellste). Höhere Werte verbessern die Zugqualität auf Kosten der Geschwindigkeit. Verwenden Sie 50–200 für stärkeres Spiel.",
+    "numVisitsNativeWarning": "MCTS ist mit nativen Backends nicht verfügbar. Wechseln Sie zu WebGPU oder WASM, um Suchbesuche zu nutzen.",
     "modelUploadedSuccess": "Modell erfolgreich hochgeladen",
     "modelUploadFailed": "Modell-Upload fehlgeschlagen",
     "modelDownloadedSuccess": "Modell erfolgreich heruntergeladen",
@@ -513,7 +514,12 @@
     "blackWinRate": "Schwarz Gewinnrate",
     "whiteWinRate": "Weiß Gewinnrate",
     "scoreLead": "Punktevorsprung",
-    "analyzeFullGameLong": "Gesamtes Spiel analysieren (kann bei langen Spielen einige Minuten dauern)"
+    "analyzeFullGameLong": "Gesamtes Spiel analysieren (kann bei langen Spielen einige Minuten dauern)",
+    "visits": "Besuche",
+    "visitsFresh": "Analyse mit konfigurierter Besuchszahl abgeschlossen",
+    "visitsStale": "Aus Cache mit weniger Besuchen — wird neu analysiert",
+    "visitsTooltip": "Suchtiefe: {{count}} Besuche (klicken zum Ändern, Doppelklick zum Zurücksetzen)",
+    "visitsNativeDisabled": "MCTS nicht verfügbar mit nativem Backend. Wechseln Sie zu WebGPU oder WASM in den Einstellungen."
   },
   "panels": {
     "library": "Bibliothek",

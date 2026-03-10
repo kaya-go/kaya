@@ -412,6 +412,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     pendingFullGameAnalysis,
     nativeUploadProgress,
     waitForCurrentAnalysis,
+    configuredNumVisits: aiSettings.numVisits ?? 1,
   };
 
   return <AIAnalysisContext.Provider value={value}>{children}</AIAnalysisContext.Provider>;
