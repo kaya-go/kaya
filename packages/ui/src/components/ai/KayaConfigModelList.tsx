@@ -79,7 +79,10 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
             {recommendedModel?.isDownloading ? (
               <>
                 <LuLoader className="spinning" size={16} />
-                {t('aiConfig.downloading')} {recommendedModel.downloadProgress ?? 0}%
+                {t('aiConfig.downloading')}
+                {(recommendedModel.downloadProgress ?? 0) >= 0
+                  ? ` ${recommendedModel.downloadProgress}%`
+                  : '…'}
               </>
             ) : (
               <>
@@ -166,7 +169,11 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                           {variant.isDownloading ? (
                             <div className="model-download-progress">
                               <LuLoader className="spinning" size={16} />
-                              <span>{variant.downloadProgress ?? 0}%</span>
+                              <span>
+                                {(variant.downloadProgress ?? 0) >= 0
+                                  ? `${variant.downloadProgress}%`
+                                  : '…'}
+                              </span>
                             </div>
                           ) : variant.isDownloaded ? (
                             <button

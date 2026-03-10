@@ -12,7 +12,6 @@ import {
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
 import { isTauriApp } from '@kaya/platform';
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { PREDEFINED_MODELS } from './ai-analysis-types';
 
 export function useModelLibrary() {
@@ -138,72 +137,91 @@ export function useModelLibrary() {
       );
 
       try {
-        let response: Response | null = null;
-        let lastError: any = null;
+        let buffer: ArrayBuffer;
 
         if (isTauriApp()) {
+          // Use Rust-side download for reliable streaming + progress on all platforms
+          // (Tauri plugin-http ReadableStream is broken on WebKitGTK/Linux)
+          const { invoke } = await import('@tauri-apps/api/core');
+          const { listen: tauriListen } = await import('@tauri-apps/api/event');
+
+          // Listen for progress events from Rust
+          const unlisten = await tauriListen('download-progress', (event: any) => {
+            const { percent } = event.payload as {
+              downloaded: number;
+              total: number;
+              percent: number;
+            };
+            setModelLibrary(prev =>
+              prev.map(m => (m.id === id ? { ...m, downloadProgress: percent } : m))
+            );
+          });
+
+          let tempPath: string | undefined;
           try {
-            response = await tauriFetch(model.url);
-          } catch (e) {
-            lastError = e;
+            // Rust downloads to a temp file and returns the path
+            tempPath = await invoke<string>('download_file', { url: model.url });
+
+            // Read the temp file as binary
+            const { readFile, remove } = await import('@tauri-apps/plugin-fs');
+            const bytes = await readFile(tempPath);
+            buffer = bytes.buffer as ArrayBuffer;
+
+            // Clean up temp file
+            try {
+              await remove(tempPath);
+            } catch {
+              // Non-critical: temp file cleanup failure
+            }
+          } finally {
+            unlisten();
           }
         } else {
           // Web environment: Direct download from Hugging Face (CORS enabled)
+          let response: Response;
           try {
             console.log(`[ModelDownload] Downloading: ${model.url}`);
-            const res = await fetch(model.url);
-            if (res.ok) {
-              console.log(`[ModelDownload] Success`);
-              response = res;
-            } else {
-              console.warn(`[ModelDownload] Failed: ${res.status} ${res.statusText}`);
+            response = await fetch(model.url);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status} ${response.statusText}`);
             }
-          } catch (e) {
-            lastError = e;
-            console.warn(`[ModelDownload] Network error:`, e);
+          } catch (e: any) {
+            throw new Error(`Download failed: ${e.message || 'Network error'}`);
           }
-        }
 
-        if (!response || !response.ok) {
-          throw new Error(
-            `Failed to download: ${response?.statusText || lastError?.message || 'Unknown error'}`
-          );
-        }
+          const contentLength = response.headers.get('Content-Length');
+          const total = contentLength ? parseInt(contentLength, 10) : 0;
+          let loaded = 0;
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error('ReadableStream not supported');
 
-        const contentLength = response.headers.get('Content-Length');
-        const total = contentLength ? parseInt(contentLength, 10) : 0;
-        let loaded = 0;
+          const chunks: Uint8Array[] = [];
 
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('ReadableStream not supported');
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
 
-        const chunks: Uint8Array[] = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          chunks.push(value);
-          loaded += value.length;
-          if (total) {
-            const progress = Math.round((loaded / total) * 100);
-            setModelLibrary(prev =>
-              prev.map(m => (m.id === id ? { ...m, downloadProgress: progress } : m))
-            );
+            chunks.push(value);
+            loaded += value.length;
+            if (total) {
+              const progress = Math.round((loaded / total) * 100);
+              setModelLibrary(prev =>
+                prev.map(m => (m.id === id ? { ...m, downloadProgress: progress } : m))
+              );
+            }
           }
-        }
 
-        // Concatenate chunks directly into a single ArrayBuffer to avoid memory bloat
-        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-        const buffer = new ArrayBuffer(totalLength);
-        const view = new Uint8Array(buffer);
-        let offset = 0;
-        for (const chunk of chunks) {
-          view.set(chunk, offset);
-          offset += chunk.length;
+          // Concatenate chunks into a single ArrayBuffer
+          const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+          buffer = new ArrayBuffer(totalLength);
+          const view = new Uint8Array(buffer);
+          let offset = 0;
+          for (const chunk of chunks) {
+            view.set(chunk, offset);
+            offset += chunk.length;
+          }
+          chunks.length = 0;
         }
-        // Free chunks memory immediately
-        chunks.length = 0;
 
         // Save to storage
         await saveModelData(id, buffer);

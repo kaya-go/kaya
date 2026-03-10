@@ -43,6 +43,7 @@ pub fn run() {
             commands::pytorch_analyze_batch,
             commands::pytorch_benchmark,
             commands::pytorch_dispose,
+            commands::download_file,
         ]);
 
     // Desktop-only plugins

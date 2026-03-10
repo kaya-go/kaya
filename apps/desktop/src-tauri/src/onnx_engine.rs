@@ -160,48 +160,10 @@ fn ensure_ort_initialized() -> Result<(), String> {
     Ok(())
 }
 
-#[cfg(all(not(target_os = "android"), not(target_os = "linux")))]
+#[cfg(not(target_os = "android"))]
 fn ensure_ort_initialized() -> Result<(), String> {
-    // On non-Linux desktop, ort handles initialization automatically with static linking
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn ensure_ort_initialized() -> Result<(), String> {
-    use std::sync::Once;
-    static INIT: Once = Once::new();
-    let init_err: Option<String> = None;
-    
-    INIT.call_once(|| {
-        // On Linux, use load-dynamic to support MIGraphX EP.
-        // Try ORT_DYLIB_PATH first, then known locations.
-        if std::env::var("ORT_DYLIB_PATH").is_ok() {
-            return; // ort crate will handle this
-        }
-        
-        // Try MIGraphX-enabled ORT in known locations
-        let home = std::env::var("HOME").unwrap_or_default();
-        let search_paths = [
-            format!("{}/.local/lib/kaya-ort/libonnxruntime.so", home),
-            "/usr/local/lib/libonnxruntime.so".to_string(),
-            "/opt/rocm/lib/libonnxruntime.so".to_string(),
-        ];
-        
-        for path in &search_paths {
-            if std::path::Path::new(path).exists() {
-                eprintln!("[OnnxEngine] Setting ORT_DYLIB_PATH to: {}", path);
-                std::env::set_var("ORT_DYLIB_PATH", path);
-                return;
-            }
-        }
-        
-        // Fall back to system libonnxruntime.so (CPU only)
-        eprintln!("[OnnxEngine] No MIGraphX-enabled ORT found, using system library (CPU only)");
-    });
-    
-    if let Some(err) = init_err {
-        return Err(err);
-    }
+    // On desktop (Linux/macOS/Windows), ort uses download-binaries for static linking.
+    // No runtime initialization needed.
     Ok(())
 }
 

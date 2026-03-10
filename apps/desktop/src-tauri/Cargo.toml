@@ -34,10 +34,10 @@ base64 = "0.22"
 ndarray = "0.17"
 half = "2.4"
 
-# Linux desktop: use load-dynamic to support MIGraphX (AMD GPU) execution provider.
-# Set ORT_DYLIB_PATH to point to a MIGraphX-enabled libonnxruntime.so.
+# Linux desktop: static linking (same as macOS/Windows) for zero-dependency deployment.
+# Power users can override with ORT_DYLIB_PATH for MIGraphX/CUDA GPU support.
 [target.'cfg(target_os = "linux")'.dependencies]
-ort = { version = "2.0.0-rc.11", default-features = false, features = ["load-dynamic", "ndarray", "half"] }
+ort = { version = "2.0.0-rc.11", features = ["download-binaries", "half"] }
 reqwest = { version = "0.13", features = ["stream"] }
 tauri-plugin-http = "2"
 tauri-plugin-process = "2"

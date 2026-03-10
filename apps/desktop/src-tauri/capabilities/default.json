@@ -32,6 +32,7 @@
     "fs:allow-temp-read-recursive",
     "fs:allow-temp-write",
     "fs:allow-temp-write-recursive",
+    "fs:allow-remove",
     "window-state:default",
     "updater:default",
     "process:allow-restart",
