@@ -51,6 +51,12 @@ export function useKayaConfig() {
     [modelLibrary]
   );
 
+  // Detect Linux desktop for showing PyTorch option
+  const isLinuxDesktop =
+    isTauriApp() &&
+    typeof navigator !== 'undefined' &&
+    /linux/i.test(navigator.userAgent ?? navigator.platform);
+
   // Check if PyTorch GPU engine is available (Linux with ROCm/CUDA only)
   const [pytorchAvailable, setPytorchAvailable] = useState(false);
   // Check WebNN availability (Chrome with navigator.ml)
@@ -200,6 +206,7 @@ export function useKayaConfig() {
     handleDownload,
     handleDelete,
     handleSelect,
+    isLinuxDesktop,
     pytorchAvailable,
     webnnAvailable,
     aiSettings,

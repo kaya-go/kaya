@@ -24,6 +24,7 @@ type KayaConfigAnalysisTabProps = Pick<
   | 'handleFileSelect'
   | 'aiSettings'
   | 'setAISettings'
+  | 'isLinuxDesktop'
   | 'pytorchAvailable'
   | 'webnnAvailable'
 >;
@@ -45,6 +46,7 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
   handleFileSelect,
   aiSettings,
   setAISettings,
+  isLinuxDesktop,
   pytorchAvailable,
   webnnAvailable,
 }) => {
@@ -102,7 +104,11 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
                   <option value="native-cpu">{t('aiConfig.nativeCpu')}</option>
                 </>
               )}
-              {pytorchAvailable && <option value="pytorch">{t('aiConfig.pytorch')}</option>}
+              {isLinuxDesktop && (
+                <option value="pytorch" disabled={!pytorchAvailable}>
+                  {pytorchAvailable ? t('aiConfig.pytorch') : t('aiConfig.pytorchUnavailable')}
+                </option>
+              )}
               {!isTauriApp() && typeof navigator !== 'undefined' && (navigator as any).gpu && (
                 <option value="webgpu">{t('aiConfig.webgpu')}</option>
               )}

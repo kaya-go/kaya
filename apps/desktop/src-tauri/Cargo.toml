@@ -28,17 +28,16 @@ serde_json = "1.0"
 tokio = { version = "1", features = ["full"] }
 futures = "0.3"
 base64 = "0.22"
+# ONNX Runtime - shared dependencies
+# Must match ndarray version used by ort (0.17.x)
+ndarray = "0.17"
+half = "2.4"
 
 # Audio playback — bypasses WebKitGTK/GStreamer entirely (which is broken in AppImage)
 # Uses ALSA/PulseAudio on Linux, CoreAudio on macOS, WASAPI on Windows
 # Not needed on Android (audio is handled via WebView)
 [target.'cfg(not(target_os = "android"))'.dependencies]
 rodio = { version = "0.20", default-features = false, features = ["vorbis"] }
-
-# ONNX Runtime - shared dependencies
-# Must match ndarray version used by ort (0.17.x)
-ndarray = "0.17"
-half = "2.4"
 
 # Linux desktop: static linking (same as macOS/Windows) for zero-dependency deployment.
 # Power users can override with ORT_DYLIB_PATH for MIGraphX/CUDA GPU support.
