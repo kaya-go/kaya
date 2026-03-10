@@ -156,6 +156,16 @@ If not installed: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | s
 2. Rebuild packages: `bun run build:packages`
 3. Clean and retry: `bun run clean && bun install && bun run build:packages`
 
+### Resource path doesn't exist (e.g. `capture3.ogg`)
+
+Sound assets need to be copied before running the desktop app. Run:
+
+```bash
+bun run copy-assets
+```
+
+This copies sound files from `public/sounds/` into the directories expected by Tauri and the web app.
+
 ---
 
 ## Additional Resources
