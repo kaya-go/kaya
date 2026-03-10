@@ -44,9 +44,6 @@ export interface AIAnalysisContextValue {
   clearAnalysisCache: () => void;
   nativeUploadProgress: { stage: string; progress: number; message: string } | null;
 
-  // Fallback notification (from AIEngineContext)
-  backendFallbackMessage: string | null;
-
   // Wait for the currently running live analysis to finish (resolves immediately if none)
   waitForCurrentAnalysis: () => Promise<void>;
 }

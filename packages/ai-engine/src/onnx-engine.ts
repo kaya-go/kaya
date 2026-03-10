@@ -38,6 +38,7 @@ export class OnnxEngine extends Engine {
   private requestedProviders: string[] = [];
   private inputDataType: 'float32' | 'float16' = 'float32';
   private didFallback: boolean = false;
+  private fallbackReason?: string;
   private graphCaptureEnabled: boolean = false;
   private useGpuInputs: boolean = false;
   private maxInferenceBatch: number = Infinity;
@@ -72,6 +73,76 @@ export class OnnxEngine extends Engine {
     }
   }
 
+  /** Whether any GPU-based execution provider is currently active. */
+  private isUsingGpuProvider(): boolean {
+    return this.usedProviders.some(p => ['webgpu', 'webnn'].includes(p));
+  }
+
+  /**
+   * Reinitialize the ONNX session with WASM-only after a GPU runtime error.
+   * Disposes the current session, releases GPU resources, and recreates with CPU backend.
+   */
+  private async reinitializeWithWasm(errorMessage: string): Promise<void> {
+    console.warn(`[OnnxEngine] GPU runtime error, falling back to WASM: ${errorMessage}`);
+
+    // Release GPU resources
+    releaseGpuBuffers(this.gpu);
+    this.gpu = createEmptyGpuState();
+
+    // Release current session
+    if (this.session) {
+      try {
+        // @ts-ignore
+        await this.session.release?.();
+      } catch {
+        // Ignore release errors
+      }
+      this.session = null;
+    }
+
+    // Store original requested backend for reporting
+    const originalBackend = this.usedProviders.join('+');
+    const originalRequested =
+      this.requestedProviders.length > 0
+        ? this.requestedProviders.find(p => ['webgpu', 'webnn'].includes(p)) || originalBackend
+        : originalBackend;
+
+    // Recreate config forcing WASM-only
+    const wasmConfig: OnnxEngineConfig = {
+      ...(this.config as OnnxEngineConfig),
+      executionProviders: ['wasm'],
+      enableGraphCapture: false,
+    };
+    if (this.modelSource?.buffer) {
+      wasmConfig.modelBuffer = this.modelSource.buffer;
+    } else if (this.modelSource?.url) {
+      wasmConfig.modelUrl = this.modelSource.url;
+    }
+
+    const result = await createOnnxSession(wasmConfig, this.debugLog.bind(this));
+    this.session = result.session;
+    this.usedProviders = result.usedProviders;
+    this.inputDataType = result.inputDataType;
+    this.graphCaptureEnabled = false;
+    this.useGpuInputs = false;
+    this.maxInferenceBatch = result.maxInferenceBatch;
+    this.storedSessionOptions = result.sessionOptions;
+    this.didFallback = true;
+    this.fallbackReason =
+      `${originalRequested.toUpperCase()} failed at runtime. ` +
+      `Switched to WASM (CPU) for compatibility.`;
+
+    // Keep requestedProviders to show what was originally requested
+    if (!this.requestedProviders.some(p => ['webgpu', 'webnn'].includes(p))) {
+      this.requestedProviders = [originalBackend, ...this.requestedProviders];
+    }
+
+    console.log(`[OnnxEngine] Successfully fell back to WASM backend`);
+
+    // Notify listener
+    this.onRuntimeFallback?.(this.getRuntimeInfo());
+  }
+
   async initialize(): Promise<void> {
     if (this.initialized) return;
     const config = this.config as OnnxEngineConfig;
@@ -99,9 +170,95 @@ export class OnnxEngine extends Engine {
           this.useGpuInputs = false;
         }
       }
+
+      // Validate GPU backend with a warm-up inference to detect silent failures
+      // (e.g. WebGPU validation errors that don't throw but produce zero outputs)
+      if (this.isUsingGpuProvider()) {
+        const gpuValid = await this.validateGpuInference();
+        if (!gpuValid) {
+          await this.reinitializeWithWasm(
+            'WebGPU produced invalid results during warm-up (GPU validation errors)'
+          );
+        }
+      }
     } catch (e) {
       console.error('[OnnxEngine] Failed to initialize:', e);
       throw e;
+    }
+  }
+
+  /**
+   * Run a warm-up inference with dummy data to validate that the GPU backend
+   * actually produces valid (non-zero) output.
+   * WebGPU can silently fail with validation errors that don't throw but
+   * produce all-zero output buffers.
+   */
+  private async validateGpuInference(): Promise<boolean> {
+    if (!this.session) return false;
+    const size = (this.config as OnnxEngineConfig).boardSize ?? 19;
+
+    try {
+      const batchDim = this.maxInferenceBatch !== Infinity ? this.maxInferenceBatch : 1;
+      const binInput = new Float32Array(batchDim * 22 * size * size);
+      const globalInput = new Float32Array(batchDim * 19);
+      // Set a non-zero value so the model produces non-trivial output
+      globalInput[5] = 0.375;
+
+      const { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
+        binInput,
+        globalInput,
+        1,
+        size
+      );
+
+      const results = await this.session.run({
+        bin_input: binTensor,
+        global_input: globalTensor,
+      });
+
+      if (!usingGpuBuffers) {
+        binTensor.dispose();
+        globalTensor.dispose();
+      }
+
+      // Check if any output tensor has non-zero finite values
+      let hasValidData = false;
+      for (const key of Object.keys(results)) {
+        const tensor = results[key];
+        let data: ArrayLike<number>;
+        try {
+          // getData() works for both CPU and GPU-buffer tensor locations
+          if (typeof tensor.getData === 'function') {
+            data = (await tensor.getData()) as Float32Array;
+          } else {
+            data = tensor.data as Float32Array;
+          }
+        } catch {
+          continue;
+        }
+
+        const len = Math.min(data.length, 500);
+        for (let i = 0; i < len; i++) {
+          if (data[i] !== 0 && Number.isFinite(data[i])) {
+            hasValidData = true;
+            break;
+          }
+        }
+        if (hasValidData) break;
+      }
+
+      if (!hasValidData) {
+        console.warn(
+          '[OnnxEngine] GPU warm-up produced all-zero outputs — GPU backend is not working'
+        );
+      } else {
+        this.debugLog('GPU warm-up validation passed');
+      }
+
+      return hasValidData;
+    } catch (e) {
+      console.warn('[OnnxEngine] GPU warm-up inference failed:', e);
+      return false;
     }
   }
 
@@ -138,6 +295,7 @@ export class OnnxEngine extends Engine {
       inputDataType: this.inputDataType,
       didFallback: this.didFallback,
       requestedBackend,
+      fallbackReason: this.fallbackReason,
     };
   }
 
@@ -199,6 +357,26 @@ export class OnnxEngine extends Engine {
   }
 
   private async evaluateSingle(
+    board: GoBoard,
+    nextPla: Sign,
+    komi: number,
+    history: { color: Sign; x: number; y: number }[],
+    size: number
+  ): Promise<AnalysisResult> {
+    try {
+      return await this.runSingleInference(board, nextPla, komi, history, size);
+    } catch (error) {
+      // If we're on a GPU provider, fall back to WASM and retry
+      if (this.isUsingGpuProvider()) {
+        await this.reinitializeWithWasm(String(error));
+        return await this.runSingleInference(board, nextPla, komi, history, size);
+      }
+      throw error;
+    }
+  }
+
+  /** Core single-position inference (no GPU fallback wrapper). */
+  private async runSingleInference(
     board: GoBoard,
     nextPla: Sign,
     komi: number,
@@ -276,19 +454,43 @@ export class OnnxEngine extends Engine {
   ): Promise<AnalysisResult[]> {
     const batchSize = plas.length;
 
-    const { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
-      bin_input,
-      global_input,
-      batchSize,
-      size
-    );
+    try {
+      const { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
+        bin_input,
+        global_input,
+        batchSize,
+        size
+      );
 
-    const results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
-    if (!usingGpuBuffers) {
-      binTensor.dispose();
-      globalTensor.dispose();
+      const results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
+      if (!usingGpuBuffers) {
+        binTensor.dispose();
+        globalTensor.dispose();
+      }
+      return processBatchResults(results, plas, size, batchSize);
+    } catch (error) {
+      // If we're on a GPU provider, fall back to WASM and retry
+      if (this.isUsingGpuProvider()) {
+        await this.reinitializeWithWasm(String(error));
+        // Retry with WASM backend
+        const { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
+          bin_input,
+          global_input,
+          batchSize,
+          size
+        );
+        const results = await this.session!.run({
+          bin_input: binTensor,
+          global_input: globalTensor,
+        });
+        if (!usingGpuBuffers) {
+          binTensor.dispose();
+          globalTensor.dispose();
+        }
+        return processBatchResults(results, plas, size, batchSize);
+      }
+      throw error;
     }
-    return processBatchResults(results, plas, size, batchSize);
   }
 
   private async prepareInputTensors(

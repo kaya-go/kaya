@@ -46,6 +46,13 @@ export class WorkerEngine extends Engine {
 
       if (msg.type === 'init_success') {
         // Handled by initialize() promise
+      } else if (msg.type === 'runtime_fallback') {
+        // GPU runtime error → WASM fallback occurred during inference
+        if (msg.runtimeInfo) {
+          this.runtimeInfo = msg.runtimeInfo;
+          this.debugLog('runtime-fallback', { runtimeInfo: msg.runtimeInfo });
+          this.onRuntimeFallback?.(msg.runtimeInfo);
+        }
       } else if (msg.type === 'analyze_success') {
         const req = this.pendingRequests.get(msg.id);
         if (req) {

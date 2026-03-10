@@ -32,6 +32,10 @@ const processQueue = async () => {
           await engine.dispose();
         }
         engine = new OnnxEngine(msg.config);
+        // Listen for runtime GPU→WASM fallback
+        engine.onRuntimeFallback = (runtimeInfo: EngineRuntimeInfo) => {
+          self.postMessage({ type: 'runtime_fallback', runtimeInfo });
+        };
         await engine.initialize();
         // Send runtime info along with success
         const runtimeInfo = engine.getRuntimeInfo();

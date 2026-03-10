@@ -98,6 +98,8 @@ export interface EngineRuntimeInfo {
   inputDataType: 'float32' | 'float16';
   /** Whether a fallback occurred */
   didFallback: boolean;
+  /** Human-readable reason for the fallback (if any) */
+  fallbackReason?: string;
   /** Original requested backend if fallback occurred */
   requestedBackend?: string;
 }
@@ -112,6 +114,8 @@ export abstract class Engine {
   protected config: BaseEngineConfig;
   protected cache: Map<string, AnalysisResult>;
   protected initialized: boolean = false;
+  /** Callback invoked when a runtime backend fallback occurs (e.g. GPU→CPU) */
+  onRuntimeFallback?: (info: EngineRuntimeInfo) => void;
 
   constructor(config: BaseEngineConfig = {}) {
     this.config = {

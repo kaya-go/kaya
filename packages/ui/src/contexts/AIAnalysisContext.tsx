@@ -54,13 +54,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   } = useGameTree();
 
   // Get engine from AIEngineContext
-  const {
-    engine,
-    isInitializing,
-    error: engineError,
-    nativeUploadProgress,
-    backendFallbackMessage,
-  } = useAIEngine();
+  const { engine, isInitializing, error: engineError, nativeUploadProgress } = useAIEngine();
 
   // Shared refs
   const currentNodeIdRef = useRef(currentNodeId);
@@ -397,7 +391,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     clearAnalysisCache,
     pendingFullGameAnalysis,
     nativeUploadProgress,
-    backendFallbackMessage,
     waitForCurrentAnalysis,
   };
 

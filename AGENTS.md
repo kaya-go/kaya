@@ -95,11 +95,12 @@ kaya/
 - All apps consume via `useGameTree()` hook
 - Uses LRU board cache for performance
 
-**2. AI Engine Lifecycle** (`packages/ui/src/components/ai/`)
+**2. AI Engine Lifecycle** (`packages/ui/src/contexts/AIEngineContext.tsx`)
 
-- Lazy load engine only when analysis mode enabled
-- Dispose engine to free resources when disabled
+- Singleton engine managed via `AIEngineProvider` / `useAIEngine()` hook
 - Runs in Web Worker (no UI freeze)
+- Automatic GPU→WASM fallback: warm-up validation detects silent WebGPU failures, runtime try-catch catches thrown GPU errors; both reinitialize with WASM and show a toast notification
+- Dispose engine to free resources when disabled
 
 **3. Asset Management: No Symlinks!**
 

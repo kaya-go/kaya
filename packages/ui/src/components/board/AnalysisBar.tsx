@@ -43,7 +43,6 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
     clearAnalysisCache,
     pendingFullGameAnalysis,
     nativeUploadProgress,
-    backendFallbackMessage,
   } = useAIAnalysis();
 
   const formatWinRate = (value?: number | null) => {
@@ -189,14 +188,6 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                     ? `${fullGameCurrentMove}/${fullGameTotalMoves} (${fullGameProgress}%)${fullGameETA ? ` • ETA: ${fullGameETA}` : ''}`
                     : ''}
             </span>
-            {backendFallbackMessage && (
-              <span
-                className="ai-analysis-summary__progress ai-analysis-summary__progress--warning"
-                style={{ display: 'block', opacity: 1 }}
-              >
-                ⚠️ {backendFallbackMessage}
-              </span>
-            )}
           </div>
         </div>
       )}

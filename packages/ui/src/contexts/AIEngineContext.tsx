@@ -20,6 +20,7 @@ import { useGameTree } from './GameTreeContext';
 import { isTauriApp } from '@kaya/platform';
 import { loadModelData } from '../services/modelStorage';
 import { createEngine, type CreateEngineOptions } from '../workers/engineFactory';
+import { useToast } from '../components/ui/Toast';
 
 // Global state for singleton engine management
 let globalEngineInstance: Engine | null = null;
@@ -42,8 +43,6 @@ export interface AIEngineContextValue {
   error: string | null;
   /** Progress info for native engine upload (Tauri only) */
   nativeUploadProgress: { stage: string; progress: number; message: string } | null;
-  /** Message about backend fallback (e.g., WebGPU -> WASM) */
-  backendFallbackMessage: string | null;
   /** Manually trigger engine initialization (useful if model wasn't loaded on mount) */
   initializeEngine: () => void;
   /** Dispose the engine and reset state */
@@ -73,10 +72,11 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     useGameTree();
   const boardSize = gameInfo?.boardSize ?? 19;
 
+  const { showToast } = useToast();
+
   const [engine, setEngine] = useState<Engine | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [backendFallbackMessage, setBackendFallbackMessage] = useState<string | null>(null);
   const [nativeUploadProgress, setNativeUploadProgress] = useState<{
     stage: string;
     progress: number;
@@ -333,7 +333,19 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       globalEngineInstance = newEngine;
       globalEngineConfig = currentConfig;
 
-      // Check if engine fell back to a different backend
+      // Listen for runtime GPU→CPU fallback (e.g. WebGPU validation errors during inference)
+      newEngine.onRuntimeFallback = runtimeInfo => {
+        const actualBackend = runtimeInfo.backend;
+        const reason = runtimeInfo.fallbackReason || 'GPU backend failed at runtime.';
+
+        console.log(`[AIEngine] Runtime fallback to ${actualBackend}: ${reason}`);
+
+        // Update settings to the actually working backend
+        setAISettings({ backend: actualBackend as any });
+        showToast(reason, 'info');
+      };
+
+      // Check if engine fell back to a different backend during initialization
       const runtimeInfo = newEngine.getRuntimeInfo();
       if (runtimeInfo.didFallback && runtimeInfo.requestedBackend) {
         const actualBackend = runtimeInfo.backend;
@@ -343,11 +355,11 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
         // Update settings to the actually working backend
         setAISettings({ backend: actualBackend as any });
-        setBackendFallbackMessage(
-          `Backend switched from ${requestedBackend.toUpperCase()} to ${actualBackend.toUpperCase()} for compatibility.`
+        showToast(
+          runtimeInfo.fallbackReason ||
+            `Backend switched from ${requestedBackend.toUpperCase()} to ${actualBackend.toUpperCase()} for compatibility.`,
+          'info'
         );
-        // Clear message after 5 seconds
-        setTimeout(() => setBackendFallbackMessage(null), 5000);
       }
 
       setEngine(newEngine);
@@ -370,6 +382,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     boardSize,
     setAIConfigOpen,
     setAISettings,
+    showToast,
   ]);
 
   // Auto-initialize when model becomes available
@@ -410,7 +423,6 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     isInitializing,
     error,
     nativeUploadProgress,
-    backendFallbackMessage,
     initializeEngine,
     disposeEngine,
   };
