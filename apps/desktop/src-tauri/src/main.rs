@@ -8,6 +8,25 @@ fn main() {
     // causing the app to freeze on startup.
     #[cfg(target_os = "linux")]
     {
+        // Disable the DMA-BUF renderer to prevent Wayland protocol errors
+        // that crash the app on startup ("Error 71 (Protocol error)").
+        // This is a known issue with WebKitGTK in sandboxed environments.
+        if std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").is_err() {
+            // SAFETY: called in main() before any threads are spawned
+            unsafe {
+                std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+            }
+        }
+
+        // Disable GPU compositing to prevent blank windows when the bundled
+        // Mesa drivers don't match the host GPU ("Failed to create GBM buffer").
+        if std::env::var("WEBKIT_DISABLE_COMPOSITING_MODE").is_err() {
+            // SAFETY: called in main() before any threads are spawned
+            unsafe {
+                std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+            }
+        }
+
         if std::env::var("GST_PLUGIN_SYSTEM_PATH").is_err() {
             let candidates = [
                 "/usr/lib/x86_64-linux-gnu/gstreamer-1.0",
