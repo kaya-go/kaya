@@ -1,0 +1,201 @@
+name: Build Desktop (Linux)
+
+# Runs in an Arch Linux container because the new Tauri AppImage format
+# (quick-sharun) requires Arch Linux.
+# See: https://github.com/tauri-apps/tauri/pull/12491
+
+on:
+  workflow_call:
+    inputs:
+      skip-cache:
+        type: boolean
+        default: false
+      set-version:
+        type: string
+        default: ''
+      artifact-name:
+        type: string
+        default: 'desktop-linux'
+      artifact-retention-days:
+        type: number
+        default: 90
+      bun-version:
+        type: string
+        required: true
+
+jobs:
+  build:
+    name: Build Desktop - Linux
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install system dependencies
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            git curl wget unzip \
+            webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
+            patchelf dpkg rpm-tools \
+            nodejs npm
+
+      - uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Cache node_modules
+        if: ${{ !inputs.skip-cache }}
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+          key: Linux-arch-bun-cache-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            Linux-arch-bun-cache-
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Compute Rust cache keys
+        id: rust_keys
+        shell: bash
+        run: |
+          RUSTC_HASH=$(rustc -vV | sed -n 's/^commit-hash: //p')
+          echo "rustc_hash=$RUSTC_HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Configure Rust build cache env
+        id: sccache_config
+        shell: bash
+        run: |
+          SCCACHE_DIR="$HOME/.cache/sccache"
+          echo "SCCACHE_DIR=$SCCACHE_DIR" >> "$GITHUB_ENV"
+          echo "SCCACHE_CACHE_SIZE=2G" >> "$GITHUB_ENV"
+          echo "cache_path=$SCCACHE_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Restore sccache cache
+        if: ${{ !inputs.skip-cache }}
+        id: sccache_cache
+        uses: actions/cache/restore@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.sccache_config.outputs.cache_path }}
+          key: Linux-arch-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          restore-keys: |
+            Linux-arch-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-arch-sccache-
+
+      - name: Enable sccache (strict)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v sccache >/dev/null 2>&1; then
+            echo "sccache not found on PATH" >&2
+            exit 1
+          fi
+          mkdir -p "$SCCACHE_DIR"
+          sccache --start-server
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
+      - name: Restore Cargo registry/git cache
+        if: ${{ !inputs.skip-cache }}
+        id: cargo_cache
+        uses: actions/cache/restore@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: Linux-arch-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          restore-keys: |
+            Linux-arch-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-arch-cargo-
+
+      # Install tauri-cli with new AppImage format (Arch Linux container)
+      # Uses the feat/truly-portable-appimage branch which uses quick-sharun
+      # See: https://github.com/tauri-apps/tauri/pull/12491
+      # TODO: Remove once this is merged into stable tauri-cli release
+      - name: Install tauri-cli with new AppImage format
+        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage --force
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Cache wasm-pack
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/wasm-pack*
+            ~/wasm-pack-*
+          key: Linux-arch-wasm-pack-0.13
+
+      - name: Install wasm-pack
+        shell: bash
+        run: |
+          if ! command -v wasm-pack &> /dev/null; then
+            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          fi
+
+      - name: Set version
+        if: inputs.set-version != ''
+        run: bun run set-version ${{ inputs.set-version }}
+
+      # Bun's rsbuild crashes with SIGILL in the Arch Linux container.
+      # Workaround: pre-build packages with Bun (works fine), then use
+      # Node.js/npx for rsbuild, and skip Tauri's beforeBuildCommand.
+      - name: Pre-build frontend
+        run: |
+          bun run generate-version-info
+          bun run copy-assets
+          bun run build:packages
+          cd apps/desktop && npx rsbuild build
+
+      - name: Build desktop app
+        working-directory: apps/desktop
+        run: cargo tauri build --config '{"build":{"beforeBuildCommand":""}}'
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
+          TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: 'true'
+
+      - name: Collect artifact info
+        shell: bash
+        run: |
+          echo "Collecting Linux artifacts..."
+          find apps/desktop/src-tauri/target/release/bundle -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) -exec ls -lh {} \;
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            apps/desktop/src-tauri/target/release/bundle/
+          retention-days: ${{ inputs.artifact-retention-days }}
+
+      # Save caches only when they were not found
+      - name: Save Cargo registry/git cache (if miss)
+        if: ${{ !inputs.skip-cache && steps.cargo_cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ steps.cargo_cache.outputs.cache-primary-key }}
+
+      - name: Save sccache cache (if miss)
+        if: ${{ !inputs.skip-cache && steps.sccache_cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.sccache_config.outputs.cache_path }}
+          key: ${{ steps.sccache_cache.outputs.cache-primary-key }}

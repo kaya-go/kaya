@@ -1,0 +1,215 @@
+name: Build Desktop (macOS)
+
+on:
+  workflow_call:
+    inputs:
+      skip-cache:
+        type: boolean
+        default: false
+      set-version:
+        type: string
+        default: ''
+      artifact-name:
+        type: string
+        default: 'desktop-macos'
+      artifact-retention-days:
+        type: number
+        default: 90
+      bun-version:
+        type: string
+        required: true
+    outputs:
+      version:
+        description: 'App version from package.json'
+        value: ${{ jobs.build.outputs.version }}
+      short_sha:
+        description: 'Short commit SHA'
+        value: ${{ jobs.build.outputs.short_sha }}
+
+jobs:
+  build:
+    name: Build Desktop - macOS
+    runs-on: macos-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      short_sha: ${{ steps.version.outputs.short_sha }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get version info
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
+          echo "Build version: $VERSION ($SHORT_SHA)"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Cache node_modules
+        if: ${{ !inputs.skip-cache }}
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-cache-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-cache-
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Compute Rust cache keys
+        id: rust_keys
+        shell: bash
+        run: |
+          RUSTC_HASH=$(rustc -vV | sed -n 's/^commit-hash: //p')
+          echo "rustc_hash=$RUSTC_HASH" >> "$GITHUB_OUTPUT"
+
+      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Configure Rust build cache env
+        id: sccache_config
+        shell: bash
+        run: |
+          SCCACHE_DIR="$HOME/.cache/sccache"
+          echo "SCCACHE_DIR=$SCCACHE_DIR" >> "$GITHUB_ENV"
+          echo "SCCACHE_CACHE_SIZE=2G" >> "$GITHUB_ENV"
+          echo "cache_path=$SCCACHE_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Restore sccache cache
+        if: ${{ !inputs.skip-cache }}
+        id: sccache_cache
+        uses: actions/cache/restore@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.sccache_config.outputs.cache_path }}
+          key: ${{ runner.os }}-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
+            ${{ runner.os }}-sccache-
+
+      - name: Enable sccache (strict)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v sccache >/dev/null 2>&1; then
+            echo "sccache not found on PATH" >&2
+            exit 1
+          fi
+          mkdir -p "$SCCACHE_DIR"
+          sccache --start-server
+          echo "RUSTC_WRAPPER=sccache" >> "$GITHUB_ENV"
+
+      - name: Restore Cargo registry/git cache
+        if: ${{ !inputs.skip-cache }}
+        id: cargo_cache
+        uses: actions/cache/restore@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
+            ${{ runner.os }}-cargo-
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Cache wasm-pack
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/bin/wasm-pack*
+            ~/wasm-pack-*
+          key: ${{ runner.os }}-wasm-pack-0.13
+
+      - name: Install wasm-pack
+        shell: bash
+        run: |
+          if ! command -v wasm-pack &> /dev/null; then
+            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          fi
+
+      - name: Add Rust targets
+        run: rustup target add aarch64-apple-darwin
+
+      # macOS code signing: Import Apple certificates into temporary keychain
+      - name: Import Apple certificates
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
+
+      - name: Set version
+        if: inputs.set-version != ''
+        run: bun run set-version ${{ inputs.set-version }}
+
+      - name: Build desktop app
+        run: bun run tauri:build -- --target aarch64-apple-darwin
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Collect artifact info
+        shell: bash
+        run: |
+          echo "Collecting macOS artifacts..."
+          find apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.app.tar.gz" \) -exec ls -lh {} \;
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: |
+            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/
+          retention-days: ${{ inputs.artifact-retention-days }}
+
+      # Save caches only when they were not found
+      - name: Save Cargo registry/git cache (if miss)
+        if: ${{ !inputs.skip-cache && steps.cargo_cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+          key: ${{ steps.cargo_cache.outputs.cache-primary-key }}
+
+      - name: Save sccache cache (if miss)
+        if: ${{ !inputs.skip-cache && steps.sccache_cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.sccache_config.outputs.cache_path }}
+          key: ${{ steps.sccache_cache.outputs.cache-primary-key }}
