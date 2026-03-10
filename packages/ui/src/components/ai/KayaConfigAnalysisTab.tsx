@@ -103,11 +103,13 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
                 </>
               )}
               {pytorchAvailable && <option value="pytorch">{t('aiConfig.pytorch')}</option>}
-              {typeof navigator !== 'undefined' && (navigator as any).gpu && (
+              {!isTauriApp() && typeof navigator !== 'undefined' && (navigator as any).gpu && (
                 <option value="webgpu">{t('aiConfig.webgpu')}</option>
               )}
-              {webnnAvailable && <option value="webnn">{t('aiConfig.webnn')}</option>}
-              <option value="wasm">{t('aiConfig.wasm')}</option>
+              {webnnAvailable && !isTauriApp() && (
+                <option value="webnn">{t('aiConfig.webnn')}</option>
+              )}
+              {!isTauriApp() && <option value="wasm">{t('aiConfig.wasm')}</option>}
             </select>
           </div>
 

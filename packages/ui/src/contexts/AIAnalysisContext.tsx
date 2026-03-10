@@ -257,6 +257,18 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     gameInfo,
   ]);
 
+  // Reset analysis lock when engine instance changes (e.g., backend switch).
+  // Without this, an in-flight analysis on the old (now disposed) engine
+  // keeps analysisGlobals.isAnalyzing=true, blocking the new engine.
+  const prevEngineRef = useRef(engine);
+  useEffect(() => {
+    if (prevEngineRef.current !== engine) {
+      prevEngineRef.current = engine;
+      analysisGlobals.isAnalyzing = false;
+      analysisGlobals.analyzingForNodeId = null;
+    }
+  }, [engine]);
+
   // Trigger analysis when conditions are met
   useEffect(() => {
     if (analysisMode && engine && !isFullGameAnalyzing && !analysisGlobals.isAnalyzing) {

@@ -50,11 +50,11 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
                 <option value="native-cpu">{t('aiConfig.nativeCpu')}</option>
               </>
             )}
-            {/* Only show WebGPU if supported */}
-            {typeof navigator !== 'undefined' && (navigator as any).gpu && (
+            {/* WebGPU/WASM only available in browser (not in Tauri WKWebView) */}
+            {!isTauriApp() && typeof navigator !== 'undefined' && (navigator as any).gpu && (
               <option value="webgpu">{t('aiConfig.webgpu')}</option>
             )}
-            <option value="wasm">{t('aiConfig.wasm')}</option>
+            {!isTauriApp() && <option value="wasm">{t('aiConfig.wasm')}</option>}
           </select>
         </div>
 

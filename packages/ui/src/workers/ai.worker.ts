@@ -1,4 +1,4 @@
-import { OnnxEngine, type OnnxEngineConfig, type EngineRuntimeInfo } from '@kaya/ai-engine';
+import { OnnxEngine, type OnnxEngineConfig } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
 
 // Define message types
@@ -32,10 +32,6 @@ const processQueue = async () => {
           await engine.dispose();
         }
         engine = new OnnxEngine(msg.config);
-        // Listen for runtime GPU→WASM fallback
-        engine.onRuntimeFallback = (runtimeInfo: EngineRuntimeInfo) => {
-          self.postMessage({ type: 'runtime_fallback', runtimeInfo });
-        };
         await engine.initialize();
         // Send runtime info along with success
         const runtimeInfo = engine.getRuntimeInfo();

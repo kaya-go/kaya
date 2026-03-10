@@ -8,9 +8,7 @@ import type { OnnxEngineConfig } from './onnx-types';
 export interface SessionCreationResult {
   session: ort.InferenceSession;
   usedProviders: string[];
-  requestedProviders: string[];
   inputDataType: 'float32' | 'float16';
-  didFallback: boolean;
   graphCaptureEnabled: boolean;
   useGpuInputs: boolean;
   maxInferenceBatch: number;
@@ -19,24 +17,55 @@ export interface SessionCreationResult {
 }
 
 async function checkWebGpuAvailability(): Promise<boolean> {
-  if (typeof navigator === 'undefined' || !('gpu' in navigator)) return false;
+  if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+    console.log('[OnnxEngine] WebGPU not available: navigator.gpu not found');
+    return false;
+  }
   try {
-    const webgpuAdapter = await (navigator as any).gpu.requestAdapter({
+    const gpu = (navigator as any).gpu;
+    const adapter = await gpu.requestAdapter({
       powerPreference: 'high-performance',
     });
-    if (webgpuAdapter) {
+    if (!adapter) {
+      console.log('[OnnxEngine] WebGPU not available: requestAdapter returned null');
+      return false;
+    }
+
+    // Pre-configure ORT with our adapter & power preference.
+    // Use try/catch for each property since some may be read-only
+    // depending on ORT version and whether a session was already created.
+    try {
       // @ts-ignore
       ort.env.webgpu = ort.env.webgpu || {};
+    } catch {
+      // ort.env.webgpu already exists and is non-writable
+    }
+    try {
       // @ts-ignore
-      ort.env.webgpu.adapter = webgpuAdapter;
+      ort.env.webgpu.adapter = adapter;
+    } catch {
+      // adapter property may be read-only after first session
+    }
+    try {
       // @ts-ignore
       ort.env.webgpu.powerPreference = 'high-performance';
-      return true;
+    } catch {
+      // powerPreference may be read-only
     }
-  } catch {
-    // WebGPU not available
+
+    // Log adapter info for diagnostics (helps debug macOS Metal issues)
+    const info = (adapter as any).info ?? (adapter as any).adapterInfo;
+    console.log('[OnnxEngine] WebGPU available', {
+      vendor: info?.vendor ?? 'unknown',
+      architecture: info?.architecture ?? 'unknown',
+      device: info?.device ?? 'unknown',
+      description: info?.description ?? 'unknown',
+    });
+    return true;
+  } catch (e) {
+    console.log('[OnnxEngine] WebGPU not available:', e);
+    return false;
   }
-  return false;
 }
 
 function buildProviderList(
@@ -120,8 +149,6 @@ async function createSessionWithFallback(
 ): Promise<{
   session: ort.InferenceSession;
   usedProviders: string[];
-  didFallback: boolean;
-  disableGraphCapture: boolean;
 }> {
   const createSession = async (opts: ort.InferenceSession.SessionOptions) => {
     if (config.modelBuffer) {
@@ -132,44 +159,20 @@ async function createSessionWithFallback(
     throw new Error('No model provided');
   };
 
-  try {
-    const session = await createSession(sessionOptions);
-    return {
-      session,
-      usedProviders: [...effectiveProviders],
-      didFallback: false,
-      disableGraphCapture: false,
-    };
-  } catch (initialError) {
-    const gpuProviders = ['webgpu', 'webnn'];
-    const hasGpu = effectiveProviders.some(p => gpuProviders.includes(p));
-    if (hasGpu && effectiveProviders.length > 1) {
-      const failedGpu = effectiveProviders.filter(p => gpuProviders.includes(p)).join('+');
-      console.warn(`[OnnxEngine] ${failedGpu} failed, falling back to WASM`);
-      let usedProviders = effectiveProviders.filter(p => !gpuProviders.includes(p));
-      if (usedProviders.length === 0) usedProviders = ['wasm'];
-      const session = await createSession({
-        executionProviders: usedProviders,
-        graphOptimizationLevel: sessionOptions.graphOptimizationLevel,
-        enableCpuMemArena: sessionOptions.enableCpuMemArena,
-        enableMemPattern: sessionOptions.enableMemPattern,
-        executionMode: sessionOptions.executionMode,
-      });
-      return { session, usedProviders, didFallback: true, disableGraphCapture: true };
-    }
-    throw initialError;
-  }
+  const session = await createSession(sessionOptions);
+  return {
+    session,
+    usedProviders: [...effectiveProviders],
+  };
 }
 
 function detectModelProperties(
   session: ort.InferenceSession,
   config: OnnxEngineConfig,
-  usedProviders: string[],
-  requestedProviders: string[]
+  usedProviders: string[]
 ): {
   maxInferenceBatch: number;
   inputDataType: 'float32' | 'float16';
-  didFallback: boolean;
 } {
   // Detect static batch size
   let maxInferenceBatch = Infinity;
@@ -190,11 +193,6 @@ function detectModelProperties(
       // Not available
     }
   }
-
-  // Check fallback
-  const didFallback =
-    requestedProviders.some(p => ['webgpu', 'webnn'].includes(p)) &&
-    !usedProviders.some(p => ['webgpu', 'webnn'].includes(p));
 
   // Detect input data type
   let inputDataType: 'float32' | 'float16' = 'float32';
@@ -228,7 +226,7 @@ function detectModelProperties(
     }
   }
 
-  return { maxInferenceBatch, inputDataType, didFallback };
+  return { maxInferenceBatch, inputDataType };
 }
 
 /**
@@ -260,10 +258,10 @@ export async function createOnnxSession(
   ort.env.logLevel = 'warning';
 
   const webgpuAvailable = await checkWebGpuAvailability();
-  const { providers, requestedProviders } = buildProviderList(config, webgpuAvailable);
+  const { providers } = buildProviderList(config, webgpuAvailable);
   const effectiveProviders = providers.map(p => (typeof p === 'string' ? p : (p as any).name));
 
-  let { sessionOptions, graphCaptureEnabled, useGpuInputs } = buildSessionOptions(
+  const { sessionOptions, graphCaptureEnabled, useGpuInputs } = buildSessionOptions(
     config,
     providers,
     numThreads
@@ -272,20 +270,8 @@ export async function createOnnxSession(
   const createStart = performance.now();
   const result = await createSessionWithFallback(config, sessionOptions, effectiveProviders);
 
-  if (result.disableGraphCapture) {
-    graphCaptureEnabled = false;
-    useGpuInputs = false;
-  }
-
   const createTime = performance.now() - createStart;
-  const detected = detectModelProperties(
-    result.session,
-    config,
-    result.usedProviders,
-    requestedProviders
-  );
-
-  const finalDidFallback = result.didFallback || detected.didFallback;
+  const detected = detectModelProperties(result.session, config, result.usedProviders);
 
   // Log model loaded info
   const backendInfo = result.usedProviders.join('/').toUpperCase();
@@ -303,9 +289,7 @@ export async function createOnnxSession(
   return {
     session: result.session,
     usedProviders: result.usedProviders,
-    requestedProviders,
     inputDataType: detected.inputDataType,
-    didFallback: finalDidFallback,
     graphCaptureEnabled,
     useGpuInputs,
     maxInferenceBatch: detected.maxInferenceBatch,

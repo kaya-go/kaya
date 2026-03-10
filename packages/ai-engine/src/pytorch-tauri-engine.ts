@@ -218,7 +218,6 @@ export class PyTorchTauriEngine extends Engine {
     return {
       backend: 'pytorch',
       inputDataType: this.providerInfo?.fp16 ? 'float16' : 'float32',
-      didFallback: false,
     };
   }
 
