@@ -1,6 +1,6 @@
 /**
  * Sound assets for the game
- * These are imported from @kaya/ui/assets/sounds/*.mp3
+ * These are imported from @kaya/ui/assets/sounds/*.ogg
  * Apps need to copy these files during their build process
  */
 
@@ -9,21 +9,21 @@
  */
 export const SOUND_FILES = {
   move: [
-    'assets/sounds/move-0.mp3',
-    'assets/sounds/move-1.mp3',
-    'assets/sounds/move-2.mp3',
-    'assets/sounds/move-3.mp3',
-    'assets/sounds/move-4.mp3',
+    'assets/sounds/move-0.ogg',
+    'assets/sounds/move-1.ogg',
+    'assets/sounds/move-2.ogg',
+    'assets/sounds/move-3.ogg',
+    'assets/sounds/move-4.ogg',
   ],
   capture: [
-    'assets/sounds/capture0.mp3',
-    'assets/sounds/capture1.mp3',
-    'assets/sounds/capture2.mp3',
-    'assets/sounds/capture3.mp3',
-    'assets/sounds/capture4.mp3',
+    'assets/sounds/capture0.ogg',
+    'assets/sounds/capture1.ogg',
+    'assets/sounds/capture2.ogg',
+    'assets/sounds/capture3.ogg',
+    'assets/sounds/capture4.ogg',
   ],
-  pass: 'assets/sounds/pass.mp3',
-  newgame: 'assets/sounds/newgame.mp3',
+  pass: 'assets/sounds/pass.ogg',
+  newgame: 'assets/sounds/newgame.ogg',
 } as const;
 
 /**

@@ -130,7 +130,7 @@ self.addEventListener('fetch', event => {
   // Only cache if response is actually audio (not HTML fallback)
   if (
     request.destination === 'audio' ||
-    (url.pathname.includes('/assets/') && url.pathname.endsWith('.mp3'))
+    (url.pathname.includes('/assets/') && url.pathname.endsWith('.ogg'))
   ) {
     event.respondWith(
       fetch(request)

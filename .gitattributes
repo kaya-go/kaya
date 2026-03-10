@@ -24,7 +24,7 @@
 *.jpeg binary
 *.gif binary
 *.ico binary
-*.mp3 binary
+*.ogg binary
 *.wav binary
 *.wasm binary
 *.ttf binary

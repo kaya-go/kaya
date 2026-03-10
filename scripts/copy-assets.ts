@@ -87,10 +87,10 @@ async function main() {
   const webPublicDir = path.join(rootDir, 'apps', 'web', 'public');
 
   // 1. Copy sounds to public/assets
-  await copyFiles(publicSoundsDir, publicAssetsDir, /\.mp3$/);
+  await copyFiles(publicSoundsDir, publicAssetsDir, /\.ogg$/);
 
   // 2. Copy sounds to apps/web/public/assets
-  await copyFiles(publicSoundsDir, webAssetsDir, /\.mp3$/);
+  await copyFiles(publicSoundsDir, webAssetsDir, /\.ogg$/);
 
   // Copy ONNX Runtime WASM files
   // Try to find onnxruntime-web in root node_modules or package node_modules
@@ -116,7 +116,7 @@ async function main() {
   await copyFiles(onnxWasmSrc, desktopWasmDest, /\.(wasm|mjs)$/);
 
   // 3. Copy sounds to apps/desktop/public/assets
-  await copyFiles(publicSoundsDir, desktopAssetsDir, /\.mp3$/);
+  await copyFiles(publicSoundsDir, desktopAssetsDir, /\.ogg$/);
 
   // 4. Copy manifest and icons to apps/web/public
   await copySpecificFiles(publicDir, webPublicDir, ['manifest.json', 'og-image.png', 'icon-*.png']);

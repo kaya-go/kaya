@@ -9,7 +9,7 @@ function copyAssets(src, dest) {
     fs.mkdirSync(dest, { recursive: true });
   }
 
-  const extensions = ['.css', '.svg', '.png', '.mp3', '.wav'];
+  const extensions = ['.css', '.svg', '.png', '.ogg', '.wav'];
 
   fs.readdirSync(src).forEach(file => {
     const srcPath = path.join(src, file);

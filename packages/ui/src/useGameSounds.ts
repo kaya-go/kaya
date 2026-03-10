@@ -15,10 +15,10 @@ const getAssetPath = (path: string) => {
 
 // All sound paths organized by type
 const SOUND_PATHS = {
-  move: Array.from({ length: 5 }, (_, i) => getAssetPath(`assets/move-${i}.mp3`)),
-  capture: Array.from({ length: 5 }, (_, i) => getAssetPath(`assets/capture${i}.mp3`)),
-  pass: getAssetPath(`assets/pass.mp3`),
-  newgame: getAssetPath(`assets/newgame.mp3`),
+  move: Array.from({ length: 5 }, (_, i) => getAssetPath(`assets/move-${i}.ogg`)),
+  capture: Array.from({ length: 5 }, (_, i) => getAssetPath(`assets/capture${i}.ogg`)),
+  pass: getAssetPath(`assets/pass.ogg`),
+  newgame: getAssetPath(`assets/newgame.ogg`),
 };
 
 // ============================================================================
