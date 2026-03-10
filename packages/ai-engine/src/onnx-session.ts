@@ -31,7 +31,8 @@ async function checkWebGpuAvailability(): Promise<boolean> {
       return false;
     }
 
-    // Pre-configure ORT with our adapter & power preference.
+    // Pre-configure ORT with adapter & power preference.
+    // ORT creates the device internally and requests shader-f16 if the adapter supports it.
     // Use try/catch for each property since some may be read-only
     // depending on ORT version and whether a session was already created.
     try {
@@ -53,14 +54,25 @@ async function checkWebGpuAvailability(): Promise<boolean> {
       // powerPreference may be read-only
     }
 
-    // Log adapter info for diagnostics (helps debug macOS Metal issues)
+    // Log adapter info for diagnostics
     const info = (adapter as any).info ?? (adapter as any).adapterInfo;
+    const hasShaderF16 = adapter.features?.has('shader-f16') ?? false;
     console.log('[OnnxEngine] WebGPU available', {
       vendor: info?.vendor ?? 'unknown',
       architecture: info?.architecture ?? 'unknown',
       device: info?.device ?? 'unknown',
       description: info?.description ?? 'unknown',
+      shaderF16: hasShaderF16,
     });
+
+    // If adapter doesn't support shader-f16, FP16 models will fail on WebGPU.
+    // We still return true and let the warmup validation catch actual failures.
+    if (!hasShaderF16) {
+      console.warn(
+        '[OnnxEngine] GPU adapter does not support shader-f16. FP16 models will fall back to WASM.'
+      );
+    }
+
     return true;
   } catch (e) {
     console.log('[OnnxEngine] WebGPU not available:', e);

@@ -43,6 +43,10 @@ export class OnnxEngine extends Engine {
   private modelSource: { buffer?: ArrayBuffer; url?: string } | null = null;
   private gpu: GpuBufferState = createEmptyGpuState();
 
+  /** WebGPU device reference for error scope checking (null if not using WebGPU). */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private gpuDevice: any = null;
+
   constructor(config: OnnxEngineConfig = {}) {
     super(config);
     this.debugEnabled = Boolean(config.debug);
@@ -50,6 +54,15 @@ export class OnnxEngine extends Engine {
 
   private debugLog(message: string, payload?: Record<string, unknown>): void {
     debugLog(this.debugEnabled, message, payload);
+  }
+
+  /** Pop the GPU error scope and throw if a validation error was detected. */
+  private async checkGpuErrorScope(): Promise<void> {
+    if (!this.gpuDevice) return;
+    const error = await this.gpuDevice.popErrorScope();
+    if (error) {
+      throw new Error(`WebGPU validation error: ${error.message}`);
+    }
   }
 
   private async ensureGpuBuffers(size: number): Promise<void> {
@@ -90,6 +103,11 @@ export class OnnxEngine extends Engine {
       this.modelSource = result.modelSource;
       this.storedSessionOptions = result.sessionOptions;
       this.initialized = true;
+
+      // Capture WebGPU device for error scope checking during inference
+      if (this.usedProviders.includes('webgpu')) {
+        this.gpuDevice = (ort.env as any).webgpu?.device ?? null;
+      }
 
       if (this.graphCaptureEnabled) {
         try {
@@ -223,9 +241,16 @@ export class OnnxEngine extends Engine {
     const inferenceStart = performance.now();
     let results: ort.InferenceSession.OnnxValueMapType;
 
+    // Push WebGPU error scope to catch async GPU validation errors
+    this.gpuDevice?.pushErrorScope('validation');
+
     try {
       results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
     } catch (error) {
+      // Pop error scope before rethrowing to keep the scope stack balanced
+      if (this.gpuDevice) {
+        await this.gpuDevice.popErrorScope().catch(() => {});
+      }
       const errorMsg = String(error);
       if (errorMsg.includes('expected: (tensor(float16))') && this.inputDataType === 'float32') {
         console.warn('[OnnxEngine] Detected FP16 model at runtime, switching input type');
@@ -250,7 +275,10 @@ export class OnnxEngine extends Engine {
           globalTensor = createTensor(global_input, [1, 19], this.inputDataType);
         }
         usingGpuBuffers = false;
+
+        this.gpuDevice?.pushErrorScope('validation');
         results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
+        await this.checkGpuErrorScope();
       } else {
         if (errorMsg.includes('Tensor not found') && this.usedProviders.includes('webnn')) {
           throw new Error(
@@ -261,6 +289,9 @@ export class OnnxEngine extends Engine {
         throw error;
       }
     }
+
+    // Check for async GPU validation errors that don't throw in JS
+    await this.checkGpuErrorScope();
 
     this.debugLog('NN inference', { ms: performance.now() - inferenceStart });
     if (!usingGpuBuffers) {
@@ -287,7 +318,10 @@ export class OnnxEngine extends Engine {
       size
     );
 
+    this.gpuDevice?.pushErrorScope('validation');
     const results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
+    await this.checkGpuErrorScope();
+
     if (!usingGpuBuffers) {
       binTensor.dispose();
       globalTensor.dispose();

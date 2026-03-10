@@ -9,6 +9,8 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import type { Engine } from '@kaya/ai-engine';
+import type { SignMap } from '@kaya/goboard';
+import type { AISettings } from '../types/game';
 import {
   convertModelForWebGPU,
   isWebGPUOptimized,
@@ -165,6 +167,25 @@ function getEngineConfigForBackend(
     needsWebGPUConversion,
     needsWebNNConversion,
   };
+}
+
+/**
+ * Run a warm-up inference to validate the GPU backend works correctly.
+ * The OnnxEngine uses WebGPU error scopes (pushErrorScope/popErrorScope)
+ * to detect async GPU validation errors that don't throw in JS.
+ * This warmup triggers the first inference and lets any GPU error
+ * propagate as an exception, which the fallback chain catches.
+ */
+async function validateWarmUpInference(engine: Engine, boardSize: number): Promise<void> {
+  const emptyBoard: SignMap = Array.from({ length: boardSize }, () =>
+    Array(boardSize).fill(0 as const)
+  ) as SignMap;
+  await engine.analyze(emptyBoard, {
+    nextToPlay: 'B',
+    komi: 7.5,
+    history: [],
+    skipCache: true,
+  });
 }
 
 /** User-friendly backend display names */
@@ -429,12 +450,35 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               // Get which backend the engine actually ended up using
               const runtimeInfo = newEngine.getRuntimeInfo();
               const actualBackend = runtimeInfo.backend;
+
+              // For GPU backends, run a warm-up inference to catch silent failures
+              // (WebGPU validation errors are async and don't throw in JS)
+              if (['webgpu', 'webgpu-gc', 'webnn'].includes(actualBackend)) {
+                console.log(`[AIEngine] Running warm-up validation for ${actualBackend}...`);
+                try {
+                  await validateWarmUpInference(newEngine, boardSize);
+                  console.log('[AIEngine] Warm-up validation passed');
+                } catch (warmupErr) {
+                  // Dispose the broken GPU engine before falling back
+                  try {
+                    await newEngine.dispose();
+                  } catch {
+                    // Ignore dispose errors
+                  }
+                  throw warmupErr;
+                }
+              }
+
               setActiveBackend(actualBackend);
 
-              // If we fell back to a different backend than what the user selected,
-              // show a subtle toast but do NOT update aiSettings.backend
-              // (to avoid re-init loop)
+              // If we fell back to a different backend, persist it in settings
+              // so the user sees the actual backend and doesn't retry on reload.
               if (backend !== aiSettings.backend) {
+                // Update currentConfig so globalEngineConfig matches
+                // the new aiSettings.backend after state update
+                const typedBackend = backend as AISettings['backend'];
+                currentConfig.backend = typedBackend;
+                setAISettings({ backend: typedBackend });
                 showToast(`AI running on ${backendDisplayName(actualBackend)}`, 'info');
               }
 
