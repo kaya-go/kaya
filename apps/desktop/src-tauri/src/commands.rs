@@ -11,6 +11,7 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::Manager;
+#[cfg(desktop)]
 use tauri::Emitter;
 
 /// Input for batch analysis
@@ -480,7 +481,12 @@ pub async fn pytorch_dispose() -> Result<(), String> {
     }
 }
 
-// === Model download command (uses reqwest for reliable streaming on all platforms) ===
+/// Stub for mobile: download_file is not supported
+#[cfg(not(desktop))]
+#[tauri::command]
+pub async fn download_file(_url: String) -> Result<String, String> {
+    Err("download_file is not available on mobile".to_string())
+}
 
 /// Download a file from a URL and save it to a temp file, emitting progress events.
 /// Downloads a file via reqwest (reliable streaming on all platforms).
