@@ -22,227 +22,256 @@ const SOUND_PATHS = {
 };
 
 // ============================================================================
-// Web Audio API Implementation
+// Sound Backend Interface
 // ============================================================================
 
-// Single AudioContext shared across the app (created on first user interaction)
-let audioContext: AudioContext | null = null;
+interface SoundBackend {
+  init(): void;
+  preload(): Promise<void>;
+  play(path: string): void;
+  readonly ready: boolean;
+}
 
-// Preloaded audio buffers (decoded and ready to play instantly)
-const audioBuffers = new Map<string, AudioBuffer>();
+// ============================================================================
+// Web Audio API Backend (primary — low latency)
+// ============================================================================
 
-// Loading state
-let isLoading = false;
-let isLoaded = false;
-let loadPromise: Promise<void> | null = null;
+class WebAudioBackend implements SoundBackend {
+  private context: AudioContext | null = null;
+  private buffers = new Map<string, AudioBuffer>();
+  private loading = false;
+  private loaded = false;
+  private loadPromise: Promise<void> | null = null;
+  private pendingSound: { path: string; timestamp: number } | null = null;
+  private resumeFailures = 0;
 
-// Audio device failure tracking with retry support
-let audioResumeFailures = 0;
-const MAX_RESUME_RETRIES = 3;
-let audioFailed = false;
-let retryTimer: ReturnType<typeof setTimeout> | null = null;
+  get ready() {
+    return this.loaded && this.context !== null;
+  }
 
-// Pending sound to play once loaded (for first stone)
-let pendingSound: { path: string; timestamp: number } | null = null;
-const PENDING_SOUND_TIMEOUT = 500; // Max ms to wait for loading before giving up
+  init(): void {
+    if (this.context) return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+      if (Ctor) {
+        this.context = new Ctor();
+        if (DEBUG_SOUND) console.log('[SOUND:WebAudio] ✅ AudioContext created');
+      }
+    } catch (e) {
+      if (DEBUG_SOUND) console.warn('[SOUND:WebAudio] ❌ Failed to create AudioContext:', e);
+      throw e; // let caller know init failed
+    }
+  }
+
+  async preload(): Promise<void> {
+    if (this.loaded || !this.context) return;
+    if (this.loadPromise) return this.loadPromise;
+
+    this.loading = true;
+    const allPaths = Object.values(SOUND_PATHS).flat();
+
+    this.loadPromise = Promise.all(
+      allPaths.map(async path => {
+        try {
+          const response = await fetch(path);
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const arrayBuffer = await response.arrayBuffer();
+          const buffer = await this.context!.decodeAudioData(arrayBuffer);
+          this.buffers.set(path, buffer);
+        } catch (e) {
+          if (DEBUG_SOUND) console.warn(`[SOUND:WebAudio] ❌ Failed to load ${path}:`, e);
+        }
+      })
+    ).then(() => {
+      this.loaded = true;
+      this.loading = false;
+      if (DEBUG_SOUND)
+        console.log(`[SOUND:WebAudio] ✅ Preloaded ${this.buffers.size}/${allPaths.length} sounds`);
+
+      // Play pending sound if still recent
+      if (this.pendingSound) {
+        const elapsed = performance.now() - this.pendingSound.timestamp;
+        if (elapsed < 500) this.play(this.pendingSound.path);
+        this.pendingSound = null;
+      }
+    });
+    return this.loadPromise;
+  }
+
+  play(path: string): void {
+    const ctx = this.context;
+    if (!ctx) return;
+
+    // Resume if suspended
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(e => {
+        this.resumeFailures++;
+        if (this.resumeFailures <= 1) {
+          console.warn('[SOUND:WebAudio] ⚠️ Failed to resume AudioContext:', e);
+        }
+      });
+    }
+
+    const buffer = this.buffers.get(path);
+    if (!buffer) {
+      if (this.loading && !this.pendingSound) {
+        this.pendingSound = { path, timestamp: performance.now() };
+      }
+      return;
+    }
+
+    try {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start(0);
+    } catch {
+      // Play failed — caller can fall back
+    }
+  }
+
+  /** Test if the backend can actually produce audio */
+  async validate(): Promise<boolean> {
+    if (!this.context) return false;
+    try {
+      if (this.context.state === 'suspended') {
+        await this.context.resume();
+      }
+      // If resume didn't throw, the audio device is accessible
+      return this.context.state === 'running';
+    } catch {
+      return false;
+    }
+  }
+
+  dispose(): void {
+    if (this.context) {
+      try {
+        this.context.close();
+      } catch {
+        // ignore
+      }
+      this.context = null;
+    }
+    this.buffers.clear();
+    this.loaded = false;
+    this.loading = false;
+    this.loadPromise = null;
+  }
+}
+
+// ============================================================================
+// HTMLAudioElement Backend (fallback — works when Web Audio device fails)
+// ============================================================================
+
+class HtmlAudioBackend implements SoundBackend {
+  private pool = new Map<string, HTMLAudioElement[]>();
+  private loaded = false;
+  private loadPromise: Promise<void> | null = null;
+  private readonly POOL_SIZE = 3; // clones per sound for overlapping playback
+
+  get ready() {
+    return this.loaded;
+  }
+
+  init(): void {
+    // Nothing to initialize — Audio elements are always available
+  }
+
+  async preload(): Promise<void> {
+    if (this.loaded) return;
+    if (this.loadPromise) return this.loadPromise;
+
+    const allPaths = Object.values(SOUND_PATHS).flat();
+
+    this.loadPromise = Promise.all(
+      allPaths.map(
+        path =>
+          new Promise<void>(resolve => {
+            const elements: HTMLAudioElement[] = [];
+            let loadedCount = 0;
+            for (let i = 0; i < this.POOL_SIZE; i++) {
+              const audio = new Audio(path);
+              audio.preload = 'auto';
+              const onReady = () => {
+                loadedCount++;
+                if (loadedCount === this.POOL_SIZE) resolve();
+              };
+              audio.addEventListener('canplaythrough', onReady, { once: true });
+              audio.addEventListener('error', onReady, { once: true }); // resolve anyway
+              elements.push(audio);
+            }
+            this.pool.set(path, elements);
+          })
+      )
+    ).then(() => {
+      this.loaded = true;
+      if (DEBUG_SOUND) console.log(`[SOUND:HTML] ✅ Preloaded ${this.pool.size} sounds`);
+    });
+    return this.loadPromise;
+  }
+
+  play(path: string): void {
+    const elements = this.pool.get(path);
+    if (!elements) return;
+
+    // Find an element that isn't currently playing, or reuse the first
+    const el = elements.find(e => e.paused || e.ended) ?? elements[0];
+    el.currentTime = 0;
+    el.play().catch(() => {
+      // Autoplay blocked or playback failed — silently ignore
+    });
+  }
+}
+
+// ============================================================================
+// Sound Manager (selects backend, handles fallback)
+// ============================================================================
+
+let activeBackend: SoundBackend | null = null;
+let backendInitialized = false;
 
 // Track last play time per sound type to prevent overlapping sounds
 const lastPlayTime = new Map<SoundType, number>();
-const MIN_SOUND_INTERVAL = 50; // Minimum ms between same sound type
+const MIN_SOUND_INTERVAL = 50;
 
 // Track which variant to use (rotating for variety)
 let moveVariantIndex = 0;
 let captureVariantIndex = 0;
 
-/**
- * Initialize AudioContext (must be called after user interaction due to browser policy)
- */
-const initAudioContext = (): AudioContext | null => {
-  if (audioContext) return audioContext;
-  if (audioFailed) return null;
+const initSoundBackend = async (): Promise<void> => {
+  if (backendInitialized) return;
+  backendInitialized = true;
 
+  // Try Web Audio API first (lower latency)
+  const webAudio = new WebAudioBackend();
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioContextClass) {
-      audioContext = new AudioContextClass();
-      if (DEBUG_SOUND) console.log('[SOUND] ✅ AudioContext created');
+    webAudio.init();
+    const works = await webAudio.validate();
+    if (works) {
+      activeBackend = webAudio;
+      if (DEBUG_SOUND) console.log('[SOUND] Using Web Audio API backend');
+      await webAudio.preload();
+      return;
     }
-  } catch (e) {
-    console.warn('[SOUND] ❌ Failed to create AudioContext:', e);
-    audioFailed = true;
+  } catch {
+    // Web Audio init failed
   }
 
-  return audioContext;
+  // Clean up failed WebAudio
+  webAudio.dispose();
+
+  // Fallback to HTMLAudioElement
+  console.info('[SOUND] Web Audio API unavailable, falling back to HTML Audio');
+  const htmlAudio = new HtmlAudioBackend();
+  htmlAudio.init();
+  activeBackend = htmlAudio;
+  await htmlAudio.preload();
 };
 
-/**
- * Try to recreate the AudioContext (used after a transient audio device failure).
- * Closes the old context and resets loading state so sounds can be re-preloaded.
- */
-const recreateAudioContext = (): void => {
-  if (audioContext) {
-    try {
-      audioContext.close();
-    } catch {
-      // ignore
-    }
-    audioContext = null;
-  }
-  audioBuffers.clear();
-  isLoaded = false;
-  isLoading = false;
-  loadPromise = null;
-
-  initAudioContext();
-  if (audioContext) {
-    preloadAllSounds();
-  }
-};
-
-/**
- * Resume AudioContext if suspended (required after user interaction)
- */
-const resumeAudioContext = async (): Promise<void> => {
-  if (audioFailed || !audioContext) return;
-  if (audioContext.state === 'suspended') {
-    try {
-      await audioContext.resume();
-      // Success — reset failure counter
-      if (audioResumeFailures > 0) {
-        console.info('[SOUND] ✅ AudioContext resumed after previous failures');
-        audioResumeFailures = 0;
-      } else if (DEBUG_SOUND) {
-        console.log('[SOUND] ✅ AudioContext resumed');
-      }
-    } catch (e) {
-      if (e instanceof DOMException && e.name === 'InvalidStateError') {
-        audioResumeFailures++;
-        if (audioResumeFailures >= MAX_RESUME_RETRIES) {
-          // Give up after several attempts
-          console.warn(
-            `[SOUND] ⚠️ Audio device unavailable after ${MAX_RESUME_RETRIES} attempts, disabling sound`
-          );
-          audioFailed = true;
-          audioContext = null;
-        } else if (!retryTimer) {
-          // Schedule a retry: recreate AudioContext after exponential backoff
-          const delay = 1000 * Math.pow(2, audioResumeFailures - 1); // 1s, 2s, 4s
-          if (DEBUG_SOUND)
-            console.log(
-              `[SOUND] 🔄 Audio resume failed (attempt ${audioResumeFailures}/${MAX_RESUME_RETRIES}), retrying in ${delay}ms`
-            );
-          retryTimer = setTimeout(() => {
-            retryTimer = null;
-            recreateAudioContext();
-          }, delay);
-        }
-      } else {
-        console.warn('[SOUND] ⚠️ Failed to resume AudioContext:', e);
-      }
-    }
-  }
-};
-
-/**
- * Load and decode a single audio file into an AudioBuffer
- */
-const loadAudioBuffer = async (path: string): Promise<AudioBuffer | null> => {
-  const ctx = initAudioContext();
-  if (!ctx) return null;
-
-  try {
-    const response = await fetch(path);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-    if (DEBUG_SOUND)
-      console.log(
-        `[SOUND] ✅ Loaded: ${path.split('/').pop()} (${audioBuffer.duration.toFixed(2)}s)`
-      );
-    return audioBuffer;
-  } catch (e) {
-    console.warn(`[SOUND] ❌ Failed to load ${path}:`, e);
-    return null;
-  }
-};
-
-/**
- * Preload all sounds into memory
- */
-const preloadAllSounds = async (): Promise<void> => {
-  if (audioFailed || isLoaded) return;
-  if (loadPromise) return loadPromise;
-
-  isLoading = true;
-
-  if (DEBUG_SOUND) console.log('[SOUND] 🔄 Preloading all sounds...');
-
-  const allPaths = Object.values(SOUND_PATHS).flat();
-
-  loadPromise = Promise.all(
-    allPaths.map(async path => {
-      const buffer = await loadAudioBuffer(path);
-      if (buffer) {
-        audioBuffers.set(path, buffer);
-      }
-    })
-  ).then(() => {
-    isLoaded = true;
-    isLoading = false;
-
-    if (DEBUG_SOUND)
-      console.log(`[SOUND] ✅ Preloaded ${audioBuffers.size}/${allPaths.length} sounds`);
-
-    // Play any pending sound if it's still recent enough
-    if (pendingSound) {
-      const elapsed = performance.now() - pendingSound.timestamp;
-      if (elapsed < PENDING_SOUND_TIMEOUT) {
-        if (DEBUG_SOUND)
-          console.log(`[SOUND] 🎵 Playing pending sound after ${Math.round(elapsed)}ms`);
-        playSoundBuffer(pendingSound.path);
-      } else {
-        if (DEBUG_SOUND) console.log(`[SOUND] ⏭️ Pending sound expired (${Math.round(elapsed)}ms)`);
-      }
-      pendingSound = null;
-    }
-  });
-
-  return loadPromise;
-};
-
-/**
- * Play a sound using Web Audio API
- */
-const playSoundBuffer = (path: string): void => {
-  if (audioFailed) return;
-  const ctx = audioContext;
-  if (!ctx) {
-    if (DEBUG_SOUND) console.warn('[SOUND] ⚠️ No AudioContext');
-    return;
-  }
-
-  const buffer = audioBuffers.get(path);
-  if (!buffer) {
-    // If still loading, queue this sound to play when ready
-    if (isLoading && !pendingSound) {
-      pendingSound = { path, timestamp: performance.now() };
-      if (DEBUG_SOUND) console.log(`[SOUND] ⏳ Queued pending sound: ${path.split('/').pop()}`);
-    } else if (DEBUG_SOUND) {
-      console.warn(`[SOUND] ⚠️ Buffer not loaded: ${path.split('/').pop()}`);
-    }
-    return;
-  }
-
-  // Create a new source node (they are one-shot, can't be reused)
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  source.connect(ctx.destination);
-  source.start(0);
-
-  if (DEBUG_SOUND) console.log(`[SOUND] 🎵 Playing: ${path.split('/').pop()}`);
+const playSound_ = (path: string): void => {
+  activeBackend?.play(path);
 };
 
 // ============================================================================
@@ -279,22 +308,13 @@ const setGlobalSoundEnabled = (enabled: boolean) => {
 // Track initialization state
 let initListenersAdded = false;
 
-// Initialize AudioContext and preload sounds - called once globally
 const initOnInteraction = () => {
-  if (audioFailed) return;
-  if (audioContext && isLoaded) {
-    // Already initialized — remove listeners
+  if (backendInitialized) {
     removeInitListeners();
     return;
   }
-
-  initAudioContext();
-  preloadAllSounds();
-
-  // Only remove listeners once we successfully have a context
-  if (audioContext) {
-    removeInitListeners();
-  }
+  initSoundBackend();
+  removeInitListeners();
 };
 
 const removeInitListeners = () => {
@@ -309,7 +329,6 @@ const removeInitListeners = () => {
 // Set up global initialization listeners immediately (capture phase to run before other handlers)
 if (typeof document !== 'undefined' && !initListenersAdded) {
   initListenersAdded = true;
-  // Use capture phase so we initialize BEFORE the click handler that plays the sound
   document.addEventListener('click', initOnInteraction, true);
   document.addEventListener('keydown', initOnInteraction, true);
   document.addEventListener('touchstart', initOnInteraction, true);
@@ -333,9 +352,6 @@ export const useGameSounds = () => {
 
   const playSound = useCallback((type: SoundType, variant?: number) => {
     if (!globalSoundEnabled) return;
-
-    // Ensure AudioContext is ready
-    resumeAudioContext();
 
     // Debounce: prevent rapid-fire sounds of the same type
     const now = performance.now();
@@ -373,7 +389,7 @@ export const useGameSounds = () => {
     }
 
     // Play the sound
-    playSoundBuffer(soundPath);
+    playSound_(soundPath);
   }, []);
 
   const toggleSound = useCallback(() => {
