@@ -1,5 +1,6 @@
 //! Audio stubs for Android — audio is handled via WebView on mobile.
 
+#[allow(dead_code)]
 pub struct AudioState(pub std::sync::Mutex<Option<()>>);
 
 #[tauri::command]
