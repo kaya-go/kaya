@@ -519,10 +519,10 @@
     "visitsStale": "Aus Cache mit weniger Besuchen — wird neu analysiert",
     "visitsTooltip": "Suchtiefe: {{count}} Besuche (klicken zum Ändern, Doppelklick zum Zurücksetzen)",
     "bestMove": "Bester",
-    "metricTooltip": "Heatmap-Metrik umschalten (Klick: Policy → Gewinnrate → Score)",
+    "metricTooltip": "Heatmap-Metrik umschalten (Policy: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuelle Position, ΔScore: Scoreänderung vs aktuelle Position)",
     "metric_policy": "Policy",
-    "metric_winRate": "Gew%",
-    "metric_scoreLead": "Score"
+    "metric_winRate": "ΔGew%",
+    "metric_scoreLead": "ΔScore"
   },
   "panels": {
     "library": "Bibliothek",

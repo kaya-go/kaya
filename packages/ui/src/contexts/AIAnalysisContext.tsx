@@ -400,14 +400,21 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       .fill(null)
       .map(() => Array(boardSize).fill(null));
 
-    /** Format a move's metric text based on the selected display mode */
+    // Current position metrics used as baseline for delta display
+    const currentWinRate = mctsProgress?.winRate ?? analysisResult?.winRate;
+    const currentScoreLead = mctsProgress?.scoreLead ?? analysisResult?.scoreLead;
+
+    /** Format a move's metric text as delta vs current position */
     const formatMoveText = (visitShare: number, winRate?: number, scoreLead?: number): string => {
       if (metric === 'winRate') {
-        return winRate != null ? `${(winRate * 100).toFixed(0)}%` : '—';
+        if (winRate == null || currentWinRate == null) return '—';
+        const delta = (winRate - currentWinRate) * 100;
+        return `${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%`;
       }
       if (metric === 'scoreLead') {
-        if (scoreLead == null) return '—';
-        return scoreLead >= 0 ? `+${scoreLead.toFixed(1)}` : scoreLead.toFixed(1);
+        if (scoreLead == null || currentScoreLead == null) return '—';
+        const delta = scoreLead - currentScoreLead;
+        return `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
       }
       // Default: policy/visit share
       return `${(visitShare * 100).toFixed(0)}%`;
@@ -430,7 +437,13 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
         const visitShare = totalVisits > 0 ? topMove.visits / totalVisits : 0;
         const strength = normalizeStrength(visitShare);
-        const text = formatMoveText(visitShare, topMove.winRate, topMove.scoreLead);
+        // Require minimum visits for reliable delta metrics (low-visit NN estimates are noisy)
+        const reliable = topMove.visits >= 10;
+        const text = formatMoveText(
+          visitShare,
+          reliable ? topMove.winRate : undefined,
+          reliable ? topMove.scoreLead : undefined
+        );
 
         map[y][x] = { strength, text };
         displayedCount++;

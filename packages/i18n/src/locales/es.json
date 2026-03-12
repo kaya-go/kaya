@@ -519,10 +519,10 @@
     "visitsStale": "En caché con menos visitas — se volverá a analizar",
     "visitsTooltip": "Profundidad de búsqueda: {{count}} visitas (clic para cambiar, doble clic para restablecer)",
     "bestMove": "Mejor",
-    "metricTooltip": "Cambiar métrica del mapa (clic: Política → Tasa victoria → Puntuación)",
+    "metricTooltip": "Cambiar métrica del mapa (Política: probabilidad, ΔVic%: cambio en tasa de victoria vs posición actual, ΔPunt.: cambio en puntuación vs posición actual)",
     "metric_policy": "Política",
-    "metric_winRate": "Vic%",
-    "metric_scoreLead": "Punt."
+    "metric_winRate": "ΔVic%",
+    "metric_scoreLead": "ΔPunt."
   },
   "panels": {
     "library": "Biblioteca",

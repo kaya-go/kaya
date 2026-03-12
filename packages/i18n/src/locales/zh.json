@@ -522,10 +522,10 @@
     "visitsStale": "缓存自较低访问次数 — 将重新分析",
     "visitsTooltip": "搜索深度：{{count}} 次访问（点击切换，双击重置）",
     "bestMove": "最佳",
-    "metricTooltip": "切换热图指标（策略 → 胜率 → 目数）",
+    "metricTooltip": "切换热图指标（策略：落子概率，Δ胜%：相对当前局面的胜率变化，Δ目数：相对当前局面的目数变化）",
     "metric_policy": "策略",
-    "metric_winRate": "胜%",
-    "metric_scoreLead": "目数"
+    "metric_winRate": "Δ胜%",
+    "metric_scoreLead": "Δ目数"
   },
   "panels": {
     "library": "棋库",

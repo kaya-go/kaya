@@ -519,10 +519,10 @@
     "visitsStale": "Résultat en cache avec moins de visites — sera ré-analysé",
     "visitsTooltip": "Profondeur de recherche : {{count}} visites (cliquer pour changer, double-clic pour réinitialiser)",
     "bestMove": "Meilleur",
-    "metricTooltip": "Changer la métrique affichée (Politique → Taux victoire → Score)",
+    "metricTooltip": "Changer la métrique affichée (Politique : probabilité, ΔVict% : variation du taux de victoire vs position actuelle, ΔScore : variation du score vs position actuelle)",
     "metric_policy": "Politique",
-    "metric_winRate": "Vict%",
-    "metric_scoreLead": "Score"
+    "metric_winRate": "ΔVict%",
+    "metric_scoreLead": "ΔScore"
   },
   "panels": {
     "library": "Bibliothèque",

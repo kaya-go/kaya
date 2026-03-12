@@ -519,10 +519,10 @@
     "visitsStale": "Cache con meno visite — verrà ri-analizzato",
     "visitsTooltip": "Profondità di ricerca: {{count}} visite (clicca per cambiare, doppio clic per reimpostare)",
     "bestMove": "Migliore",
-    "metricTooltip": "Cambia metrica heatmap (clic: Policy → Tasso vittoria → Punteggio)",
+    "metricTooltip": "Cambia metrica heatmap (Policy: probabilità, ΔVitt%: variazione tasso vittoria vs posizione attuale, ΔPunt.: variazione punteggio vs posizione attuale)",
     "metric_policy": "Policy",
-    "metric_winRate": "Vitt%",
-    "metric_scoreLead": "Punt."
+    "metric_winRate": "ΔVitt%",
+    "metric_scoreLead": "ΔPunt."
   },
   "panels": {
     "library": "Libreria",

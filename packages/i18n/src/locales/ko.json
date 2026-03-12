@@ -522,10 +522,10 @@
     "visitsStale": "낮은 방문 횟수의 캐시 — 다시 분석 예정",
     "visitsTooltip": "탐색 깊이: {{count}}회 방문 (클릭하여 변경, 더블클릭으로 초기화)",
     "bestMove": "최선",
-    "metricTooltip": "히트맵 지표 전환 (클릭: 정책 → 승률 → 점수)",
+    "metricTooltip": "히트맵 지표 전환 (정책: 수 확률, Δ승%: 현재 대비 승률 변화, Δ점수: 현재 대비 점수 변화)",
     "metric_policy": "정책",
-    "metric_winRate": "승%",
-    "metric_scoreLead": "점수"
+    "metric_winRate": "Δ승%",
+    "metric_scoreLead": "Δ점수"
   },
   "panels": {
     "library": "라이브러리",

@@ -522,10 +522,10 @@
     "visitsStale": "少ない訪問回数のキャッシュ — 再分析されます",
     "visitsTooltip": "探索深度：{{count}}回訪問（クリックで変更、ダブルクリックでリセット）",
     "bestMove": "最善",
-    "metricTooltip": "ヒートマップ指標切替 (クリック: ポリシー → 勝率 → スコア)",
+    "metricTooltip": "ヒートマップ指標切替（ポリシー: 着手確率、Δ勝%: 現在局面との勝率差、Δスコア: 現在局面とのスコア差）",
     "metric_policy": "ポリシー",
-    "metric_winRate": "勝%",
-    "metric_scoreLead": "スコア"
+    "metric_winRate": "Δ勝%",
+    "metric_scoreLead": "Δスコア"
   },
   "panels": {
     "library": "ライブラリ",

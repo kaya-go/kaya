@@ -522,10 +522,10 @@
     "visitsStale": "Cached from a lower visit count — will re-analyze",
     "visitsTooltip": "Search depth: {{count}} visits (click to cycle, double-click to reset)",
     "bestMove": "Best",
-    "metricTooltip": "Toggle heatmap metric (click to cycle: Policy → Win Rate → Score)",
+    "metricTooltip": "Toggle heatmap metric (Policy: move probability, ΔWin%: win rate change vs current position, ΔScore: score lead change vs current position)",
     "metric_policy": "Policy",
-    "metric_winRate": "Win%",
-    "metric_scoreLead": "Score"
+    "metric_winRate": "ΔWin%",
+    "metric_scoreLead": "ΔScore"
   },
   "panels": {
     "library": "Library",
