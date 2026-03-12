@@ -509,6 +509,8 @@
     "initializing": "Initialisierung...",
     "loading": "Laden...",
     "analyzing": "Analysiere...",
+    "evaluating": "Auswertung...",
+    "searching": "Suche...",
     "winRate": "Gewinnrate",
     "blackWinRate": "Schwarz Gewinnrate",
     "whiteWinRate": "Weiß Gewinnrate",

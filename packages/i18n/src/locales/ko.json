@@ -512,6 +512,8 @@
     "initializing": "초기화 중...",
     "loading": "로딩 중...",
     "analyzing": "분석 중...",
+    "evaluating": "평가 중...",
+    "searching": "탐색 중...",
     "winRate": "승률",
     "blackWinRate": "흑 승률",
     "whiteWinRate": "백 승률",

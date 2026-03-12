@@ -325,7 +325,7 @@ impl OnnxEngine {
         let size = sign_map.len();
         self.board_size = size;
         let num_visits = options.num_visits;
-        let max_batch: usize = 8;
+        let max_batch: usize = 16;
 
         let next_pla = match &options.next_to_play {
             Some(s) if s == "W" => -1i8,
@@ -353,6 +353,17 @@ impl OnnxEngine {
         let board_area = size * size;
         let mut ownership_sum = vec![0.0f64; board_area];
         let mut ownership_count: usize = 0;
+
+        // Emit initial progress (0/N) so the UI updates immediately
+        progress_callback(MCTSProgress {
+            completed_visits: 0,
+            total_visits: num_visits,
+            best_move: String::new(),
+            best_move_visits: 0,
+            win_rate: 0.5,
+            score_lead: 0.0,
+            top_moves: vec![],
+        });
 
         let mut completed: usize = 0;
         while completed < num_visits {

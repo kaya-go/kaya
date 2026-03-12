@@ -512,6 +512,8 @@
     "initializing": "初始化中...",
     "loading": "加载中...",
     "analyzing": "分析中...",
+    "evaluating": "评估中...",
+    "searching": "搜索中...",
     "winRate": "胜率",
     "blackWinRate": "黑方胜率",
     "whiteWinRate": "白方胜率",

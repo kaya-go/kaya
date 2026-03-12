@@ -509,6 +509,8 @@
     "initializing": "Inizializzazione...",
     "loading": "Caricamento...",
     "analyzing": "Analisi in corso...",
+    "evaluating": "Valutazione...",
+    "searching": "Ricerca...",
     "winRate": "Tasso vittoria",
     "blackWinRate": "Vittoria Nero",
     "whiteWinRate": "Vittoria Bianco",

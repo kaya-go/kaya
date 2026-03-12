@@ -219,7 +219,7 @@ export class OnnxEngine extends Engine {
 
     // Cap MCTS batch size so that backends with unbounded inference batch
     // (e.g. WASM where maxInferenceBatch=Infinity) still emit incremental progress.
-    const maxMctsBatch = Math.min(this.maxInferenceBatch, 8);
+    const maxMctsBatch = Math.min(this.maxInferenceBatch, 16);
 
     return runMCTS(
       board,

@@ -114,6 +114,19 @@ export async function runMCTS(
 
   type Step = { node: MCTSNode; board: GoBoard; pla: Sign; hist: typeof history };
 
+  // Emit initial progress (0/N) so the UI updates immediately
+  if (onProgress) {
+    onProgress({
+      completedVisits: 0,
+      totalVisits: numVisits,
+      bestMove: '',
+      bestMoveVisits: 0,
+      winRate: 0.5,
+      scoreLead: 0,
+      topMoves: [],
+    });
+  }
+
   let completed = 0;
   while (completed < numVisits) {
     if (signal?.aborted) break;

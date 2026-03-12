@@ -109,7 +109,9 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                           ? t('analysisBar.checkingCache')
                           : t('analysisBar.initializing')
                       : t('analysisBar.loading')
-                    : t('analysisBar.analyzing')}
+                    : mctsProgress
+                      ? t('analysisBar.searching')
+                      : t('analysisBar.evaluating')}
                 </span>
               </div>
               <div
