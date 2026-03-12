@@ -53,6 +53,7 @@ export { OnnxEngine, type OnnxEngineConfig } from './onnx-engine';
 // Types
 export type { MoveSuggestion, AnalysisResult, AnalysisOptions, EngineConfig } from './types';
 export * from './types';
+export type { MCTSProgress } from './onnx-types';
 
 // Utilities
 export * from './analysis-utils';

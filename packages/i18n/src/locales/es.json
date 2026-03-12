@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "Incluir datos de análisis de IA (tasa de victoria, puntos, movimientos) al guardar como SGF. Aumenta el tamaño del archivo pero preserva el análisis.",
     "numVisits": "Visitas de búsqueda",
     "numVisitsDescription": "Simulaciones MCTS por jugada. 1 = solo política (más rápido). Valores más altos mejoran la calidad de las jugadas a costa de la velocidad. Use 50–200 para un juego más fuerte.",
-    "numVisitsNativeWarning": "MCTS no está disponible con motores nativos. Cambie a WebGPU o WASM para usar las visitas de búsqueda.",
     "modelUploadedSuccess": "Modelo subido correctamente",
     "modelUploadFailed": "Error al subir el modelo",
     "modelDownloadedSuccess": "Modelo descargado correctamente",
@@ -519,7 +518,11 @@
     "visitsFresh": "Análisis completo con las visitas configuradas",
     "visitsStale": "En caché con menos visitas — se volverá a analizar",
     "visitsTooltip": "Profundidad de búsqueda: {{count}} visitas (clic para cambiar, doble clic para restablecer)",
-    "visitsNativeDisabled": "MCTS no disponible con motor nativo. Cambie a WebGPU o WASM en la configuración."
+    "bestMove": "Mejor",
+    "metricTooltip": "Cambiar métrica del mapa (clic: Política → Tasa victoria → Puntuación)",
+    "metric_policy": "Política",
+    "metric_winRate": "Vic%",
+    "metric_scoreLead": "Punt."
   },
   "panels": {
     "library": "Biblioteca",

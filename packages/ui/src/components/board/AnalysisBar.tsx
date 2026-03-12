@@ -7,7 +7,16 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuMap, LuLayers, LuZap, LuSquare, LuTrash2, LuInfo, LuSearch } from 'react-icons/lu';
+import {
+  LuMap,
+  LuLayers,
+  LuZap,
+  LuSquare,
+  LuTrash2,
+  LuInfo,
+  LuSearch,
+  LuChartBar,
+} from 'react-icons/lu';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useGameTreeAI } from '../../contexts/selectors';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
@@ -22,7 +31,6 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
   const { t } = useTranslation();
   const { bindingToDisplayString, getBinding } = useKeyboardShortcuts();
   const { showAnalysisBar, setAISettings, aiSettings } = useGameTreeAI();
-  const isNativeBackend = ['native', 'native-cpu', 'pytorch'].includes(aiSettings.backend);
 
   const {
     showOwnership,
@@ -47,6 +55,8 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
     pendingFullGameAnalysis,
     nativeUploadProgress,
     configuredNumVisits,
+    mctsProgress,
+    nextMoveInfo,
   } = useAIAnalysis();
 
   const formatWinRate = (value?: number | null) => {
@@ -60,6 +70,12 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
   };
 
   if (!showAnalysisBar && !isFullGameAnalyzing) return null;
+
+  // During multi-visit MCTS, show live-updating metrics from progress
+  const showLiveProgress = mctsProgress !== null;
+  const displayWinRate = showLiveProgress ? mctsProgress.winRate : analysisResult?.winRate;
+  const displayScoreLead = showLiveProgress ? mctsProgress.scoreLead : analysisResult?.scoreLead;
+  const hasMetrics = showLiveProgress || analysisResult != null;
 
   return (
     <div className="ai-analysis-summary">
@@ -96,9 +112,12 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                     : t('analysisBar.analyzing')}
                 </span>
               </div>
-              <div className="ai-analysis-summary__metric" style={{ minWidth: '90px' }}>
+              <div
+                className={`ai-analysis-summary__metric${showLiveProgress ? ' ai-analysis-summary__metric--in-progress' : ''}`}
+                style={{ minWidth: '90px' }}
+              >
                 <span className="ai-analysis-summary__metric-value">
-                  {formatWinRate(analysisResult?.winRate)}
+                  {formatWinRate(displayWinRate)}
                 </span>
                 <span className="ai-analysis-summary__metric-label">
                   {t('analysisBar.blackWinRate')}
@@ -107,12 +126,15 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
 
               <div className="ai-analysis-summary__separator" />
 
-              <div className="ai-analysis-summary__metric" style={{ minWidth: '70px' }}>
+              <div
+                className={`ai-analysis-summary__metric${showLiveProgress ? ' ai-analysis-summary__metric--in-progress' : ''}`}
+                style={{ minWidth: '70px' }}
+              >
                 <span className="ai-analysis-summary__metric-value">
-                  {analysisResult ? (
+                  {hasMetrics ? (
                     <>
-                      {analysisResult.scoreLead >= 0 ? 'B+' : 'W+'}
-                      {formatScoreLead(Math.abs(analysisResult.scoreLead))}
+                      {(displayScoreLead ?? 0) >= 0 ? 'B+' : 'W+'}
+                      {formatScoreLead(Math.abs(displayScoreLead ?? 0))}
                     </>
                   ) : (
                     '—'
@@ -122,31 +144,75 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                   {t('analysisBar.scoreLead')}
                 </span>
               </div>
+
+              {nextMoveInfo && nextMoveInfo.deltaScoreLead != null && (
+                <>
+                  <div className="ai-analysis-summary__separator" />
+                  <div className="ai-analysis-summary__metric" style={{ minWidth: '80px' }}>
+                    <span
+                      className="ai-analysis-summary__metric-value"
+                      style={{
+                        color:
+                          nextMoveInfo.rank === 0
+                            ? 'var(--analysis-best-color, #4caf50)'
+                            : Math.abs(nextMoveInfo.deltaScoreLead) < 0.5
+                              ? 'var(--analysis-good-color, #8bc34a)'
+                              : Math.abs(nextMoveInfo.deltaScoreLead) < 2
+                                ? 'var(--analysis-ok-color, #ff9800)'
+                                : 'var(--analysis-bad-color, #f44336)',
+                      }}
+                    >
+                      {nextMoveInfo.rank === 0
+                        ? t('analysisBar.bestMove')
+                        : `${nextMoveInfo.deltaScoreLead >= 0 ? '+' : ''}${nextMoveInfo.deltaScoreLead.toFixed(1)}`}
+                    </span>
+                    <span className="ai-analysis-summary__metric-label">
+                      {nextMoveInfo.gtp} {nextMoveInfo.rank >= 0 ? `#${nextMoveInfo.rank + 1}` : ''}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="ai-analysis-summary__actions">
               <button
-                className={`gameboard-action-button gameboard-visits-button ${configuredNumVisits > 1 && !isNativeBackend ? 'active' : ''}`}
-                title={
-                  isNativeBackend
-                    ? t('analysisBar.visitsNativeDisabled')
-                    : t('analysisBar.visitsTooltip', { count: configuredNumVisits })
-                }
+                className={`gameboard-action-button gameboard-metric-button ${aiSettings.heatMapMetric !== 'policy' ? 'active' : ''}`}
+                title={t('analysisBar.metricTooltip')}
                 onClick={() => {
-                  if (isNativeBackend) return;
+                  const modes: Array<'policy' | 'winRate' | 'scoreLead'> = [
+                    'policy',
+                    'winRate',
+                    'scoreLead',
+                  ];
+                  const idx = modes.indexOf(aiSettings.heatMapMetric ?? 'policy');
+                  const next = modes[(idx + 1) % modes.length];
+                  setAISettings({ heatMapMetric: next });
+                }}
+                disabled={isInitializing}
+              >
+                <LuChartBar />
+                <span className="gameboard-metric-button__label">
+                  {t(`analysisBar.metric_${aiSettings.heatMapMetric ?? 'policy'}`)}
+                </span>
+              </button>
+              <button
+                className={`gameboard-action-button gameboard-visits-button ${configuredNumVisits > 1 ? 'active' : ''}`}
+                title={t('analysisBar.visitsTooltip', { count: configuredNumVisits })}
+                onClick={() => {
                   const idx = VISITS_PRESETS.indexOf(configuredNumVisits);
                   const next = VISITS_PRESETS[(idx + 1) % VISITS_PRESETS.length];
                   setAISettings({ numVisits: next });
                 }}
                 onDoubleClick={() => {
-                  if (isNativeBackend) return;
                   setAISettings({ numVisits: 1 });
                 }}
-                disabled={isInitializing || isNativeBackend}
+                disabled={isInitializing}
               >
                 <LuSearch />
                 <span className="gameboard-visits-button__label">
-                  {isNativeBackend ? '—' : configuredNumVisits}
+                  {mctsProgress
+                    ? `${mctsProgress.completedVisits}/${mctsProgress.totalVisits}`
+                    : configuredNumVisits}
                 </span>
               </button>
               <button

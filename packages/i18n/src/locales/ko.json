@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "SGF 저장 시 AI 분석 데이터(승률, 목차, 착수 후보)를 포함합니다. 파일 크기는 증가하지만 분석 결과가 보존됩니다.",
     "numVisits": "탐색 횟수",
     "numVisitsDescription": "수당 MCTS 시뮬레이션 횟수. 1 = 정책만 사용(가장 빠름). 값이 높을수록 수 품질이 향상되지만 속도가 느려집니다. 강한 대국에는 50–200을 사용하세요.",
-    "numVisitsNativeWarning": "네이티브 백엔드에서는 MCTS를 사용할 수 없습니다. 검색 방문을 사용하려면 WebGPU 또는 WASM으로 전환하세요.",
     "modelUploadedSuccess": "모델 업로드 성공",
     "modelUploadFailed": "모델 업로드 실패",
     "modelDownloadedSuccess": "모델 다운로드 성공",
@@ -522,7 +521,11 @@
     "visitsFresh": "설정된 방문 횟수로 분석 완료",
     "visitsStale": "낮은 방문 횟수의 캐시 — 다시 분석 예정",
     "visitsTooltip": "탐색 깊이: {{count}}회 방문 (클릭하여 변경, 더블클릭으로 초기화)",
-    "visitsNativeDisabled": "네이티브 백엔드에서는 MCTS를 사용할 수 없습니다. 설정에서 WebGPU 또는 WASM으로 전환하세요."
+    "bestMove": "최선",
+    "metricTooltip": "히트맵 지표 전환 (클릭: 정책 → 승률 → 점수)",
+    "metric_policy": "정책",
+    "metric_winRate": "승%",
+    "metric_scoreLead": "점수"
   },
   "panels": {
     "library": "라이브러리",

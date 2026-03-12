@@ -42,6 +42,8 @@ export interface AISettings {
    * Lower values use less GPU memory at the cost of analysis throughput.
    */
   webgpuBatchSize: number;
+  /** Metric shown on heatmap circles: policy probability, win rate, or score lead */
+  heatMapMetric: 'policy' | 'winRate' | 'scoreLead';
 }
 
 /**

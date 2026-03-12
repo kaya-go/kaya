@@ -9,6 +9,7 @@
  */
 
 import type { SignMap } from '@kaya/goboard';
+import { GoBoard, type Sign } from '@kaya/goboard';
 import {
   Engine,
   type EngineAnalysisOptions,
@@ -16,6 +17,8 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import type { AnalysisResult } from './types';
+import type { MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
+import { runMCTS } from './onnx-mcts';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -229,38 +232,66 @@ export class TauriEngine extends Engine {
       throw new Error('TauriEngine can only be used in a Tauri environment');
     }
 
-    const analysisStart = performance.now();
+    const numVisits: number = (options as any).numVisits ?? 1;
 
-    // Convert SignMap to number[][] for Rust
-    const signMapArray = signMap.map(row => row.map(s => s as number));
+    const board = new GoBoard(signMap);
+    const size = board.width;
 
-    // Prepare options for Rust
-    const tauriOptions: TauriAnalysisOptions = {
-      komi: options.komi ?? 7.5,
-      nextToPlay: options.nextToPlay,
-      history: this.convertHistory(options.history),
+    let nextPla: Sign = 1;
+    if (options.nextToPlay) {
+      nextPla = options.nextToPlay === 'W' ? -1 : 1;
+    } else {
+      let blackStones = 0,
+        whiteStones = 0;
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const s = board.get([x, y]);
+          if (s === 1) blackStones++;
+          else if (s === -1) whiteStones++;
+        }
+      }
+      nextPla = blackStones === whiteStones ? 1 : -1;
+    }
+
+    const komi = options.komi ?? 7.5;
+    const history = options.history || [];
+    const maxBatch = 8;
+
+    const koInfo = (options as any).koInfo as { sign: Sign; vertex: [number, number] } | undefined;
+    if (koInfo && (koInfo.sign as number) !== 0) {
+      board._koInfo = { sign: koInfo.sign, vertex: koInfo.vertex };
+    }
+
+    // Build batch evaluator that uses Tauri IPC
+    const evaluator: MCTSBatchEvaluator = async leaves => {
+      const batchInputs: TauriBatchInput[] = leaves.map(leaf => ({
+        signMap: leaf.board.signMap.map(row => row.map(s => s as number)),
+        options: {
+          komi: leaf.komi,
+          nextToPlay: leaf.pla === 1 ? 'B' : 'W',
+          history: this.convertHistory(leaf.history),
+        },
+      }));
+
+      return this.invoke!<AnalysisResult[]>('onnx_analyze_batch', { inputs: batchInputs });
     };
 
-    this.debugLog('Analyzing position', {
-      boardSize: signMap.length,
-      nextToPlay: tauriOptions.nextToPlay,
-      historyLength: tauriOptions.history.length,
-    });
+    const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
+    const signal = (options as any).signal as AbortSignal | undefined;
 
-    const inferenceStart = performance.now();
-    const result = await this.invoke<AnalysisResult>('onnx_analyze', {
-      signMap: signMapArray,
-      options: tauriOptions,
-    });
-    const inferenceTime = performance.now() - inferenceStart;
-
-    const totalTime = performance.now() - analysisStart;
-    this.debugLog('Analysis complete', {
-      totalTimeMs: totalTime,
-      inferenceTimeMs: inferenceTime,
-    });
-
-    return result;
+    return runMCTS(
+      board,
+      nextPla,
+      komi,
+      history,
+      numVisits,
+      size,
+      maxBatch,
+      evaluator,
+      this.debugLog.bind(this),
+      onProgress,
+      signal
+    );
   }
 
   async analyzeBatch(

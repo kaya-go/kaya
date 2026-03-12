@@ -1,5 +1,5 @@
 import { GoBoard, type Sign } from '@kaya/goboard';
-import type { MCTSNode } from './onnx-types';
+import type { MCTSNode, MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
 import type { AnalysisResult, MoveSuggestion } from './types';
 
 /** Parse a GTP move string (e.g. "D4", "Q16", "PASS") to board [x, y] or null for pass. */
@@ -60,6 +60,7 @@ export function expandNode(
     node.children.set(move, {
       N: 0,
       W: 0,
+      S: 0,
       P: suggestion.probability,
       children: null,
       expanded: false,
@@ -81,49 +82,34 @@ export async function runMCTS(
   numVisits: number,
   size: number,
   maxInferenceBatch: number,
-  featurizeToBuffer: (
-    board: GoBoard,
-    pla: Sign,
-    komi: number,
-    history: { color: Sign; x: number; y: number }[],
-    bin_input: Float32Array,
-    global_input: Float32Array,
-    batchIndex: number,
-    size: number
-  ) => void,
-  runBatchInference: (
-    bin_input: Float32Array,
-    global_input: Float32Array,
-    plas: Sign[],
-    size: number
-  ) => Promise<AnalysisResult[]>,
-  evaluateSingle: (
-    board: GoBoard,
-    nextPla: Sign,
-    komi: number,
-    history: { color: Sign; x: number; y: number }[],
-    size: number
-  ) => Promise<AnalysisResult>,
-  debugLogFn: (message: string, payload?: Record<string, unknown>) => void
+  batchEvaluator: MCTSBatchEvaluator,
+  debugLogFn: (message: string, payload?: Record<string, unknown>) => void,
+  onProgress?: (progress: MCTSProgress) => void,
+  signal?: AbortSignal
 ): Promise<AnalysisResult> {
   const CPUCT = 1.5;
-  const numPlanes = 22;
-  const perPosBinSize = numPlanes * size * size;
 
   const root: MCTSNode = {
     N: 0,
     W: 0,
+    S: 0,
     P: 1,
     children: null,
     expanded: false,
     virtualLoss: 0,
   };
-  let rootEval: AnalysisResult | null = null;
+
+  // Ownership accumulator: sum of ownership maps across all root evaluations
+  const boardArea = size * size;
+  const ownershipSum = new Float64Array(boardArea);
+  let ownershipCount = 0;
 
   type Step = { node: MCTSNode; board: GoBoard; pla: Sign; hist: typeof history };
 
   let completed = 0;
   while (completed < numVisits) {
+    if (signal?.aborted) break;
+
     const batchSize = Math.min(maxInferenceBatch, numVisits - completed);
 
     // Phase 1: Select up to batchSize leaves using PUCT with virtual loss
@@ -196,22 +182,17 @@ export async function runMCTS(
       pending.push({ path, needsEval: !leaf.node.expanded });
     }
 
-    // Phase 2: Batch evaluate unexpanded leaves in a single GPU call
+    // Phase 2: Batch evaluate unexpanded leaves in a single call
     const toEvaluate = pending.filter(p => p.needsEval);
     const evalResults: AnalysisResult[] = [];
 
     if (toEvaluate.length > 0) {
-      const batchBin = new Float32Array(toEvaluate.length * perPosBinSize);
-      const batchGlobal = new Float32Array(toEvaluate.length * 19);
-      const batchPlas: Sign[] = [];
+      const leaves = toEvaluate.map(p => {
+        const leaf = p.path[p.path.length - 1];
+        return { board: leaf.board, pla: leaf.pla, komi, history: leaf.hist };
+      });
 
-      for (let i = 0; i < toEvaluate.length; i++) {
-        const leaf = toEvaluate[i].path[toEvaluate[i].path.length - 1];
-        batchPlas.push(leaf.pla);
-        featurizeToBuffer(leaf.board, leaf.pla, komi, leaf.hist, batchBin, batchGlobal, i, size);
-      }
-
-      evalResults.push(...(await runBatchInference(batchBin, batchGlobal, batchPlas, size)));
+      evalResults.push(...(await batchEvaluator(leaves)));
     }
 
     // Phase 3: Remove virtual loss, expand leaves, backup values
@@ -221,52 +202,97 @@ export async function runMCTS(
 
       const leaf = item.path[item.path.length - 1];
       let value: number;
+      let scoreLead: number;
 
       if (item.needsEval && evalIdx < evalResults.length) {
         const result = evalResults[evalIdx++];
         const filtered = filterKoMoves(result, leaf.board, leaf.pla, size);
         expandNode(leaf.node, filtered, leaf.board, leaf.pla, size);
         value = filtered.winRate;
-        if (leaf.node === root) rootEval = filtered;
+        scoreLead = filtered.scoreLead;
+
+        // Accumulate ownership at the root level
+        if (filtered.ownership) {
+          for (let i = 0; i < boardArea; i++) {
+            ownershipSum[i] += filtered.ownership[i];
+          }
+          ownershipCount++;
+        }
       } else {
         value = leaf.node.N > 0 ? leaf.node.W / leaf.node.N : 0.5;
+        scoreLead = leaf.node.N > 0 ? leaf.node.S / leaf.node.N : 0;
       }
 
       for (const step of item.path) {
         step.node.N++;
         step.node.W += value;
+        step.node.S += scoreLead;
       }
     }
 
     completed += pending.length;
-  }
 
-  if (!rootEval) {
-    rootEval = await evaluateSingle(rootBoard, nextPla, komi, history, size);
+    // Emit progress after each batch
+    if (onProgress && root.children && root.children.size > 0) {
+      const sorted = [...root.children.entries()].sort(([, a], [, b]) => b.N - a.N);
+      const [bestMove, bestChild] = sorted[0];
+      onProgress({
+        completedVisits: completed,
+        totalVisits: numVisits,
+        bestMove,
+        bestMoveVisits: bestChild.N,
+        winRate: root.N > 0 ? root.W / root.N : 0.5,
+        scoreLead: root.N > 0 ? root.S / root.N : 0,
+        topMoves: sorted.slice(0, 5).map(([move, child]) => ({
+          move,
+          visits: child.N,
+          winRate: child.N > 0 ? child.W / child.N : 0.5,
+          scoreLead: child.N > 0 ? child.S / child.N : 0,
+        })),
+      });
+
+      // Yield to the event loop so progress messages can be delivered to the
+      // main thread. Without this, synchronous backends (WASM) run the entire
+      // loop in a tight microtask chain and all postMessage calls arrive at
+      // once, preventing the UI from showing intermediate progress.
+      if (completed < numVisits) {
+        await new Promise<void>(resolve => setTimeout(resolve, 0));
+      }
+    }
   }
 
   // Build AnalysisResult from MCTS visit counts
   const moveSuggestions: MoveSuggestion[] = [];
   if (root.children && root.children.size > 0) {
     const totalChildVisits = [...root.children.values()].reduce((s, c) => s + c.N, 0);
-    const sorted = [...root.children.entries()].sort(([, a], [, b]) => b.N - a.N);
-    for (const [move, child] of sorted.slice(0, 10)) {
+    const sorted = [...root.children.entries()].sort(([, a], [, b]) => {
+      // Visited children first (by visit count), then unvisited (by policy prior)
+      if (a.N !== b.N) return b.N - a.N;
+      return b.P - a.P;
+    });
+    for (const [move, child] of sorted) {
       moveSuggestions.push({
         move,
-        probability: totalChildVisits > 0 ? child.N / totalChildVisits : child.P,
+        probability: child.N > 0 && totalChildVisits > 0 ? child.N / totalChildVisits : child.P,
+        winRate: child.N > 0 ? child.W / child.N : undefined,
+        scoreLead: child.N > 0 ? child.S / child.N : undefined,
       });
     }
   }
 
-  const winRate = root.N > 0 ? root.W / root.N : rootEval.winRate;
-  debugLogFn('MCTS complete', { visits: root.N, winRate });
+  const winRate = root.N > 0 ? root.W / root.N : 0.5;
+  const mctsScoreLead = root.N > 0 ? root.S / root.N : 0;
+  const ownership =
+    ownershipCount > 0 ? Array.from(ownershipSum, v => v / ownershipCount) : undefined;
+
+  debugLogFn('MCTS complete', { visits: root.N, winRate, scoreLead: mctsScoreLead });
 
   return {
     moveSuggestions,
     winRate,
-    scoreLead: rootEval.scoreLead,
+    scoreLead: mctsScoreLead,
     currentTurn: nextPla === 1 ? 'B' : 'W',
     visits: root.N,
-    ownership: rootEval.ownership,
+    ownership,
   };
 }

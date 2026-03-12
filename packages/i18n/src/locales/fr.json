@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "Intégrer les données d'analyse IA lors de la sauvegarde. Augmente la taille du fichier.",
     "numVisits": "Visites de recherche",
     "numVisitsDescription": "Simulations MCTS par coup. 1 = politique seule (le plus rapide). Des valeurs plus élevées améliorent la qualité des coups au détriment de la vitesse. Utilisez 50–200 pour un jeu plus fort.",
-    "numVisitsNativeWarning": "MCTS n'est pas disponible avec les moteurs natifs. Passez à WebGPU ou WASM pour utiliser les visites de recherche.",
     "modelUploadedSuccess": "Modèle importé avec succès",
     "modelUploadFailed": "Échec de l'import du modèle",
     "modelDownloadedSuccess": "Modèle téléchargé avec succès",
@@ -519,7 +518,11 @@
     "visitsFresh": "Analyse complète avec le nombre de visites configuré",
     "visitsStale": "Résultat en cache avec moins de visites — sera ré-analysé",
     "visitsTooltip": "Profondeur de recherche : {{count}} visites (cliquer pour changer, double-clic pour réinitialiser)",
-    "visitsNativeDisabled": "MCTS non disponible avec le moteur natif. Passez à WebGPU ou WASM dans les paramètres."
+    "bestMove": "Meilleur",
+    "metricTooltip": "Changer la métrique affichée (Politique → Taux victoire → Score)",
+    "metric_policy": "Politique",
+    "metric_winRate": "Vict%",
+    "metric_scoreLead": "Score"
   },
   "panels": {
     "library": "Bibliothèque",

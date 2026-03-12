@@ -162,6 +162,7 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   saveAnalysisToSgf: true,
   numVisits: 1,
   webgpuBatchSize: 4,
+  heatMapMetric: 'policy',
 };
 
 // Load AI settings from localStorage
@@ -216,6 +217,9 @@ export function loadAISettings(): AISettings {
           parsed.webgpuBatchSize <= 16
             ? Math.round(parsed.webgpuBatchSize)
             : DEFAULT_AI_SETTINGS.webgpuBatchSize,
+        heatMapMetric: ['policy', 'winRate', 'scoreLead'].includes(parsed.heatMapMetric)
+          ? parsed.heatMapMetric
+          : DEFAULT_AI_SETTINGS.heatMapMetric,
       };
     }
   } catch (e) {

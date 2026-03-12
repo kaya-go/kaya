@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "Embed AI analysis data (win rate, score, move suggestions) when saving SGF files. Increases file size but preserves your analysis.",
     "numVisits": "Search Visits",
     "numVisitsDescription": "MCTS simulations per move. 1 = policy-only (fastest). Higher values improve move quality at the cost of speed. Use 50–200 for stronger play.",
-    "numVisitsNativeWarning": "MCTS is not available with native backends. Switch to WebGPU or WASM to use search visits.",
     "modelUploadedSuccess": "Model uploaded successfully",
     "modelUploadFailed": "Failed to upload model",
     "modelDownloadedSuccess": "Model downloaded successfully",
@@ -522,7 +521,11 @@
     "visitsFresh": "Analysis complete with configured visit count",
     "visitsStale": "Cached from a lower visit count — will re-analyze",
     "visitsTooltip": "Search depth: {{count}} visits (click to cycle, double-click to reset)",
-    "visitsNativeDisabled": "MCTS not available with native backend. Switch to WebGPU or WASM in settings."
+    "bestMove": "Best",
+    "metricTooltip": "Toggle heatmap metric (click to cycle: Policy → Win Rate → Score)",
+    "metric_policy": "Policy",
+    "metric_winRate": "Win%",
+    "metric_scoreLead": "Score"
   },
   "panels": {
     "library": "Library",

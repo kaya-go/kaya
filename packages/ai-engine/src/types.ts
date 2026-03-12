@@ -10,6 +10,10 @@ export interface MoveSuggestion {
   move: string;
   /** Policy network probability (0.0 to 1.0) */
   probability: number;
+  /** Win rate for this move (0.0 to 1.0, from Black's perspective) — available after MCTS */
+  winRate?: number;
+  /** Score lead for this move (positive = Black leads) — available after MCTS */
+  scoreLead?: number;
 }
 
 /**

@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "保存 SGF 文件时嵌入 AI 分析数据（胜率、目差、着法建议）。会增加文件大小但保留分析结果。",
     "numVisits": "搜索次数",
     "numVisitsDescription": "每手棋的 MCTS 模拟次数。1 = 仅策略网络（最快）。数值越高棋力越强，但速度越慢。建议 50–200 以获得更强的对弈。",
-    "numVisitsNativeWarning": "MCTS 不支持原生后端。请切换到 WebGPU 或 WASM 以使用搜索访问次数。",
     "modelUploadedSuccess": "模型上传成功",
     "modelUploadFailed": "模型上传失败",
     "modelDownloadedSuccess": "模型下载成功",
@@ -522,7 +521,11 @@
     "visitsFresh": "使用配置的访问次数完成分析",
     "visitsStale": "缓存自较低访问次数 — 将重新分析",
     "visitsTooltip": "搜索深度：{{count}} 次访问（点击切换，双击重置）",
-    "visitsNativeDisabled": "MCTS 不支持原生后端。请在设置中切换到 WebGPU 或 WASM。"
+    "bestMove": "最佳",
+    "metricTooltip": "切换热图指标（策略 → 胜率 → 目数）",
+    "metric_policy": "策略",
+    "metric_winRate": "胜%",
+    "metric_scoreLead": "目数"
   },
   "panels": {
     "library": "棋库",
