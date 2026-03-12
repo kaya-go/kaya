@@ -158,9 +158,9 @@ function getDefaultBackend(): 'native' | 'webgpu' | 'wasm' {
 const DEFAULT_AI_SETTINGS: AISettings = {
   minProb: 0.01,
   maxTopMoves: 5,
-  backend: 'wasm', // This will be overridden by loadAISettings
+  backend: 'webgpu', // This will be overridden by loadAISettings
   saveAnalysisToSgf: true,
-  numVisits: 1,
+  numVisits: 32,
   webgpuBatchSize: 4,
   heatMapMetric: 'policy',
 };
