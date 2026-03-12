@@ -6,6 +6,7 @@
 mod execution_providers;
 mod featurization;
 mod inference;
+pub mod mcts;
 mod result_processing;
 mod types;
 
@@ -28,6 +29,7 @@ use execution_providers::{
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
 /// Native ONNX engine state
@@ -42,6 +44,9 @@ pub struct OnnxEngine {
 
 /// Global engine instance (lazy loaded)
 static ENGINE: Mutex<Option<OnnxEngine>> = Mutex::new(None);
+
+/// Global abort flag for MCTS — checked each iteration of the search loop.
+static MCTS_ABORT: AtomicBool = AtomicBool::new(false);
 
 impl OnnxEngine {
     /// Get the MIGraphX model cache directory
@@ -327,4 +332,23 @@ pub fn get_provider_info() -> Option<ExecutionProviderInfo> {
         is_fp16: engine.is_fp16,
         description: description.to_string(),
     })
+}
+
+/// Run MCTS analysis entirely in Rust (no per-batch IPC overhead).
+pub fn run_mcts_analysis(
+    sign_map: Vec<Vec<i8>>,
+    options: mcts::MCTSAnalysisOptions,
+    progress_callback: &mut dyn FnMut(mcts::MCTSProgress),
+) -> Result<mcts::MCTSAnalysisResult, String> {
+    // Reset abort flag before starting
+    MCTS_ABORT.store(false, Ordering::Relaxed);
+
+    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
+    let engine = global.as_mut().ok_or("Engine not initialized")?;
+    engine.run_mcts(&sign_map, &options, &MCTS_ABORT, progress_callback)
+}
+
+/// Signal the MCTS search to abort.
+pub fn abort_mcts() {
+    MCTS_ABORT.store(true, Ordering::Relaxed);
 }

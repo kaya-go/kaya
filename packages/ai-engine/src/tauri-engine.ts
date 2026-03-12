@@ -9,7 +9,7 @@
  */
 
 import type { SignMap } from '@kaya/goboard';
-import { GoBoard, type Sign } from '@kaya/goboard';
+import type { Sign } from '@kaya/goboard';
 import {
   Engine,
   type EngineAnalysisOptions,
@@ -17,8 +17,7 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import type { AnalysisResult } from './types';
-import type { MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
-import { runMCTS } from './onnx-mcts';
+import type { MCTSProgress } from './onnx-types';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -28,7 +27,9 @@ import {
   type TauriAnalysisOptions,
   type TauriBatchInput,
   type TauriInvokeFn,
+  type TauriListenFn,
   getTauriInvoke,
+  getTauriListen,
   CHUNK_SIZE,
   chunkToBase64,
   yieldToUI,
@@ -49,6 +50,7 @@ export class TauriEngine extends Engine {
   private modelPath?: string;
   private modelId?: string;
   private invoke: TauriInvokeFn | null = null;
+  private listen: TauriListenFn | null = null;
   private onProgress?: (progress: UploadProgress) => void;
   private executionProvider: ExecutionProviderPreference;
   private providerIsGpu = false;
@@ -66,8 +68,9 @@ export class TauriEngine extends Engine {
     const modelName = (config.modelId ?? config.modelPath ?? '').toLowerCase();
     this.modelIsFp16 = modelName.includes('fp16') || modelName.includes('float16');
 
-    // Get invoke function immediately in constructor
+    // Get invoke and listen functions immediately in constructor
     this.invoke = getTauriInvoke();
+    this.listen = getTauriListen();
   }
 
   private reportProgress(stage: UploadProgress['stage'], progress: number, message: string): void {
@@ -233,68 +236,83 @@ export class TauriEngine extends Engine {
     }
 
     const numVisits: number = (options as any).numVisits ?? 1;
-
-    const board = new GoBoard(signMap);
-    const size = board.width;
-
-    let nextPla: Sign = 1;
-    if (options.nextToPlay) {
-      nextPla = options.nextToPlay === 'W' ? -1 : 1;
-    } else {
-      let blackStones = 0,
-        whiteStones = 0;
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const s = board.get([x, y]);
-          if (s === 1) blackStones++;
-          else if (s === -1) whiteStones++;
-        }
-      }
-      nextPla = blackStones === whiteStones ? 1 : -1;
-    }
-
     const komi = options.komi ?? 7.5;
-    const history = options.history || [];
-    const maxBatch = 8;
-
-    const koInfo = (options as any).koInfo as { sign: Sign; vertex: [number, number] } | undefined;
-    if (koInfo && (koInfo.sign as number) !== 0) {
-      board._koInfo = { sign: koInfo.sign, vertex: koInfo.vertex };
-    }
-
-    // Build batch evaluator that uses Tauri IPC
-    const evaluator: MCTSBatchEvaluator = async leaves => {
-      const batchInputs: TauriBatchInput[] = leaves.map(leaf => ({
-        signMap: leaf.board.signMap.map(row => row.map(s => s as number)),
-        options: {
-          komi: leaf.komi,
-          nextToPlay: leaf.pla === 1 ? 'B' : 'W',
-          history: this.convertHistory(leaf.history),
-        },
-      }));
-
-      return this.invoke!<AnalysisResult[]>('onnx_analyze_batch', { inputs: batchInputs });
-    };
-
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
     const signal = (options as any).signal as AbortSignal | undefined;
+
+    // Build ko info
+    const koInfo = (options as any).koInfo as { sign: Sign; vertex: [number, number] } | undefined;
+    let koOption: { sign: number; vertex: [number, number] } | undefined;
+    if (koInfo && (koInfo.sign as number) !== 0) {
+      koOption = { sign: koInfo.sign as number, vertex: koInfo.vertex };
+    }
+
     const includeMove = options.includeMove;
 
-    return runMCTS(
-      board,
-      nextPla,
-      komi,
-      history,
-      numVisits,
-      size,
-      maxBatch,
-      maxBatch, // maxMctsBatch = same as maxInferenceBatch (already 8)
-      evaluator,
-      this.debugLog.bind(this),
-      onProgress,
-      signal,
-      includeMove
-    );
+    // Listen for progress events from Rust
+    let unlisten: (() => void) | undefined;
+    if (onProgress && this.listen) {
+      unlisten = await this.listen<MCTSProgress>(
+        'mcts-progress',
+        (event: { payload: MCTSProgress }) => {
+          onProgress(event.payload);
+        }
+      );
+    }
+
+    // Wire abort signal to Rust abort command
+    let abortHandler: (() => void) | undefined;
+    if (signal) {
+      abortHandler = () => {
+        this.invoke!('onnx_abort_mcts');
+      };
+      if (signal.aborted) {
+        abortHandler();
+      } else {
+        signal.addEventListener('abort', abortHandler, { once: true });
+      }
+    }
+
+    try {
+      // Single IPC call — entire MCTS runs in Rust
+      const result = await this.invoke<{
+        moveSuggestions: {
+          move: string;
+          probability: number;
+          winRate?: number;
+          scoreLead?: number;
+        }[];
+        winRate: number;
+        scoreLead: number;
+        currentTurn: string;
+        ownership?: number[];
+        visits?: number;
+      }>('onnx_analyze_mcts', {
+        signMap: signMap.map(row => row.map(s => s as number)),
+        options: {
+          komi,
+          nextToPlay: options.nextToPlay ?? null,
+          history: this.convertHistory(options.history),
+          numVisits,
+          includeMove: includeMove ?? null,
+          koInfo: koOption ?? null,
+        },
+      });
+
+      return {
+        moveSuggestions: result.moveSuggestions,
+        winRate: result.winRate,
+        scoreLead: result.scoreLead,
+        currentTurn: result.currentTurn as 'B' | 'W',
+        ownership: result.ownership,
+        visits: result.visits,
+      };
+    } finally {
+      if (unlisten) unlisten();
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+    }
   }
 
   async analyzeBatch(
