@@ -252,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Poor",
     "poorProb": "<10%",
-    "note": "The current ONNX KataGo implementation provides policy probabilities but does not include win rate or score lead for individual move suggestions. These metrics are only available for the current board position.",
+    "note": "Colors always represent the AI's policy probability (visit share), regardless of the selected metric. Use the metric toggle to change the text on stones: Policy shows move probabilities, ΔWin% and ΔScore show changes versus the current position.",
     "heatmapOwnership": "Heatmap Ownership",
     "heatmapDescription": "The ownership heatmap shows the predicted territory control at the end of the game. Brighter colors indicate higher confidence that the area will belong to that player.",
     "blackArea": "Black Area",
@@ -522,7 +522,7 @@
     "visitsStale": "Cached from a lower visit count — will re-analyze",
     "visitsTooltip": "Search depth: {{count}} visits (click to cycle, double-click to reset)",
     "bestMove": "Best",
-    "metricTooltip": "Toggle heatmap metric (Policy: move probability, ΔWin%: win rate change vs current position, ΔScore: score lead change vs current position)",
+    "metricTooltip": "Toggle stone text metric — colors always show policy probability. Policy: move probability, ΔWin%: win rate change vs current, ΔScore: score lead change vs current",
     "metric_policy": "Policy",
     "metric_winRate": "ΔWin%",
     "metric_scoreLead": "ΔScore"

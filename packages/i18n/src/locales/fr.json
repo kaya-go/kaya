@@ -252,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Faible",
     "poorProb": "<10%",
-    "note": "L'implémentation ONNX fournit les probabilités mais pas le taux de victoire ni l'avantage au score pour chaque coup.",
+    "note": "Les couleurs représentent toujours la probabilité de politique (part de visites), quel que soit le mode sélectionné. Utilisez le sélecteur de métrique pour changer le texte sur les pierres : Politique affiche les probabilités, ΔVict% et ΔScore affichent les variations par rapport à la position actuelle.",
     "heatmapOwnership": "Carte de territoire",
     "heatmapDescription": "La carte montre le territoire prédit en fin de partie. Les couleurs vives indiquent une plus grande certitude.",
     "blackArea": "Zone noire",
@@ -519,7 +519,7 @@
     "visitsStale": "Résultat en cache avec moins de visites — sera ré-analysé",
     "visitsTooltip": "Profondeur de recherche : {{count}} visites (cliquer pour changer, double-clic pour réinitialiser)",
     "bestMove": "Meilleur",
-    "metricTooltip": "Changer la métrique affichée (Politique : probabilité, ΔVict% : variation du taux de victoire vs position actuelle, ΔScore : variation du score vs position actuelle)",
+    "metricTooltip": "Changer le texte sur les pierres — les couleurs montrent toujours la probabilité de politique. Politique : probabilité, ΔVict% : variation du taux de victoire vs actuel, ΔScore : variation du score vs actuel",
     "metric_policy": "Politique",
     "metric_winRate": "ΔVict%",
     "metric_scoreLead": "ΔScore"

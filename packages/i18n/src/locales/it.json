@@ -252,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Scarsa",
     "poorProb": "<10%",
-    "note": "L'implementazione ONNX KataGo attuale fornisce probabilità di policy, ma non include percentuale di vittoria o differenza punti per le singole mosse candidate. Questi sono disponibili solo per la posizione corrente della tavola.",
+    "note": "I colori rappresentano sempre la probabilità di policy (quota visite), indipendentemente dalla metrica selezionata. Usa il selettore metrica per cambiare il testo sulle pietre: Policy mostra le probabilità, ΔVitt% e ΔPunt. mostrano le variazioni rispetto alla posizione attuale.",
     "heatmapOwnership": "Proprietà mappa di calore",
     "heatmapDescription": "La mappa di calore proprietà mostra il territorio previsto a fine partita. Colori più intensi indicano maggiore confidenza che l'area appartenga al giocatore.",
     "blackArea": "Territorio nero",
@@ -519,7 +519,7 @@
     "visitsStale": "Cache con meno visite — verrà ri-analizzato",
     "visitsTooltip": "Profondità di ricerca: {{count}} visite (clicca per cambiare, doppio clic per reimpostare)",
     "bestMove": "Migliore",
-    "metricTooltip": "Cambia metrica heatmap (Policy: probabilità, ΔVitt%: variazione tasso vittoria vs posizione attuale, ΔPunt.: variazione punteggio vs posizione attuale)",
+    "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di policy. Policy: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
     "metric_policy": "Policy",
     "metric_winRate": "ΔVitt%",
     "metric_scoreLead": "ΔPunt."

@@ -252,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Schlecht",
     "poorProb": "<10%",
-    "note": "Die aktuelle ONNX KataGo-Implementierung liefert Richtlinien-Wahrscheinlichkeiten, enthält jedoch keine Gewinnrate oder Punkt-Unterschied für einzelne Zugkandidaten. Diese sind nur für die aktuelle Brettposition verfügbar.",
+    "note": "Farben zeigen immer die Policy-Wahrscheinlichkeit (Besuchsanteil) an, unabhängig von der gewählten Metrik. Verwenden Sie den Metrik-Umschalter, um den Text auf den Steinen zu ändern: Policy zeigt Zugwahrscheinlichkeiten, ΔGew% und ΔScore zeigen Änderungen gegenüber der aktuellen Position.",
     "heatmapOwnership": "Heatmap-Besitz",
     "heatmapDescription": "Die Besitz-Heatmap zeigt das vorhergesagte Endgebiet. Hellere Farben zeigen eine höhere Konfidenz an, dass der Bereich dem Spieler gehört.",
     "blackArea": "Schwarzes Gebiet",
@@ -519,7 +519,7 @@
     "visitsStale": "Aus Cache mit weniger Besuchen — wird neu analysiert",
     "visitsTooltip": "Suchtiefe: {{count}} Besuche (klicken zum Ändern, Doppelklick zum Zurücksetzen)",
     "bestMove": "Bester",
-    "metricTooltip": "Heatmap-Metrik umschalten (Policy: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuelle Position, ΔScore: Scoreänderung vs aktuelle Position)",
+    "metricTooltip": "Steintext-Metrik umschalten — Farben zeigen immer Policy-Wahrscheinlichkeit. Policy: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuell, ΔScore: Scoreänderung vs aktuell",
     "metric_policy": "Policy",
     "metric_winRate": "ΔGew%",
     "metric_scoreLead": "ΔScore"
