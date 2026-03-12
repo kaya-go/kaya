@@ -54,6 +54,12 @@ export interface EngineAnalysisOptions {
   skipCache?: boolean;
 
   /**
+   * GTP move (e.g. "D4") to force-visit in MCTS so it always has
+   * winRate/scoreLead statistics. Used to evaluate the actually-played move.
+   */
+  includeMove?: string;
+
+  /**
    * Additional engine-specific options
    */
   [key: string]: any;

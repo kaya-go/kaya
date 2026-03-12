@@ -402,10 +402,11 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     /** Format a move's metric text based on the selected display mode */
     const formatMoveText = (visitShare: number, winRate?: number, scoreLead?: number): string => {
-      if (metric === 'winRate' && winRate != null) {
-        return `${(winRate * 100).toFixed(0)}%`;
+      if (metric === 'winRate') {
+        return winRate != null ? `${(winRate * 100).toFixed(0)}%` : '—';
       }
-      if (metric === 'scoreLead' && scoreLead != null) {
+      if (metric === 'scoreLead') {
+        if (scoreLead == null) return '—';
         return scoreLead >= 0 ? `+${scoreLead.toFixed(1)}` : scoreLead.toFixed(1);
       }
       // Default: policy/visit share

@@ -215,6 +215,11 @@ export class OnnxEngine extends Engine {
 
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
     const signal = (options as any).signal as AbortSignal | undefined;
+    const includeMove = options.includeMove;
+
+    // Cap MCTS batch size so that backends with unbounded inference batch
+    // (e.g. WASM where maxInferenceBatch=Infinity) still emit incremental progress.
+    const maxMctsBatch = Math.min(this.maxInferenceBatch, 8);
 
     return runMCTS(
       board,
@@ -224,10 +229,12 @@ export class OnnxEngine extends Engine {
       numVisits,
       size,
       this.maxInferenceBatch,
+      maxMctsBatch,
       evaluator,
       this.debugLog.bind(this),
       onProgress,
-      signal
+      signal,
+      includeMove
     );
   }
 

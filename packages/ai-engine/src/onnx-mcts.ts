@@ -73,6 +73,12 @@ export function expandNode(
 /**
  * Run PUCT MCTS search from the given position.
  * Uses batch evaluation with virtual loss to amortize GPU sync overhead.
+ *
+ * @param maxMctsBatch - Max visits per loop iteration before yielding for progress.
+ *   Caps batch size independently of maxInferenceBatch so that backends with
+ *   unbounded inference batch (e.g. WASM) still emit incremental progress.
+ * @param includeMove - GTP move (e.g. "D4") to force-visit so it always has
+ *   MCTS statistics in the result. Used to evaluate the actually-played move.
  */
 export async function runMCTS(
   rootBoard: GoBoard,
@@ -82,10 +88,12 @@ export async function runMCTS(
   numVisits: number,
   size: number,
   maxInferenceBatch: number,
+  maxMctsBatch: number,
   batchEvaluator: MCTSBatchEvaluator,
   debugLogFn: (message: string, payload?: Record<string, unknown>) => void,
   onProgress?: (progress: MCTSProgress) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  includeMove?: string
 ): Promise<AnalysisResult> {
   const CPUCT = 1.5;
 
@@ -110,7 +118,7 @@ export async function runMCTS(
   while (completed < numVisits) {
     if (signal?.aborted) break;
 
-    const batchSize = Math.min(maxInferenceBatch, numVisits - completed);
+    const batchSize = Math.min(maxMctsBatch, maxInferenceBatch, numVisits - completed);
 
     // Phase 1: Select up to batchSize leaves using PUCT with virtual loss
     const pending: { path: Step[]; needsEval: boolean }[] = [];
@@ -236,6 +244,18 @@ export async function runMCTS(
     if (onProgress && root.children && root.children.size > 0) {
       const sorted = [...root.children.entries()].sort(([, a], [, b]) => b.N - a.N);
       const [bestMove, bestChild] = sorted[0];
+      let progressTopMoves = sorted.slice(0, 5);
+
+      // Append includeMove if it's not already in the top 5
+      if (
+        includeMove &&
+        !progressTopMoves.some(([m]) => m === includeMove) &&
+        root.children!.has(includeMove)
+      ) {
+        const child = root.children!.get(includeMove)!;
+        progressTopMoves.push([includeMove, child]);
+      }
+
       onProgress({
         completedVisits: completed,
         totalVisits: numVisits,
@@ -243,7 +263,7 @@ export async function runMCTS(
         bestMoveVisits: bestChild.N,
         winRate: root.N > 0 ? root.W / root.N : 0.5,
         scoreLead: root.N > 0 ? root.S / root.N : 0,
-        topMoves: sorted.slice(0, 5).map(([move, child]) => ({
+        topMoves: progressTopMoves.map(([move, child]) => ({
           move,
           visits: child.N,
           winRate: child.N > 0 ? child.W / child.N : 0.5,
@@ -261,6 +281,129 @@ export async function runMCTS(
     }
   }
 
+  // Force additional visits through includeMove if it has insufficient statistics.
+  // This ensures the actually-played move always has winRate/scoreLead data.
+  if (
+    includeMove &&
+    root.children &&
+    root.children.has(includeMove) &&
+    numVisits > 1 &&
+    !signal?.aborted
+  ) {
+    const minVisits = Math.max(3, Math.ceil(numVisits * 0.05));
+    const includedChild = root.children.get(includeMove)!;
+    if (includedChild.N < minVisits) {
+      const extraNeeded = minVisits - includedChild.N;
+      debugLogFn('includeMove forced visits', {
+        move: includeMove,
+        existing: includedChild.N,
+        extra: extraNeeded,
+      });
+
+      for (let e = 0; e < extraNeeded && !signal?.aborted; e++) {
+        // Force select includeMove at root, then normal PUCT below
+        const path: Step[] = [{ node: root, board: rootBoard, pla: nextPla, hist: history }];
+
+        // First step: forced selection of includeMove
+        const parsed = parseMoveStr(includeMove, size);
+        let childBoard: GoBoard;
+        let childHist: typeof history;
+        if (includeMove === 'PASS') {
+          childBoard = new GoBoard(rootBoard.signMap.map(row => [...row] as Sign[]));
+          childHist = [...history.slice(-4), { color: nextPla, x: -1, y: -1 }];
+        } else if (parsed) {
+          try {
+            childBoard = rootBoard.makeMove(nextPla, parsed, {});
+          } catch {
+            break; // illegal move, stop forced visits
+          }
+          childHist = [...history.slice(-4), { color: nextPla, x: parsed[0], y: parsed[1] }];
+        } else {
+          break;
+        }
+
+        const childPla = (nextPla === 1 ? -1 : 1) as Sign;
+        path.push({
+          node: includedChild,
+          board: childBoard,
+          pla: childPla,
+          hist: childHist,
+        });
+
+        // Continue with normal PUCT from the child node downward
+        let cur = path[path.length - 1];
+        while (true) {
+          const { node, board, pla, hist } = cur;
+          if (!node.expanded || !node.children || node.children.size === 0) break;
+          const len = hist.length;
+          if (len >= 2 && hist[len - 1].x < 0 && hist[len - 2].x < 0) break;
+
+          let bestScore = -Infinity;
+          let bestMv = '';
+          let bestCh: MCTSNode | null = null;
+          const parentN = node.N;
+          for (const [mv, ch] of node.children) {
+            const q = ch.N > 0 ? (pla === 1 ? ch.W / ch.N : 1 - ch.W / ch.N) : 0;
+            const u = (1.5 * ch.P * Math.sqrt(Math.max(parentN, 1))) / (1 + ch.N);
+            if (q + u > bestScore) {
+              bestScore = q + u;
+              bestMv = mv;
+              bestCh = ch;
+            }
+          }
+          if (!bestCh) break;
+
+          let nb: GoBoard;
+          let nh: typeof history;
+          if (bestMv === 'PASS') {
+            nb = new GoBoard(board.signMap.map(row => [...row] as Sign[]));
+            nh = [...hist.slice(-4), { color: pla, x: -1, y: -1 }];
+          } else {
+            const p2 = parseMoveStr(bestMv, size);
+            if (!p2) break;
+            try {
+              nb = board.makeMove(pla, p2, {});
+            } catch {
+              break;
+            }
+            nh = [...hist.slice(-4), { color: pla, x: p2[0], y: p2[1] }];
+          }
+          path.push({
+            node: bestCh,
+            board: nb,
+            pla: (pla === 1 ? -1 : 1) as Sign,
+            hist: nh,
+          });
+          cur = path[path.length - 1];
+        }
+
+        // Evaluate leaf if unexpanded
+        const leaf = path[path.length - 1];
+        let value: number;
+        let sl: number;
+        if (!leaf.node.expanded) {
+          const [evalResult] = await batchEvaluator([
+            { board: leaf.board, pla: leaf.pla, komi, history: leaf.hist },
+          ]);
+          const filtered = filterKoMoves(evalResult, leaf.board, leaf.pla, size);
+          expandNode(leaf.node, filtered, leaf.board, leaf.pla, size);
+          value = filtered.winRate;
+          sl = filtered.scoreLead;
+        } else {
+          value = leaf.node.N > 0 ? leaf.node.W / leaf.node.N : 0.5;
+          sl = leaf.node.N > 0 ? leaf.node.S / leaf.node.N : 0;
+        }
+
+        // Backup
+        for (const step of path) {
+          step.node.N++;
+          step.node.W += value;
+          step.node.S += sl;
+        }
+      }
+    }
+  }
+
   // Build AnalysisResult from MCTS visit counts
   const moveSuggestions: MoveSuggestion[] = [];
   if (root.children && root.children.size > 0) {
@@ -270,12 +413,15 @@ export async function runMCTS(
       if (a.N !== b.N) return b.N - a.N;
       return b.P - a.P;
     });
+    const rootWinRate = root.N > 0 ? root.W / root.N : 0.5;
+    const rootScoreLead = root.N > 0 ? root.S / root.N : 0;
+
     for (const [move, child] of sorted) {
       moveSuggestions.push({
         move,
         probability: child.N > 0 && totalChildVisits > 0 ? child.N / totalChildVisits : child.P,
-        winRate: child.N > 0 ? child.W / child.N : undefined,
-        scoreLead: child.N > 0 ? child.S / child.N : undefined,
+        winRate: child.N > 0 ? child.W / child.N : rootWinRate,
+        scoreLead: child.N > 0 ? child.S / child.N : rootScoreLead,
       });
     }
   }

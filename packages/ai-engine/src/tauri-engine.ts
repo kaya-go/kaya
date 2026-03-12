@@ -278,6 +278,7 @@ export class TauriEngine extends Engine {
 
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
     const signal = (options as any).signal as AbortSignal | undefined;
+    const includeMove = options.includeMove;
 
     return runMCTS(
       board,
@@ -287,10 +288,12 @@ export class TauriEngine extends Engine {
       numVisits,
       size,
       maxBatch,
+      maxBatch, // maxMctsBatch = same as maxInferenceBatch (already 8)
       evaluator,
       this.debugLog.bind(this),
       onProgress,
-      signal
+      signal,
+      includeMove
     );
   }
 

@@ -7,6 +7,7 @@ import { useState, useCallback, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 import type { AnalysisResult, MCTSProgress } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
+import { sgfToVertex } from '@kaya/sgf';
 import { getPathToNode } from '../utils/gameCache';
 import {
   createInitialAnalysisState,
@@ -15,6 +16,7 @@ import {
   smoothAnalysisResult,
   type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
+import { vertexToGTP } from '../utils/gtpUtils';
 import { analysisGlobals } from './ai-analysis-types';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 
@@ -237,6 +239,7 @@ export function useLiveAnalysis({
           koInfo: { sign: number; vertex: [number, number] };
           signal?: AbortSignal;
           onProgress?: (p: MCTSProgress) => void;
+          includeMove?: string;
         };
         cacheKey: string;
       }> = [];
@@ -260,6 +263,24 @@ export function useLiveAnalysis({
       }
 
       if (!currentHasEnoughVisits) {
+        // Detect the next move played in the game so the engine can
+        // force-visit it and always provide metrics for it.
+        let includeMove: string | undefined;
+        if (gameTree && currentNodeId !== null) {
+          const currentNode = gameTree.get(currentNodeId);
+          if (currentNode?.children?.length > 0) {
+            const nextNode = currentNode.children[0];
+            const moveData = nextNode?.data?.B?.[0] || nextNode?.data?.W?.[0];
+            if (moveData) {
+              const vertex = sgfToVertex(moveData);
+              if (vertex && vertex[0] >= 0) {
+                includeMove = vertexToGTP(vertex as [number, number], boardSize);
+                if (includeMove === 'PASS') includeMove = undefined;
+              }
+            }
+          }
+        }
+
         toAnalyze.push({
           key: 'current',
           signMap: positions.current.state.board.signMap,
@@ -274,6 +295,7 @@ export function useLiveAnalysis({
             },
             signal: abortController.signal,
             onProgress: (p: MCTSProgress) => setMctsProgress(p),
+            includeMove,
           },
           cacheKey: positions.current.cacheKey,
         });
