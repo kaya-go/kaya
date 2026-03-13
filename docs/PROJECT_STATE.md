@@ -48,9 +48,14 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 ### AI Analysis
 
 - **Live Analysis**: Real-time win rate, score lead, and move suggestions
+- **MCTS Live Progress**: Real-time progress during Monte Carlo Tree Search with top move updates
+- **Native MCTS** (Desktop): Full MCTS loop runs in Rust for zero-IPC-overhead search
+- **Heatmap Metric Toggle**: Switch stone text between Policy, ΔWin%, and ΔScore (colors always show policy)
+- **Next Move Display**: Shows the actual next move played with rank, delta metrics, and quality color
 - **Batch Analysis**: Analyze entire games with progress tracking and stop button
-- **Native ONNX Runtime** (Desktop): GPU acceleration via CUDA, CoreML, or DirectML
+- **Native ONNX Runtime** (Desktop): GPU acceleration via CUDA, CoreML (optimized), or DirectML
 - **Web ONNX Runtime**: WebGPU (GPU) or WASM (CPU) backend with automatic GPU→CPU fallback
+- **Model Caching**: Local model cache with hash-based invalidation (desktop)
 - **Analysis Graph**: Visual win rate chart across all moves
 - **Move Quality Colors**: Chess.com-style move classification (best/great/good/okay/poor)
 - **Ownership Heatmap**: Territory control visualization

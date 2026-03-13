@@ -97,6 +97,19 @@ export interface TauriBatchInput {
 export type TauriInvokeFn = <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
 
 /**
+ * Type for a Tauri event unlisten function
+ */
+export type TauriUnlistenFn = () => void;
+
+/**
+ * Type for the Tauri listen function
+ */
+export type TauriListenFn = <T>(
+  event: string,
+  handler: (event: { payload: T }) => void
+) => Promise<TauriUnlistenFn>;
+
+/**
  * Check if we're running in a Tauri environment
  * This checks for the global Tauri object without any dynamic imports
  */
@@ -133,6 +146,33 @@ export function getTauriInvoke(): TauriInvokeFn | null {
     // Tauri v2 internals
     if (w.__TAURI_INTERNALS__?.invoke) {
       return w.__TAURI_INTERNALS__.invoke;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Get the Tauri event listen function from the global window object
+ */
+export function getTauriListen(): TauriListenFn | null {
+  if (!isTauriEnvironment()) {
+    return null;
+  }
+
+  try {
+    const w = window as Record<string, any>;
+
+    // Tauri v2 with withGlobalTauri: true
+    if (w.__TAURI__?.event?.listen) {
+      return w.__TAURI__.event.listen;
+    }
+
+    // Tauri v2 internals
+    if (w.__TAURI_INTERNALS__?.event?.listen) {
+      return w.__TAURI_INTERNALS__.event.listen;
     }
 
     return null;

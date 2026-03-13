@@ -193,7 +193,7 @@ export async function processBatchResults(
     indices.sort((a, b) => probs[b] - probs[a]);
 
     const moveSuggestions: MoveSuggestion[] = [];
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < Math.min(10, numMoves); i++) {
       const idx = indices[i];
       const prob = probs[idx];
       let moveStr = '';

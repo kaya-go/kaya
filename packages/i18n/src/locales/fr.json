@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "Intégrer les données d'analyse IA lors de la sauvegarde. Augmente la taille du fichier.",
     "numVisits": "Visites de recherche",
     "numVisitsDescription": "Simulations MCTS par coup. 1 = politique seule (le plus rapide). Des valeurs plus élevées améliorent la qualité des coups au détriment de la vitesse. Utilisez 50–200 pour un jeu plus fort.",
-    "numVisitsNativeWarning": "MCTS n'est pas disponible avec les moteurs natifs. Passez à WebGPU ou WASM pour utiliser les visites de recherche.",
     "modelUploadedSuccess": "Modèle importé avec succès",
     "modelUploadFailed": "Échec de l'import du modèle",
     "modelDownloadedSuccess": "Modèle téléchargé avec succès",
@@ -253,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Faible",
     "poorProb": "<10%",
-    "note": "L'implémentation ONNX fournit les probabilités mais pas le taux de victoire ni l'avantage au score pour chaque coup.",
+    "note": "Les couleurs représentent toujours la probabilité de politique (part de visites), quel que soit le mode sélectionné. Utilisez le sélecteur de métrique pour changer le texte sur les pierres : Politique affiche les probabilités, ΔVict% et ΔScore affichent les variations par rapport à la position actuelle.",
     "heatmapOwnership": "Carte de territoire",
     "heatmapDescription": "La carte montre le territoire prédit en fin de partie. Les couleurs vives indiquent une plus grande certitude.",
     "blackArea": "Zone noire",
@@ -510,6 +509,8 @@
     "initializing": "Initialisation...",
     "loading": "Chargement...",
     "analyzing": "Analyse en cours...",
+    "evaluating": "Évaluation...",
+    "searching": "Recherche...",
     "winRate": "Taux de victoire",
     "blackWinRate": "Victoire Noir",
     "whiteWinRate": "Victoire Blanc",
@@ -519,7 +520,11 @@
     "visitsFresh": "Analyse complète avec le nombre de visites configuré",
     "visitsStale": "Résultat en cache avec moins de visites — sera ré-analysé",
     "visitsTooltip": "Profondeur de recherche : {{count}} visites (cliquer pour changer, double-clic pour réinitialiser)",
-    "visitsNativeDisabled": "MCTS non disponible avec le moteur natif. Passez à WebGPU ou WASM dans les paramètres."
+    "bestMove": "Meilleur",
+    "metricTooltip": "Changer le texte sur les pierres — les couleurs montrent toujours la probabilité de politique. Politique : probabilité, ΔVict% : variation du taux de victoire vs actuel, ΔScore : variation du score vs actuel",
+    "metric_policy": "Politique",
+    "metric_winRate": "ΔVict%",
+    "metric_scoreLead": "ΔScore"
   },
   "panels": {
     "library": "Bibliothèque",

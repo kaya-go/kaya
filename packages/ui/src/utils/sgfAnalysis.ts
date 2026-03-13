@@ -91,6 +91,8 @@ export function serializeAnalysis(result: AnalysisResult): string {
     m: result.moveSuggestions.map(move => ({
       m: move.move,
       p: Number(move.probability.toFixed(4)),
+      ...(move.winRate != null ? { w: Number(move.winRate.toFixed(4)) } : {}),
+      ...(move.scoreLead != null ? { s: Number(move.scoreLead.toFixed(2)) } : {}),
     })),
   };
 
@@ -116,6 +118,8 @@ export function parseAnalysis(json: string, currentTurn: 'B' | 'W'): AnalysisRes
     const moveSuggestions: MoveSuggestion[] = data.m.map(m => ({
       move: m.m,
       probability: m.p,
+      ...(m.w != null ? { winRate: m.w } : {}),
+      ...(m.s != null ? { scoreLead: m.s } : {}),
     }));
 
     const result: AnalysisResult = {

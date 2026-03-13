@@ -24,6 +24,7 @@ export class WorkerEngine extends Engine {
       resolve: (val: any) => void;
       reject: (err: any) => void;
       timeout: ReturnType<typeof setTimeout>;
+      onProgress?: (progress: any) => void;
     }
   >;
   private nextRequestId: number = 0;
@@ -61,6 +62,11 @@ export class WorkerEngine extends Engine {
           req.resolve(msg.results);
           this.pendingRequests.delete(msg.id);
           this.debugLog('batch-resolve', { id: msg.id, batchSize: msg.results?.length });
+        }
+      } else if (msg.type === 'mcts_progress') {
+        const req = this.pendingRequests.get(msg.id);
+        if (req?.onProgress) {
+          req.onProgress(msg.progress);
         }
       } else if (msg.type === 'dispose_success') {
         // Handled by dispose() promise
@@ -147,6 +153,12 @@ export class WorkerEngine extends Engine {
     return new Promise((resolve, reject) => {
       const id = this.nextRequestId++;
       this.debugLog('analyze-request', { id });
+
+      // Extract non-cloneable props before postMessage
+      const onProgress = (options as any).onProgress as ((p: any) => void) | undefined;
+      const signal = (options as any).signal as AbortSignal | undefined;
+      const { onProgress: _p, signal: _s, ...serializableOptions } = options as any;
+
       const timeout = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
@@ -155,8 +167,26 @@ export class WorkerEngine extends Engine {
         }
       }, 60000);
 
-      this.pendingRequests.set(id, { resolve, reject, timeout });
-      this.worker.postMessage({ type: 'analyze', id, signMap, options });
+      this.pendingRequests.set(id, { resolve, reject, timeout, onProgress });
+
+      // Listen for abort signal and forward to worker
+      if (signal) {
+        if (signal.aborted) {
+          clearTimeout(timeout);
+          this.pendingRequests.delete(id);
+          reject(new AbortedError());
+          return;
+        }
+        signal.addEventListener(
+          'abort',
+          () => {
+            this.worker.postMessage({ type: 'abort', id });
+          },
+          { once: true }
+        );
+      }
+
+      this.worker.postMessage({ type: 'analyze', id, signMap, options: serializableOptions });
     });
   }
 
@@ -175,7 +205,15 @@ export class WorkerEngine extends Engine {
       }, 60000);
 
       this.pendingRequests.set(id, { resolve, reject, timeout });
-      this.worker.postMessage({ type: 'analyzeBatch', id, inputs });
+
+      // Strip non-cloneable props (signal, onProgress) from each input's options
+      const serializableInputs = inputs.map(input => {
+        if (!input.options) return input;
+        const { onProgress: _p, signal: _s, ...opts } = input.options as any;
+        return { signMap: input.signMap, options: opts };
+      });
+
+      this.worker.postMessage({ type: 'analyzeBatch', id, inputs: serializableInputs });
     });
   }
 

@@ -18,6 +18,7 @@ import {
 } from './onnx-utils';
 import { filterKoMoves, runMCTS } from './onnx-mcts';
 import { featurize, featurizeToBuffer } from './onnx-featurization';
+import type { MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
 import { createOnnxSession } from './onnx-session';
 import {
   type GpuBufferState,
@@ -187,39 +188,57 @@ export class OnnxEngine extends Engine {
       board._koInfo = { sign: koInfo.sign, vertex: koInfo.vertex };
     }
 
-    if (numVisits > 1) {
-      return runMCTS(
-        board,
-        nextPla,
-        komi,
-        history,
-        numVisits,
-        size,
-        this.maxInferenceBatch,
-        featurizeToBuffer,
-        this.runBatchInference.bind(this),
-        this.evaluateSingle.bind(this),
-        this.debugLog.bind(this)
-      );
-    }
+    const evaluator: MCTSBatchEvaluator = async leaves => {
+      const numPlanes = 22;
+      const perPosBinSize = numPlanes * size * size;
+      const batchBin = new Float32Array(leaves.length * perPosBinSize);
+      const batchGlobal = new Float32Array(leaves.length * 19);
+      const plas: Sign[] = [];
 
-    const analysisStart = performance.now();
-    const analysisResult = await this.evaluateSingle(board, nextPla, komi, history, size);
-    this.debugLog('Single analysis complete', { totalTimeMs: performance.now() - analysisStart });
-    return analysisResult;
+      for (let i = 0; i < leaves.length; i++) {
+        const leaf = leaves[i];
+        plas.push(leaf.pla);
+        featurizeToBuffer(
+          leaf.board,
+          leaf.pla,
+          leaf.komi,
+          leaf.history,
+          batchBin,
+          batchGlobal,
+          i,
+          size
+        );
+      }
+
+      return this.runBatchInference(batchBin, batchGlobal, plas, size);
+    };
+
+    const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
+    const signal = (options as any).signal as AbortSignal | undefined;
+    const includeMove = options.includeMove;
+
+    // Cap MCTS batch size so that backends with unbounded inference batch
+    // (e.g. WASM where maxInferenceBatch=Infinity) still emit incremental progress.
+    const maxMctsBatch = Math.min(this.maxInferenceBatch, 16);
+
+    return runMCTS(
+      board,
+      nextPla,
+      komi,
+      history,
+      numVisits,
+      size,
+      this.maxInferenceBatch,
+      maxMctsBatch,
+      evaluator,
+      this.debugLog.bind(this),
+      onProgress,
+      signal,
+      includeMove
+    );
   }
 
-  private async evaluateSingle(
-    board: GoBoard,
-    nextPla: Sign,
-    komi: number,
-    history: { color: Sign; x: number; y: number }[],
-    size: number
-  ): Promise<AnalysisResult> {
-    return this.runSingleInference(board, nextPla, komi, history, size);
-  }
-
-  /** Core single-position inference. */
+  /** Single-position inference used by warm-up validation. */
   private async runSingleInference(
     board: GoBoard,
     nextPla: Sign,

@@ -54,6 +54,12 @@ export interface EngineAnalysisOptions {
   skipCache?: boolean;
 
   /**
+   * GTP move (e.g. "D4") to force-visit in MCTS so it always has
+   * winRate/scoreLead statistics. Used to evaluate the actually-played move.
+   */
+  includeMove?: string;
+
+  /**
    * Additional engine-specific options
    */
   [key: string]: any;
@@ -326,11 +332,14 @@ export abstract class Engine {
     const history = options.history || [];
     const last5Moves = history.slice(-5).map((m: any) => `${m.color}:${m.x},${m.y}`);
 
+    const numVisits = (options as any).numVisits ?? 1;
+
     return JSON.stringify({
       board: boardHash,
       nextToPlay,
       komi,
       history: last5Moves,
+      numVisits,
     });
   }
 

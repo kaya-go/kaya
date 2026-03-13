@@ -5,8 +5,9 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { MutableRefObject } from 'react';
-import type { AnalysisResult } from '@kaya/ai-engine';
+import type { AnalysisResult, MCTSProgress } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
+import { sgfToVertex } from '@kaya/sgf';
 import { getPathToNode } from '../utils/gameCache';
 import {
   createInitialAnalysisState,
@@ -15,6 +16,7 @@ import {
   smoothAnalysisResult,
   type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
+import { vertexToGTP } from '../utils/gtpUtils';
 import { analysisGlobals } from './ai-analysis-types';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 
@@ -55,11 +57,15 @@ export function useLiveAnalysis({
 }: UseLiveAnalysisParams) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mctsProgress, setMctsProgress] = useState<MCTSProgress | null>(null);
 
   // Promise that resolves when the current live analysis run finishes
   const analysisCompleteRef = useRef<(() => void) | null>(null);
   const analysisWaiterRef = useRef<Promise<void>>(Promise.resolve());
   const waitForCurrentAnalysis = useCallback(() => analysisWaiterRef.current, []);
+
+  // AbortController for cancelling in-flight MCTS
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const lookupCachedResult = useCallback((): boolean => {
     if (!gameTree || currentNodeId === null || currentNodeId === undefined) {
@@ -122,6 +128,11 @@ export function useLiveAnalysis({
     if (analysisGlobals.isAnalyzing && analysisGlobals.analyzingForNodeId === currentNodeId) return;
     analysisGlobals.isAnalyzing = true;
     analysisGlobals.analyzingForNodeId = currentNodeId;
+
+    // Abort any in-flight MCTS search
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setMctsProgress(null);
 
     if (!analysisMode || isFullGameAnalyzingRef.current) {
       analysisGlobals.isAnalyzing = false;
@@ -212,6 +223,11 @@ export function useLiveAnalysis({
 
     try {
       const numVisits = aiSettings.numVisits ?? 1;
+
+      // Create AbortController for MCTS cancellation
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
       const toAnalyze: Array<{
         key: 'prev' | 'current';
         signMap: SignMap;
@@ -221,6 +237,9 @@ export function useLiveAnalysis({
           komi: number;
           numVisits: number;
           koInfo: { sign: number; vertex: [number, number] };
+          signal?: AbortSignal;
+          onProgress?: (p: MCTSProgress) => void;
+          includeMove?: string;
         };
         cacheKey: string;
       }> = [];
@@ -244,6 +263,24 @@ export function useLiveAnalysis({
       }
 
       if (!currentHasEnoughVisits) {
+        // Detect the next move played in the game so the engine can
+        // force-visit it and always provide metrics for it.
+        let includeMove: string | undefined;
+        if (gameTree && currentNodeId !== null) {
+          const currentNode = gameTree.get(currentNodeId);
+          if (currentNode?.children?.length > 0) {
+            const nextNode = currentNode.children[0];
+            const moveData = nextNode?.data?.B?.[0] || nextNode?.data?.W?.[0];
+            if (moveData) {
+              const vertex = sgfToVertex(moveData);
+              if (vertex && vertex[0] >= 0) {
+                includeMove = vertexToGTP(vertex as [number, number], boardSize);
+                if (includeMove === 'PASS') includeMove = undefined;
+              }
+            }
+          }
+        }
+
         toAnalyze.push({
           key: 'current',
           signMap: positions.current.state.board.signMap,
@@ -256,6 +293,9 @@ export function useLiveAnalysis({
               sign: number;
               vertex: [number, number];
             },
+            signal: abortController.signal,
+            onProgress: (p: MCTSProgress) => setMctsProgress(p),
+            includeMove,
           },
           cacheKey: positions.current.cacheKey,
         });
@@ -263,24 +303,15 @@ export function useLiveAnalysis({
 
       const newResults: { [key: string]: AnalysisResult } = {};
 
+      // Always analyze sequentially (not batched) to preserve onProgress/signal
+      // for the current position's MCTS progress reporting
+      for (const item of toAnalyze) {
+        if (currentRequestId !== analysisGlobals.analysisId) break;
+        const result = await engine.analyze(item.signMap, item.options);
+        newResults[item.key] = result;
+        analysisCache.current.set(item.cacheKey, result);
+      }
       if (toAnalyze.length > 0) {
-        if (toAnalyze.length === 1) {
-          const item = toAnalyze[0];
-          const result = await engine.analyze(item.signMap, item.options);
-          newResults[item.key] = result;
-          analysisCache.current.set(item.cacheKey, result);
-        } else {
-          const inputs = toAnalyze.map(item => ({
-            signMap: item.signMap,
-            options: item.options,
-          }));
-          const results = await engine.analyzeBatch(inputs);
-          results.forEach((result: AnalysisResult, idx: number) => {
-            const item = toAnalyze[idx];
-            newResults[item.key] = result;
-            analysisCache.current.set(item.cacheKey, result);
-          });
-        }
         updateAnalysisCacheSize();
       }
 
@@ -377,6 +408,8 @@ export function useLiveAnalysis({
       analysisGlobals.analyzingForNodeId = null;
       analysisCompleteRef.current?.();
       analysisCompleteRef.current = null;
+      abortControllerRef.current = null;
+      setMctsProgress(null);
       if (currentRequestId === analysisGlobals.analysisId) {
         setIsAnalyzing(false);
       }
@@ -404,5 +437,6 @@ export function useLiveAnalysis({
     runAnalysis,
     lookupCachedResult,
     waitForCurrentAnalysis,
+    mctsProgress,
   };
 }

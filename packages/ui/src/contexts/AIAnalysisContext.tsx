@@ -8,6 +8,7 @@
 
 import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import type { MoveSuggestion } from '@kaya/ai-engine';
+import { sgfToVertex } from '@kaya/sgf';
 import { useGameTree } from './GameTreeContext';
 import { useAIEngine } from './AIEngineContext';
 import { getPathToNode } from '../utils/gameCache';
@@ -19,8 +20,9 @@ import {
   normalizeStrength,
   formatProbability,
 } from '../utils/aiAnalysis';
+import { vertexToGTP } from '../utils/gtpUtils';
 import { AIAnalysisContext, analysisGlobals } from './ai-analysis-types';
-import type { AIAnalysisContextValue } from './ai-analysis-types';
+import type { AIAnalysisContextValue, NextMoveInfo } from './ai-analysis-types';
 import { useLiveAnalysis } from './useLiveAnalysis';
 import { useFullGameAnalysis } from './useFullGameAnalysis';
 
@@ -79,6 +81,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     runAnalysis,
     lookupCachedResult,
     waitForCurrentAnalysis,
+    mctsProgress,
   } = useLiveAnalysis({
     engine,
     analysisMode,
@@ -300,55 +303,259 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setAnalysisResult,
   ]);
 
-  // Heatmap generation
+  // Compute the next move from the game tree (the actual move played in the game)
+  const nextMoveVertex = useMemo(() => {
+    if (!gameTree || currentNodeId === null) return null;
+    const currentNode = gameTree.get(currentNodeId);
+    if (!currentNode || currentNode.children.length === 0) return null;
+    const nextNode = currentNode.children[0];
+    if (!nextNode) return null;
+    const moveData = nextNode.data.B?.[0] || nextNode.data.W?.[0];
+    if (!moveData) return null;
+    const vertex = sgfToVertex(moveData);
+    if (!vertex || vertex[0] < 0) return null;
+    const player: 1 | -1 = nextNode.data.B ? 1 : -1;
+    return { vertex: vertex as [number, number], player };
+  }, [gameTree, currentNodeId]);
+
+  // Compute next move info: find the played move in AI suggestions and compute deltas
+  const nextMoveInfo: NextMoveInfo | null = useMemo(() => {
+    if (!nextMoveVertex) return null;
+    const boardSize = currentBoard.signMap.length;
+    const gtp = vertexToGTP(nextMoveVertex.vertex, boardSize);
+    if (gtp === 'PASS') return null;
+
+    // Check in MCTS progress topMoves (during live analysis)
+    if (mctsProgress && mctsProgress.topMoves.length > 0) {
+      const topMoves = mctsProgress.topMoves;
+      const idx = topMoves.findIndex(m => m.move === gtp);
+      const best = topMoves[0];
+      if (idx >= 0) {
+        const played = topMoves[idx];
+        return {
+          vertex: nextMoveVertex.vertex,
+          player: nextMoveVertex.player,
+          gtp,
+          isTopMove: true,
+          rank: idx,
+          winRate: played.winRate,
+          scoreLead: played.scoreLead,
+          deltaWinRate: played.winRate - best.winRate,
+          deltaScoreLead: played.scoreLead - best.scoreLead,
+        };
+      }
+      // Not in live topMoves — fall through to check analysisResult
+    }
+
+    // Check in final analysis result moveSuggestions
+    if (analysisResult?.moveSuggestions) {
+      const suggestions = analysisResult.moveSuggestions as MoveSuggestion[];
+      const idx = suggestions.findIndex(s => s.move === gtp);
+      const best = suggestions[0];
+      if (idx >= 0) {
+        const played = suggestions[idx];
+        return {
+          vertex: nextMoveVertex.vertex,
+          player: nextMoveVertex.player,
+          gtp,
+          isTopMove: true,
+          rank: idx,
+          winRate: played.winRate,
+          scoreLead: played.scoreLead,
+          deltaWinRate:
+            played.winRate != null && best?.winRate != null
+              ? played.winRate - best.winRate
+              : undefined,
+          deltaScoreLead:
+            played.scoreLead != null && best?.scoreLead != null
+              ? played.scoreLead - best.scoreLead
+              : undefined,
+        };
+      }
+      return {
+        vertex: nextMoveVertex.vertex,
+        player: nextMoveVertex.player,
+        gtp,
+        isTopMove: false,
+        rank: -1,
+      };
+    }
+
+    return {
+      vertex: nextMoveVertex.vertex,
+      player: nextMoveVertex.player,
+      gtp,
+      isTopMove: false,
+      rank: -1,
+    };
+  }, [nextMoveVertex, mctsProgress, analysisResult, currentBoard.signMap.length]);
+
+  // Heatmap generation — uses live mctsProgress.topMoves during MCTS, final analysisResult after
   const heatMap = useMemo(() => {
-    if (!analysisResult || !showTopMoves) return null;
+    if (!showTopMoves) return null;
 
     const boardSize = currentBoard.signMap.length;
+    const metric = aiSettings.heatMapMetric ?? 'policy';
     const map: Array<Array<{ strength: number; text: string } | null>> = Array(boardSize)
       .fill(null)
       .map(() => Array(boardSize).fill(null));
 
+    // Current position metrics used as baseline for delta display
+    const currentWinRate = mctsProgress?.winRate ?? analysisResult?.winRate;
+    const currentScoreLead = mctsProgress?.scoreLead ?? analysisResult?.scoreLead;
+
+    /** Format a move's metric text as delta vs current position */
+    const formatMoveText = (visitShare: number, winRate?: number, scoreLead?: number): string => {
+      if (metric === 'winRate') {
+        if (winRate == null || currentWinRate == null) return '—';
+        const delta = (winRate - currentWinRate) * 100;
+        return `${delta >= 0 ? '+' : ''}${delta.toFixed(0)}%`;
+      }
+      if (metric === 'scoreLead') {
+        if (scoreLead == null || currentScoreLead == null) return '—';
+        const delta = scoreLead - currentScoreLead;
+        return `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}`;
+      }
+      // Default: policy/visit share
+      return `${(visitShare * 100).toFixed(0)}%`;
+    };
+
+    // During MCTS, show live top moves from progress
+    if (mctsProgress && mctsProgress.topMoves.length > 0) {
+      const totalVisits = mctsProgress.topMoves.reduce((sum, m) => sum + m.visits, 0);
+      let displayedCount = 0;
+
+      for (const topMove of mctsProgress.topMoves) {
+        if (displayedCount >= aiSettings.maxTopMoves) break;
+
+        const vertex = gtpToVertex(topMove.move, boardSize);
+        if (!vertex) continue;
+
+        const [x, y] = vertex;
+        if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) continue;
+        if (currentBoard.signMap[y]?.[x] !== 0) continue;
+
+        const visitShare = totalVisits > 0 ? topMove.visits / totalVisits : 0;
+        const strength = normalizeStrength(visitShare);
+        // Require minimum visits for reliable delta metrics (low-visit NN estimates are noisy)
+        const reliable = topMove.visits >= 10;
+        const text = formatMoveText(
+          visitShare,
+          reliable ? topMove.winRate : undefined,
+          reliable ? topMove.scoreLead : undefined
+        );
+
+        map[y][x] = { strength, text };
+        displayedCount++;
+      }
+
+      // Add next move marker: append ▷ symbol to distinguish it
+      if (nextMoveInfo) {
+        const [x, y] = nextMoveInfo.vertex;
+        if (
+          x >= 0 &&
+          x < boardSize &&
+          y >= 0 &&
+          y < boardSize &&
+          currentBoard.signMap[y]?.[x] === 0
+        ) {
+          const existing = map[y][x];
+          if (existing) {
+            map[y][x] = { ...existing, text: existing.text ? `${existing.text}\n▷` : '▷' };
+          } else {
+            // Not in live topMoves — look up in analysisResult for metrics
+            const allSuggestions = (analysisResult?.moveSuggestions ?? []) as MoveSuggestion[];
+            const playedSuggestion = allSuggestions.find(s => s.move === nextMoveInfo.gtp);
+            if (playedSuggestion) {
+              const strength = normalizeStrength(playedSuggestion.probability);
+              const text = formatMoveText(
+                playedSuggestion.probability,
+                playedSuggestion.winRate,
+                playedSuggestion.scoreLead
+              );
+              map[y][x] = { strength, text: text ? `${text}\n▷` : '▷' };
+            } else {
+              map[y][x] = { strength: 4, text: '▷' };
+            }
+          }
+        }
+      }
+
+      return map;
+    }
+
+    // After analysis completes, use final result
+    if (!analysisResult) return null;
+
     if (analysisResult.moveSuggestions) {
-      // Filter by minProb first, then limit to maxTopMoves
       const suggestions = (analysisResult.moveSuggestions as MoveSuggestion[]).filter(
         s => s.probability >= aiSettings.minProb
       );
       let displayedCount = 0;
 
       for (const suggestion of suggestions) {
-        // Stop once we've displayed maxTopMoves moves
-        if (displayedCount >= aiSettings.maxTopMoves) {
-          break;
-        }
+        if (displayedCount >= aiSettings.maxTopMoves) break;
 
         const vertex = gtpToVertex(suggestion.move, boardSize);
-        if (!vertex) continue; // Skip pass moves
+        if (!vertex) continue;
 
         const [x, y] = vertex;
         if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) continue;
-
-        // Skip positions that already have stones
         if (currentBoard.signMap[y]?.[x] !== 0) continue;
 
-        // Calculate strength (0-9) based on policy probability
         const strength = normalizeStrength(suggestion.probability);
-
-        // Format text to show policy only
-        const winRateText = formatProbability(suggestion.probability);
-        const text = `${winRateText}`;
+        const text = formatMoveText(
+          suggestion.probability,
+          suggestion.winRate,
+          suggestion.scoreLead
+        );
 
         map[y][x] = { strength, text };
         displayedCount++;
+      }
+
+      // Add next move marker: append ▷ symbol to distinguish it
+      if (nextMoveInfo) {
+        const [x, y] = nextMoveInfo.vertex;
+        if (
+          x >= 0 &&
+          x < boardSize &&
+          y >= 0 &&
+          y < boardSize &&
+          currentBoard.signMap[y]?.[x] === 0
+        ) {
+          const existing = map[y][x];
+          if (existing) {
+            map[y][x] = { ...existing, text: existing.text ? `${existing.text}\n▷` : '▷' };
+          } else {
+            // Not among displayed suggestions — add it with its metric if available
+            const allSuggestions = analysisResult.moveSuggestions as MoveSuggestion[];
+            const playedSuggestion = allSuggestions.find(s => s.move === nextMoveInfo.gtp);
+            if (playedSuggestion) {
+              const strength = normalizeStrength(playedSuggestion.probability);
+              const text = formatMoveText(
+                playedSuggestion.probability,
+                playedSuggestion.winRate,
+                playedSuggestion.scoreLead
+              );
+              map[y][x] = { strength, text: text ? `${text}\n▷` : '▷' };
+            } else {
+              map[y][x] = { strength: 4, text: '▷' };
+            }
+          }
+        }
       }
     }
 
     return map;
   }, [
     analysisResult,
+    mctsProgress,
+    nextMoveInfo,
     currentBoard.signMap.length,
     aiSettings.maxTopMoves,
     aiSettings.minProb,
+    aiSettings.heatMapMetric,
     showTopMoves,
   ]);
 
@@ -413,6 +620,8 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     nativeUploadProgress,
     waitForCurrentAnalysis,
     configuredNumVisits: aiSettings.numVisits ?? 1,
+    mctsProgress,
+    nextMoveInfo,
   };
 
   return <AIAnalysisContext.Provider value={value}>{children}</AIAnalysisContext.Provider>;

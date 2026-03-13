@@ -163,6 +163,30 @@
   text-align: center;
 }
 
+/* Metric toggle button label */
+.gameboard-metric-button__label {
+  font-size: 0.65rem;
+  min-width: 1.2em;
+  text-align: center;
+}
+
+/* In-progress metric animation during MCTS */
+.ai-analysis-summary__metric--in-progress .ai-analysis-summary__metric-value {
+  opacity: 0.7;
+  animation: pulse-metric 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-metric {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* =========================
  * Mobile AI Analysis Summary
  * ========================= */

@@ -1,13 +1,37 @@
+import type { GoBoard, Sign } from '@kaya/goboard';
 import type { BaseEngineConfig } from './base-engine';
+import type { AnalysisResult } from './types';
 
 /** Node in the MCTS search tree */
 export interface MCTSNode {
   N: number; // visit count
   W: number; // cumulative value (sum of Black's winrate)
+  S: number; // cumulative score lead (sum of score estimates)
   P: number; // prior probability (from parent's NN policy)
   children: Map<string, MCTSNode> | null;
   expanded: boolean;
   virtualLoss: number; // in-flight evaluations passing through this node
+}
+
+/** Batch evaluator for MCTS: evaluates multiple leaf positions in one call. */
+export type MCTSBatchEvaluator = (
+  leaves: Array<{
+    board: GoBoard;
+    pla: Sign;
+    komi: number;
+    history: { color: Sign; x: number; y: number }[];
+  }>
+) => Promise<AnalysisResult[]>;
+
+/** Progress update emitted during MCTS search. */
+export interface MCTSProgress {
+  completedVisits: number;
+  totalVisits: number;
+  bestMove: string;
+  bestMoveVisits: number;
+  winRate: number;
+  scoreLead: number;
+  topMoves: Array<{ move: string; visits: number; winRate: number; scoreLead: number }>;
 }
 
 export interface OnnxEngineConfig extends BaseEngineConfig {

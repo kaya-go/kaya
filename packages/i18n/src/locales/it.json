@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "Incorpora i dati di analisi IA (percentuale vittoria, punti, mosse) quando salvi come SGF. Aumenta la dimensione del file ma preserva l'analisi.",
     "numVisits": "Visite di ricerca",
     "numVisitsDescription": "Simulazioni MCTS per mossa. 1 = solo policy (più veloce). Valori più alti migliorano la qualità delle mosse a scapito della velocità. Usare 50–200 per un gioco più forte.",
-    "numVisitsNativeWarning": "MCTS non è disponibile con i backend nativi. Passa a WebGPU o WASM per utilizzare le visite di ricerca.",
     "modelUploadedSuccess": "Modello caricato con successo",
     "modelUploadFailed": "Caricamento modello fallito",
     "modelDownloadedSuccess": "Modello scaricato con successo",
@@ -253,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Scarsa",
     "poorProb": "<10%",
-    "note": "L'implementazione ONNX KataGo attuale fornisce probabilità di policy, ma non include percentuale di vittoria o differenza punti per le singole mosse candidate. Questi sono disponibili solo per la posizione corrente della tavola.",
+    "note": "I colori rappresentano sempre la probabilità di policy (quota visite), indipendentemente dalla metrica selezionata. Usa il selettore metrica per cambiare il testo sulle pietre: Policy mostra le probabilità, ΔVitt% e ΔPunt. mostrano le variazioni rispetto alla posizione attuale.",
     "heatmapOwnership": "Proprietà mappa di calore",
     "heatmapDescription": "La mappa di calore proprietà mostra il territorio previsto a fine partita. Colori più intensi indicano maggiore confidenza che l'area appartenga al giocatore.",
     "blackArea": "Territorio nero",
@@ -510,6 +509,8 @@
     "initializing": "Inizializzazione...",
     "loading": "Caricamento...",
     "analyzing": "Analisi in corso...",
+    "evaluating": "Valutazione...",
+    "searching": "Ricerca...",
     "winRate": "Tasso vittoria",
     "blackWinRate": "Vittoria Nero",
     "whiteWinRate": "Vittoria Bianco",
@@ -519,7 +520,11 @@
     "visitsFresh": "Analisi completata con il numero di visite configurato",
     "visitsStale": "Cache con meno visite — verrà ri-analizzato",
     "visitsTooltip": "Profondità di ricerca: {{count}} visite (clicca per cambiare, doppio clic per reimpostare)",
-    "visitsNativeDisabled": "MCTS non disponibile con backend nativo. Passa a WebGPU o WASM nelle impostazioni."
+    "bestMove": "Migliore",
+    "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di policy. Policy: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
+    "metric_policy": "Policy",
+    "metric_winRate": "ΔVitt%",
+    "metric_scoreLead": "ΔPunt."
   },
   "panels": {
     "library": "Libreria",

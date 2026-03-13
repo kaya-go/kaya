@@ -12,11 +12,14 @@ type WorkerMessage =
     }
   | { type: 'dispose' }
   | { type: 'clearCache' }
-  | { type: 'getRuntimeInfo' };
+  | { type: 'getRuntimeInfo' }
+  | { type: 'abort'; id: number };
 
 let engine: OnnxEngine | null = null;
 let isProcessing = false;
 const messageQueue: MessageEvent<WorkerMessage>[] = [];
+// Track AbortControllers for in-flight MCTS requests
+const activeAbortControllers = new Map<number, AbortController>();
 
 const processQueue = async () => {
   if (isProcessing || messageQueue.length === 0) return;
@@ -38,11 +41,23 @@ const processQueue = async () => {
         self.postMessage({ type: 'init_success', runtimeInfo });
         break;
 
-      case 'analyze':
+      case 'analyze': {
         if (!engine) throw new Error('Engine not initialized');
-        const result = await engine.analyze(msg.signMap, msg.options);
+        // Create AbortController and progress callback for MCTS
+        const ac = new AbortController();
+        activeAbortControllers.set(msg.id, ac);
+        const optionsWithCallbacks = {
+          ...msg.options,
+          signal: ac.signal,
+          onProgress: (progress: any) => {
+            self.postMessage({ type: 'mcts_progress', id: msg.id, progress });
+          },
+        };
+        const result = await engine.analyze(msg.signMap, optionsWithCallbacks);
+        activeAbortControllers.delete(msg.id);
         self.postMessage({ type: 'analyze_success', id: msg.id, result });
         break;
+      }
 
       case 'analyzeBatch':
         if (!engine) throw new Error('Engine not initialized');
@@ -90,6 +105,15 @@ const processQueue = async () => {
 };
 
 self.onmessage = (e: MessageEvent<WorkerMessage>) => {
+  // Handle abort immediately without queuing
+  if (e.data.type === 'abort') {
+    const ac = activeAbortControllers.get(e.data.id);
+    if (ac) {
+      ac.abort();
+      activeAbortControllers.delete(e.data.id);
+    }
+    return;
+  }
   messageQueue.push(e);
   processQueue();
 };

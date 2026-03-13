@@ -135,6 +135,57 @@ pub async fn onnx_get_cached_model(model_id: String, app_handle: tauri::AppHandl
     }
 }
 
+/// Result from caching a downloaded model file.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CacheResult {
+    pub path: String,
+    pub size: u64,
+}
+
+/// Cache a downloaded temp file directly to the models directory.
+/// Returns the cached file path and size. This avoids the JS round-trip of reading
+/// the file into memory and then uploading it back via chunked IPC.
+#[tauri::command]
+pub async fn onnx_cache_downloaded_file(
+    temp_path: String,
+    model_id: String,
+    app_handle: tauri::AppHandle,
+) -> Result<CacheResult, String> {
+    sanitize_model_id(&model_id)?;
+
+    let src = std::path::Path::new(&temp_path);
+    if !src.exists() {
+        return Err(format!("Temp file not found: {}", temp_path));
+    }
+
+    let file_size = std::fs::metadata(src)
+        .map_err(|e| format!("Failed to read temp file metadata: {}", e))?
+        .len();
+
+    let app_data = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    let models_dir = app_data.join("models");
+    std::fs::create_dir_all(&models_dir)
+        .map_err(|e| format!("Failed to create models dir: {}", e))?;
+
+    let cached_path = models_dir.join(format!("{}.onnx", model_id));
+
+    std::fs::rename(src, &cached_path)
+        .or_else(|_| {
+            std::fs::copy(src, &cached_path)?;
+            std::fs::remove_file(src)
+        })
+        .map_err(|e| format!("Failed to cache model: {}", e))?;
+
+    Ok(CacheResult {
+        path: cached_path.to_string_lossy().to_string(),
+        size: file_size,
+    })
+}
+
 /// Delete a cached model from the app data directory
 #[tauri::command]
 pub async fn onnx_delete_cached_model(model_id: String, app_handle: tauri::AppHandle) -> Result<bool, String> {

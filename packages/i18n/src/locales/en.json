@@ -134,7 +134,6 @@
     "saveAnalysisToSgfDescription": "Embed AI analysis data (win rate, score, move suggestions) when saving SGF files. Increases file size but preserves your analysis.",
     "numVisits": "Search Visits",
     "numVisitsDescription": "MCTS simulations per move. 1 = policy-only (fastest). Higher values improve move quality at the cost of speed. Use 50–200 for stronger play.",
-    "numVisitsNativeWarning": "MCTS is not available with native backends. Switch to WebGPU or WASM to use search visits.",
     "modelUploadedSuccess": "Model uploaded successfully",
     "modelUploadFailed": "Failed to upload model",
     "modelDownloadedSuccess": "Model downloaded successfully",
@@ -253,7 +252,7 @@
     "okayProb": "10-40%",
     "poor": "Poor",
     "poorProb": "<10%",
-    "note": "The current ONNX KataGo implementation provides policy probabilities but does not include win rate or score lead for individual move suggestions. These metrics are only available for the current board position.",
+    "note": "Colors always represent the AI's policy probability (visit share), regardless of the selected metric. Use the metric toggle to change the text on stones: Policy shows move probabilities, ΔWin% and ΔScore show changes versus the current position.",
     "heatmapOwnership": "Heatmap Ownership",
     "heatmapDescription": "The ownership heatmap shows the predicted territory control at the end of the game. Brighter colors indicate higher confidence that the area will belong to that player.",
     "blackArea": "Black Area",
@@ -513,6 +512,8 @@
     "initializing": "Initializing...",
     "loading": "Loading...",
     "analyzing": "Analyzing...",
+    "evaluating": "Evaluating...",
+    "searching": "Searching...",
     "winRate": "Win Rate",
     "blackWinRate": "Black Win Rate",
     "whiteWinRate": "White Win Rate",
@@ -522,7 +523,11 @@
     "visitsFresh": "Analysis complete with configured visit count",
     "visitsStale": "Cached from a lower visit count — will re-analyze",
     "visitsTooltip": "Search depth: {{count}} visits (click to cycle, double-click to reset)",
-    "visitsNativeDisabled": "MCTS not available with native backend. Switch to WebGPU or WASM in settings."
+    "bestMove": "Best",
+    "metricTooltip": "Toggle stone text metric — colors always show policy probability. Policy: move probability, ΔWin%: win rate change vs current, ΔScore: score lead change vs current",
+    "metric_policy": "Policy",
+    "metric_winRate": "ΔWin%",
+    "metric_scoreLead": "ΔScore"
   },
   "panels": {
     "library": "Library",

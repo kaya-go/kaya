@@ -9,6 +9,7 @@
  */
 
 import type { SignMap } from '@kaya/goboard';
+import type { Sign } from '@kaya/goboard';
 import {
   Engine,
   type EngineAnalysisOptions,
@@ -16,6 +17,7 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import type { AnalysisResult } from './types';
+import type { MCTSProgress } from './onnx-types';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -25,7 +27,9 @@ import {
   type TauriAnalysisOptions,
   type TauriBatchInput,
   type TauriInvokeFn,
+  type TauriListenFn,
   getTauriInvoke,
+  getTauriListen,
   CHUNK_SIZE,
   chunkToBase64,
   yieldToUI,
@@ -46,6 +50,7 @@ export class TauriEngine extends Engine {
   private modelPath?: string;
   private modelId?: string;
   private invoke: TauriInvokeFn | null = null;
+  private listen: TauriListenFn | null = null;
   private onProgress?: (progress: UploadProgress) => void;
   private executionProvider: ExecutionProviderPreference;
   private providerIsGpu = false;
@@ -63,8 +68,9 @@ export class TauriEngine extends Engine {
     const modelName = (config.modelId ?? config.modelPath ?? '').toLowerCase();
     this.modelIsFp16 = modelName.includes('fp16') || modelName.includes('float16');
 
-    // Get invoke function immediately in constructor
+    // Get invoke and listen functions immediately in constructor
     this.invoke = getTauriInvoke();
+    this.listen = getTauriListen();
   }
 
   private reportProgress(stage: UploadProgress['stage'], progress: number, message: string): void {
@@ -229,38 +235,84 @@ export class TauriEngine extends Engine {
       throw new Error('TauriEngine can only be used in a Tauri environment');
     }
 
-    const analysisStart = performance.now();
+    const numVisits: number = (options as any).numVisits ?? 1;
+    const komi = options.komi ?? 7.5;
+    const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
+    const signal = (options as any).signal as AbortSignal | undefined;
 
-    // Convert SignMap to number[][] for Rust
-    const signMapArray = signMap.map(row => row.map(s => s as number));
+    // Build ko info
+    const koInfo = (options as any).koInfo as { sign: Sign; vertex: [number, number] } | undefined;
+    let koOption: { sign: number; vertex: [number, number] } | undefined;
+    if (koInfo && (koInfo.sign as number) !== 0) {
+      koOption = { sign: koInfo.sign as number, vertex: koInfo.vertex };
+    }
 
-    // Prepare options for Rust
-    const tauriOptions: TauriAnalysisOptions = {
-      komi: options.komi ?? 7.5,
-      nextToPlay: options.nextToPlay,
-      history: this.convertHistory(options.history),
-    };
+    const includeMove = options.includeMove;
 
-    this.debugLog('Analyzing position', {
-      boardSize: signMap.length,
-      nextToPlay: tauriOptions.nextToPlay,
-      historyLength: tauriOptions.history.length,
-    });
+    // Listen for progress events from Rust
+    let unlisten: (() => void) | undefined;
+    if (onProgress && this.listen) {
+      unlisten = await this.listen<MCTSProgress>(
+        'mcts-progress',
+        (event: { payload: MCTSProgress }) => {
+          onProgress(event.payload);
+        }
+      );
+    }
 
-    const inferenceStart = performance.now();
-    const result = await this.invoke<AnalysisResult>('onnx_analyze', {
-      signMap: signMapArray,
-      options: tauriOptions,
-    });
-    const inferenceTime = performance.now() - inferenceStart;
+    // Wire abort signal to Rust abort command
+    let abortHandler: (() => void) | undefined;
+    if (signal) {
+      abortHandler = () => {
+        this.invoke!('onnx_abort_mcts');
+      };
+      if (signal.aborted) {
+        abortHandler();
+      } else {
+        signal.addEventListener('abort', abortHandler, { once: true });
+      }
+    }
 
-    const totalTime = performance.now() - analysisStart;
-    this.debugLog('Analysis complete', {
-      totalTimeMs: totalTime,
-      inferenceTimeMs: inferenceTime,
-    });
+    try {
+      // Single IPC call — entire MCTS runs in Rust
+      const result = await this.invoke<{
+        moveSuggestions: {
+          move: string;
+          probability: number;
+          winRate?: number;
+          scoreLead?: number;
+        }[];
+        winRate: number;
+        scoreLead: number;
+        currentTurn: string;
+        ownership?: number[];
+        visits?: number;
+      }>('onnx_analyze_mcts', {
+        signMap: signMap.map(row => row.map(s => s as number)),
+        options: {
+          komi,
+          nextToPlay: options.nextToPlay ?? null,
+          history: this.convertHistory(options.history),
+          numVisits,
+          includeMove: includeMove ?? null,
+          koInfo: koOption ?? null,
+        },
+      });
 
-    return result;
+      return {
+        moveSuggestions: result.moveSuggestions,
+        winRate: result.winRate,
+        scoreLead: result.scoreLead,
+        currentTurn: result.currentTurn as 'B' | 'W',
+        ownership: result.ownership,
+        visits: result.visits,
+      };
+    } finally {
+      if (unlisten) unlisten();
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+    }
   }
 
   async analyzeBatch(

@@ -162,17 +162,19 @@ export function useModelLibrary() {
             // Rust downloads to a temp file and returns the path
             tempPath = await invoke<string>('download_file', { url: model.url });
 
-            // Read the temp file as binary
-            const { readFile, remove } = await import('@tauri-apps/plugin-fs');
-            const bytes = await readFile(tempPath);
-            buffer = bytes.buffer as ArrayBuffer;
+            // Cache the downloaded file directly in Rust's model cache dir.
+            // This avoids re-uploading via chunked IPC when the native engine initializes.
+            const modelCacheId = id.replace(/[^a-zA-Z0-9-_]/g, '_');
+            const cacheResult = await invoke<{ path: string; size: number }>(
+              'onnx_cache_downloaded_file',
+              { tempPath, modelId: modelCacheId }
+            );
 
-            // Clean up temp file
-            try {
-              await remove(tempPath);
-            } catch {
-              // Non-critical: temp file cleanup failure
-            }
+            // Read the cached copy into JS for IndexedDB storage
+            // (needed for web engine / WebGPU backend fallback)
+            const { readFile } = await import('@tauri-apps/plugin-fs');
+            const bytes = await readFile(cacheResult.path);
+            buffer = bytes.buffer as ArrayBuffer;
           } finally {
             unlisten();
           }
