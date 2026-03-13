@@ -1,8 +1,8 @@
 //! Execution provider configuration and ONNX Runtime initialization
 
-use ort::execution_providers::{
-    CUDAExecutionProvider, CoreMLExecutionProvider, DirectMLExecutionProvider,
-};
+use ort::execution_providers::{CUDAExecutionProvider, DirectMLExecutionProvider};
+#[cfg(target_os = "macos")]
+use ort::execution_providers::CoreMLExecutionProvider;
 #[cfg(target_os = "macos")]
 use ort::ep::coreml::{ModelFormat, SpecializationStrategy};
 use ort::session::builder::SessionBuilder;
@@ -272,10 +272,16 @@ pub fn configure_execution_providers(
             eprintln!("[OnnxEngine] MIGraphX is only available on Linux with AMD GPU, using CPU");
             Ok(builder)
         }
+        #[cfg(target_os = "macos")]
         ExecutionProviderPreference::CoreMl => {
             builder
                 .with_execution_providers([build_coreml_provider(_model_cache_dir)])
                 .map_err(|e| format!("Failed to set CoreML execution provider: {}", e))
+        }
+        #[cfg(not(target_os = "macos"))]
+        ExecutionProviderPreference::CoreMl => {
+            eprintln!("[OnnxEngine] CoreML is only available on macOS, using CPU");
+            Ok(builder)
         }
         ExecutionProviderPreference::DirectMl => {
             builder
