@@ -49,39 +49,91 @@ static ENGINE: Mutex<Option<OnnxEngine>> = Mutex::new(None);
 static MCTS_ABORT: AtomicBool = AtomicBool::new(false);
 
 impl OnnxEngine {
-    /// Get the MIGraphX model cache directory
+    /// Determine optimal thread count based on platform and available parallelism.
+    /// Matches the web engine's behavior: min(8, hardware_concurrency).
+    fn get_num_threads() -> usize {
+        #[cfg(target_os = "android")]
+        { 2 }
+        #[cfg(not(target_os = "android"))]
+        {
+            std::thread::available_parallelism()
+                .map(|n| n.get().min(8))
+                .unwrap_or(4)
+        }
+    }
+
+    /// Get the EP model cache directory (for CoreML/MIGraphX compiled model caching).
+    /// Uses a platform-appropriate location under the user's data directory.
     fn get_cache_dir() -> Option<String> {
-        let home = std::env::var("HOME").ok()?;
-        let cache_dir = format!("{}/.local/share/kaya/migraphx_cache", home);
+        let cache_dir = if cfg!(target_os = "macos") {
+            let home = std::env::var("HOME").ok()?;
+            std::path::PathBuf::from(home).join("Library/Application Support/kaya/ep_cache")
+        } else if cfg!(target_os = "windows") {
+            let appdata = std::env::var("APPDATA").ok()?;
+            std::path::PathBuf::from(appdata).join("kaya/ep_cache")
+        } else {
+            let home = std::env::var("HOME").ok()?;
+            std::path::PathBuf::from(home).join(".local/share/kaya/ep_cache")
+        };
         std::fs::create_dir_all(&cache_dir).ok()?;
-        Some(cache_dir)
+        Some(cache_dir.to_string_lossy().to_string())
+    }
+
+    /// Get the path for the graph-optimized model file.
+    /// ORT saves the optimized model here on first load and reuses it on subsequent loads,
+    /// skipping the expensive Level3 graph optimization.
+    fn get_optimized_model_path(cache_dir: &str, model_source: &str) -> std::path::PathBuf {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        model_source.hash(&mut hasher);
+        let hash = hasher.finish();
+        let opt_dir = std::path::PathBuf::from(cache_dir).join("optimized");
+        let _ = std::fs::create_dir_all(&opt_dir);
+        opt_dir.join(format!("{:016x}.onnx", hash))
     }
 
     /// Create a new ONNX engine from a model file
     pub fn new(model_path: &Path) -> Result<Self, String> {
+        use std::time::Instant;
+        let total_start = Instant::now();
+
         ensure_ort_initialized()?;
         
         let preference = get_execution_provider_preference();
         let provider_name = preference_to_name(preference);
         let cache_dir = Self::get_cache_dir();
+        let num_threads = Self::get_num_threads();
+        eprintln!("[OnnxEngine] Loading model from {:?} (provider={}, threads={})", model_path, provider_name, num_threads);
         
         let builder = Session::builder()
             .map_err(|e| format!("Failed to create session builder: {}", e))?;
         
         let builder = configure_execution_providers(builder, preference, cache_dir.as_deref())?;
         
-        #[cfg(target_os = "android")]
-        let num_threads = 2;
-        #[cfg(not(target_os = "android"))]
-        let num_threads = 4;
-        
-        let session = builder
+        let session_start = Instant::now();
+        let mut session_builder = builder
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(|e| format!("Failed to set optimization level: {}", e))?
             .with_intra_threads(num_threads)
             .map_err(|e| format!("Failed to set intra threads: {}", e))?
+            .with_inter_threads(num_threads)
+            .map_err(|e| format!("Failed to set inter threads: {}", e))?
+            .with_memory_pattern(true)
+            .map_err(|e| format!("Failed to enable memory pattern: {}", e))?;
+
+        // Save optimized model to cache so subsequent loads skip graph optimization
+        if let Some(ref dir) = cache_dir {
+            let opt_path = Self::get_optimized_model_path(dir, model_path.to_string_lossy().as_ref());
+            session_builder = session_builder
+                .with_optimized_model_path(&opt_path)
+                .map_err(|e| format!("Failed to set optimized model path: {}", e))?;
+        }
+
+        let session = session_builder
             .commit_from_file(model_path)
             .map_err(|e| format!("Failed to load model from {:?}: {}", model_path, e))?;
+        eprintln!("[OnnxEngine] Session created in {:.1}s", session_start.elapsed().as_secs_f64());
 
         let is_fp16 = detect_fp16(&session, "OnnxEngine");
 
@@ -95,37 +147,57 @@ impl OnnxEngine {
         // Run a warm-up inference to catch GPU failures early
         // (e.g. fp16 model on incompatible GPU, or missing GPU drivers)
         if preference != ExecutionProviderPreference::Cpu {
+            let warmup_start = Instant::now();
             engine.validate_warmup()?;
+            eprintln!("[OnnxEngine] Warm-up completed in {:.1}s", warmup_start.elapsed().as_secs_f64());
         }
 
+        eprintln!("[OnnxEngine] Total initialization: {:.1}s", total_start.elapsed().as_secs_f64());
         Ok(engine)
     }
 
     /// Create a new ONNX engine from model bytes
     pub fn from_bytes(model_bytes: &[u8]) -> Result<Self, String> {
+        use std::time::Instant;
+        let total_start = Instant::now();
+
         ensure_ort_initialized()?;
         
         let preference = get_execution_provider_preference();
         let provider_name = preference_to_name(preference);
         let cache_dir = Self::get_cache_dir();
+        let num_threads = Self::get_num_threads();
+        eprintln!("[OnnxEngine] Loading model from bytes ({}MB, provider={}, threads={})",
+            model_bytes.len() / 1024 / 1024, provider_name, num_threads);
         
         let builder = Session::builder()
             .map_err(|e| format!("Failed to create session builder: {}", e))?;
         
         let builder = configure_execution_providers(builder, preference, cache_dir.as_deref())?;
         
-        #[cfg(target_os = "android")]
-        let num_threads = 2;
-        #[cfg(not(target_os = "android"))]
-        let num_threads = 4;
-        
-        let session = builder
+        let session_start = Instant::now();
+        let mut session_builder = builder
             .with_optimization_level(GraphOptimizationLevel::Level3)
             .map_err(|e| format!("Failed to set optimization level: {}", e))?
             .with_intra_threads(num_threads)
             .map_err(|e| format!("Failed to set intra threads: {}", e))?
+            .with_inter_threads(num_threads)
+            .map_err(|e| format!("Failed to set inter threads: {}", e))?
+            .with_memory_pattern(true)
+            .map_err(|e| format!("Failed to enable memory pattern: {}", e))?;
+
+        // Save optimized model to cache so subsequent loads skip graph optimization
+        if let Some(ref dir) = cache_dir {
+            let opt_path = Self::get_optimized_model_path(dir, &format!("bytes_{}", model_bytes.len()));
+            session_builder = session_builder
+                .with_optimized_model_path(&opt_path)
+                .map_err(|e| format!("Failed to set optimized model path: {}", e))?;
+        }
+
+        let session = session_builder
             .commit_from_memory(model_bytes)
             .map_err(|e| format!("Failed to load model from bytes: {}", e))?;
+        eprintln!("[OnnxEngine] Session created in {:.1}s", session_start.elapsed().as_secs_f64());
 
         let is_fp16 = detect_fp16(&session, "OnnxEngine from_bytes");
 
@@ -139,9 +211,12 @@ impl OnnxEngine {
         // Run a warm-up inference to catch GPU failures early
         // (e.g. fp16 model on incompatible GPU, or missing GPU drivers)
         if preference != ExecutionProviderPreference::Cpu {
+            let warmup_start = Instant::now();
             engine.validate_warmup()?;
+            eprintln!("[OnnxEngine] Warm-up completed in {:.1}s", warmup_start.elapsed().as_secs_f64());
         }
 
+        eprintln!("[OnnxEngine] Total initialization: {:.1}s", total_start.elapsed().as_secs_f64());
         Ok(engine)
     }
     
@@ -190,7 +265,7 @@ impl OnnxEngine {
             featurize_ndarray(sign_map, next_pla, options.komi, &options.history, self.board_size);
 
         // Run inference
-        let results = self.run_inference(&bin_input, &global_input, 1)?;
+        let results = self.run_inference(bin_input, global_input)?;
 
         // Process results
         self.process_results(&results, next_pla)
@@ -233,7 +308,7 @@ impl OnnxEngine {
             }
         }
 
-        let results = self.run_inference(&bin_input, &global_input, batch_size)?;
+        let results = self.run_inference(bin_input, global_input)?;
         self.process_batch_results(&results, &plas)
     }
 }

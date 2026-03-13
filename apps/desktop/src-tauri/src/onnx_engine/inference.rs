@@ -8,12 +8,12 @@ use super::types::OnnxOutputs;
 use super::OnnxEngine;
 
 impl OnnxEngine {
-    /// Run ONNX inference (dispatches to fp16 or fp32 path)
+    /// Run ONNX inference (dispatches to fp16 or fp32 path).
+    /// Takes ownership of inputs to avoid cloning.
     pub(crate) fn run_inference(
         &mut self,
-        bin_input: &Array4<f32>,
-        global_input: &Array2<f32>,
-        _batch_size: usize,
+        bin_input: Array4<f32>,
+        global_input: Array2<f32>,
     ) -> Result<OnnxOutputs, String> {
         if self.is_fp16 {
             self.run_inference_fp16(bin_input, global_input)
@@ -25,16 +25,13 @@ impl OnnxEngine {
     /// Run ONNX inference with fp32 tensors
     fn run_inference_fp32(
         &mut self,
-        bin_input: &Array4<f32>,
-        global_input: &Array2<f32>,
+        bin_input: Array4<f32>,
+        global_input: Array2<f32>,
     ) -> Result<OnnxOutputs, String> {
-        let bin_owned = bin_input.clone();
-        let global_owned = global_input.clone();
-
-        let bin_tensor = Tensor::from_array(bin_owned)
+        let bin_tensor = Tensor::from_array(bin_input)
             .map_err(|e| format!("Failed to create bin_input tensor: {}", e))?;
 
-        let global_tensor = Tensor::from_array(global_owned)
+        let global_tensor = Tensor::from_array(global_input)
             .map_err(|e| format!("Failed to create global_input tensor: {}", e))?;
 
         let outputs = self
@@ -77,8 +74,8 @@ impl OnnxEngine {
     /// Run ONNX inference with fp16 tensors (converts f32 inputs to f16, runs inference, converts f16 outputs back to f32)
     fn run_inference_fp16(
         &mut self,
-        bin_input: &Array4<f32>,
-        global_input: &Array2<f32>,
+        bin_input: Array4<f32>,
+        global_input: Array2<f32>,
     ) -> Result<OnnxOutputs, String> {
         let bin_fp16 = bin_input.mapv(|v| f16::from_f32(v));
         let global_fp16 = global_input.mapv(|v| f16::from_f32(v));

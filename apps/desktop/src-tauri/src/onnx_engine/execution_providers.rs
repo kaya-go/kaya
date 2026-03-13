@@ -3,6 +3,8 @@
 use ort::execution_providers::{
     CUDAExecutionProvider, CoreMLExecutionProvider, DirectMLExecutionProvider,
 };
+#[cfg(target_os = "macos")]
+use ort::ep::coreml::{ModelFormat, SpecializationStrategy};
 use ort::session::builder::SessionBuilder;
 #[cfg(target_os = "android")]
 use ort::execution_providers::NNAPIExecutionProvider;
@@ -160,6 +162,31 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
     Ok(())
 }
 
+/// Build an optimized CoreML execution provider (macOS only).
+///
+/// Key optimizations over bare defaults:
+/// - MLProgram format: newer, more performant (requires macOS 12+)
+/// - FastPrediction specialization: optimize for inference latency
+/// - Model caching: avoids recompiling CoreML model on every session load
+/// - Static input shapes: allows CoreML to optimize graph for fixed dimensions
+#[cfg(target_os = "macos")]
+fn build_coreml_provider(cache_dir: Option<&str>) -> ort::execution_providers::ExecutionProviderDispatch {
+    let mut ep = CoreMLExecutionProvider::default()
+        .with_model_format(ModelFormat::MLProgram)
+        .with_specialization_strategy(SpecializationStrategy::FastPrediction)
+        .with_static_input_shapes(true);
+
+    if let Some(dir) = cache_dir {
+        let coreml_cache = format!("{}/coreml", dir);
+        if std::fs::create_dir_all(&coreml_cache).is_ok() {
+            eprintln!("[OnnxEngine] CoreML model cache dir: {}", coreml_cache);
+            ep = ep.with_model_cache_dir(&coreml_cache);
+        }
+    }
+
+    ep.build()
+}
+
 /// Configure execution providers based on preference and platform
 pub fn configure_execution_providers(
     builder: SessionBuilder,
@@ -178,7 +205,7 @@ pub fn configure_execution_providers(
             #[cfg(target_os = "macos")]
             {
                 builder
-                    .with_execution_providers([CoreMLExecutionProvider::default().build()])
+                    .with_execution_providers([build_coreml_provider(_model_cache_dir)])
                     .map_err(|e| format!("Failed to set CoreML execution provider: {}", e))
             }
             #[cfg(target_os = "windows")]
@@ -247,7 +274,7 @@ pub fn configure_execution_providers(
         }
         ExecutionProviderPreference::CoreMl => {
             builder
-                .with_execution_providers([CoreMLExecutionProvider::default().build()])
+                .with_execution_providers([build_coreml_provider(_model_cache_dir)])
                 .map_err(|e| format!("Failed to set CoreML execution provider: {}", e))
         }
         ExecutionProviderPreference::DirectMl => {
