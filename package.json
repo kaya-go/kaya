@@ -1,6 +1,6 @@
 {
   "name": "kaya",
-  "version": "0.3.5",
+  "version": "0.3.6-dev",
   "private": true,
   "type": "module",
   "description": "Free, open-source Go (Baduk/Weiqi) application with AI analysis (KataGo), board recognition from photos, SGF support, and game tree navigation",
