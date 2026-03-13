@@ -32,12 +32,13 @@ jobs:
     name: Build Desktop - Linux (${{ inputs.arch }})
     runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
-      image: archlinux:base-devel
+      image: ${{ inputs.arch == 'aarch64' && 'menci/archlinuxarm:latest' || 'archlinux:base-devel' }}
     steps:
       - name: Install system dependencies
         run: |
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed \
+            base-devel \
             git curl wget unzip \
             clang cmake mold \
             webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
