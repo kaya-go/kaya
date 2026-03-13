@@ -176,19 +176,31 @@ jobs:
     secrets: inherit
 
   build-linux:
-    name: Build Linux
+    name: Build Linux (x86_64)
     needs: verify
     uses: ./.github/workflows/_build-linux.yml
     with:
       set-version: ${{ github.event.inputs.version }}
+      arch: x86_64
       artifact-name: desktop-linux
+      bun-version: '1.3.2'
+    secrets: inherit
+
+  build-linux-arm64:
+    name: Build Linux (aarch64)
+    needs: verify
+    uses: ./.github/workflows/_build-linux.yml
+    with:
+      set-version: ${{ github.event.inputs.version }}
+      arch: aarch64
+      artifact-name: desktop-linux-arm64
       bun-version: '1.3.2'
     secrets: inherit
 
   # Commit version bump and create release ONLY after successful builds
   commit-and-release:
     name: Commit Version & Create Release
-    needs: [build-macos, build-windows, build-linux, deploy-web]
+    needs: [build-macos, build-windows, build-linux, build-linux-arm64, deploy-web]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -271,6 +283,10 @@ jobs:
             desktop-linux/**/*.rpm
             desktop-linux/**/*.AppImage
             desktop-linux/**/*.AppImage.sig
+            desktop-linux-arm64/**/*.deb
+            desktop-linux-arm64/**/*.rpm
+            desktop-linux-arm64/**/*.AppImage
+            desktop-linux-arm64/**/*.AppImage.sig
             desktop-windows/**/*.exe
             desktop-windows/**/*.exe.sig
             latest.json
@@ -286,9 +302,12 @@ jobs:
             | -------- | --------- | --------- |
             | **macOS** (Apple Silicon) | [.dmg](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.dmg) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.dmg.sig) |
             | **Windows** (x64) | [.exe](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_x64-setup.exe) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_x64-setup.exe.sig) |
-            | **Linux** (AppImage) | [.AppImage](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage.sig) |
-            | **Linux** (Debian/Ubuntu) | [.deb](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya_${{ github.event.inputs.version }}_amd64.deb) | - |
-            | **Linux** (Fedora/RHEL) | [.rpm](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya-${{ github.event.inputs.version }}-1.x86_64.rpm) | - |
+            | **Linux x64** (AppImage) | [.AppImage](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage.sig) |
+            | **Linux x64** (Debian/Ubuntu) | [.deb](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya_${{ github.event.inputs.version }}_amd64.deb) | - |
+            | **Linux x64** (Fedora/RHEL) | [.rpm](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya-${{ github.event.inputs.version }}-1.x86_64.rpm) | - |
+            | **Linux ARM64** (AppImage) | [.AppImage](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.AppImage) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.AppImage.sig) |
+            | **Linux ARM64** (Debian/Ubuntu) | [.deb](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya_${{ github.event.inputs.version }}_arm64.deb) | - |
+            | **Linux ARM64** (Fedora/RHEL) | [.rpm](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya-${{ github.event.inputs.version }}-1.aarch64.rpm) | - |
 
   bump-dev-version:
     name: Bump to Next Dev Version

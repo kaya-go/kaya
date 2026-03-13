@@ -37,11 +37,23 @@ jobs:
     secrets: inherit
 
   build-linux:
-    name: Build Linux
+    name: Build Linux (x86_64)
     uses: ./.github/workflows/_build-linux.yml
     with:
       skip-cache: ${{ inputs.skip_cache || false }}
+      arch: x86_64
       artifact-name: nightly-linux
+      artifact-retention-days: 14
+      bun-version: '1.3.2'
+    secrets: inherit
+
+  build-linux-arm64:
+    name: Build Linux (aarch64)
+    uses: ./.github/workflows/_build-linux.yml
+    with:
+      skip-cache: ${{ inputs.skip_cache || false }}
+      arch: aarch64
+      artifact-name: nightly-linux-arm64
       artifact-retention-days: 14
       bun-version: '1.3.2'
     secrets: inherit
@@ -49,7 +61,7 @@ jobs:
   # Generate summary after all builds complete
   summary:
     name: Generate Summary
-    needs: [build-macos, build-windows, build-linux]
+    needs: [build-macos, build-windows, build-linux, build-linux-arm64]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -120,6 +132,22 @@ jobs:
           echo "|------|------|" >> $GITHUB_STEP_SUMMARY
           if [ -d "artifacts/nightly-linux" ]; then
             find artifacts/nightly-linux -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) | while read file; do
+              filename=$(basename "$file")
+              size=$(ls -lh "$file" | awk '{print $5}')
+              echo "| \`$filename\` | $size |" >> $GITHUB_STEP_SUMMARY
+            done
+          else
+            echo "| *No artifacts found* | - |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          # Linux ARM64 section
+          echo "### 🐧 Linux (ARM64)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          if [ -d "artifacts/nightly-linux-arm64" ]; then
+            find artifacts/nightly-linux-arm64 -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) | while read file; do
               filename=$(basename "$file")
               size=$(ls -lh "$file" | awk '{print $5}')
               echo "| \`$filename\` | $size |" >> $GITHUB_STEP_SUMMARY

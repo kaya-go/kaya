@@ -73,14 +73,26 @@ if (darwinSigFile) {
   };
 }
 
-// Linux
+// Linux (x86_64)
 // Tauri v2 updater uses .AppImage for Linux
-const linuxSigFile = findFile('.', /\.AppImage\.sig$/);
+const linuxSigFile = findFile('.', /amd64\.AppImage\.sig$/);
 if (linuxSigFile) {
   const sigContent = getSignatureContent('.', linuxSigFile);
   const binaryName = linuxSigFile.replace('.sig', '');
 
   updaterJson.platforms['linux-x86_64'] = {
+    signature: sigContent,
+    url: `${baseUrl}/${basename(binaryName)}`,
+  };
+}
+
+// Linux (aarch64)
+const linuxArm64SigFile = findFile('.', /aarch64\.AppImage\.sig$/);
+if (linuxArm64SigFile) {
+  const sigContent = getSignatureContent('.', linuxArm64SigFile);
+  const binaryName = linuxArm64SigFile.replace('.sig', '');
+
+  updaterJson.platforms['linux-aarch64'] = {
     signature: sigContent,
     url: `${baseUrl}/${basename(binaryName)}`,
   };

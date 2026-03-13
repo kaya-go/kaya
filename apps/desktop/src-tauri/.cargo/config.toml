@@ -5,6 +5,10 @@
 linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 
+[target.aarch64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
 # Android targets - use NDK linkers
 # These are automatically set up by `tauri android init` but we document them here
 [target.aarch64-linux-android]

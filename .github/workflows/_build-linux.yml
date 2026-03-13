@@ -13,6 +13,10 @@ on:
       set-version:
         type: string
         default: ''
+      arch:
+        description: 'Target architecture: x86_64 or aarch64'
+        type: string
+        default: 'x86_64'
       artifact-name:
         type: string
         default: 'desktop-linux'
@@ -25,8 +29,8 @@ on:
 
 jobs:
   build:
-    name: Build Desktop - Linux
-    runs-on: ubuntu-latest
+    name: Build Desktop - Linux (${{ inputs.arch }})
+    runs-on: ${{ inputs.arch == 'aarch64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
       image: archlinux:base-devel
     steps:
@@ -55,9 +59,9 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-          key: Linux-arch-bun-cache-${{ hashFiles('**/bun.lock') }}
+          key: Linux-arch-${{ inputs.arch }}-bun-cache-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            Linux-arch-bun-cache-
+            Linux-arch-${{ inputs.arch }}-bun-cache-
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -90,10 +94,10 @@ jobs:
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
-          key: Linux-arch-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-arch-${{ inputs.arch }}-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            Linux-arch-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
-            Linux-arch-sccache-
+            Linux-arch-${{ inputs.arch }}-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-arch-${{ inputs.arch }}-sccache-
 
       - name: Enable sccache (strict)
         shell: bash
@@ -117,10 +121,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
-          key: Linux-arch-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-arch-${{ inputs.arch }}-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            Linux-arch-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
-            Linux-arch-cargo-
+            Linux-arch-${{ inputs.arch }}-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-arch-${{ inputs.arch }}-cargo-
 
       # Install tauri-cli with new AppImage format (Arch Linux container)
       # Uses the feat/truly-portable-appimage branch which uses quick-sharun
@@ -138,7 +142,7 @@ jobs:
           path: |
             ~/.cargo/bin/wasm-pack*
             ~/wasm-pack-*
-          key: Linux-arch-wasm-pack-0.13
+          key: Linux-arch-${{ inputs.arch }}-wasm-pack-0.13
 
       - name: Install wasm-pack
         shell: bash
