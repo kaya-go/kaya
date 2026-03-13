@@ -104,9 +104,17 @@ kaya/
 **2. AI Engine Lifecycle** (`packages/ui/src/contexts/AIEngineContext.tsx`)
 
 - Singleton engine managed via `AIEngineProvider` / `useAIEngine()` hook
-- Runs in Web Worker (no UI freeze)
+- Runs in Web Worker (web) or native Rust ONNX Runtime (desktop)
 - Automatic GPU→WASM fallback: warm-up validation detects silent WebGPU failures, runtime try-catch catches thrown GPU errors; both reinitialize with WASM and show a toast notification
 - Dispose engine to free resources when disabled
+
+**2b. AI Analysis & MCTS** (`packages/ui/src/contexts/AIAnalysisContext.tsx`)
+
+- MCTS search with live progress reporting (visit count, top moves, win rate)
+- Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts` command) — zero IPC overhead
+- Web: MCTS runs in Web Worker with batched inference
+- Heatmap metric toggle: policy / ΔWin% / ΔScore (colors always show policy probability)
+- Next move display: compares played move to AI's top suggestion with rank and delta metrics
 
 **3. Asset Management: No Symlinks!**
 
