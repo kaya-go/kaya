@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.5] - 2026-03-13
+
+### <!-- 0 -->🚀 Features
+
+- *(ai)* Add MCTS live progress, heatmap metric toggle, next move display, and native Rust MCTS ([#84](https://github.com/kaya-go/kaya/issues/84)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Prevent analysis bar buttons from being clipped on narrow widths ([0061548](https://github.com/kaya-go/kaya/commit/0061548c1d8fb200cecb2a9c4673b14655083490)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.4] - 2026-03-10
 
 ### <!-- 0 -->🚀 Features
@@ -62,10 +77,14 @@ All notable changes to this project will be documented in this file.
 
 - Update documentation with missing features, fix stale i18n paths ([ec815bb](https://github.com/kaya-go/kaya/commit/ec815bb51050c5726646b2e6e4a1ea588a826742)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.3.4 ([936d91a](https://github.com/kaya-go/kaya/commit/936d91a728dd0e9485e12ddd1242d1deb59dbc78)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.3] - 2026-03-10
 
