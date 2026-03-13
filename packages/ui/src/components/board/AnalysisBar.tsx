@@ -91,29 +91,26 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
           <div className="ai-analysis-summary__content">
             <div className="ai-analysis-summary__metrics-group">
               {/* Loading/Analyzing indicator - always reserves space to prevent layout shift */}
-              <div
-                className="ai-analysis-summary__loading-indicator"
-                style={{
-                  visibility: isInitializing || isAnalyzing ? 'visible' : 'hidden',
-                }}
-              >
-                <span className="ai-analysis-summary__spinner">⟳</span>
-                <span className="ai-analysis-summary__loading-text">
-                  {isInitializing
-                    ? nativeUploadProgress
-                      ? nativeUploadProgress.stage === 'uploading'
-                        ? t('analysisBar.uploadingModel', {
-                            progress: nativeUploadProgress.progress,
-                          })
-                        : nativeUploadProgress.stage === 'checking-cache'
-                          ? t('analysisBar.checkingCache')
-                          : t('analysisBar.initializing')
-                      : t('analysisBar.loading')
-                    : mctsProgress
-                      ? t('analysisBar.searching')
-                      : t('analysisBar.evaluating')}
-                </span>
-              </div>
+              {(isInitializing || isAnalyzing) && (
+                <div className="ai-analysis-summary__loading-indicator">
+                  <span className="ai-analysis-summary__spinner">⟳</span>
+                  <span className="ai-analysis-summary__loading-text">
+                    {isInitializing
+                      ? nativeUploadProgress
+                        ? nativeUploadProgress.stage === 'uploading'
+                          ? t('analysisBar.uploadingModel', {
+                              progress: nativeUploadProgress.progress,
+                            })
+                          : nativeUploadProgress.stage === 'checking-cache'
+                            ? t('analysisBar.checkingCache')
+                            : t('analysisBar.initializing')
+                        : t('analysisBar.loading')
+                      : mctsProgress
+                        ? t('analysisBar.searching')
+                        : t('analysisBar.evaluating')}
+                  </span>
+                </div>
+              )}
               <div
                 className={`ai-analysis-summary__metric${showLiveProgress ? ' ai-analysis-summary__metric--in-progress' : ''}`}
                 style={{ minWidth: '90px' }}
