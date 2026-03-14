@@ -19,8 +19,8 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^2.0.0",
-    "@dagrejs/graphlib": "^3.0.2",
+    "@dagrejs/dagre": "^2.0.4",
+    "@dagrejs/graphlib": "^3.0.4",
     "@kaya/ai-engine": "workspace:*",
     "@kaya/boardmatcher": "workspace:*",
     "@kaya/deadstones": "workspace:*",
@@ -32,18 +32,18 @@
     "@kaya/goboard": "workspace:*",
     "@kaya/sgf": "workspace:*",
     "@kaya/shudan": "workspace:*",
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/plugin-clipboard-manager": "^2.0.0",
-    "@tauri-apps/plugin-fs": "^2.0.0",
-    "@tauri-apps/plugin-http": "^2.5.4",
-    "@tauri-apps/plugin-shell": "^2.0.0",
-    "elkjs": "^0.11.0",
+    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-fs": "^2.4.5",
+    "@tauri-apps/plugin-http": "^2.5.7",
+    "@tauri-apps/plugin-shell": "^2.3.5",
+    "elkjs": "^0.11.1",
     "gamecontroller.js": "^1.5.0",
-    "i18next": "^25.7.3",
+    "i18next": "^25.8.18",
     "jszip": "^3.10.1",
     "react-arborist": "^3.4.3",
-    "react-i18next": "^16.5.0",
-    "react-icons": "^5.5.0",
+    "react-i18next": "^16.5.8",
+    "react-icons": "^5.6.0",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^3.0.6",
     "reactflow": "^11.11.4",
@@ -56,10 +56,10 @@
   },
   "devDependencies": {
     "@types/jszip": "^3.4.1",
-    "@types/react": "^19.2.7",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "typescript": "^5.6.0"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.9.3"
   }
 }

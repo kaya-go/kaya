@@ -41,7 +41,7 @@
     "@kaya/gametree": "workspace:*",
     "@kaya/goboard": "workspace:*",
     "@kaya/sgf": "workspace:*",
-    "onnxruntime-web": "^1.24.2",
+    "onnxruntime-web": "^1.24.3",
     "protobufjs": "^8.0.0"
   },
   "devDependencies": {

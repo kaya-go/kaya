@@ -12,26 +12,26 @@
     "lint": "eslint src --ext ts,tsx"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^2.0.0",
-    "@dagrejs/graphlib": "^3.0.2",
+    "@dagrejs/dagre": "^2.0.4",
+    "@dagrejs/graphlib": "^3.0.4",
     "@kaya/gametree": "workspace:*",
     "@kaya/goboard": "workspace:*",
     "@kaya/sgf": "workspace:*",
     "@kaya/shudan": "workspace:*",
     "@kaya/ui": "workspace:*",
     "coi-serviceworker": "^0.1.7",
-    "i18next": "^25.7.3",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-i18next": "^16.5.0",
-    "react-icons": "^5.5.0"
+    "i18next": "^25.8.18",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-i18next": "^16.5.8",
+    "react-icons": "^5.6.0"
   },
   "devDependencies": {
-    "@rsbuild/core": "^1.6.15",
-    "@rsbuild/plugin-react": "^1.1.5",
-    "@types/node": "^25.0.3",
-    "@types/react": "^19.2.7",
+    "@rsbuild/core": "^1.7.3",
+    "@rsbuild/plugin-react": "^1.4.6",
+    "@types/node": "^25.5.0",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5.6.0"
+    "typescript": "^5.9.3"
   }
 }
