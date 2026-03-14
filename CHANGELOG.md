@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.6] - 2026-03-14
+
+### <!-- 0 -->🚀 Features
+
+- *(board-recognition)* Improve moku corner detection and add debug button ([6c5b446](https://github.com/kaya-go/kaya/commit/6c5b446d762e87d60fbb97375d336f3908fc7b7c)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(android)* Add api-24 feature to ort and update ONNX Runtime to 1.24.3 ([55eaa82](https://github.com/kaya-go/kaya/commit/55eaa822257d95af888a52ba951a644943e43feb)) by @hadim
+
+- *(audio)* Use lewton decoder instead of symphonia for OGG vorbis ([60d6e0b](https://github.com/kaya-go/kaya/commit/60d6e0b94b8b4e3abe5b759994c96a1aa41de2af)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Bump all patch and minor dependencies (npm + rust) ([e84be2b](https://github.com/kaya-go/kaya/commit/e84be2bee186fcbba5bfa18e005478c8f7267011)) by @hadim
+
+- Bump react-resizable-panels v3 to v4 ([b2eb7b2](https://github.com/kaya-go/kaya/commit/b2eb7b26fb34bf3a0f5c1602e72e18269659e89c)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.5] - 2026-03-13
 
 ### <!-- 0 -->🚀 Features
@@ -12,10 +35,14 @@ All notable changes to this project will be documented in this file.
 
 - *(ui)* Prevent analysis bar buttons from being clipped on narrow widths ([0061548](https://github.com/kaya-go/kaya/commit/0061548c1d8fb200cecb2a9c4673b14655083490)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.3.5 ([3d7d762](https://github.com/kaya-go/kaya/commit/3d7d7620d25c1a94488e572115ac6b763938fe2b)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.4] - 2026-03-10
 
