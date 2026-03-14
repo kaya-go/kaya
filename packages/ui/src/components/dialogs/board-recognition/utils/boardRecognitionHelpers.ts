@@ -42,6 +42,7 @@ export interface BoardRecognitionState {
   cornersRef: React.MutableRefObject<BoardCorners | null>;
   cornersManuallySet: boolean;
   resetCornersToAuto: () => void;
+  applyMokuPredictedCorners: () => void;
 }
 
 /** Warped output size in pixels. */

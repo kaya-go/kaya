@@ -71,4 +71,12 @@ export interface RecognitionResult {
   estimatedGridCorners?: BoardCorners;
   /** Raw moku detections in image coords (only set by moku backend, for corner re-mapping). */
   mokuRawDetections?: MokuRawDetection[];
+  /**
+   * Raw moku corner predictions before fallback/degenerate correction.
+   * Null if fewer than 3 corners were detected.
+   * Only differs from `corners` when `cornersDetected === false`.
+   */
+  mokuRawCorners?: BoardCorners | null;
+  /** Number of corner candidates detected by Moku (0–4). */
+  mokuCornerCount?: number;
 }

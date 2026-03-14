@@ -393,6 +393,22 @@ export function useBoardRecognition(
     [rawImage, boardSize]
   );
 
+  // ── Apply raw moku corner predictions (bypass fallback) ──
+  const applyMokuPredictedCorners = useCallback(() => {
+    const rawCorners = result?.mokuRawCorners ?? null;
+    if (!rawCorners || !rawImage || !boardSize) return;
+    setCornersManuallySet(true);
+    setCorners(rawCorners);
+    cornersRef.current = rawCorners;
+    setHints([]);
+    if (result?.mokuRawDetections) {
+      const insetDst = computeInsetDst();
+      const rebuilt = buildMokuResult(result, rawCorners, boardSize, insetDst);
+      setResult(rebuilt);
+      updateGrid(insetDst);
+    }
+  }, [result, rawImage, boardSize]);
+
   // ── Reset corners to auto-detected positions ──
   const resetCornersToAuto = useCallback(() => {
     const autoCorners = autoCornersRef.current;
@@ -438,5 +454,6 @@ export function useBoardRecognition(
     cornersRef,
     cornersManuallySet,
     resetCornersToAuto,
+    applyMokuPredictedCorners,
   };
 }

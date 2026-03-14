@@ -213,14 +213,15 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
             MAGNIFIER_RADIUS * 2
           );
 
-          // Draw crosshair inside magnifier
-          ctx.strokeStyle = CORNER_COLORS[di];
-          ctx.lineWidth = 1.5;
+          // Draw crosshair inside magnifier — large but semi-transparent
+          const crossLen = MAGNIFIER_RADIUS * 0.7;
+          ctx.strokeStyle = CORNER_COLORS[di] + '80'; // 50% opacity
+          ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.moveTo(magX - 8, magY);
-          ctx.lineTo(magX + 8, magY);
-          ctx.moveTo(magX, magY - 8);
-          ctx.lineTo(magX, magY + 8);
+          ctx.moveTo(magX - crossLen, magY);
+          ctx.lineTo(magX + crossLen, magY);
+          ctx.moveTo(magX, magY - crossLen);
+          ctx.lineTo(magX, magY + crossLen);
           ctx.stroke();
 
           ctx.restore();
@@ -245,6 +246,17 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
   useLayoutEffect(() => {
     paintCanvas(corners);
   }, [corners, paintCanvas]);
+
+  // Repaint when container resizes (e.g. dialog open animation, window resize)
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const ro = new ResizeObserver(() => {
+      paintCanvas(cornersRef.current);
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, [paintCanvas, cornersRef]);
 
   // ── Canvas pointer events ─────────────────────────────
 

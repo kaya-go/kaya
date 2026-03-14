@@ -101,6 +101,8 @@ export interface SerializedResult {
   warpedSize: number; // width === height
   mokuRawDetections?: MokuRawDetection[];
   estimatedGridCorners?: BoardCorners;
+  mokuRawCorners?: BoardCorners | null;
+  mokuCornerCount?: number;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -125,6 +127,8 @@ function serializeResult(r: RecognitionResult): {
       warpedSize: r.warpedImage!.width,
       mokuRawDetections: r.mokuRawDetections,
       estimatedGridCorners: r.estimatedGridCorners,
+      mokuRawCorners: r.mokuRawCorners,
+      mokuCornerCount: r.mokuCornerCount,
     },
     transfer: [warpedBuffer],
   };

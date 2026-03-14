@@ -17,6 +17,11 @@ interface PhotoPanelProps {
   cornersRef: React.MutableRefObject<BoardCorners | null>;
   cornersManuallySet: boolean;
   resetCornersToAuto: () => void;
+  hasResult: boolean;
+  hasMokuRawCorners: boolean;
+  rawCornersActive: boolean;
+  mokuCornerCount: number;
+  applyMokuPredictedCorners: () => void;
 }
 
 export const PhotoPanel: React.FC<PhotoPanelProps> = ({
@@ -33,6 +38,11 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
   cornersRef,
   cornersManuallySet,
   resetCornersToAuto,
+  hasResult,
+  hasMokuRawCorners,
+  rawCornersActive,
+  mokuCornerCount,
+  applyMokuPredictedCorners,
 }) => {
   const { t } = useTranslation();
 
@@ -84,6 +94,22 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
               title={t('boardRecognition.resetCorners')}
             >
               ↺ {t('boardRecognition.resetCorners')}
+            </button>
+          )}
+          {hasResult && (
+            <button
+              className="brd-reset-corners-btn"
+              onClick={applyMokuPredictedCorners}
+              disabled={!hasMokuRawCorners || rawCornersActive}
+              title={
+                !hasMokuRawCorners
+                  ? '[Debug] No raw corners detected by Moku'
+                  : rawCornersActive
+                    ? '[Debug] Raw Moku corners are currently displayed'
+                    : '[Debug] Apply raw moku corner predictions (bypass fallback)'
+              }
+            >
+              🔍 Moku corners ({mokuCornerCount}/4){rawCornersActive ? ' — active' : ''}
             </button>
           )}
         </div>

@@ -93,6 +93,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
     cornersRef,
     cornersManuallySet,
     resetCornersToAuto,
+    applyMokuPredictedCorners,
   } = recognition;
 
   const onGridClick = useCallback(
@@ -372,6 +373,18 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             cornersRef={cornersRef}
             cornersManuallySet={cornersManuallySet}
             resetCornersToAuto={resetCornersToAuto}
+            hasResult={result != null}
+            hasMokuRawCorners={result?.mokuRawCorners != null}
+            rawCornersActive={
+              result?.mokuRawCorners != null &&
+              corners != null &&
+              result.mokuRawCorners.every(
+                (p, i) =>
+                  Math.abs(p[0] - corners![i][0]) < 0.5 && Math.abs(p[1] - corners![i][1]) < 0.5
+              )
+            }
+            mokuCornerCount={result?.mokuCornerCount ?? 0}
+            applyMokuPredictedCorners={applyMokuPredictedCorners}
           />
 
           {/* Right: warped board preview */}

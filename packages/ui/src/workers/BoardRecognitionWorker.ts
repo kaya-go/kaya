@@ -39,6 +39,8 @@ function deserializeResult(s: SerializedResult): RecognitionResult {
     },
     mokuRawDetections: s.mokuRawDetections,
     estimatedGridCorners: s.estimatedGridCorners,
+    mokuRawCorners: s.mokuRawCorners,
+    mokuCornerCount: s.mokuCornerCount,
   };
 }
 
