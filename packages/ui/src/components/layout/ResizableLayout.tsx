@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, Group, Separator } from 'react-resizable-panels';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import {
   LuLibrary,
   LuPanelRight,
@@ -102,24 +102,35 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
   // Desktop/Tablet Layout
   // =========================
   return (
-    <Group orientation="horizontal" id="main-layout" className="panel-group">
+    <PanelGroup
+      direction="horizontal"
+      id="main-layout"
+      autoSaveId="kaya-main-layout"
+      className="panel-group"
+    >
       {/* Left panel (Library + Analysis Graph) - always rendered when content exists */}
       {(libraryContent || analysisGraphContent) && (
         <>
           {showLibrary ? (
             <Panel
               id="left-panel"
+              order={1}
               defaultSize={25}
               minSize={10}
               maxSize={50}
               className="panel left-panel-container"
             >
-              <Group orientation="vertical" id="left-panel-group">
+              <PanelGroup
+                direction="vertical"
+                id="left-panel-group"
+                autoSaveId="kaya-left-panel-group"
+              >
                 {/* Library Section */}
                 {leftPanelVisibility.library && libraryContent ? (
                   <>
                     <Panel
                       id="library-section"
+                      order={1}
                       defaultSize={getLeftPanelSize(leftPanelVisibility.library)}
                       minSize={15}
                       className="panel library-section"
@@ -135,7 +146,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                       </div>
                     </Panel>
                     {leftPanelVisibility.analysisGraph && analysisGraphContent && (
-                      <Separator className="resize-handle resize-handle-horizontal" />
+                      <PanelResizeHandle className="resize-handle resize-handle-horizontal" />
                     )}
                   </>
                 ) : libraryContent ? (
@@ -153,6 +164,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                 {leftPanelVisibility.analysisGraph && analysisGraphContent ? (
                   <Panel
                     id="analysis-graph-section"
+                    order={2}
                     defaultSize={visibleLeftPanelCount === 2 ? 40 : 100}
                     minSize={15}
                     className="panel analysis-graph-section"
@@ -177,7 +189,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                     />
                   </div>
                 ) : null}
-              </Group>
+              </PanelGroup>
             </Panel>
           ) : (
             <div
@@ -188,13 +200,14 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
               <LuLibrary size={16} />
             </div>
           )}
-          {showLibrary && <Separator className="resize-handle resize-handle-vertical" />}
+          {showLibrary && <PanelResizeHandle className="resize-handle resize-handle-vertical" />}
         </>
       )}
 
       {/* Main board area */}
       <Panel
         id="board-panel"
+        order={2}
         defaultSize={showSidebar ? 75 : 100}
         minSize={30}
         className="panel board-panel"
@@ -205,22 +218,24 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
       {showSidebar ? (
         <>
           {/* Vertical resize handle */}
-          <Separator className="resize-handle resize-handle-vertical" />
+          <PanelResizeHandle className="resize-handle resize-handle-vertical" />
 
           {/* Sidebar with three vertical sections */}
           <Panel
             id="sidebar-panel"
+            order={3}
             defaultSize={25}
             minSize={20}
             maxSize={50}
             className="panel sidebar-panel"
           >
-            <Group orientation="vertical" id="sidebar-group">
+            <PanelGroup direction="vertical" id="sidebar-group" autoSaveId="kaya-sidebar-group">
               {/* Game Tree Section */}
               {panelVisibility.gameTree ? (
                 <>
                   <Panel
                     id="game-tree-panel"
+                    order={1}
                     defaultSize={getDefaultSize(panelVisibility.gameTree, 'gameTree')}
                     minSize={10}
                     className="panel game-tree-section"
@@ -239,7 +254,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                     </div>
                   </Panel>
                   {(panelVisibility.gameInfo || panelVisibility.comment) && (
-                    <Separator className="resize-handle resize-handle-horizontal" />
+                    <PanelResizeHandle className="resize-handle resize-handle-horizontal" />
                   )}
                 </>
               ) : (
@@ -258,6 +273,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                 <>
                   <Panel
                     id="game-info-panel"
+                    order={2}
                     defaultSize={getDefaultSize(panelVisibility.gameInfo, 'gameInfo')}
                     minSize={10}
                     className="panel game-info-section"
@@ -276,7 +292,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                     </div>
                   </Panel>
                   {panelVisibility.comment && (
-                    <Separator className="resize-handle resize-handle-horizontal" />
+                    <PanelResizeHandle className="resize-handle resize-handle-horizontal" />
                   )}
                 </>
               ) : (
@@ -294,6 +310,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
               {panelVisibility.comment ? (
                 <Panel
                   id="comment-panel"
+                  order={3}
                   defaultSize={getDefaultSize(panelVisibility.comment, 'comment')}
                   minSize={10}
                   className="panel comments-section"
@@ -321,7 +338,7 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
                   />
                 </div>
               )}
-            </Group>
+            </PanelGroup>
           </Panel>
         </>
       ) : (
@@ -334,6 +351,6 @@ export const ResizableLayout: React.FC<ResizableLayoutProps> = ({
           <LuPanelRight size={16} />
         </div>
       )}
-    </Group>
+    </PanelGroup>
   );
 };
