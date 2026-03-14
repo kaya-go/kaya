@@ -1,6 +1,6 @@
 {
   "name": "@kaya/ui",
-  "version": "0.3.6",
+  "version": "0.3.7-dev",
   "description": "Shared UI components for Kaya",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

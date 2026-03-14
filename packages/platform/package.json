@@ -1,6 +1,6 @@
 {
   "name": "@kaya/platform",
-  "version": "0.3.6",
+  "version": "0.3.7-dev",
   "description": "Platform abstraction layer for Kaya - file save, clipboard, platform detection",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
