@@ -3,86 +3,30 @@
 //! Bypasses WebKitGTK/GStreamer entirely — plays through ALSA/PulseAudio
 //! (Linux), CoreAudio (macOS), or WASAPI (Windows) directly.
 //!
-//! Architecture:
-//! - A dedicated audio thread owns the `OutputStream` (must stay alive).
-//! - Sound data (OGG bytes) is preloaded from Tauri resources at init time.
-//! - `play()` sends pre-loaded bytes through a channel; the audio thread
-//!   decodes and plays them without blocking the caller.
+//! Sound data (OGG bytes) is preloaded from Tauri resources at init time.
+//! `MixerDeviceSink` manages audio output internally (`Send + Sync`).
 
 use std::collections::HashMap;
 use std::io::Cursor;
-use std::sync::mpsc;
 
-use rodio::{Decoder, OutputStream, Sink};
+use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink};
 use tauri::Manager;
 
-/// Messages sent to the audio thread.
-enum AudioCommand {
-    Play(Vec<u8>),
-    Shutdown,
-}
-
-/// Manages native audio playback on a dedicated thread.
+/// Manages native audio playback via rodio's mixer.
 pub struct AudioManager {
-    sender: mpsc::Sender<AudioCommand>,
+    sink: MixerDeviceSink,
     sounds: HashMap<String, Vec<u8>>,
 }
 
 impl AudioManager {
-    /// Create a new AudioManager. Spawns a background thread that owns the
-    /// audio output stream. Returns an error string if the audio device
-    /// cannot be opened (e.g. headless server, no sound card).
+    /// Create a new AudioManager. Opens the default audio output device.
+    /// Returns an error string if the device cannot be opened.
     pub fn new() -> Result<Self, String> {
-        let (tx, rx) = mpsc::channel::<AudioCommand>();
-
-        // Spawn audio thread — OutputStream must live on its creator thread
-        let (ready_tx, ready_rx) = mpsc::channel::<Result<(), String>>();
-
-        std::thread::Builder::new()
-            .name("kaya-audio".into())
-            .spawn(move || {
-                // Try to open the default audio output
-                let stream_result = OutputStream::try_default();
-                let (_stream, stream_handle) = match stream_result {
-                    Ok(pair) => {
-                        ready_tx.send(Ok(())).ok();
-                        pair
-                    }
-                    Err(e) => {
-                        ready_tx
-                            .send(Err(format!("Failed to open audio device: {e}")))
-                            .ok();
-                        return;
-                    }
-                };
-
-                // Process commands until shutdown
-                while let Ok(cmd) = rx.recv() {
-                    match cmd {
-                        AudioCommand::Play(data) => {
-                            let cursor = Cursor::new(data);
-                            if let Ok(source) = Decoder::new(cursor) {
-                                // Use a Sink for non-blocking playback
-                                if let Ok(sink) = Sink::try_new(&stream_handle) {
-                                    sink.append(source);
-                                    sink.detach(); // Play without blocking
-                                }
-                            }
-                        }
-                        AudioCommand::Shutdown => break,
-                    }
-                }
-            })
-            .map_err(|e| format!("Failed to spawn audio thread: {e}"))?;
-
-        // Wait for the audio thread to report success or failure
-        let init_result = ready_rx
-            .recv()
-            .map_err(|_| "Audio thread exited before initializing".to_string())?;
-        init_result?;
+        let sink = DeviceSinkBuilder::open_default_sink()
+            .map_err(|e| format!("Failed to open audio device: {e}"))?;
 
         Ok(Self {
-            sender: tx,
+            sink,
             sounds: HashMap::new(),
         })
     }
@@ -93,18 +37,14 @@ impl AudioManager {
     }
 
     /// Play a previously loaded sound by key. Non-blocking, fire-and-forget.
-    /// Returns silently if the sound key is not found or the channel is closed.
+    /// Returns silently if the sound key is not found or decoding fails.
     pub fn play(&self, key: &str) {
         if let Some(data) = self.sounds.get(key) {
-            // Send a clone of the data to the audio thread
-            let _ = self.sender.send(AudioCommand::Play(data.clone()));
+            let cursor = Cursor::new(data.clone());
+            if let Ok(source) = Decoder::new(cursor) {
+                self.sink.mixer().add(source);
+            }
         }
-    }
-}
-
-impl Drop for AudioManager {
-    fn drop(&mut self) {
-        let _ = self.sender.send(AudioCommand::Shutdown);
     }
 }
 

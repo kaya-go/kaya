@@ -37,7 +37,7 @@ half = "2.7"
 # Uses ALSA/PulseAudio on Linux, CoreAudio on macOS, WASAPI on Windows
 # Not needed on Android (audio is handled via WebView)
 [target.'cfg(not(target_os = "android"))'.dependencies]
-rodio = { version = "0.20", default-features = false, features = ["vorbis"] }
+rodio = { version = "0.22", default-features = false, features = ["playback", "vorbis"] }
 
 # Linux desktop: static linking (same as macOS/Windows) for zero-dependency deployment.
 # Power users can override with ORT_DYLIB_PATH for MIGraphX/CUDA GPU support.
@@ -61,7 +61,8 @@ tauri-plugin-window-state = "2.4.1"
 # Android: dynamic loading at runtime (we bundle libonnxruntime.so in the APK)
 [target.'cfg(target_os = "android")'.dependencies]
 # default-features = false to disable download-binaries which doesn't work for Android
-ort = { version = "2.0.0-rc.12", default-features = false, features = ["load-dynamic", "ndarray", "half"] }
+# api-24 is required so ort-sys generates full API bindings (VitisAI EP etc.)
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["load-dynamic", "ndarray", "half", "api-24"] }
 # Note: reqwest is NOT included for Android to avoid OpenSSL/ring compilation issues
 # HTTP requests on Android should be done via the frontend/WebView
 

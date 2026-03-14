@@ -6,8 +6,8 @@
 
 set -e
 
-# ONNX Runtime version to use
-ORT_VERSION="1.22.0"
+# ONNX Runtime version to use (must match ort crate's expected API level)
+ORT_VERSION="1.24.3"
 
 # Output directory for jniLibs
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
