@@ -37,7 +37,7 @@ half = "2.7"
 # Uses ALSA/PulseAudio on Linux, CoreAudio on macOS, WASAPI on Windows
 # Not needed on Android (audio is handled via WebView)
 [target.'cfg(not(target_os = "android"))'.dependencies]
-rodio = { version = "0.22", default-features = false, features = ["playback", "vorbis"] }
+rodio = { version = "0.22", default-features = false, features = ["playback", "lewton"] }
 
 # Linux desktop: static linking (same as macOS/Windows) for zero-dependency deployment.
 # Power users can override with ORT_DYLIB_PATH for MIGraphX/CUDA GPU support.
