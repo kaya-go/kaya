@@ -22,7 +22,6 @@ import { warpPerspective } from './perspective';
 import { buildSGF } from './sgf';
 import {
   mokuLog,
-  mokuWarn,
   fetchModelWithCache,
   clearModelCache,
   type ProgressCallback,
@@ -164,24 +163,19 @@ export class MokuDetector {
     const wasmPath = this.config.wasmPath ?? '/wasm/';
     ort.env.wasm.wasmPaths = wasmPath;
     ort.env.wasm.numThreads = 1;
-    mokuLog('Initializing — wasmPath:', wasmPath, 'modelUrl:', modelUrl);
+    mokuLog('Initializing…');
 
     // Try Cache API first, then fetch and cache
     const t0 = performance.now();
     const modelBuffer = await fetchModelWithCache(modelUrl, this.config.onProgress);
 
     const t1 = performance.now();
-    mokuLog(
-      `Creating ONNX session (model ${(modelBuffer.byteLength / 1024 / 1024).toFixed(1)} MB)…`
-    );
     this.session = await ort.InferenceSession.create(modelBuffer, {
       executionProviders: ['wasm'],
       graphOptimizationLevel: 'all',
     });
     const t2 = performance.now();
-    mokuLog(
-      `Session ready in ${((t2 - t1) / 1000).toFixed(1)}s (total init: ${((t2 - t0) / 1000).toFixed(1)}s)`
-    );
+    mokuLog(`Ready in ${((t2 - t0) / 1000).toFixed(1)}s`);
   }
 
   /** Whether the model is loaded and ready for inference. */
@@ -229,9 +223,7 @@ export class MokuDetector {
         : out.warpedImage,
     };
     const t3 = performance.now();
-    mokuLog(
-      `Detection: preprocess=${(t1 - t0).toFixed(0)}ms, inference=${(t2 - t1).toFixed(0)}ms, postprocess=${(t3 - t2).toFixed(0)}ms, total=${(t3 - t0).toFixed(0)}ms, stones=${out.stones.length}, cornersDetected=${out.cornersDetected}`
-    );
+    mokuLog(`Detection: ${(t3 - t0).toFixed(0)}ms, stones=${out.stones.length}`);
     return out;
   }
 
@@ -268,9 +260,6 @@ export class MokuDetector {
           : out.warpedImage,
       };
       const t1 = performance.now();
-      mokuLog(
-        `Refilter (boardSize changed): postprocess=${(t1 - t0).toFixed(0)}ms, stones=${out.stones.length}`
-      );
       return out;
     }
 
@@ -314,7 +303,6 @@ export class MokuDetector {
     }));
 
     const t1 = performance.now();
-    mokuLog(`Refilter (fast): ${(t1 - t0).toFixed(1)}ms, stones=${detectedStones.length}`);
 
     // Build return value with a FRESH copy of warpedImage data.
     // The worker will transfer (neuter) this buffer via postMessage,
@@ -459,15 +447,6 @@ function postprocess(
       }
     }
   }
-
-  console.log(
-    `[moku] corners after dedup: ${cornerCandidates.length}, stones: ${stones.length}`,
-    cornerCandidates.map(c => ({
-      x: Math.round(c.cx),
-      y: Math.round(c.cy),
-      score: c.score.toFixed(3),
-    }))
-  );
 
   if (cornerCandidates.length < 2) {
     // Fallback: fewer than 2 corners detected → use image bounds with margin

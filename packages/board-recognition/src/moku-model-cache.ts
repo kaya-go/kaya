@@ -59,7 +59,6 @@ async function fetchRemoteEtag(modelUrl: string): Promise<string | null> {
 export async function clearModelCache(): Promise<void> {
   if (typeof caches !== 'undefined') {
     await caches.delete(MODEL_CACHE_NAME);
-    mokuLog('Model cache cleared');
   }
 }
 
@@ -86,25 +85,19 @@ export async function fetchModelWithCache(
         if (remoteEtag) {
           const storedEtag = await getStoredEtag(cache, modelUrl);
           if (storedEtag && storedEtag !== remoteEtag) {
-            mokuLog(
-              `Model ETag changed (cached=${storedEtag}, remote=${remoteEtag}), re-downloading`
-            );
             await cache.delete(modelUrl);
           } else {
-            mokuLog('Model loaded from cache (ETag matches)');
             onProgress?.(1);
             return cached.arrayBuffer();
           }
         } else {
           // No ETag available — trust the cache
-          mokuLog('Model loaded from cache');
           onProgress?.(1);
           return cached.arrayBuffer();
         }
       }
 
       // Fetch from network with progress tracking
-      mokuLog('Downloading model from', modelUrl);
       const t0 = performance.now();
       const response = await fetch(modelUrl);
       if (!response.ok) {
@@ -133,7 +126,6 @@ export async function fetchModelWithCache(
   }
 
   // Fallback: plain fetch without caching
-  mokuLog('Downloading model (no cache) from', modelUrl);
   const t0 = performance.now();
   const response = await fetch(modelUrl);
   if (!response.ok) {
