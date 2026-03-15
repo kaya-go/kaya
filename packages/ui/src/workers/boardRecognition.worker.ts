@@ -120,9 +120,9 @@ function serializeResult(r: RecognitionResult): {
   serialized: SerializedResult;
   transfer: ArrayBuffer[];
 } {
-  // Clone the buffer so the worker retains its copy (e.g. for mokuRefilter cache).
-  // Without this, transferring detaches the original and breaks subsequent refilter calls.
-  const warpedBuffer = (r.warpedImage!.data.buffer as ArrayBuffer).slice(0);
+  // warpedImage stays in the worker (used by mokuRefilter cache).
+  // Sending the 2.5 MB buffer to the main thread blocks the UI for ~2 s
+  // and it's never rendered there, so we skip the transfer.
   return {
     serialized: {
       boardSize: r.boardSize,
@@ -130,14 +130,14 @@ function serializeResult(r: RecognitionResult): {
       corners: r.corners,
       cornersDetected: r.cornersDetected,
       sgf: r.sgf,
-      warpedBuffer,
-      warpedSize: r.warpedImage!.width,
+      warpedBuffer: new ArrayBuffer(0),
+      warpedSize: 0,
       mokuRawDetections: r.mokuRawDetections,
       estimatedGridCorners: r.estimatedGridCorners,
       mokuRawCorners: r.mokuRawCorners,
       mokuCornerCount: r.mokuCornerCount,
     },
-    transfer: [warpedBuffer],
+    transfer: [],
   };
 }
 

@@ -32,7 +32,7 @@ function deserializeResult(s: SerializedResult): RecognitionResult {
     corners: s.corners,
     cornersDetected: s.cornersDetected,
     sgf: s.sgf,
-    // warpedImage may be absent for refilter responses (empty buffer)
+    // warpedImage is only populated for warpOnly responses; detect/refilter skip the transfer
     warpedImage:
       s.warpedBuffer.byteLength > 0
         ? {
@@ -86,7 +86,9 @@ export class BoardRecognitionWorker {
       return undefined; // already cached on worker
     }
     this.lastImgData = imgData;
-    return imgData.buffer.slice(0) as ArrayBuffer; // only clone once per unique image
+    // Transfer the original buffer (zero-copy) instead of cloning 7.6 MB.
+    // The main thread only uses rawImage.width/height after this, never .data.
+    return imgData.buffer as ArrayBuffer;
   }
 
   recognizeBoard(
@@ -98,16 +100,18 @@ export class BoardRecognitionWorker {
     const id = this.nextId++;
     const imgBuffer = this._getImgBuffer(imgData);
 
+    const msg = {
+      type: 'recognizeBoard',
+      id,
+      imgBuffer,
+      width,
+      height,
+      options,
+    } satisfies WorkerRequest;
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage({
-        type: 'recognizeBoard',
-        id,
-        imgBuffer,
-        width,
-        height,
-        options,
-      } satisfies WorkerRequest);
+      this.worker.postMessage(msg, imgBuffer ? [imgBuffer] : []);
     });
   }
 
@@ -121,17 +125,19 @@ export class BoardRecognitionWorker {
     const id = this.nextId++;
     const imgBuffer = this._getImgBuffer(imgData);
 
+    const msg = {
+      type: 'reclassifyWithCorners',
+      id,
+      imgBuffer,
+      width,
+      height,
+      corners,
+      options,
+    } satisfies WorkerRequest;
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage({
-        type: 'reclassifyWithCorners',
-        id,
-        imgBuffer,
-        width,
-        height,
-        corners,
-        options,
-      } satisfies WorkerRequest);
+      this.worker.postMessage(msg, imgBuffer ? [imgBuffer] : []);
     });
   }
 
@@ -146,18 +152,20 @@ export class BoardRecognitionWorker {
     const id = this.nextId++;
     const imgBuffer = this._getImgBuffer(imgData);
 
+    const msg = {
+      type: 'reclassifyWithHints',
+      id,
+      imgBuffer,
+      width,
+      height,
+      corners,
+      hints,
+      options,
+    } satisfies WorkerRequest;
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage({
-        type: 'reclassifyWithHints',
-        id,
-        imgBuffer,
-        width,
-        height,
-        corners,
-        hints,
-        options,
-      } satisfies WorkerRequest);
+      this.worker.postMessage(msg, imgBuffer ? [imgBuffer] : []);
     });
   }
 
@@ -213,16 +221,18 @@ export class BoardRecognitionWorker {
     const id = this.nextId++;
     const imgBuffer = this._getImgBuffer(imgData);
 
+    const msg = {
+      type: 'mokuDetect' as const,
+      id,
+      imgBuffer,
+      width,
+      height,
+      options,
+    };
+
     return new Promise<RecognitionResult>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      this.worker.postMessage({
-        type: 'mokuDetect' as const,
-        id,
-        imgBuffer,
-        width,
-        height,
-        options,
-      });
+      this.worker.postMessage(msg, imgBuffer ? [imgBuffer] : []);
     });
   }
 

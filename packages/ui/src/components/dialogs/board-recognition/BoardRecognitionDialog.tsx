@@ -22,6 +22,7 @@ import {
   useBoardRecognition,
 } from './hooks/useBoardRecognition';
 import { PhotoPanel } from './components/PhotoPanel';
+import { useLayoutMode } from '../../../hooks/useMediaQuery';
 import './styles/BoardRecognitionDialog.css';
 import './styles/BoardRecognitionDialogControls.css';
 import './styles/BoardRecognitionDialogCanvas.css';
@@ -67,7 +68,10 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   const [customSizeActive, setCustomSizeActive] = useState(false);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [showDelta, setShowDelta] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'photo' | 'preview'>('photo');
   const addMenuRef = useRef<HTMLDivElement>(null);
+  const layoutMode = useLayoutMode();
+  const isMobile = layoutMode === 'mobile';
 
   const recognition = useBoardRecognition(file, boardSize, mokuThreshold, setMokuThreshold);
 
@@ -426,8 +430,34 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
 
         {loadError && <div className="brd-error">{loadError}</div>}
 
+        {/* Mobile tab bar */}
+        {isMobile && (
+          <div className="brd-mobile-tabs">
+            <button
+              className={`brd-mobile-tab${mobileTab === 'photo' ? ' active' : ''}`}
+              onClick={() => setMobileTab('photo')}
+            >
+              <span className="brd-mobile-tab-badge">1</span>
+              {t('boardRecognition.stepCorners')}
+            </button>
+            <button
+              className={`brd-mobile-tab${mobileTab === 'preview' ? ' active' : ''}`}
+              onClick={() => setMobileTab('preview')}
+            >
+              <span className="brd-mobile-tab-badge">2</span>
+              {t('boardRecognition.stepReview')}
+              {result && !analyzing && (
+                <span className="brd-mobile-tab-stats">
+                  ● {result.stones.filter(s => s.color === 'black').length} ○{' '}
+                  {result.stones.filter(s => s.color === 'white').length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         <div className="brd-body">
-          {/* Left: original image with draggable corners */}
+          {/* Left / Tab 1: original image with draggable corners */}
           <PhotoPanel
             rawImage={rawImage}
             objectURL={objectURL}
@@ -443,24 +473,30 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             cornersManuallySet={cornersManuallySet}
             resetCornersToAuto={resetCornersToAuto}
             hasResult={result != null}
+            analyzing={analyzing}
+            className={isMobile && mobileTab !== 'photo' ? 'brd-mobile-hidden' : undefined}
           />
 
-          {/* Right: warped board preview */}
-          <div className="brd-panel brd-panel-preview">
-            <div className="brd-panel-title brd-step-title">
-              <span className="brd-step-badge">2</span>
-              {t('boardRecognition.stepReview')}
-              {result && !analyzing && (
-                <span className="brd-panel-stats">
-                  <span className="brd-stat black">
-                    ● {result.stones.filter(s => s.color === 'black').length}
+          {/* Right / Tab 2: warped board preview */}
+          <div
+            className={`brd-panel brd-panel-preview${isMobile && mobileTab !== 'preview' ? ' brd-mobile-hidden' : ''}`}
+          >
+            {!isMobile && (
+              <div className="brd-panel-title brd-step-title">
+                <span className="brd-step-badge">2</span>
+                {t('boardRecognition.stepReview')}
+                {result && !analyzing && (
+                  <span className="brd-panel-stats">
+                    <span className="brd-stat black">
+                      ● {result.stones.filter(s => s.color === 'black').length}
+                    </span>
+                    <span className="brd-stat white">
+                      ○ {result.stones.filter(s => s.color === 'white').length}
+                    </span>
                   </span>
-                  <span className="brd-stat white">
-                    ○ {result.stones.filter(s => s.color === 'white').length}
-                  </span>
-                </span>
-              )}
-            </div>
+                )}
+              </div>
+            )}
             <div className="brd-preview-wrap">
               {analyzing && !result && (
                 <div className="brd-analyzing">

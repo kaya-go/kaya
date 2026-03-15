@@ -18,6 +18,8 @@ interface PhotoPanelProps {
   cornersManuallySet: boolean;
   resetCornersToAuto: () => void;
   hasResult: boolean;
+  analyzing: boolean;
+  className?: string;
 }
 
 export const PhotoPanel: React.FC<PhotoPanelProps> = ({
@@ -35,6 +37,8 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
   cornersManuallySet,
   resetCornersToAuto,
   hasResult,
+  analyzing,
+  className,
 }) => {
   const { t } = useTranslation();
 
@@ -54,7 +58,7 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
     });
 
   return (
-    <div className="brd-panel brd-panel-photo">
+    <div className={`brd-panel brd-panel-photo${className ? ` ${className}` : ''}`}>
       <div className="brd-panel-title brd-step-title">
         <span className="brd-step-badge">1</span>
         {t('boardRecognition.stepCorners')}
@@ -74,6 +78,11 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
           />
         ) : (
           <div className="brd-placeholder">{t('loading.loading')}</div>
+        )}
+        {analyzing && !corners && objectURL && (
+          <div className="brd-photo-analyzing">
+            <div className="brd-spinner" />
+          </div>
         )}
       </div>
       <div className="brd-corner-actions">

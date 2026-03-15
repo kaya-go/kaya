@@ -98,6 +98,11 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
         container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
       const containerH =
         container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+
+      // Skip painting when the container is hidden (display: none → 0×0)
+      // to avoid negative dimensions and infinite ResizeObserver loops.
+      if (containerW <= 0 || containerH <= 0) return;
+
       const { width: rawW, height: rawH } = rawDimsRef.current;
 
       const scale = Math.min(containerW / rawW, containerH / rawH, 1);

@@ -199,6 +199,37 @@
   color: var(--text-primary, #ccc);
 }
 
+/* ── Mobile controls ───────────────────────────────────── */
+@media (max-width: 767px) {
+  .brd-size-row {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .brd-threshold-slider {
+    width: 70px;
+  }
+
+  .brd-threshold-end-label {
+    display: none;
+  }
+
+  .brd-fine-btn,
+  .brd-fine-btn-sm {
+    display: none;
+  }
+
+  .brd-calibration-area {
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .brd-calibration-area button {
+    padding: 5px 8px;
+    font-size: 0.75rem;
+  }
+}
+
 /* ── Calibration area ── */
 
 .brd-calibration-area {

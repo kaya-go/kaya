@@ -116,42 +116,44 @@ export async function fileToDownscaledImage(
   file: File,
   maxDim: number
 ): Promise<{ raw: RawImage; objectURL: string }> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
-      const canvas = document.createElement('canvas');
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, w, h);
-      const id = ctx.getImageData(0, 0, w, h);
+  // Use createImageBitmap for async, non-blocking image decode + downscale
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+  const w = Math.round(bitmap.width * scale);
+  const h = Math.round(bitmap.height * scale);
 
-      canvas.toBlob(
-        blob => {
-          if (!blob) {
-            URL.revokeObjectURL(url);
-            reject(new Error('Failed to encode downscaled image'));
-            return;
-          }
-          const downscaledUrl = URL.createObjectURL(blob);
-          URL.revokeObjectURL(url); // free original FULL SIZE url early
-          resolve({
-            raw: { data: id.data, width: w, height: h },
-            objectURL: downscaledUrl,
-          });
-        },
-        'image/jpeg',
-        0.85
-      );
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('Failed to load image'));
-    };
-    img.src = url;
+  // Resize asynchronously via createImageBitmap (avoids main-thread freeze)
+  const resized =
+    scale < 1 ? await createImageBitmap(bitmap, { resizeWidth: w, resizeHeight: h }) : bitmap;
+  if (scale < 1) bitmap.close();
+
+  // Yield to allow UI to render before the synchronous pixel read
+  await new Promise(r => setTimeout(r, 0));
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(resized, 0, 0, w, h);
+  resized.close();
+  const id = ctx.getImageData(0, 0, w, h);
+
+  const objectURL = await new Promise<string>((resolve, reject) => {
+    canvas.toBlob(
+      blob => {
+        if (!blob) {
+          reject(new Error('Failed to encode downscaled image'));
+          return;
+        }
+        resolve(URL.createObjectURL(blob));
+      },
+      'image/jpeg',
+      0.85
+    );
   });
+
+  return {
+    raw: { data: id.data, width: w, height: h },
+    objectURL,
+  };
 }
