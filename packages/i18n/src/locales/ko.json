@@ -682,7 +682,7 @@
     "loadError": "이미지 로드 실패",
     "analysisError": "분석 실패",
     "stepCorners": "코너 정렬",
-    "stepReview": "돌 검토 및 보정",
+    "stepReview": "돌 보정",
     "alignGrid": "격자:",
     "resetGrid": "격자 정렬 초기화",
     "gridClickHint": "미리보기에서 격자의 4개 모서리 교차점을 클릭하세요 ({{count}}/4)",

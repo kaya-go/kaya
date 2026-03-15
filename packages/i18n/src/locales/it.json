@@ -679,7 +679,7 @@
     "loadError": "Impossibile caricare l'immagine",
     "analysisError": "Analisi fallita",
     "stepCorners": "Allinea gli angoli",
-    "stepReview": "Verifica e calibra le pietre",
+    "stepReview": "Calibra pietre",
     "alignGrid": "Griglia:",
     "resetGrid": "Reimposta allineamento griglia",
     "gridClickHint": "Clicca sui 4 angoli della griglia nell'anteprima ({{count}}/4)",

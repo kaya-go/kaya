@@ -679,7 +679,7 @@
     "loadError": "Bild konnte nicht geladen werden",
     "analysisError": "Analyse fehlgeschlagen",
     "stepCorners": "Ecken ausrichten",
-    "stepReview": "Steine prüfen und kalibrieren",
+    "stepReview": "Steine kalibrieren",
     "alignGrid": "Gitter:",
     "resetGrid": "Gitterausrichtung zurücksetzen",
     "gridClickHint": "Klicken Sie auf die 4 Eck-Schnittpunkte des Gitters ({{count}}/4)",

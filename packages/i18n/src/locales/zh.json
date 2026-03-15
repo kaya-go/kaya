@@ -682,7 +682,7 @@
     "loadError": "图片加载失败",
     "analysisError": "分析失败",
     "stepCorners": "对齐角点",
-    "stepReview": "检查并校准棋子",
+    "stepReview": "校准棋子",
     "alignGrid": "网格：",
     "resetGrid": "重置网格对齐",
     "gridClickHint": "在预览中点击网格的4个角点交叉 ({{count}}/4)",

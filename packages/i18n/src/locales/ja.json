@@ -682,7 +682,7 @@
     "loadError": "画像の読み込みに失敗しました",
     "analysisError": "分析に失敗しました",
     "stepCorners": "コーナーの配置",
-    "stepReview": "石の確認と補正",
+    "stepReview": "石の補正",
     "alignGrid": "グリッド：",
     "resetGrid": "グリッド位置をリセット",
     "gridClickHint": "プレビューでグリッドの4隅の交点をクリック ({{count}}/4)",

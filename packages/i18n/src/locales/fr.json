@@ -679,7 +679,7 @@
     "loadError": "Échec du chargement de l'image",
     "analysisError": "Échec de l'analyse",
     "stepCorners": "Aligner les coins",
-    "stepReview": "Vérifier et calibrer les pierres",
+    "stepReview": "Calibrer les pierres",
     "alignGrid": "Grille :",
     "resetGrid": "Réinitialiser l'alignement de la grille",
     "gridClickHint": "Cliquez sur les 4 intersections d'angle de la grille ({{count}}/4)",

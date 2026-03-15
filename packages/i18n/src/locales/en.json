@@ -682,7 +682,7 @@
     "loadError": "Failed to load image",
     "analysisError": "Analysis failed",
     "stepCorners": "Align corners",
-    "stepReview": "Review & calibrate stones",
+    "stepReview": "Calibrate stones",
     "alignGrid": "Grid:",
     "resetGrid": "Reset grid alignment",
     "gridClickHint": "Click the 4 grid corner intersections on the preview ({{count}}/4)",

@@ -679,7 +679,7 @@
     "loadError": "Error al cargar la imagen",
     "analysisError": "Error de análisis",
     "stepCorners": "Alinear esquinas",
-    "stepReview": "Revisar y calibrar piedras",
+    "stepReview": "Calibrar piedras",
     "alignGrid": "Cuadrícula:",
     "resetGrid": "Restablecer alineación de cuadrícula",
     "gridClickHint": "Haz clic en las 4 intersecciones de las esquinas de la cuadrícula ({{count}}/4)",
