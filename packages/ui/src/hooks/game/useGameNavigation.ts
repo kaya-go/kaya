@@ -7,6 +7,7 @@ import {
   type UseGameNavigationProps,
   computeVariations,
   computeTotalMovesInBranch,
+  isNodeStep,
 } from './navigation-helpers';
 import { useBranchNavigation } from './useBranchNavigation';
 
@@ -240,7 +241,7 @@ export function useGameNavigation({
         const next = getActiveChildForNode(current);
         if (!next) break;
         current = next;
-        if (current.data.B || current.data.W) count++;
+        if (isNodeStep(current)) count++;
       }
       if (current) {
         markNavigationStart(`navigateToMove(${moveNumber})`, current.id);

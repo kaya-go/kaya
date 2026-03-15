@@ -5,6 +5,7 @@ import { type Marker } from '@kaya/shudan';
 import { extractMarkers, sgfToVertex, type GameInfo } from '@kaya/sgf';
 import { reconstructBoard, getPathToNode } from '../../utils/gameCache';
 import { type SGFProperty } from '../../types/game';
+import { isNodeStep } from './navigation-helpers';
 
 export interface UseBoardStateProps {
   gameTree: GameTree<SGFProperty> | null;
@@ -101,7 +102,7 @@ export function useBoardState({
   const moveNumber = useMemo(() => {
     if (!gameTree || currentNodeId === null) return 0;
     const sequence = getPathToNode(gameTree, currentNodeId);
-    return sequence.filter(node => node.data.B || node.data.W).length;
+    return sequence.filter(node => isNodeStep(node)).length;
   }, [gameTree, currentNodeId]);
 
   return {
