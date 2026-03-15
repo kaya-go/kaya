@@ -5,7 +5,9 @@
     "continue": "대국 계속하기",
     "newGame": "새 대국",
     "library": "기보 라이브러리",
-    "dropSgfToOpen": "SGF 파일을 드롭하여 열기"
+    "dropSgfToOpen": "SGF 파일을 드롭하여 열기",
+    "scanBoard": "바둑판 스캔",
+    "openFile": "SGF 파일 열기"
   },
   "black": "흑:",
   "boardSettings": "바둑판 설정",

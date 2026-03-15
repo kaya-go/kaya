@@ -5,7 +5,9 @@
     "continue": "Continuar partida",
     "newGame": "Nueva partida",
     "library": "Biblioteca",
-    "dropSgfToOpen": "Arrastra un archivo SGF"
+    "dropSgfToOpen": "Arrastra un archivo SGF",
+    "scanBoard": "Escanear tablero",
+    "openFile": "Abrir archivo SGF"
   },
   "black": "Negro:",
   "boardSettings": "Configuración del tablero",

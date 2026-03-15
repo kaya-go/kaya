@@ -55,6 +55,7 @@ export function AppContent({
     handleContinue,
     handleOpenLibrary,
     handleGoHome,
+    handleNavigateToBoard,
     handleFileDrop,
     scoreData,
     setScoreData,
@@ -76,6 +77,7 @@ export function AppContent({
         onContinue={handleContinue}
         onOpenLibrary={handleOpenLibrary}
         onFileDrop={handleFileDrop}
+        onNavigateToBoard={handleNavigateToBoard}
         version={versionData?.version}
         hasSavedGame={hasSavedGame}
       />
@@ -83,7 +85,7 @@ export function AppContent({
   }
 
   return (
-    <AppDropZone>
+    <AppDropZone onNavigateToBoard={handleNavigateToBoard}>
       <div className="app">
         {showHeader ? (
           <Header
@@ -94,6 +96,7 @@ export function AppContent({
             onToggleSidebar={() => setShowSidebar(prev => !prev)}
             onHide={() => setShowHeader(false)}
             onGoHome={handleGoHome}
+            onNavigateToBoard={handleNavigateToBoard}
           />
         ) : (
           <div

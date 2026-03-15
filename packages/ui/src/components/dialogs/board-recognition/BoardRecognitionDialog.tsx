@@ -406,18 +406,17 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
                 ›
               </button>
               <span className="brd-threshold-value">{mokuThreshold.toFixed(3)}</span>
-              {mokuThreshold !== DEFAULT_SENSITIVITY && (
-                <button
-                  className="brd-threshold-reset"
-                  onClick={() => {
-                    handleMokuThresholdChange(DEFAULT_SENSITIVITY);
-                    commitMokuThreshold();
-                  }}
-                  title={t('boardRecognition.sensitivityReset')}
-                >
-                  ↺
-                </button>
-              )}
+              <button
+                className="brd-threshold-reset"
+                disabled={mokuThreshold === DEFAULT_SENSITIVITY}
+                onClick={() => {
+                  handleMokuThresholdChange(DEFAULT_SENSITIVITY);
+                  commitMokuThreshold();
+                }}
+                title={t('boardRecognition.sensitivityReset')}
+              >
+                ↺
+              </button>
             </>
           )}
         </div>
@@ -446,12 +445,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             >
               <span className="brd-mobile-tab-badge">2</span>
               {t('boardRecognition.stepReview')}
-              {result && !analyzing && (
-                <span className="brd-mobile-tab-stats">
-                  ● {result.stones.filter(s => s.color === 'black').length} ○{' '}
-                  {result.stones.filter(s => s.color === 'white').length}
-                </span>
-              )}
             </button>
           </div>
         )}
@@ -493,6 +486,69 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
                     <span className="brd-stat white">
                       ○ {result.stones.filter(s => s.color === 'white').length}
                     </span>
+                  </span>
+                )}
+              </div>
+            )}
+            {/* Mobile: stone counts + sensitivity above the goban */}
+            {isMobile && result && !analyzing && (
+              <div className="brd-mobile-preview-bar">
+                <span className="brd-mobile-counts">
+                  <span className="brd-stat black">
+                    ● {result.stones.filter(s => s.color === 'black').length}
+                  </span>
+                  <span className="brd-stat white">
+                    ○ {result.stones.filter(s => s.color === 'white').length}
+                  </span>
+                </span>
+                {mokuReady && (
+                  <span className="brd-mobile-sensitivity">
+                    <button
+                      className="brd-fine-btn-mobile"
+                      onClick={() => {
+                        const v = Math.max(0.5, mokuThreshold - 0.01);
+                        handleMokuThresholdChange(v);
+                        commitMokuThreshold();
+                      }}
+                      title={t('boardRecognition.sensitivityFewer')}
+                    >
+                      −
+                    </button>
+                    <input
+                      type="range"
+                      className="brd-threshold-slider-mobile"
+                      min={0.5}
+                      max={0.99}
+                      step={0.001}
+                      value={mokuThreshold}
+                      onChange={e => {
+                        handleMokuThresholdChange(Number(e.target.value));
+                        commitMokuThreshold();
+                      }}
+                    />
+                    <button
+                      className="brd-fine-btn-mobile"
+                      onClick={() => {
+                        const v = Math.min(0.99, mokuThreshold + 0.01);
+                        handleMokuThresholdChange(v);
+                        commitMokuThreshold();
+                      }}
+                      title={t('boardRecognition.sensitivityMore')}
+                    >
+                      +
+                    </button>
+                    <span className="brd-threshold-value-mobile">{mokuThreshold.toFixed(3)}</span>
+                    <button
+                      className="brd-fine-btn-mobile brd-fine-btn-mobile-reset"
+                      disabled={mokuThreshold === DEFAULT_SENSITIVITY}
+                      onClick={() => {
+                        handleMokuThresholdChange(DEFAULT_SENSITIVITY);
+                        commitMokuThreshold();
+                      }}
+                      title={t('boardRecognition.sensitivityReset')}
+                    >
+                      ↺
+                    </button>
                   </span>
                 )}
               </div>

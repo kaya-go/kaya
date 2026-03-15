@@ -21,6 +21,7 @@ interface HeaderProps {
   onToggleSidebar?: () => void;
   onHide?: () => void;
   onGoHome?: () => void;
+  onNavigateToBoard?: () => void;
   versionData?: VersionData;
 }
 
@@ -32,10 +33,11 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleSidebar,
   onHide,
   onGoHome,
+  onNavigateToBoard,
   versionData,
 }) => {
   const { t } = useTranslation();
-  const actions = useHeaderActions();
+  const actions = useHeaderActions({ onNavigateToBoard });
 
   return (
     <>

@@ -5,7 +5,9 @@
     "continue": "继续对局",
     "newGame": "新对局",
     "library": "棋谱库",
-    "dropSgfToOpen": "拖放 SGF 文件以打开"
+    "dropSgfToOpen": "拖放 SGF 文件以打开",
+    "scanBoard": "扫描棋盘",
+    "openFile": "打开 SGF 文件"
   },
   "black": "黑方：",
   "boardSettings": "棋盘设置",

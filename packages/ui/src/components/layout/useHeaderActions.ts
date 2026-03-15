@@ -19,7 +19,7 @@ import { useToast } from '../ui/Toast';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 
-export function useHeaderActions() {
+export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const { soundEnabled, toggleSound } = useGameSounds();
@@ -138,8 +138,9 @@ export function useHeaderActions() {
       clearLoadedFile();
       loadSGFAsync(sgf);
       setFileName('scan.sgf');
+      options?.onNavigateToBoard?.();
     },
-    [loadSGFAsync, setFileName, clearLoadedFile]
+    [loadSGFAsync, setFileName, clearLoadedFile, options?.onNavigateToBoard]
   );
 
   const handleOpenClick = useCallback(() => {

@@ -5,7 +5,9 @@
     "continue": "Continue Game",
     "newGame": "New Game",
     "library": "Game Library",
-    "dropSgfToOpen": "Drop SGF file to open"
+    "dropSgfToOpen": "Drop SGF file to open",
+    "scanBoard": "Scan Board",
+    "openFile": "Open SGF File"
   },
   "black": "Black:",
   "boardSettings": "Board Settings",

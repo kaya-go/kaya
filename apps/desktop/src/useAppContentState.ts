@@ -160,6 +160,13 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     setHasStarted(false);
   }, []);
 
+  const handleNavigateToBoard = useCallback(() => {
+    setHasStarted(true);
+    if (isMobileOrTablet && onMobileTabChange) {
+      onMobileTabChange('board');
+    }
+  }, [isMobileOrTablet, onMobileTabChange]);
+
   const handleFileDrop = useCallback(
     (file: File) => {
       const reader = new FileReader();
@@ -253,6 +260,7 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     handleContinue,
     handleOpenLibrary,
     handleGoHome,
+    handleNavigateToBoard,
     handleFileDrop,
     scoreData,
     setScoreData,

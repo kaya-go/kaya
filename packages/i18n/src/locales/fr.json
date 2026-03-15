@@ -5,7 +5,9 @@
     "continue": "Continuer",
     "newGame": "Nouvelle partie",
     "library": "Bibliothèque",
-    "dropSgfToOpen": "Déposer un fichier SGF"
+    "dropSgfToOpen": "Déposer un fichier SGF",
+    "scanBoard": "Scanner le goban",
+    "openFile": "Ouvrir un fichier SGF"
   },
   "black": "Noir :",
   "boardSettings": "Paramètres",

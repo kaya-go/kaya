@@ -5,7 +5,9 @@
     "continue": "対局を続ける",
     "newGame": "新規対局",
     "library": "棋譜ライブラリ",
-    "dropSgfToOpen": "SGFファイルをドロップして開く"
+    "dropSgfToOpen": "SGFファイルをドロップして開く",
+    "scanBoard": "碁盤をスキャン",
+    "openFile": "SGFファイルを開く"
   },
   "black": "黒:",
   "boardSettings": "碁盤設定",

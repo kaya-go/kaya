@@ -218,6 +218,13 @@ function AppContent({
     }
   }, [isMobile]);
 
+  const handleNavigateToBoard = useCallback(() => {
+    setHasStarted(true);
+    if (isMobile && onMobileTabChange) {
+      onMobileTabChange('board');
+    }
+  }, [isMobile, onMobileTabChange]);
+
   const { loadSGFAsync, setFileName } = useGameTree();
   const handleFileDrop = useCallback(
     (file: File) => {
@@ -242,6 +249,7 @@ function AppContent({
         onContinue={handleContinue}
         onOpenLibrary={handleOpenLibrary}
         onFileDrop={handleFileDrop}
+        onNavigateToBoard={handleNavigateToBoard}
         version={versionData?.version}
         hasSavedGame={hasSavedGame}
       />
@@ -249,7 +257,7 @@ function AppContent({
   }
 
   return (
-    <AppDropZone>
+    <AppDropZone onNavigateToBoard={handleNavigateToBoard}>
       <div className="app">
         {showHeader ? (
           <Header
@@ -260,6 +268,7 @@ function AppContent({
             onToggleSidebar={() => setShowSidebar(prev => !prev)}
             onHide={() => setShowHeader(false)}
             onGoHome={isMobile ? handleGoHome : undefined}
+            onNavigateToBoard={handleNavigateToBoard}
             versionData={versionData}
           />
         ) : (

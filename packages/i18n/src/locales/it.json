@@ -5,7 +5,9 @@
     "continue": "Continua partita",
     "newGame": "Nuova partita",
     "library": "Libreria",
-    "dropSgfToOpen": "Trascina un file SGF"
+    "dropSgfToOpen": "Trascina un file SGF",
+    "scanBoard": "Scansiona goban",
+    "openFile": "Apri file SGF"
   },
   "black": "Nero:",
   "boardSettings": "Impostazioni tavola",

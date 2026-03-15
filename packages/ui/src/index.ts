@@ -80,7 +80,7 @@ export type {
 export { GameTreeLayoutToggle } from './components/gametree/GameTreeLayoutToggle';
 export { GameTreeControls } from './components/gametree/GameTreeControls';
 export { BoardControls } from './components/board/BoardControls';
-export { AppDropZone } from './components/file/AppDropZone';
+export { AppDropZone, type AppDropZoneRef } from './components/file/AppDropZone';
 export {
   GameInfoEditor,
   GameInfoHeaderActions,

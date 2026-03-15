@@ -5,7 +5,9 @@
     "continue": "Spiel fortsetzen",
     "newGame": "Neues Spiel",
     "library": "Spielbibliothek",
-    "dropSgfToOpen": "SGF-Datei zum Öffnen ablegen"
+    "dropSgfToOpen": "SGF-Datei zum Öffnen ablegen",
+    "scanBoard": "Brett scannen",
+    "openFile": "SGF-Datei öffnen"
   },
   "black": "Schwarz:",
   "boardSettings": "Brett-Einstellungen",

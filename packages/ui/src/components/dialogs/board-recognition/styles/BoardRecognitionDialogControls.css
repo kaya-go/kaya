@@ -194,9 +194,13 @@
     color 0.15s;
 }
 
-.brd-threshold-reset:hover {
+.brd-threshold-reset:hover:not(:disabled) {
   border-color: var(--accent, #4a9eff);
   color: var(--text-primary, #ccc);
+}
+.brd-threshold-reset:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 /* ── Mobile controls ───────────────────────────────────── */
@@ -206,16 +210,15 @@
     gap: 6px;
   }
 
-  .brd-threshold-slider {
-    width: 70px;
-  }
-
-  .brd-threshold-end-label {
-    display: none;
-  }
-
+  /* Hide sensitivity from the size row on mobile — it's in the preview bar */
+  .brd-threshold-slider,
+  .brd-threshold-end-label,
+  .brd-threshold-label,
+  .brd-threshold-value,
+  .brd-threshold-reset,
   .brd-fine-btn,
-  .brd-fine-btn-sm {
+  .brd-fine-btn-sm,
+  .brd-size-sep {
     display: none;
   }
 
