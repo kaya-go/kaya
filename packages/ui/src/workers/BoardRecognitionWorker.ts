@@ -222,6 +222,22 @@ export class BoardRecognitionWorker {
     });
   }
 
+  /**
+   * Re-filter cached inference outputs with a new threshold.
+   * No image data or ONNX inference needed — instant postprocess only.
+   */
+  mokuRefilter(options: MokuDetectOptions): Promise<RecognitionResult> {
+    const id = this.nextId++;
+    return new Promise<RecognitionResult>((resolve, reject) => {
+      this.pending.set(id, { resolve, reject });
+      this.worker.postMessage({
+        type: 'mokuRefilter' as const,
+        id,
+        options,
+      });
+    });
+  }
+
   /** Dispose the moku detector and free ONNX resources. */
   mokuDispose(): Promise<void> {
     const id = this.nextId++;

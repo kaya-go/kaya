@@ -142,6 +142,15 @@ export class MokuDetector {
   private session: import('onnxruntime-web').InferenceSession | null = null;
   private config: MokuDetectorConfig;
 
+  // Cached inference outputs for fast threshold re-filtering
+  private cachedLogits: Float32Array | null = null;
+  private cachedPredBoxes: Float32Array | null = null;
+  private cachedImg: RawImage | null = null;
+
+  // Cached postprocess outputs that don't depend on the stone threshold
+  // (corners use a fixed low threshold, so they never change when the user adjusts sensitivity)
+  private cachedResult: RecognitionResult | null = null;
+
   constructor(config: MokuDetectorConfig = {}) {
     this.config = config;
   }
@@ -204,8 +213,21 @@ export class MokuDetector {
     const logits = results.logits.data as Float32Array; // (1, 300, 3)
     const predBoxes = results.pred_boxes.data as Float32Array; // (1, 300, 4)
 
+    // Cache inference outputs for fast re-filtering
+    this.cachedLogits = logits;
+    this.cachedPredBoxes = predBoxes;
+    this.cachedImg = img;
+
     // 3. Postprocess → RecognitionResult
     const out = postprocess(logits, predBoxes, img, options.boardSize, threshold, outputSize);
+    // Cache with a COPY of warpedImage data — the original buffer gets neutered
+    // when postMessage transfers it to the main thread.
+    this.cachedResult = {
+      ...out,
+      warpedImage: out.warpedImage
+        ? { ...out.warpedImage, data: new Uint8ClampedArray(out.warpedImage.data) }
+        : out.warpedImage,
+    };
     const t3 = performance.now();
     mokuLog(
       `Detection: preprocess=${(t1 - t0).toFixed(0)}ms, inference=${(t2 - t1).toFixed(0)}ms, postprocess=${(t3 - t2).toFixed(0)}ms, total=${(t3 - t0).toFixed(0)}ms, stones=${out.stones.length}, cornersDetected=${out.cornersDetected}`
@@ -213,10 +235,110 @@ export class MokuDetector {
     return out;
   }
 
+  /**
+   * Re-filter cached inference outputs with a new threshold/boardSize.
+   * Skips ONNX inference AND perspective warp — only re-decodes stones
+   * and re-maps them to the grid (~0.1ms).
+   * Falls back to full postprocess when boardSize changes (needs new warp).
+   */
+  refilter(options: MokuDetectOptions): RecognitionResult | null {
+    if (!this.cachedLogits || !this.cachedPredBoxes || !this.cachedImg) {
+      return null;
+    }
+
+    const threshold = options.threshold ?? DEFAULT_THRESHOLD;
+
+    // If boardSize changed, we need to redo the full warp (grid mapping depends on it)
+    if (!this.cachedResult || this.cachedResult.boardSize !== options.boardSize) {
+      const outputSize = options.outputSize ?? WARP_OUTPUT_SIZE;
+      const t0 = performance.now();
+      const out = postprocess(
+        this.cachedLogits,
+        this.cachedPredBoxes,
+        this.cachedImg,
+        options.boardSize,
+        threshold,
+        outputSize
+      );
+      // Cache with copied warpedImage data (original gets neutered on transfer)
+      this.cachedResult = {
+        ...out,
+        warpedImage: out.warpedImage
+          ? { ...out.warpedImage, data: new Uint8ClampedArray(out.warpedImage.data) }
+          : out.warpedImage,
+      };
+      const t1 = performance.now();
+      mokuLog(
+        `Refilter (boardSize changed): postprocess=${(t1 - t0).toFixed(0)}ms, stones=${out.stones.length}`
+      );
+      return out;
+    }
+
+    // Fast path: only threshold changed — reuse cached corners + warp
+    const t0 = performance.now();
+
+    // Re-decode only stones from cached logits (corners are threshold-independent)
+    const stones: MokuRawDetection[] = [];
+    for (let q = 0; q < NUM_QUERIES; q++) {
+      const logitBase = q * NUM_CLASSES;
+      const boxBase = q * 4;
+
+      let bestClass = 0;
+      let bestScore = -Infinity;
+      for (let c = 0; c < NUM_CLASSES; c++) {
+        const s = sigmoid(this.cachedLogits[logitBase + c]);
+        if (s > bestScore) {
+          bestScore = s;
+          bestClass = c;
+        }
+      }
+
+      // Skip corners (they don't change) and stones below threshold
+      if (bestClass === CLASS_BOARD_CORNER || bestScore < threshold) continue;
+
+      stones.push({
+        cx: this.cachedPredBoxes[boxBase] * this.cachedImg.width,
+        cy: this.cachedPredBoxes[boxBase + 1] * this.cachedImg.height,
+        classId: bestClass,
+        score: bestScore,
+      });
+    }
+
+    // Re-map stones to grid using cached corners
+    const detectedStones = mapStonesToGrid(stones, this.cachedResult.corners, options.boardSize);
+    const rawDetections: MokuRawDetection[] = stones.map(d => ({
+      cx: d.cx,
+      cy: d.cy,
+      classId: d.classId,
+      score: d.score,
+    }));
+
+    const t1 = performance.now();
+    mokuLog(`Refilter (fast): ${(t1 - t0).toFixed(1)}ms, stones=${detectedStones.length}`);
+
+    // Build return value with a FRESH copy of warpedImage data.
+    // The worker will transfer (neuter) this buffer via postMessage,
+    // so we must not share the same ArrayBuffer as the cache.
+    const cached = this.cachedResult;
+    return {
+      ...cached,
+      warpedImage: cached.warpedImage
+        ? { ...cached.warpedImage, data: new Uint8ClampedArray(cached.warpedImage.data) }
+        : cached.warpedImage,
+      stones: detectedStones,
+      sgf: buildSGF(options.boardSize, detectedStones),
+      mokuRawDetections: rawDetections,
+    };
+  }
+
   /** Release the ONNX session and free resources. */
   dispose(): void {
     this.session?.release();
     this.session = null;
+    this.cachedLogits = null;
+    this.cachedPredBoxes = null;
+    this.cachedImg = null;
+    this.cachedResult = null;
   }
 }
 

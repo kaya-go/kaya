@@ -23,6 +23,7 @@ import {
 } from '../utils/boardRecognitionHelpers';
 
 export const PRESET_SIZES: number[] = [9, 13, 19];
+export const DEFAULT_SENSITIVITY = 0.95;
 export type { BoardRecognitionState };
 
 type BoardSize = number;
@@ -58,9 +59,9 @@ export function useBoardRecognition(
   const reclassifySeqRef = useRef(0);
   const gridCornersRef = useRef<BoardCorners | null>(null);
   const mokuThresholdRef = useRef(0.95);
-  const commitThresholdRef = useRef<() => void>(() => {});
-  const thresholdDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const autoCornersRef = useRef<BoardCorners | null>(null);
+  const hasInitialDetectionRef = useRef(false);
 
   /** Update grid corners state + ref in one call. */
   const updateGrid = (gc: BoardCorners | null) => {
@@ -75,7 +76,6 @@ export function useBoardRecognition(
     return () => {
       w.dispose();
       workerRef.current = null;
-      if (thresholdDebounceRef.current) clearTimeout(thresholdDebounceRef.current);
     };
   }, []);
 
@@ -131,6 +131,7 @@ export function useBoardRecognition(
   // ── Load & downscale image ────────────────────────────
   useEffect(() => {
     let cancelled = false;
+    hasInitialDetectionRef.current = false;
     fileToDownscaledImage(file, MAX_WORKING_DIM)
       .then(({ raw, objectURL: url }) => {
         if (cancelled) {
@@ -162,14 +163,22 @@ export function useBoardRecognition(
     setResult(null);
     setHints([]);
 
-    const promise = workerRef.current.mokuDetect(rawImage.data, rawImage.width, rawImage.height, {
-      boardSize,
-      threshold: 1 - mokuThresholdRef.current,
-    });
+    // If we already ran inference once, just re-filter cached outputs
+    const useRefilter = hasInitialDetectionRef.current;
+    const promise = useRefilter
+      ? workerRef.current.mokuRefilter({
+          boardSize,
+          threshold: 1 - mokuThresholdRef.current,
+        })
+      : workerRef.current.mokuDetect(rawImage.data, rawImage.width, rawImage.height, {
+          boardSize,
+          threshold: 1 - mokuThresholdRef.current,
+        });
 
     promise
       .then(r => {
         if (cancelled) return;
+        hasInitialDetectionRef.current = true;
         const { corners: safe } = fixResultCorners(r, rawImage.width, rawImage.height);
         const cornersChanged = safe !== r.corners;
         autoCornersRef.current = safe;
@@ -204,44 +213,50 @@ export function useBoardRecognition(
     };
   }, [rawImage, boardSize, mokuReady, t]);
 
-  // ── Debounced moku sensitivity re-detection ────────────
+  // ── Moku sensitivity state update (no commit) ──────────
   const handleMokuThresholdChange = useCallback(
     (newThreshold: number) => {
       setMokuThreshold(newThreshold);
       mokuThresholdRef.current = newThreshold;
-      // Debounced auto-commit for reliability (keyboard, tap, etc.)
-      if (thresholdDebounceRef.current) clearTimeout(thresholdDebounceRef.current);
-      thresholdDebounceRef.current = setTimeout(() => commitThresholdRef.current(), 600);
     },
     [setMokuThreshold]
   );
 
-  /** Commit sensitivity: trigger re-detection (called on slider release or debounce). */
+  /** Commit sensitivity: re-filter cached inference results (no ONNX re-run). */
   const commitMokuThreshold = useCallback(() => {
     const sensitivity = mokuThresholdRef.current;
 
     if (!mokuReady || !rawImage || !boardSize || !workerRef.current) return;
 
-    if (thresholdDebounceRef.current) clearTimeout(thresholdDebounceRef.current);
-
     const seq = ++reclassifySeqRef.current;
-    setAnalyzing(true);
+    console.log('[commitMokuThreshold] calling refilter, seq=', seq, 'sensitivity=', sensitivity);
 
     workerRef.current
-      .mokuDetect(rawImage.data, rawImage.width, rawImage.height, {
+      .mokuRefilter({
         boardSize,
         threshold: 1 - sensitivity,
       })
       .then(r => {
-        if (reclassifySeqRef.current !== seq) return;
+        console.log(
+          '[commitMokuThreshold] .then, seq=',
+          seq,
+          'current=',
+          reclassifySeqRef.current,
+          'stones=',
+          r.stones.length,
+          'warpedImage byteLength=',
+          r.warpedImage?.data?.byteLength
+        );
+        if (reclassifySeqRef.current !== seq) {
+          console.log('[commitMokuThreshold] SKIPPED (seq mismatch)');
+          return;
+        }
         // If user has manually set corners, keep them and just re-map stones
         const manualCorners = cornersRef.current;
         if (cornersManuallySet && manualCorners) {
           const existingGrid = gridCornersRef.current;
           const updatedResult = buildMokuResult(r, manualCorners, boardSize, existingGrid);
-          startTransition(() => {
-            setResult(updatedResult);
-          });
+          setResult(updatedResult);
           // Store new auto corners for reset
           autoCornersRef.current = safeCorners(r.corners, rawImage.width, rawImage.height);
         } else {
@@ -252,31 +267,24 @@ export function useBoardRecognition(
 
           if (cornersChanged && r.mokuRawDetections) {
             const rebuilt = buildMokuResult(r, safe, boardSize!);
-            startTransition(() => {
-              setResult(rebuilt);
-              if (rebuilt.estimatedGridCorners) {
-                updateGrid(rebuilt.estimatedGridCorners);
-              }
-            });
+            setResult(rebuilt);
+            if (rebuilt.estimatedGridCorners) {
+              updateGrid(rebuilt.estimatedGridCorners);
+            }
           } else {
-            startTransition(() => {
-              setResult(r);
-              if (r.estimatedGridCorners) {
-                updateGrid(r.estimatedGridCorners);
-              }
-            });
+            setResult(r);
+            if (r.estimatedGridCorners) {
+              updateGrid(r.estimatedGridCorners);
+            }
           }
         }
+        console.log('[commitMokuThreshold] setResult done');
         setHints([]);
-        setAnalyzing(false);
       })
-      .catch(() => {
-        if (reclassifySeqRef.current === seq) setAnalyzing(false);
+      .catch(err => {
+        console.error('[commitMokuThreshold] ERROR', err);
       });
   }, [mokuReady, rawImage, boardSize, cornersManuallySet]);
-
-  // Keep commitThresholdRef in sync so the debounced timer uses the latest version
-  commitThresholdRef.current = commitMokuThreshold;
 
   /** Cancel any pending or in-flight reclassification (called when user starts a new corner drag). */
   const cancelReclassify = useCallback(() => {
@@ -393,22 +401,6 @@ export function useBoardRecognition(
     [rawImage, boardSize]
   );
 
-  // ── Apply raw moku corner predictions (bypass fallback) ──
-  const applyMokuPredictedCorners = useCallback(() => {
-    const rawCorners = result?.mokuRawCorners ?? null;
-    if (!rawCorners || !rawImage || !boardSize) return;
-    setCornersManuallySet(true);
-    setCorners(rawCorners);
-    cornersRef.current = rawCorners;
-    setHints([]);
-    if (result?.mokuRawDetections) {
-      const insetDst = computeInsetDst();
-      const rebuilt = buildMokuResult(result, rawCorners, boardSize, insetDst);
-      setResult(rebuilt);
-      updateGrid(insetDst);
-    }
-  }, [result, rawImage, boardSize]);
-
   // ── Reset corners to auto-detected positions ──
   const resetCornersToAuto = useCallback(() => {
     const autoCorners = autoCornersRef.current;
@@ -454,6 +446,5 @@ export function useBoardRecognition(
     cornersRef,
     cornersManuallySet,
     resetCornersToAuto,
-    applyMokuPredictedCorners,
   };
 }

@@ -133,6 +133,26 @@
   color: var(--text-secondary, #aaa);
 }
 
+/* ── Corner status indicator ── */
+
+.brd-corners-status {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.brd-corners-auto {
+  background: rgba(76, 175, 80, 0.15);
+  color: #81c784;
+}
+
+.brd-corners-manual {
+  background: rgba(255, 183, 77, 0.15);
+  color: #ffb74d;
+}
+
 /* ── Analyzing spinner ── */
 
 .brd-analyzing {

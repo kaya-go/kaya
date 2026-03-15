@@ -126,11 +126,77 @@
   cursor: pointer;
 }
 
+.brd-threshold-end-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #888);
+  user-select: none;
+  flex-shrink: 0;
+}
+
 .brd-threshold-value {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-secondary, #888);
-  min-width: 2.5em;
+  min-width: 2.8em;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.brd-fine-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #555);
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-secondary, #888);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.brd-fine-btn:hover {
+  border-color: var(--accent, #4a9eff);
+  color: var(--text-primary, #ccc);
+}
+
+.brd-fine-btn-sm {
+  width: 18px;
+  height: 18px;
+  font-size: 0.7rem;
+}
+
+.brd-threshold-reset {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color, #555);
+  background: var(--bg-secondary, #2a2a2a);
+  color: var(--text-secondary, #888);
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+}
+
+.brd-threshold-reset:hover {
+  border-color: var(--accent, #4a9eff);
+  color: var(--text-primary, #ccc);
 }
 
 /* ── Calibration area ── */
@@ -206,6 +272,14 @@
 }
 
 /* ── Stats & warnings ── */
+
+.brd-panel-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
 
 .brd-stats {
   display: flex;

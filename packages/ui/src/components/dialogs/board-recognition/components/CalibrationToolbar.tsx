@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import type {
   BoardCorners,
   CalibrationHint,
-  DetectedStone,
   Point,
   RecognitionResult,
 } from '@kaya/board-recognition';
@@ -47,17 +46,9 @@ export const CalibrationToolbar: React.FC<CalibrationToolbarProps> = ({
 
   return (
     <div className="brd-calibration-area">
-      <div className="brd-stats">
-        <span className="brd-stat black">
-          ● {result.stones.filter((s: DetectedStone) => s.color === 'black').length}
-        </span>
-        <span className="brd-stat white">
-          ○ {result.stones.filter((s: DetectedStone) => s.color === 'white').length}
-        </span>
-        {!result.cornersDetected && (
-          <span className="brd-warn">{t('boardRecognition.cornersManual')}</span>
-        )}
-      </div>
+      {!result.cornersDetected && (
+        <span className="brd-warn">{t('boardRecognition.cornersManual')}</span>
+      )}
       <div className="brd-calibration-row">
         <span className="brd-calibration-label">{t('boardRecognition.calibrate')}</span>
         <button

@@ -16,7 +16,11 @@ import type { GoBoard } from '@kaya/goboard';
 import type { Sign, Vertex } from '@kaya/goboard';
 import { BoardPreview } from './components/BoardPreview';
 import { CalibrationToolbar } from './components/CalibrationToolbar';
-import { PRESET_SIZES, useBoardRecognition } from './hooks/useBoardRecognition';
+import {
+  PRESET_SIZES,
+  DEFAULT_SENSITIVITY,
+  useBoardRecognition,
+} from './hooks/useBoardRecognition';
 import { PhotoPanel } from './components/PhotoPanel';
 import './styles/BoardRecognitionDialog.css';
 import './styles/BoardRecognitionDialogControls.css';
@@ -93,7 +97,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
     cornersRef,
     cornersManuallySet,
     resetCornersToAuto,
-    applyMokuPredictedCorners,
   } = recognition;
 
   const onGridClick = useCallback(
@@ -330,21 +333,87 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
           {mokuReady && (
             <>
               <span className="brd-size-sep" />
-              <span className="brd-size-label brd-threshold-label">
+              <span
+                className="brd-size-label brd-threshold-label"
+                title={t('boardRecognition.sensitivityTooltip')}
+              >
                 {t('boardRecognition.sensitivity')}
+              </span>
+              <button
+                className="brd-fine-btn"
+                onClick={() => {
+                  const v = Math.max(0.5, mokuThreshold - 0.01);
+                  handleMokuThresholdChange(v);
+                  commitMokuThreshold();
+                }}
+                title={t('boardRecognition.sensitivityFewer')}
+              >
+                ‹
+              </button>
+              <button
+                className="brd-fine-btn brd-fine-btn-sm"
+                onClick={() => {
+                  const v = Math.max(0.5, mokuThreshold - 0.001);
+                  handleMokuThresholdChange(v);
+                  commitMokuThreshold();
+                }}
+                title={t('boardRecognition.sensitivityFewer')}
+              >
+                ‹
+              </button>
+              <span className="brd-threshold-end-label">
+                {t('boardRecognition.sensitivityFewer')}
               </span>
               <input
                 type="range"
                 className="brd-threshold-slider"
-                min={0.01}
+                min={0.5}
                 max={0.99}
-                step={0.01}
+                step={0.001}
                 value={mokuThreshold}
-                onChange={e => handleMokuThresholdChange(Number(e.target.value))}
-                onPointerUp={commitMokuThreshold}
-                onKeyUp={commitMokuThreshold}
+                onChange={e => {
+                  handleMokuThresholdChange(Number(e.target.value));
+                  commitMokuThreshold();
+                }}
               />
-              <span className="brd-threshold-value">{mokuThreshold.toFixed(2)}</span>
+              <span className="brd-threshold-end-label">
+                {t('boardRecognition.sensitivityMore')}
+              </span>
+              <button
+                className="brd-fine-btn brd-fine-btn-sm"
+                onClick={() => {
+                  const v = Math.min(0.99, mokuThreshold + 0.001);
+                  handleMokuThresholdChange(v);
+                  commitMokuThreshold();
+                }}
+                title={t('boardRecognition.sensitivityMore')}
+              >
+                ›
+              </button>
+              <button
+                className="brd-fine-btn"
+                onClick={() => {
+                  const v = Math.min(0.99, mokuThreshold + 0.01);
+                  handleMokuThresholdChange(v);
+                  commitMokuThreshold();
+                }}
+                title={t('boardRecognition.sensitivityMore')}
+              >
+                ›
+              </button>
+              <span className="brd-threshold-value">{mokuThreshold.toFixed(3)}</span>
+              {mokuThreshold !== DEFAULT_SENSITIVITY && (
+                <button
+                  className="brd-threshold-reset"
+                  onClick={() => {
+                    handleMokuThresholdChange(DEFAULT_SENSITIVITY);
+                    commitMokuThreshold();
+                  }}
+                  title={t('boardRecognition.sensitivityReset')}
+                >
+                  ↺
+                </button>
+              )}
             </>
           )}
         </div>
@@ -374,17 +443,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             cornersManuallySet={cornersManuallySet}
             resetCornersToAuto={resetCornersToAuto}
             hasResult={result != null}
-            hasMokuRawCorners={result?.mokuRawCorners != null}
-            rawCornersActive={
-              result?.mokuRawCorners != null &&
-              corners != null &&
-              result.mokuRawCorners.every(
-                (p, i) =>
-                  Math.abs(p[0] - corners![i][0]) < 0.5 && Math.abs(p[1] - corners![i][1]) < 0.5
-              )
-            }
-            mokuCornerCount={result?.mokuCornerCount ?? 0}
-            applyMokuPredictedCorners={applyMokuPredictedCorners}
           />
 
           {/* Right: warped board preview */}
@@ -392,6 +450,16 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             <div className="brd-panel-title brd-step-title">
               <span className="brd-step-badge">2</span>
               {t('boardRecognition.stepReview')}
+              {result && !analyzing && (
+                <span className="brd-panel-stats">
+                  <span className="brd-stat black">
+                    ● {result.stones.filter(s => s.color === 'black').length}
+                  </span>
+                  <span className="brd-stat white">
+                    ○ {result.stones.filter(s => s.color === 'white').length}
+                  </span>
+                </span>
+              )}
             </div>
             <div className="brd-preview-wrap">
               {analyzing && !result && (

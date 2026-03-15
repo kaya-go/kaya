@@ -18,10 +18,6 @@ interface PhotoPanelProps {
   cornersManuallySet: boolean;
   resetCornersToAuto: () => void;
   hasResult: boolean;
-  hasMokuRawCorners: boolean;
-  rawCornersActive: boolean;
-  mokuCornerCount: number;
-  applyMokuPredictedCorners: () => void;
 }
 
 export const PhotoPanel: React.FC<PhotoPanelProps> = ({
@@ -39,10 +35,6 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
   cornersManuallySet,
   resetCornersToAuto,
   hasResult,
-  hasMokuRawCorners,
-  rawCornersActive,
-  mokuCornerCount,
-  applyMokuPredictedCorners,
 }) => {
   const { t } = useTranslation();
 
@@ -87,6 +79,15 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
       <div className="brd-corner-actions">
         {corners && <div className="brd-hint">{t('boardRecognition.dragHint')}</div>}
         <div className="brd-corner-actions-btns">
+          {hasResult && (
+            <span
+              className={`brd-corners-status ${cornersManuallySet ? 'brd-corners-manual' : 'brd-corners-auto'}`}
+            >
+              {cornersManuallySet
+                ? t('boardRecognition.cornersAdjusted')
+                : t('boardRecognition.cornersAutoDetected')}
+            </span>
+          )}
           {cornersManuallySet && (
             <button
               className="brd-reset-corners-btn"
@@ -94,22 +95,6 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
               title={t('boardRecognition.resetCorners')}
             >
               ↺ {t('boardRecognition.resetCorners')}
-            </button>
-          )}
-          {hasResult && (
-            <button
-              className="brd-reset-corners-btn"
-              onClick={applyMokuPredictedCorners}
-              disabled={!hasMokuRawCorners || rawCornersActive}
-              title={
-                !hasMokuRawCorners
-                  ? '[Debug] No raw corners detected by Moku'
-                  : rawCornersActive
-                    ? '[Debug] Raw Moku corners are currently displayed'
-                    : '[Debug] Apply raw moku corner predictions (bypass fallback)'
-              }
-            >
-              🔍 Moku corners ({mokuCornerCount}/4){rawCornersActive ? ' — active' : ''}
             </button>
           )}
         </div>

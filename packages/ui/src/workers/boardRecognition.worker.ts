@@ -64,6 +64,11 @@ export type WorkerRequest =
       options: MokuDetectOptions;
     }
   | {
+      type: 'mokuRefilter';
+      id: number;
+      options: MokuDetectOptions;
+    }
+  | {
       type: 'mokuDispose';
       id: number;
     }
@@ -190,6 +195,13 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
       case 'mokuDetect': {
         if (!mokuDetector) throw new Error('Moku detector not initialized');
         result = await mokuDetector.detect(getImg(), msg.options);
+        break;
+      }
+      case 'mokuRefilter': {
+        if (!mokuDetector) throw new Error('Moku detector not initialized');
+        const refiltered = mokuDetector.refilter(msg.options);
+        if (!refiltered) throw new Error('No cached inference — run mokuDetect first');
+        result = refiltered;
         break;
       }
       case 'mokuDispose': {

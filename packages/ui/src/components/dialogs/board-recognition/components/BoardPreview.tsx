@@ -81,12 +81,15 @@ export const BoardPreview: React.FC<PreviewProps> = ({
   const [containerSize, setContainerSize] = useState(0);
 
   // Measure container size with ResizeObserver
+  // Use min(width, height) because the container has aspect-ratio: 1
+  // but max-height: 100% can constrain height below width in short windows
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const ro = new ResizeObserver(entries => {
-      const w = entries[0].contentRect.width;
-      if (w > 0) setContainerSize(w);
+      const { width, height } = entries[0].contentRect;
+      const s = Math.min(width, height);
+      if (s > 0) setContainerSize(s);
     });
     ro.observe(el);
     return () => ro.disconnect();
