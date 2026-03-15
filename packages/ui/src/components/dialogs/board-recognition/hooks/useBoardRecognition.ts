@@ -229,7 +229,6 @@ export function useBoardRecognition(
     if (!mokuReady || !rawImage || !boardSize || !workerRef.current) return;
 
     const seq = ++reclassifySeqRef.current;
-    console.log('[commitMokuThreshold] calling refilter, seq=', seq, 'sensitivity=', sensitivity);
 
     workerRef.current
       .mokuRefilter({
@@ -237,52 +236,44 @@ export function useBoardRecognition(
         threshold: 1 - sensitivity,
       })
       .then(r => {
-        console.log(
-          '[commitMokuThreshold] .then, seq=',
-          seq,
-          'current=',
-          reclassifySeqRef.current,
-          'stones=',
-          r.stones.length,
-          'warpedImage byteLength=',
-          r.warpedImage?.data?.byteLength
-        );
-        if (reclassifySeqRef.current !== seq) {
-          console.log('[commitMokuThreshold] SKIPPED (seq mismatch)');
-          return;
-        }
-        // If user has manually set corners, keep them and just re-map stones
-        const manualCorners = cornersRef.current;
-        if (cornersManuallySet && manualCorners) {
-          const existingGrid = gridCornersRef.current;
-          const updatedResult = buildMokuResult(r, manualCorners, boardSize, existingGrid);
-          setResult(updatedResult);
-          // Store new auto corners for reset
-          autoCornersRef.current = safeCorners(r.corners, rawImage.width, rawImage.height);
-        } else {
-          const { corners: safe } = fixResultCorners(r, rawImage.width, rawImage.height);
-          const cornersChanged = safe !== r.corners;
-          autoCornersRef.current = safe;
-          setCorners(safe);
+        if (reclassifySeqRef.current !== seq) return;
 
-          if (cornersChanged && r.mokuRawDetections) {
-            const rebuilt = buildMokuResult(r, safe, boardSize!);
-            setResult(rebuilt);
-            if (rebuilt.estimatedGridCorners) {
-              updateGrid(rebuilt.estimatedGridCorners);
-            }
-          } else {
-            setResult(r);
-            if (r.estimatedGridCorners) {
-              updateGrid(r.estimatedGridCorners);
-            }
-          }
+        // Refilter only re-thresholds stones — corners, grid, and warpedImage
+        // are unchanged. Update only the stone-related fields to avoid
+        // triggering expensive re-renders of both panels.
+        if (cornersManuallySet && cornersRef.current) {
+          const remapped = buildMokuResult(
+            r,
+            cornersRef.current,
+            boardSize,
+            gridCornersRef.current
+          );
+          setResult(prev =>
+            prev
+              ? {
+                  ...prev,
+                  stones: remapped.stones,
+                  sgf: remapped.sgf,
+                  mokuRawDetections: remapped.mokuRawDetections,
+                }
+              : remapped
+          );
+        } else {
+          setResult(prev =>
+            prev
+              ? {
+                  ...prev,
+                  stones: r.stones,
+                  sgf: r.sgf,
+                  mokuRawDetections: r.mokuRawDetections,
+                }
+              : r
+          );
         }
-        console.log('[commitMokuThreshold] setResult done');
-        setHints([]);
+        setHints(prev => (prev.length === 0 ? prev : []));
       })
-      .catch(err => {
-        console.error('[commitMokuThreshold] ERROR', err);
+      .catch(() => {
+        // Refilter failed — silently ignore (worker may have been disposed)
       });
   }, [mokuReady, rawImage, boardSize, cornersManuallySet]);
 

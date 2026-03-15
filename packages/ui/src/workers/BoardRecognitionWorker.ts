@@ -32,11 +32,15 @@ function deserializeResult(s: SerializedResult): RecognitionResult {
     corners: s.corners,
     cornersDetected: s.cornersDetected,
     sgf: s.sgf,
-    warpedImage: {
-      data: new Uint8ClampedArray(s.warpedBuffer),
-      width: s.warpedSize,
-      height: s.warpedSize,
-    },
+    // warpedImage may be absent for refilter responses (empty buffer)
+    warpedImage:
+      s.warpedBuffer.byteLength > 0
+        ? {
+            data: new Uint8ClampedArray(s.warpedBuffer),
+            width: s.warpedSize,
+            height: s.warpedSize,
+          }
+        : undefined!,
     mokuRawDetections: s.mokuRawDetections,
     estimatedGridCorners: s.estimatedGridCorners,
     mokuRawCorners: s.mokuRawCorners,

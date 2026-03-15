@@ -120,7 +120,9 @@ function serializeResult(r: RecognitionResult): {
   serialized: SerializedResult;
   transfer: ArrayBuffer[];
 } {
-  const warpedBuffer = r.warpedImage!.data.buffer as ArrayBuffer;
+  // Clone the buffer so the worker retains its copy (e.g. for mokuRefilter cache).
+  // Without this, transferring detaches the original and breaks subsequent refilter calls.
+  const warpedBuffer = (r.warpedImage!.data.buffer as ArrayBuffer).slice(0);
   return {
     serialized: {
       boardSize: r.boardSize,
@@ -201,8 +203,26 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         if (!mokuDetector) throw new Error('Moku detector not initialized');
         const refiltered = mokuDetector.refilter(msg.options);
         if (!refiltered) throw new Error('No cached inference — run mokuDetect first');
-        result = refiltered;
-        break;
+        // Refilter only changes stones — skip the 2.5 MB warpedBuffer transfer.
+        // The main thread keeps the existing warpedImage from the initial detect.
+        const refilterSerialized: SerializedResult = {
+          boardSize: refiltered.boardSize,
+          stones: refiltered.stones,
+          corners: refiltered.corners,
+          cornersDetected: refiltered.cornersDetected,
+          sgf: refiltered.sgf,
+          warpedBuffer: new ArrayBuffer(0),
+          warpedSize: 0,
+          mokuRawDetections: refiltered.mokuRawDetections,
+          estimatedGridCorners: refiltered.estimatedGridCorners,
+          mokuRawCorners: refiltered.mokuRawCorners,
+          mokuCornerCount: refiltered.mokuCornerCount,
+        };
+        (self as unknown as Worker).postMessage({
+          id: msg.id,
+          result: refilterSerialized,
+        } satisfies WorkerResponse);
+        return;
       }
       case 'mokuDispose': {
         mokuDetector?.dispose();
