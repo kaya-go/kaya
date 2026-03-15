@@ -1,6 +1,6 @@
 {
   "name": "@kaya/gtp",
-  "version": "0.3.7-dev",
+  "version": "0.3.7",
   "description": "Go Text Protocol implementation (adapted from Sabaki gtp)",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

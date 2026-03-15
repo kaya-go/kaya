@@ -2,6 +2,45 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.7] - 2026-03-15
+
+### <!-- 0 -->🚀 Features
+
+- *(board-recognition)* Upgrade moku model to v2 and add ETag-based cache invalidation ([0e8dbfc](https://github.com/kaya-go/kaya/commit/0e8dbfcae7b84b0333bf3a416e4878c1b5810773)) by @hadim
+
+- *(board-recognition)* Add refilter optimization and sensitivity UX redesign ([e04ea05](https://github.com/kaya-go/kaya/commit/e04ea059fdeda4ab90119e55fe0d2e22b8224b01)) by @hadim
+
+- *(ui)* Improve mobile board recognition UX and add scan/open buttons to landing page ([29d338d](https://github.com/kaya-go/kaya/commit/29d338de3abadcacc235adbef108a064442d2268)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(board-recognition)* Fix moku refilter ArrayBuffer detach and optimize slider performance ([bfd65d2](https://github.com/kaya-go/kaya/commit/bfd65d2f9c1e962b700250fba55ca65bb2edbe07)) by @hadim
+
+- *(ui)* Fix board recognition overlay misalignment on small window heights ([0d2cbd3](https://github.com/kaya-go/kaya/commit/0d2cbd3c66c55aba30efe02a09ee4ca73f573af4)) by @hadim
+
+- *(ui)* Use neutral colors for corners status indicators ([e9e7e88](https://github.com/kaya-go/kaya/commit/e9e7e88a2ede59bab99b6ca968f7f37a784b0d71)) by @hadim
+
+- *(ui)* Mobile board recognition dialog with tabbed layout and performance fixes ([b7b0e86](https://github.com/kaya-go/kaya/commit/b7b0e86ef4e7dc05fa10321417078a3882993b23)) by @hadim
+
+- *(ui)* Count setup nodes in move counter for board recognition scans ([f98bc07](https://github.com/kaya-go/kaya/commit/f98bc0705676dbeb43a6261eb2f830cbd6880c5a)) by @hadim
+
+- *(i18n)* Shorten board recognition stepReview tab label for mobile ([11d4eae](https://github.com/kaya-go/kaya/commit/11d4eae3466a7e63e1a20dede07121c0230dd8e6)) by @hadim
+
+- *(ui)* Use ScanOptionsModal on landing page for photo/camera choice ([4fb26c3](https://github.com/kaya-go/kaya/commit/4fb26c3112c93b676ef3382a35a048faec2a737e)) by @hadim
+
+### <!-- 3 -->📚 Documentation
+
+- Update documentation with audio system, moku v2, and corrected paths ([3ec034f](https://github.com/kaya-go/kaya/commit/3ec034f76f8f31f0cbca5dda09b9bc6df523447d)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- *(board-recognition)* Reduce moku console log verbosity ([6d93b06](https://github.com/kaya-go/kaya/commit/6d93b06992f3db9ef149f0bad837f70ff19ac4f2)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.6] - 2026-03-14
 
 ### <!-- 0 -->🚀 Features
@@ -20,10 +59,12 @@ All notable changes to this project will be documented in this file.
 
 - Bump react-resizable-panels v3 to v4 ([b2eb7b2](https://github.com/kaya-go/kaya/commit/b2eb7b26fb34bf3a0f5c1602e72e18269659e89c)) by @hadim
 
+- Release v0.3.6 ([63d644d](https://github.com/kaya-go/kaya/commit/63d644d18b70b8ab398ac44830c889afaf014cfe)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.5] - 2026-03-13
 
