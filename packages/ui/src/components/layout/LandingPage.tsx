@@ -1,7 +1,8 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuPlay, LuFolderOpen, LuLibrary, LuCamera } from 'react-icons/lu';
 import { AppDropZone, type AppDropZoneRef } from '../file/AppDropZone';
+import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
 import './LandingPage.css';
 
 export interface LandingPageProps {
@@ -25,17 +26,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const { t } = useTranslation();
   const dropZoneRef = useRef<AppDropZoneRef>(null);
-  const scanInputRef = useRef<HTMLInputElement>(null);
   const openInputRef = useRef<HTMLInputElement>(null);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
 
   const handleScanClick = useCallback(() => {
-    scanInputRef.current?.click();
+    setIsScanModalOpen(true);
   }, []);
 
-  const handleScanChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) dropZoneRef.current?.loadFile(file);
-    e.target.value = '';
+  const handleScanFileSelected = useCallback((file: File) => {
+    dropZoneRef.current?.loadFile(file);
   }, []);
 
   const handleOpenClick = useCallback(() => {
@@ -82,17 +81,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>{t('landing.library')}</span>
             </button>
 
-            <input
-              ref={scanInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleScanChange}
-            />
             <button className="landing-button secondary" onClick={handleScanClick}>
               <LuCamera size={24} />
               <span>{t('landing.scanBoard')}</span>
             </button>
+
+            <ScanOptionsModal
+              isOpen={isScanModalOpen}
+              onClose={() => setIsScanModalOpen(false)}
+              onSelectFile={handleScanFileSelected}
+            />
 
             <input
               ref={openInputRef}
