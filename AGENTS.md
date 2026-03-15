@@ -84,7 +84,7 @@ kaya/
     ├── boardmatcher/    # Pattern matching
     ├── deadstones/      # Rust/WASM Monte Carlo
     ├── ai-engine/       # KataGo via ONNX Runtime + GTP protocol
-    ├── board-recognition/ # Photo → SGF (classic CV + Moku AI)
+    ├── board-recognition/ # Photo → SGF (classic CV + Moku AI RT-DETR)
     ├── i18n/            # Internationalization (8 languages)
     ├── themes/          # Board theme system (6 built-in themes)
     ├── game-library/    # IndexedDB-based SGF file storage
@@ -95,17 +95,20 @@ kaya/
 
 ### Key Architecture Points
 
-**1. GameTreeContext is the Single Source of Truth** (`packages/ui/src/GameTreeContext.tsx`)
+**1. GameTreeContext is the Single Source of Truth** (`packages/ui/src/contexts/GameTreeContext.tsx`)
 
 - Manages game state, board reconstruction, SGF parsing, navigation
 - All apps consume via `useGameTree()` hook
 - Uses LRU board cache for performance
+- Modular hook architecture: `useGameTreeState`, `useBoardState`, `useGameNavigation`, `useGameModification`, `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`, `useGameTreeUndoRedo`
 
 **2. AI Engine Lifecycle** (`packages/ui/src/contexts/AIEngineContext.tsx`)
 
 - Singleton engine managed via `AIEngineProvider` / `useAIEngine()` hook
 - Runs in Web Worker (web) or native Rust ONNX Runtime (desktop)
 - Automatic GPU→WASM fallback: warm-up validation detects silent WebGPU failures, runtime try-catch catches thrown GPU errors; both reinitialize with WASM and show a toast notification
+- Desktop: GPU→CPU fallback for native ONNX engine
+- Tracks model quantization (`selectedQuantization`) and native upload progress
 - Dispose engine to free resources when disabled
 
 **2b. AI Analysis & MCTS** (`packages/ui/src/contexts/AIAnalysisContext.tsx`)
@@ -130,7 +133,14 @@ bun run copy-assets  # Runs automatically in build
 - Add new shortcuts to `ShortcutId` type and `DEFAULT_SHORTCUTS`
 - Add translations under `shortcuts.{id}` in all locale files
 
-**5. Tauri v2 Imports**
+**5. Native Audio System** (`apps/desktop/src-tauri/src/audio.rs`)
+
+- Desktop uses **rodio** with **lewton** OGG/Vorbis decoder — bypasses broken WebKitGTK/GStreamer in AppImage
+- Platform-native backends: ALSA/PulseAudio (Linux), CoreAudio (macOS), WASAPI (Windows)
+- Tauri commands: `audio_init`, `audio_play_sound`, `audio_check`
+- Android: stub implementation (`audio_stub.rs`)
+
+**6. Tauri v2 Imports**
 
 ```typescript
 import { invoke } from '@tauri-apps/api/core'; // NOT @tauri-apps/api/tauri

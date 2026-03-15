@@ -86,7 +86,7 @@ kaya/
     ├── boardmatcher/       # Pattern matching
     ├── deadstones/         # Dead stone detection (Rust/WASM)
     ├── ai-engine/          # AI Analysis (KataGo/ONNX) + GTP protocol
-    ├── board-recognition/  # Photo → SGF (classic CV + Moku AI)
+    ├── board-recognition/  # Photo → SGF (classic CV + Moku AI RT-DETR)
     ├── i18n/               # Internationalization (8 languages)
     ├── themes/             # Board theme system (6 themes)
     ├── game-library/       # IndexedDB-based SGF file storage

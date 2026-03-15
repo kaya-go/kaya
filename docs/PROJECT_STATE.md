@@ -23,7 +23,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
   @kaya/boardmatcher     - Pattern matching and move naming
   @kaya/deadstones       - Dead stone detection (Rust/WASM)
   @kaya/ai-engine        - KataGo via ONNX Runtime + GTP protocol
-  @kaya/board-recognition - Photo-to-SGF board recognition (classic CV + Moku AI)
+  @kaya/board-recognition - Photo-to-SGF board recognition (classic CV + Moku AI RT-DETR)
   @kaya/i18n             - Internationalization (8 languages, locale detection)
   @kaya/themes           - Board theme system (6 built-in themes)
   @kaya/game-library     - IndexedDB-based SGF file storage and management
@@ -56,6 +56,7 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 - **Native ONNX Runtime** (Desktop): GPU acceleration via CUDA, CoreML (optimized), or DirectML
 - **Web ONNX Runtime**: WebGPU (GPU) or WASM (CPU) backend with automatic GPU→CPU fallback
 - **Model Caching**: Local model cache with hash-based invalidation (desktop)
+- **Quantization Tracking**: Tracks selected vs runtime model precision (fp32/fp16/uint8)
 - **Analysis Graph**: Visual win rate chart across all moves
 - **Move Quality Colors**: Chess.com-style move classification (best/great/good/okay/poor)
 - **Ownership Heatmap**: Territory control visualization
@@ -72,17 +73,19 @@ Kaya is a desktop and web Go (Baduk/Weiqi) application with AI analysis. It feat
 - **Dark/Light Theme**: Persisted user preference
 - **Show/Hide Coordinates**: Toggle board coordinates display
 - **Sound Effects**: Stone placement and capture sounds
+- **Native Audio** (Desktop): rodio-based audio with lewton OGG/Vorbis decoder, bypasses WebKitGTK/GStreamer issues
 - **Configurable Keyboard Shortcuts**: Customize all shortcuts via Settings
 - **Internationalization**: Full i18n support with 8 languages (EN, ZH, KO, JA, FR, DE, ES, IT)
 - **Mobile/Tablet Responsive**: Touch-friendly layout with swipe navigation and orientation support
 - **Overflow Menu**: Additional board actions (scan board, etc.) accessible via overflow button
+- **Landing Page**: Scan/Open buttons on mobile landing page for quick access
 
 ### Board Recognition
 
 - **Photo Import**: Recognize board positions from photos with multiple import modes (SGF, blank board, merge with current position, add as move)
 - **Dual Backend**: Classic computer-vision pipeline and Moku AI (RT-DETR) detection
-- **Moku AI**: ONNX-based RT-DETR model detects corners and stones directly with configurable sensitivity
-- **Model Caching**: Browser Cache API with hash-based invalidation and download progress tracking
+- **Moku AI**: ONNX-based RT-DETR model (v2) detects corners and stones directly with configurable sensitivity and refilter optimization
+- **Model Caching**: Browser Cache API with ETag-based invalidation, hash verification, and download progress tracking
 - **Corner Dragging**: Interactive perspective warp with deferred worker-based warping and collapsed corner auto-spread
 - **Custom Board Sizes**: Support for arbitrary board sizes (2–52) in addition to standard 9/13/19
 - **Manual Calibration**: Click-to-toggle stone color corrections and grid alignment
