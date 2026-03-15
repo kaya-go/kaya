@@ -91,8 +91,13 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
       const container = containerRef.current;
       if (!img || !canvas || !container) return;
 
-      const containerW = container.clientWidth;
-      const containerH = container.clientHeight;
+      // Use content area (excluding padding) so the canvas intrinsic size
+      // matches the CSS-constrained display size (max-width/max-height: 100%).
+      const cs = getComputedStyle(container);
+      const containerW =
+        container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const containerH =
+        container.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       const { width: rawW, height: rawH } = rawDimsRef.current;
 
       const scale = Math.min(containerW / rawW, containerH / rawH, 1);

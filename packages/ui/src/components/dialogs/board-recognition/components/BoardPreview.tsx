@@ -80,18 +80,19 @@ export const BoardPreview: React.FC<PreviewProps> = ({
   const paintRef = useRef<() => void>(() => {});
   const [containerSize, setContainerSize] = useState(0);
 
-  // Measure container size with ResizeObserver
-  // Use min(width, height) because the container has aspect-ratio: 1
-  // but max-height: 100% can constrain height below width in short windows
+  // Measure the available space from the PARENT wrapper (.brd-preview-wrap)
+  // and use the smaller dimension to keep the container square.
+  // We observe the parent (not the container itself) to avoid a feedback loop
+  // when setting explicit width/height on the container via inline styles.
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    const parent = containerRef.current?.parentElement;
+    if (!parent) return;
     const ro = new ResizeObserver(entries => {
       const { width, height } = entries[0].contentRect;
       const s = Math.min(width, height);
       if (s > 0) setContainerSize(s);
     });
-    ro.observe(el);
+    ro.observe(parent);
     return () => ro.disconnect();
   }, []);
 
@@ -326,7 +327,11 @@ export const BoardPreview: React.FC<PreviewProps> = ({
   );
 
   return (
-    <div ref={containerRef} className="brd-preview-container">
+    <div
+      ref={containerRef}
+      className="brd-preview-container"
+      style={containerSize > 0 ? { width: containerSize, height: containerSize } : undefined}
+    >
       {objectURL && cssTransform && (
         <img
           src={objectURL}
