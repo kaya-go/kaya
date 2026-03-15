@@ -18,25 +18,39 @@ export function mokuWarn(...args: unknown[]) {
 // ── Model caching ────────────────────────────────────────────────────────────
 
 const MODEL_CACHE_NAME = 'kaya-moku-models';
-const MODEL_HASH_KEY_PREFIX = 'kaya-moku-hash:';
+const ETAG_KEY_PREFIX = 'kaya-moku-etag:';
 
 /** Progress callback: receives values in [0, 1]. */
 export type ProgressCallback = (progress: number) => void;
 
 /**
- * Store and retrieve a hash string for a model URL using the Cache API.
- * The hash is stored as a simple text Response keyed by a special URL.
+ * Store and retrieve the ETag for a model URL using the Cache API.
+ * The ETag is stored as a simple text Response keyed by a special URL.
  */
-async function getStoredHash(cache: Cache, modelUrl: string): Promise<string | null> {
-  const hashKey = `${MODEL_HASH_KEY_PREFIX}${modelUrl}`;
-  const resp = await cache.match(hashKey);
+async function getStoredEtag(cache: Cache, modelUrl: string): Promise<string | null> {
+  const key = `${ETAG_KEY_PREFIX}${modelUrl}`;
+  const resp = await cache.match(key);
   if (!resp) return null;
   return resp.text();
 }
 
-async function storeHash(cache: Cache, modelUrl: string, hash: string): Promise<void> {
-  const hashKey = `${MODEL_HASH_KEY_PREFIX}${modelUrl}`;
-  await cache.put(hashKey, new Response(hash));
+async function storeEtag(cache: Cache, modelUrl: string, etag: string): Promise<void> {
+  const key = `${ETAG_KEY_PREFIX}${modelUrl}`;
+  await cache.put(key, new Response(etag));
+}
+
+/**
+ * Fetch the remote ETag via a lightweight HEAD request.
+ * Returns null if the server doesn't provide an ETag or the request fails.
+ */
+async function fetchRemoteEtag(modelUrl: string): Promise<string | null> {
+  try {
+    const resp = await fetch(modelUrl, { method: 'HEAD' });
+    if (!resp.ok) return null;
+    return resp.headers.get('etag');
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -50,38 +64,43 @@ export async function clearModelCache(): Promise<void> {
 }
 
 /**
- * Fetch the ONNX model with Cache API persistence and hash-based invalidation.
+ * Fetch the ONNX model with Cache API persistence and ETag-based invalidation.
  * On first load, the model is fetched from the network and stored in the
  * browser Cache API so subsequent loads are instant without re-downloading.
- * If `expectedHash` is provided, the cached model is invalidated when the
- * hash doesn't match (e.g. when a new model version is deployed).
+ * On subsequent loads, a lightweight HEAD request checks the server ETag;
+ * if it differs from the cached ETag the model is re-downloaded automatically.
  */
 export async function fetchModelWithCache(
   modelUrl: string,
-  onProgress?: ProgressCallback,
-  expectedHash?: string
+  onProgress?: ProgressCallback
 ): Promise<ArrayBuffer> {
   // Try Cache API (available in workers and main thread)
   if (typeof caches !== 'undefined') {
     try {
       const cache = await caches.open(MODEL_CACHE_NAME);
-
-      // Check hash-based invalidation
-      if (expectedHash) {
-        const storedHash = await getStoredHash(cache, modelUrl);
-        if (storedHash && storedHash !== expectedHash) {
-          mokuLog(
-            `Model hash mismatch (stored=${storedHash}, expected=${expectedHash}), re-downloading`
-          );
-          await cache.delete(modelUrl);
-        }
-      }
-
       const cached = await cache.match(modelUrl);
+
       if (cached) {
-        mokuLog('Model loaded from cache');
-        onProgress?.(1);
-        return cached.arrayBuffer();
+        // Check if the remote file has changed via ETag
+        const remoteEtag = await fetchRemoteEtag(modelUrl);
+        if (remoteEtag) {
+          const storedEtag = await getStoredEtag(cache, modelUrl);
+          if (storedEtag && storedEtag !== remoteEtag) {
+            mokuLog(
+              `Model ETag changed (cached=${storedEtag}, remote=${remoteEtag}), re-downloading`
+            );
+            await cache.delete(modelUrl);
+          } else {
+            mokuLog('Model loaded from cache (ETag matches)');
+            onProgress?.(1);
+            return cached.arrayBuffer();
+          }
+        } else {
+          // No ETag available — trust the cache
+          mokuLog('Model loaded from cache');
+          onProgress?.(1);
+          return cached.arrayBuffer();
+        }
       }
 
       // Fetch from network with progress tracking
@@ -92,15 +111,18 @@ export async function fetchModelWithCache(
         throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
       }
 
+      // Store the ETag from the full response
+      const etag = response.headers.get('etag');
+
       const buffer = await readResponseWithProgress(response, onProgress);
       const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
       const sizeMB = (buffer.byteLength / 1024 / 1024).toFixed(1);
       mokuLog(`Model downloaded: ${sizeMB} MB in ${elapsed}s`);
 
-      // Cache the downloaded buffer
+      // Cache the downloaded buffer and its ETag
       await cache.put(modelUrl, new Response(buffer.slice(0)));
-      if (expectedHash) {
-        await storeHash(cache, modelUrl, expectedHash);
+      if (etag) {
+        await storeEtag(cache, modelUrl, etag);
       }
       return buffer;
     } catch (e) {

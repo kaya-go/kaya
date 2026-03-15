@@ -2,7 +2,7 @@
 // Moku Detector – ONNX-based Go board detection using RT-DETR
 //
 // Alternative detection backend using a trained object detection model
-// (kaya-go/moku-v1) to detect board corners and stones directly.
+// (kaya-go/moku-v2) to detect board corners and stones directly.
 //
 // Uses dynamic import for onnxruntime-web to avoid loading the ONNX runtime
 // bundle unless the moku detector is actually needed.
@@ -42,7 +42,7 @@ async function getOrt() {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL_URL = 'https://huggingface.co/kaya-go/moku-v1/resolve/main/model.onnx';
+const DEFAULT_MODEL_URL = 'https://huggingface.co/kaya-go/moku-v2/resolve/main/model.onnx';
 
 const INPUT_SIZE = 640;
 const NUM_QUERIES = 300;
@@ -59,14 +59,12 @@ const WARP_OUTPUT_SIZE = 800;
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface MokuDetectorConfig {
-  /** URL to the ONNX model (default: HuggingFace kaya-go/moku-v1) */
+  /** URL to the ONNX model (default: HuggingFace kaya-go/moku-v2) */
   modelUrl?: string;
   /** Path to ONNX Runtime WASM files (default: '/wasm/') */
   wasmPath?: string;
   /** Progress callback for model download (0..1) */
   onProgress?: ProgressCallback;
-  /** Expected model hash for cache invalidation */
-  modelHash?: string;
 }
 
 export interface MokuDetectOptions {
@@ -161,11 +159,7 @@ export class MokuDetector {
 
     // Try Cache API first, then fetch and cache
     const t0 = performance.now();
-    const modelBuffer = await fetchModelWithCache(
-      modelUrl,
-      this.config.onProgress,
-      this.config.modelHash
-    );
+    const modelBuffer = await fetchModelWithCache(modelUrl, this.config.onProgress);
 
     const t1 = performance.now();
     mokuLog(
