@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.8] - 2026-03-23
+
+### <!-- 0 -->🚀 Features
+
+- *(board-recognition)* Upgrade to moku-v3 model and fix threshold defaults ([e9571e9](https://github.com/kaya-go/kaya/commit/e9571e99b22e7584b5b4c06871967b0163e5c50b)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.7] - 2026-03-15
 
 ### <!-- 0 -->🚀 Features
@@ -36,10 +47,12 @@ All notable changes to this project will be documented in this file.
 
 - *(board-recognition)* Reduce moku console log verbosity ([6d93b06](https://github.com/kaya-go/kaya/commit/6d93b06992f3db9ef149f0bad837f70ff19ac4f2)) by @hadim
 
+- Release v0.3.7 ([39b8529](https://github.com/kaya-go/kaya/commit/39b8529b26b847f88975a25c9170df24363a3db6)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.6] - 2026-03-14
 
