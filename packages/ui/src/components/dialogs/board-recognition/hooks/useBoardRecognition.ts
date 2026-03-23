@@ -23,7 +23,6 @@ import {
 } from '../utils/boardRecognitionHelpers';
 
 export const PRESET_SIZES: number[] = [9, 13, 19];
-export const DEFAULT_SENSITIVITY = 0.95;
 export type { BoardRecognitionState };
 
 type BoardSize = number;

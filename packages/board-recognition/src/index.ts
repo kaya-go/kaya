@@ -33,7 +33,13 @@ export { warpPerspective, computeHomography, applyHomography } from './perspecti
 export { classifyIntersections, classifyWithHints } from './stones';
 export { buildSGF } from './sgf';
 export { toGrayscale } from './image';
-export { MokuDetector, mapStonesToGrid, expandCorners, clearModelCache } from './moku-detector';
+export {
+  MokuDetector,
+  mapStonesToGrid,
+  expandCorners,
+  clearModelCache,
+  DEFAULT_THRESHOLD,
+} from './moku-detector';
 export type { MokuDetectorConfig, MokuDetectOptions, ProgressCallback } from './moku-detector';
 
 // ============================================================================

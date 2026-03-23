@@ -16,11 +16,8 @@ import type { GoBoard } from '@kaya/goboard';
 import type { Sign, Vertex } from '@kaya/goboard';
 import { BoardPreview } from './components/BoardPreview';
 import { CalibrationToolbar } from './components/CalibrationToolbar';
-import {
-  PRESET_SIZES,
-  DEFAULT_SENSITIVITY,
-  useBoardRecognition,
-} from './hooks/useBoardRecognition';
+import { PRESET_SIZES, useBoardRecognition } from './hooks/useBoardRecognition';
+import { DEFAULT_THRESHOLD } from '@kaya/board-recognition';
 import { PhotoPanel } from './components/PhotoPanel';
 import { useLayoutMode } from '../../../hooks/useMediaQuery';
 import './styles/BoardRecognitionDialog.css';
@@ -60,7 +57,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   const { t } = useTranslation();
 
   const [boardSize, setBoardSize] = useState<number | null>(19);
-  const [mokuThreshold, setMokuThreshold] = useState(0.95);
+  const [mokuThreshold, setMokuThreshold] = useState(1 - DEFAULT_THRESHOLD);
   const [calibrationMode, setCalibrationMode] = useState<'black' | 'white' | 'empty' | null>(null);
   const [gridClicks, setGridClicks] = useState<Point[]>([]);
   const [settingGrid, setSettingGrid] = useState(false);
@@ -372,7 +369,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
                 type="range"
                 className="brd-threshold-slider"
                 min={0.5}
-                max={0.99}
+                max={1}
                 step={0.001}
                 value={mokuThreshold}
                 onChange={e => {
@@ -386,7 +383,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
               <button
                 className="brd-fine-btn brd-fine-btn-sm"
                 onClick={() => {
-                  const v = Math.min(0.99, mokuThreshold + 0.001);
+                  const v = Math.min(1, mokuThreshold + 0.001);
                   handleMokuThresholdChange(v);
                   commitMokuThreshold();
                 }}
@@ -397,7 +394,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
               <button
                 className="brd-fine-btn"
                 onClick={() => {
-                  const v = Math.min(0.99, mokuThreshold + 0.01);
+                  const v = Math.min(1, mokuThreshold + 0.01);
                   handleMokuThresholdChange(v);
                   commitMokuThreshold();
                 }}
@@ -408,9 +405,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
               <span className="brd-threshold-value">{mokuThreshold.toFixed(3)}</span>
               <button
                 className="brd-threshold-reset"
-                disabled={mokuThreshold === DEFAULT_SENSITIVITY}
+                disabled={mokuThreshold === 1 - DEFAULT_THRESHOLD}
                 onClick={() => {
-                  handleMokuThresholdChange(DEFAULT_SENSITIVITY);
+                  handleMokuThresholdChange(1 - DEFAULT_THRESHOLD);
                   commitMokuThreshold();
                 }}
                 title={t('boardRecognition.sensitivityReset')}
@@ -518,7 +515,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
                       type="range"
                       className="brd-threshold-slider-mobile"
                       min={0.5}
-                      max={0.99}
+                      max={1}
                       step={0.001}
                       value={mokuThreshold}
                       onChange={e => {
@@ -529,7 +526,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
                     <button
                       className="brd-fine-btn-mobile"
                       onClick={() => {
-                        const v = Math.min(0.99, mokuThreshold + 0.01);
+                        const v = Math.min(1, mokuThreshold + 0.01);
                         handleMokuThresholdChange(v);
                         commitMokuThreshold();
                       }}
@@ -540,9 +537,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
                     <span className="brd-threshold-value-mobile">{mokuThreshold.toFixed(3)}</span>
                     <button
                       className="brd-fine-btn-mobile brd-fine-btn-mobile-reset"
-                      disabled={mokuThreshold === DEFAULT_SENSITIVITY}
+                      disabled={mokuThreshold === 1 - DEFAULT_THRESHOLD}
                       onClick={() => {
-                        handleMokuThresholdChange(DEFAULT_SENSITIVITY);
+                        handleMokuThresholdChange(1 - DEFAULT_THRESHOLD);
                         commitMokuThreshold();
                       }}
                       title={t('boardRecognition.sensitivityReset')}

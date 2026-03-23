@@ -2,7 +2,7 @@
 // Moku Detector – ONNX-based Go board detection using RT-DETR
 //
 // Alternative detection backend using a trained object detection model
-// (kaya-go/moku-v2) to detect board corners and stones directly.
+// (kaya-go/moku-v3) to detect board corners and stones directly.
 //
 // Uses dynamic import for onnxruntime-web to avoid loading the ONNX runtime
 // bundle unless the moku detector is actually needed.
@@ -41,7 +41,7 @@ async function getOrt() {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const DEFAULT_MODEL_URL = 'https://huggingface.co/kaya-go/moku-v2/resolve/main/model.onnx';
+const DEFAULT_MODEL_URL = 'https://huggingface.co/kaya-go/moku-v3/resolve/main/model.onnx';
 
 const INPUT_SIZE = 640;
 const NUM_QUERIES = 300;
@@ -52,13 +52,13 @@ const CLASS_BLACK_STONE = 0;
 const CLASS_WHITE_STONE = 1;
 const CLASS_BOARD_CORNER = 2;
 
-const DEFAULT_THRESHOLD = 0.05;
+export const DEFAULT_THRESHOLD = 0.035; // tuned for good balance of precision/recall on typical photos
 const WARP_OUTPUT_SIZE = 800;
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface MokuDetectorConfig {
-  /** URL to the ONNX model (default: HuggingFace kaya-go/moku-v2) */
+  /** URL to the ONNX model (default: HuggingFace kaya-go/moku-v3) */
   modelUrl?: string;
   /** Path to ONNX Runtime WASM files (default: '/wasm/') */
   wasmPath?: string;
