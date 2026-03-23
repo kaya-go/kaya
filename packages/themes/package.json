@@ -1,6 +1,6 @@
 {
   "name": "@kaya/themes",
-  "version": "0.3.8",
+  "version": "0.3.9-dev",
   "description": "Board themes for Kaya - 6 built-in Go board visual themes",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
