@@ -16,9 +16,9 @@ export function useLibraryPanel() {
   const [showLibrary, setShowLibrary] = useState(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved === 'true';
+      if (saved !== null) return saved === 'true';
     }
-    return false;
+    return true;
   });
 
   // Save preference when it changes
