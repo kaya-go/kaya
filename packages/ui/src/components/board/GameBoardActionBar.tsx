@@ -202,6 +202,7 @@ export const GameBoardActionBar: React.FC<GameBoardActionBarProps> = ({
             onClick={item.onClick}
             disabled={item.disabled}
             title={title}
+            aria-label={item.label}
           >
             {item.icon}
             <span className="btn-text">{item.label}</span>
