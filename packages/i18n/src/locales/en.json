@@ -181,6 +181,7 @@
     "gameTab": "Game",
     "themeTab": "Theme",
     "shortcutsTab": "Shortcuts",
+    "detectionTab": "Detection",
     "boardSettings": "Board Settings",
     "themeSettings": "Board Theme",
     "themeDescription": "Choose a visual theme for the Go board and stones.",
@@ -710,5 +711,24 @@
     "fitAll": "Fit all",
     "fitImage": "Fit image",
     "poweredBy": "Powered by"
+  },
+  "detectionConfig": {
+    "title": "Board Detection",
+    "currentModel": "Current Model",
+    "defaultModelName": "Moku v3 (Default)",
+    "defaultModelDescription": "AI-powered board detection model by Kaya. Detects stones and board corners from photos.",
+    "customModelActive": "Custom Model",
+    "customModelName": "{{name}}",
+    "advancedSection": "Custom Model",
+    "advancedDescription": "Upload your own ONNX detection model for board recognition. This is an advanced feature for users who have trained their own model.",
+    "compatibilityWarning": "Only compatible models will work.",
+    "compatibilityDetails": "The model must be an RT-DETR object detection model with exactly 3 classes: black stone (0), white stone (1), and board corner (2). Input size must be 640×640. The default model is available at:",
+    "uploadModel": "Upload Custom Model",
+    "uploadHint": "Select a .onnx file",
+    "modelUploadedSuccess": "Custom detection model loaded successfully",
+    "modelUploadFailed": "Failed to load custom detection model",
+    "resetToDefault": "Reset to Default Model",
+    "resetSuccess": "Detection model reset to default",
+    "modelSettingsLink": "Model settings"
   }
 }

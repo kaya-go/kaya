@@ -181,6 +181,7 @@
     "gameTab": "Spiel",
     "themeTab": "Thema",
     "shortcutsTab": "Tastenkürzel",
+    "detectionTab": "Erkennung",
     "boardSettings": "Brett-Einstellungen",
     "themeSettings": "Brett-Thema",
     "themeDescription": "Wählen Sie ein visuelles Thema für das Go-Brett und die Steine.",
@@ -707,5 +708,24 @@
     "fitAll": "Alles anzeigen",
     "fitImage": "Bild einpassen",
     "poweredBy": "Unterstützt von"
+  },
+  "detectionConfig": {
+    "title": "Bretterkennung",
+    "currentModel": "Aktuelles Modell",
+    "defaultModelName": "Moku v3 (Standard)",
+    "defaultModelDescription": "KI-gestützte Bretterkennungsmodell von Kaya. Erkennt Steine und Brettecken aus Fotos.",
+    "customModelActive": "Benutzerdefiniertes Modell",
+    "customModelName": "{{name}}",
+    "advancedSection": "Benutzerdefiniertes Modell",
+    "advancedDescription": "Laden Sie Ihr eigenes ONNX-Erkennungsmodell für die Bretterkennung hoch. Erweiterte Funktion für Benutzer, die ihr eigenes Modell trainiert haben.",
+    "compatibilityWarning": "Nur kompatible Modelle funktionieren.",
+    "compatibilityDetails": "Das Modell muss ein RT-DETR-Objekterkennungsmodell mit genau 3 Klassen sein: Schwarzer Stein (0), Weißer Stein (1) und Brettecke (2). Die Eingabegröße muss 640×640 betragen. Das Standardmodell ist hier verfügbar:",
+    "uploadModel": "Modell hochladen",
+    "uploadHint": ".onnx-Datei auswählen",
+    "modelUploadedSuccess": "Benutzerdefiniertes Erkennungsmodell erfolgreich geladen",
+    "modelUploadFailed": "Fehler beim Laden des benutzerdefinierten Erkennungsmodells",
+    "resetToDefault": "Auf Standardmodell zurücksetzen",
+    "resetSuccess": "Erkennungsmodell auf Standard zurückgesetzt",
+    "modelSettingsLink": "Modelleinstellungen"
   }
 }

@@ -7,7 +7,7 @@ import { useToast } from '../ui/Toast';
 import { isTauriApp } from '@kaya/platform';
 import { BASE_MODELS, parseModelId, getModelId } from '../../hooks/game/useAIAnalysis';
 
-export type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts';
+export type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts' | 'detection';
 
 export function useKayaConfig() {
   const { t } = useTranslation();
@@ -21,6 +21,8 @@ export function useKayaConfig() {
     setGameSettings,
     isAIConfigOpen,
     setAIConfigOpen,
+    configInitialTab,
+    setConfigInitialTab,
     modelLibrary,
     selectedModelId,
     setSelectedModelId,
@@ -118,6 +120,14 @@ export function useKayaConfig() {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isAIConfigOpen, setAIConfigOpen]);
+
+  // Sync active tab when modal opens with a requested initial tab
+  useEffect(() => {
+    if (isAIConfigOpen && configInitialTab) {
+      setActiveTab(configInitialTab);
+      setConfigInitialTab('analysis');
+    }
+  }, [isAIConfigOpen, configInitialTab, setConfigInitialTab]);
 
   const closeModal = () => setAIConfigOpen(false);
 

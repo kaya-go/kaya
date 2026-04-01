@@ -181,6 +181,7 @@
     "gameTab": "ゲーム",
     "themeTab": "テーマ",
     "shortcutsTab": "ショートカット",
+    "detectionTab": "検出",
     "boardSettings": "盤面設定",
     "themeSettings": "碁盤テーマ",
     "themeDescription": "碁盤と碁石のビジュアルテーマを選択します。",
@@ -710,5 +711,24 @@
     "fitAll": "すべて表示",
     "fitImage": "画像に合わせる",
     "poweredBy": "提供元"
+  },
+  "detectionConfig": {
+    "title": "盤面検出",
+    "currentModel": "現在のモデル",
+    "defaultModelName": "Moku v3（デフォルト）",
+    "defaultModelDescription": "Kaya の AI 盤面検出モデル。写真から石と盤の角を検出します。",
+    "customModelActive": "カスタムモデル",
+    "customModelName": "{{name}}",
+    "advancedSection": "カスタムモデル",
+    "advancedDescription": "盤面認識用に独自の ONNX 検出モデルをアップロードできます。独自のモデルをトレーニングした上級ユーザー向けの機能です。",
+    "compatibilityWarning": "互換性のあるモデルのみ動作します。",
+    "compatibilityDetails": "モデルは 3 クラスの RT-DETR 物体検出モデルである必要があります：黒石 (0)、白石 (1)、盤の角 (2)。入力サイズは 640×640 である必要があります。デフォルトモデルはこちらで入手できます：",
+    "uploadModel": "カスタムモデルをアップロード",
+    "uploadHint": ".onnx ファイルを選択",
+    "modelUploadedSuccess": "カスタム検出モデルが正常に読み込まれました",
+    "modelUploadFailed": "カスタム検出モデルの読み込みに失敗しました",
+    "resetToDefault": "デフォルトモデルにリセット",
+    "resetSuccess": "検出モデルをデフォルトにリセットしました",
+    "modelSettingsLink": "モデル設定"
   }
 }

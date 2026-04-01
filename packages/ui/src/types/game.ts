@@ -4,6 +4,8 @@ import { Marker } from '@kaya/shudan';
 import { GameInfo as SGFGameInfo } from '@kaya/sgf';
 import { AnalysisResult } from '@kaya/ai-engine';
 
+import type { ConfigTab } from '../components/ai/useKayaConfig';
+
 export interface SGFProperty {
   [key: string]: string[];
 }
@@ -56,6 +58,10 @@ export interface GameSettings {
   showCoordinates: boolean;
   /** Show the board controls section (captures, navigation buttons) */
   showBoardControls: boolean;
+  /** Source of the Moku detection ONNX model: 'default' or 'custom' */
+  detectionModelSource: 'default' | 'custom';
+  /** Name of the uploaded custom detection model file (display only) */
+  customDetectionModelName?: string;
 }
 
 export interface AIModel {
@@ -126,6 +132,8 @@ export interface GameTreeContextValue {
   setAISettings: (settings: Partial<AISettings>) => void;
   isAIConfigOpen: boolean;
   setAIConfigOpen: (isOpen: boolean) => void;
+  configInitialTab: ConfigTab;
+  setConfigInitialTab: (tab: ConfigTab) => void;
   analysisCache: React.MutableRefObject<Map<string, AnalysisResult>>;
   analysisCacheSize: number;
   updateAnalysisCacheSize: () => void;

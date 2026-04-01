@@ -189,7 +189,11 @@ export class BoardRecognitionWorker {
   // ── Moku detector methods ──────────────────────────────
 
   /** Initialize the moku ONNX detector (downloads and loads the model). */
-  mokuInit(config?: MokuDetectorConfig, onProgress?: (progress: number) => void): Promise<void> {
+  mokuInit(
+    config?: MokuDetectorConfig,
+    onProgress?: (progress: number) => void,
+    modelData?: ArrayBuffer
+  ): Promise<void> {
     this.progressCallback = onProgress ?? null;
     const id = this.nextId++;
     return new Promise<void>((resolve, reject) => {
@@ -203,11 +207,13 @@ export class BoardRecognitionWorker {
           reject(err);
         },
       } as Pending);
-      this.worker.postMessage({
+      const msg = {
         type: 'mokuInit' as const,
         id,
         config,
-      });
+        ...(modelData && { modelData }),
+      };
+      this.worker.postMessage(msg, modelData ? [modelData] : []);
     });
   }
 
@@ -336,6 +342,21 @@ export function isSharedMokuReady(): boolean {
 /** Mark the shared worker's moku detector as initialized. */
 export function setSharedMokuReady(ready: boolean): void {
   mokuInitialized = ready;
+}
+
+/**
+ * Immediately terminate the shared worker and reset all state.
+ * Used when the detection model changes (upload / reset) so the next
+ * dialog open creates a fresh worker with the correct model.
+ */
+export function destroySharedWorker(): void {
+  clearIdleTimer();
+  if (sharedWorker) {
+    sharedWorker.dispose();
+    sharedWorker = null;
+  }
+  refCount = 0;
+  mokuInitialized = false;
 }
 
 /**

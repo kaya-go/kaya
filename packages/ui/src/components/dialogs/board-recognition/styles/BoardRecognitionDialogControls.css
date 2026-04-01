@@ -12,6 +12,7 @@
 }
 
 /* ── Progress bar for model download ── */
+
 .brd-progress-bar-wrap {
   height: 3px;
   background: var(--border-color, #333);

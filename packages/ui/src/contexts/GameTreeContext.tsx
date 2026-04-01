@@ -205,6 +205,8 @@ export const GameTreeProvider: React.FC<{
     isModelLoaded,
     isAIConfigOpen,
     setAIConfigOpen,
+    configInitialTab,
+    setConfigInitialTab,
     analysisResult,
     setAnalysisResult,
     isAnalyzing,
@@ -310,6 +312,8 @@ export const GameTreeProvider: React.FC<{
       setAISettings,
       isAIConfigOpen,
       setAIConfigOpen,
+      configInitialTab,
+      setConfigInitialTab,
       analysisCache,
       analysisCacheSize,
       updateAnalysisCacheSize,
@@ -451,7 +455,7 @@ export const GameTreeProvider: React.FC<{
     // prettier-ignore
     [
       gameTree, currentNodeId, rootId, currentBoard, currentNode, nextMoveNode, gameInfo, markerMap,
-      customAIModel, isModelLoaded, aiSettings, isAIConfigOpen, gameSettings, modelLibrary, selectedModelId,
+      customAIModel, isModelLoaded, aiSettings, isAIConfigOpen, configInitialTab, gameSettings, modelLibrary, selectedModelId,
       moveNumber, variations, canGoBack, canGoForward,
       navigate, navigateToMove, navigateForward, navigateBackward, navigateUp, navigateDown,
       navigateToStart, navigateToEnd, navigateToNextFork, navigateToPreviousFork, navigateToMainLine,

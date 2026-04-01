@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { type AISettings } from '../../types/game';
+import type { ConfigTab } from '../../components/ai/useKayaConfig';
 import { AnalysisResult } from '@kaya/ai-engine';
 import { useModelLibrary } from './useModelLibrary';
 import {
@@ -33,6 +34,7 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
   } = useModelLibrary();
 
   const [isAIConfigOpen, setAIConfigOpen] = useState(false);
+  const [configInitialTab, setConfigInitialTab] = useState<ConfigTab>('analysis');
   const [analysisMode, setAnalysisMode] = useState(false);
   const [pendingAnalysisAction, setPendingAnalysisAction] = useState<PendingAnalysisAction>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -202,6 +204,8 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
     isModelLoaded,
     isAIConfigOpen,
     setAIConfigOpen,
+    configInitialTab,
+    setConfigInitialTab,
     analysisMode,
     setAnalysisMode,
     isAnalyzing,

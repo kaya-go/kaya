@@ -63,6 +63,8 @@ export interface MokuDetectorConfig {
   bundledModelUrl?: string;
   /** URL to the remote ONNX model (fallback: HuggingFace kaya-go/moku-v3) */
   modelUrl?: string;
+  /** Pre-loaded model data — when provided, URL fetching is skipped entirely */
+  modelData?: ArrayBuffer;
   /** Path to ONNX Runtime WASM files (default: '/wasm/') */
   wasmPath?: string;
   /** Progress callback for model download (0..1) */
@@ -184,10 +186,6 @@ export class MokuDetector {
   /** Load the ONNX model. Must be called before `detect()`. */
   async init(): Promise<void> {
     const ort = await getOrt();
-    const remoteUrl = this.config.modelUrl ?? DEFAULT_MODEL_URL;
-    const modelUrls = this.config.bundledModelUrl
-      ? [this.config.bundledModelUrl, remoteUrl]
-      : [remoteUrl];
 
     // Configure WASM paths so the runtime finds its .wasm files
     const wasmPath = this.config.wasmPath ?? '/wasm/';
@@ -195,9 +193,22 @@ export class MokuDetector {
     ort.env.wasm.numThreads = 1;
     mokuLog('Initializing…');
 
-    // Try each model URL in order (bundled first, then remote)
     const t0 = performance.now();
-    const modelBuffer = await fetchModelWithFallback(modelUrls, this.config.onProgress);
+    let modelBuffer: ArrayBuffer;
+
+    if (this.config.modelData) {
+      // Use pre-loaded model data (custom uploaded model)
+      modelBuffer = this.config.modelData;
+      this.config.onProgress?.(1);
+      mokuLog('Using pre-loaded custom model data');
+    } else {
+      // Fetch model from URL(s)
+      const remoteUrl = this.config.modelUrl ?? DEFAULT_MODEL_URL;
+      const modelUrls = this.config.bundledModelUrl
+        ? [this.config.bundledModelUrl, remoteUrl]
+        : [remoteUrl];
+      modelBuffer = await fetchModelWithFallback(modelUrls, this.config.onProgress);
+    }
 
     const t1 = performance.now();
     this.session = await ort.InferenceSession.create(modelBuffer, {

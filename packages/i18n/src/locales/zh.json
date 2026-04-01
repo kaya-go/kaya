@@ -181,6 +181,7 @@
     "gameTab": "游戏",
     "themeTab": "主题",
     "shortcutsTab": "快捷键",
+    "detectionTab": "检测",
     "boardSettings": "棋盘设置",
     "themeSettings": "棋盘主题",
     "themeDescription": "选择棋盘和棋子的视觉主题。",
@@ -710,5 +711,24 @@
     "fitAll": "显示全部",
     "fitImage": "适应图片",
     "poweredBy": "技术支持"
+  },
+  "detectionConfig": {
+    "title": "棋盘检测",
+    "currentModel": "当前模型",
+    "defaultModelName": "Moku v3（默认）",
+    "defaultModelDescription": "Kaya 提供的 AI 棋盘检测模型。可从照片中检测棋子和棋盘角落。",
+    "customModelActive": "自定义模型",
+    "customModelName": "{{name}}",
+    "advancedSection": "自定义模型",
+    "advancedDescription": "上传您自己的 ONNX 检测模型用于棋盘识别。这是一个面向已训练自己模型的用户的高级功能。",
+    "compatibilityWarning": "仅兼容的模型才能正常工作。",
+    "compatibilityDetails": "模型必须是 RT-DETR 目标检测模型，包含 3 个类别：黑子 (0)、白子 (1) 和棋盘角落 (2)。输入尺寸必须为 640×640。默认模型可在此获取：",
+    "uploadModel": "上传自定义模型",
+    "uploadHint": "选择 .onnx 文件",
+    "modelUploadedSuccess": "自定义检测模型加载成功",
+    "modelUploadFailed": "加载自定义检测模型失败",
+    "resetToDefault": "重置为默认模型",
+    "resetSuccess": "检测模型已重置为默认",
+    "modelSettingsLink": "模型设置"
   }
 }

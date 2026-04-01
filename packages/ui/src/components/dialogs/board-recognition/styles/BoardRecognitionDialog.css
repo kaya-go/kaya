@@ -39,6 +39,32 @@
   font-weight: 600;
 }
 
+.brd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.brd-model-settings-btn {
+  background: none;
+  border: none;
+  color: var(--text-tertiary, #666);
+  cursor: pointer;
+  font-size: 0.95rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+  opacity: 0.6;
+  transition:
+    opacity 0.2s,
+    color 0.2s;
+}
+.brd-model-settings-btn:hover {
+  opacity: 1;
+  color: var(--accent, #4a9eff);
+  background: var(--hover-bg, rgba(255, 255, 255, 0.08));
+}
+
 .brd-close {
   background: none;
   border: none;

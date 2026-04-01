@@ -181,6 +181,7 @@
     "gameTab": "Jeu",
     "themeTab": "Thème",
     "shortcutsTab": "Raccourcis",
+    "detectionTab": "Détection",
     "boardSettings": "Paramètres du plateau",
     "themeSettings": "Thème du goban",
     "themeDescription": "Choisissez un thème visuel pour le goban et les pierres.",
@@ -707,5 +708,24 @@
     "fitAll": "Tout afficher",
     "fitImage": "Ajuster à l'image",
     "poweredBy": "Propulsé par"
+  },
+  "detectionConfig": {
+    "title": "Détection du plateau",
+    "currentModel": "Modèle actuel",
+    "defaultModelName": "Moku v3 (Par défaut)",
+    "defaultModelDescription": "Modèle de détection de plateau IA par Kaya. Détecte les pierres et les coins du plateau à partir de photos.",
+    "customModelActive": "Modèle personnalisé",
+    "customModelName": "{{name}}",
+    "advancedSection": "Modèle personnalisé",
+    "advancedDescription": "Téléversez votre propre modèle de détection ONNX pour la reconnaissance de plateau. Fonctionnalité avancée pour les utilisateurs ayant entraîné leur propre modèle.",
+    "compatibilityWarning": "Seuls les modèles compatibles fonctionneront.",
+    "compatibilityDetails": "Le modèle doit être un modèle de détection RT-DETR avec exactement 3 classes : pierre noire (0), pierre blanche (1) et coin du plateau (2). La taille d'entrée doit être 640×640. Le modèle par défaut est disponible ici :",
+    "uploadModel": "Téléverser un modèle",
+    "uploadHint": "Sélectionnez un fichier .onnx",
+    "modelUploadedSuccess": "Modèle de détection personnalisé chargé avec succès",
+    "modelUploadFailed": "Échec du chargement du modèle de détection personnalisé",
+    "resetToDefault": "Réinitialiser au modèle par défaut",
+    "resetSuccess": "Modèle de détection réinitialisé",
+    "modelSettingsLink": "Paramètres du modèle"
   }
 }

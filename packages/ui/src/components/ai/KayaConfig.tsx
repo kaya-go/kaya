@@ -1,11 +1,21 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { LuX, LuBrain, LuSettings, LuCpu, LuGamepad2, LuPalette, LuKeyboard } from 'react-icons/lu';
+import {
+  LuX,
+  LuBrain,
+  LuSettings,
+  LuCpu,
+  LuGamepad2,
+  LuPalette,
+  LuKeyboard,
+  LuCamera,
+} from 'react-icons/lu';
 import { ShortcutsTab } from '../settings/ShortcutsTab';
 import { useKayaConfig, type UseKayaConfigReturn } from './useKayaConfig';
 import { KayaConfigAnalysisTab } from './KayaConfigAnalysisTab';
 import { KayaConfigThemeTab } from './KayaConfigThemeTab';
+import { KayaConfigDetectionTab } from './KayaConfigDetectionTab';
 import './KayaConfig.css';
 
 // Game Tab Content (small enough to keep inline)
@@ -151,6 +161,13 @@ export const KayaConfig: React.FC = () => {
             <LuKeyboard size={16} />
             {t('kayaConfig.shortcutsTab')}
           </button>
+          <button
+            className={`kaya-config-tab ${activeTab === 'detection' ? 'active' : ''}`}
+            onClick={() => setActiveTab('detection')}
+          >
+            <LuCamera size={16} />
+            {t('kayaConfig.detectionTab')}
+          </button>
         </div>
 
         <div className="kaya-config-content">
@@ -161,6 +178,7 @@ export const KayaConfig: React.FC = () => {
             )}
             {activeTab === 'theme' && <KayaConfigThemeTab />}
             {activeTab === 'shortcuts' && <ShortcutsTab />}
+            {activeTab === 'detection' && <KayaConfigDetectionTab />}
           </div>
         </div>
       </div>

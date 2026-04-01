@@ -181,6 +181,7 @@
     "gameTab": "Juego",
     "themeTab": "Tema",
     "shortcutsTab": "Atajos",
+    "detectionTab": "Detección",
     "boardSettings": "Configuración del tablero",
     "themeSettings": "Tema del tablero",
     "themeDescription": "Elige un tema visual para el tablero y las piedras.",
@@ -707,5 +708,24 @@
     "fitAll": "Mostrar todo",
     "fitImage": "Ajustar a imagen",
     "poweredBy": "Desarrollado con"
+  },
+  "detectionConfig": {
+    "title": "Detección del tablero",
+    "currentModel": "Modelo actual",
+    "defaultModelName": "Moku v3 (Predeterminado)",
+    "defaultModelDescription": "Modelo de detección de tablero con IA de Kaya. Detecta piedras y esquinas del tablero a partir de fotos.",
+    "customModelActive": "Modelo personalizado",
+    "customModelName": "{{name}}",
+    "advancedSection": "Modelo personalizado",
+    "advancedDescription": "Sube tu propio modelo de detección ONNX para el reconocimiento del tablero. Función avanzada para usuarios que han entrenado su propio modelo.",
+    "compatibilityWarning": "Solo funcionarán los modelos compatibles.",
+    "compatibilityDetails": "El modelo debe ser un modelo de detección de objetos RT-DETR con exactamente 3 clases: piedra negra (0), piedra blanca (1) y esquina del tablero (2). El tamaño de entrada debe ser 640×640. El modelo predeterminado está disponible en:",
+    "uploadModel": "Subir modelo personalizado",
+    "uploadHint": "Seleccionar archivo .onnx",
+    "modelUploadedSuccess": "Modelo de detección personalizado cargado correctamente",
+    "modelUploadFailed": "Error al cargar el modelo de detección personalizado",
+    "resetToDefault": "Restablecer modelo predeterminado",
+    "resetSuccess": "Modelo de detección restablecido al predeterminado",
+    "modelSettingsLink": "Ajustes del modelo"
   }
 }

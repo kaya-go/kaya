@@ -18,6 +18,7 @@ import {
   setSharedMokuReady,
 } from '../../../../workers/BoardRecognitionWorker';
 import { isTauriApp } from '@kaya/platform';
+import { loadMokuCustomModel } from '../../../../services/mokuModelStorage';
 import {
   computeInsetDst,
   buildMokuResult,
@@ -37,7 +38,8 @@ export function useBoardRecognition(
   file: File,
   boardSize: BoardSize | null,
   mokuThreshold: number,
-  setMokuThreshold: React.Dispatch<React.SetStateAction<number>>
+  setMokuThreshold: React.Dispatch<React.SetStateAction<number>>,
+  detectionModelSource: 'default' | 'custom' = 'default'
 ): BoardRecognitionState {
   const { t } = useTranslation();
 
@@ -119,16 +121,28 @@ export function useBoardRecognition(
       wasmPath = new URL('wasm/', document.baseURI || window.location.href).href;
     }
 
-    workerRef.current
-      .mokuInit(
+    const initWorker = async () => {
+      let modelData: ArrayBuffer | undefined;
+      if (detectionModelSource === 'custom') {
+        const customModel = await loadMokuCustomModel();
+        if (customModel) {
+          modelData = customModel;
+        }
+      }
+
+      await workerRef.current!.mokuInit(
         {
           wasmPath,
-          ...(isTauriApp() && { bundledModelUrl: '/models/moku-v3.onnx' }),
+          ...(isTauriApp() && !modelData && { bundledModelUrl: '/models/moku-v3.onnx' }),
         },
         progress => {
           if (!cancelled) setMokuProgress(progress);
-        }
-      )
+        },
+        modelData
+      );
+    };
+
+    initWorker()
       .then(() => {
         if (!cancelled) {
           setMokuReady(true);
@@ -149,7 +163,7 @@ export function useBoardRecognition(
     return () => {
       cancelled = true;
     };
-  }, [mokuReady, t]);
+  }, [mokuReady, t, detectionModelSource]);
 
   // ── Load & downscale image ────────────────────────────
   useEffect(() => {

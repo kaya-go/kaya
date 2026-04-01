@@ -20,6 +20,7 @@ import { PRESET_SIZES, useBoardRecognition } from './hooks/useBoardRecognition';
 import { DEFAULT_THRESHOLD } from '@kaya/board-recognition';
 import { PhotoPanel } from './components/PhotoPanel';
 import { useLayoutMode } from '../../../hooks/useMediaQuery';
+import { useGameTree } from '../../../contexts/GameTreeContext';
 import './styles/BoardRecognitionDialog.css';
 import './styles/BoardRecognitionDialogControls.css';
 import './styles/BoardRecognitionDialogCanvas.css';
@@ -69,8 +70,15 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   const addMenuRef = useRef<HTMLDivElement>(null);
   const layoutMode = useLayoutMode();
   const isMobile = layoutMode === 'mobile';
+  const { gameSettings, setAIConfigOpen, setConfigInitialTab } = useGameTree();
 
-  const recognition = useBoardRecognition(file, boardSize, mokuThreshold, setMokuThreshold);
+  const recognition = useBoardRecognition(
+    file,
+    boardSize,
+    mokuThreshold,
+    setMokuThreshold,
+    gameSettings.detectionModelSource
+  );
 
   const {
     rawImage,
@@ -280,9 +288,22 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
         {/* Header */}
         <div className="brd-header">
           <h2 className="brd-title">{t('boardRecognition.title')}</h2>
-          <button className="brd-close" onClick={onClose} aria-label={t('close')}>
-            ✕
-          </button>
+          <div className="brd-header-actions">
+            <button
+              className="brd-model-settings-btn"
+              onClick={() => {
+                setConfigInitialTab('detection');
+                setAIConfigOpen(true);
+                onClose();
+              }}
+              title={t('detectionConfig.modelSettingsLink')}
+            >
+              ⚙
+            </button>
+            <button className="brd-close" onClick={onClose} aria-label={t('close')}>
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Board size + backend selector */}
@@ -417,6 +438,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             </>
           )}
         </div>
+
         {/* Progress bar for model download */}
         {mokuLoading && mokuProgress > 0 && mokuProgress < 1 && (
           <div className="brd-progress-bar-wrap">

@@ -54,6 +54,7 @@ export type WorkerRequest =
       type: 'mokuInit';
       id: number;
       config?: MokuDetectorConfig;
+      modelData?: ArrayBuffer;
     }
   | {
       type: 'mokuDetect';
@@ -176,8 +177,8 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         break;
       }
       case 'mokuInit': {
-        // Skip re-initialization if already ready
-        if (mokuDetector?.ready) {
+        // Skip re-initialization if already ready and no custom model data provided
+        if (mokuDetector?.ready && !msg.modelData) {
           (self as unknown as Worker).postMessage({
             id: msg.id,
             result: undefined,
@@ -187,6 +188,7 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         mokuDetector?.dispose();
         const config = {
           ...msg.config,
+          ...(msg.modelData && { modelData: msg.modelData }),
           onProgress: (progress: number) => {
             (self as unknown as Worker).postMessage({
               type: 'mokuProgress',

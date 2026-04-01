@@ -10,6 +10,7 @@ const DEFAULT_GAME_SETTINGS: GameSettings = {
   fuzzyStonePlacement: true, // Enabled by default for natural stone appearance
   showCoordinates: true, // Show coordinates by default
   showBoardControls: true, // Show board controls by default
+  detectionModelSource: 'default', // Use built-in Moku model by default
 };
 
 /**
@@ -33,6 +34,14 @@ function loadGameSettings(): GameSettings {
           typeof parsed.showBoardControls === 'boolean'
             ? parsed.showBoardControls
             : DEFAULT_GAME_SETTINGS.showBoardControls,
+        detectionModelSource:
+          parsed.detectionModelSource === 'custom'
+            ? 'custom'
+            : DEFAULT_GAME_SETTINGS.detectionModelSource,
+        customDetectionModelName:
+          typeof parsed.customDetectionModelName === 'string'
+            ? parsed.customDetectionModelName
+            : undefined,
       };
     }
   } catch (e) {

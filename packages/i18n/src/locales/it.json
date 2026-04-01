@@ -181,6 +181,7 @@
     "gameTab": "Gioco",
     "themeTab": "Tema",
     "shortcutsTab": "Scorciatoie",
+    "detectionTab": "Rilevamento",
     "boardSettings": "Impostazioni della tavola",
     "themeSettings": "Tema del goban",
     "themeDescription": "Scegli un tema visivo per il goban e le pietre.",
@@ -707,5 +708,24 @@
     "fitAll": "Mostra tutto",
     "fitImage": "Adatta all'immagine",
     "poweredBy": "Sviluppato con"
+  },
+  "detectionConfig": {
+    "title": "Rilevamento del tavoliere",
+    "currentModel": "Modello attuale",
+    "defaultModelName": "Moku v3 (Predefinito)",
+    "defaultModelDescription": "Modello di rilevamento del tavoliere IA di Kaya. Rileva pietre e angoli del tavoliere dalle foto.",
+    "customModelActive": "Modello personalizzato",
+    "customModelName": "{{name}}",
+    "advancedSection": "Modello personalizzato",
+    "advancedDescription": "Carica il tuo modello di rilevamento ONNX per il riconoscimento del tavoliere. Funzionalità avanzata per utenti che hanno addestrato il proprio modello.",
+    "compatibilityWarning": "Funzioneranno solo i modelli compatibili.",
+    "compatibilityDetails": "Il modello deve essere un modello RT-DETR di rilevamento oggetti con esattamente 3 classi: pietra nera (0), pietra bianca (1) e angolo del tavoliere (2). La dimensione di input deve essere 640×640. Il modello predefinito è disponibile qui:",
+    "uploadModel": "Carica modello personalizzato",
+    "uploadHint": "Seleziona un file .onnx",
+    "modelUploadedSuccess": "Modello di rilevamento personalizzato caricato con successo",
+    "modelUploadFailed": "Errore nel caricamento del modello di rilevamento personalizzato",
+    "resetToDefault": "Ripristina modello predefinito",
+    "resetSuccess": "Modello di rilevamento ripristinato al predefinito",
+    "modelSettingsLink": "Impostazioni modello"
   }
 }
