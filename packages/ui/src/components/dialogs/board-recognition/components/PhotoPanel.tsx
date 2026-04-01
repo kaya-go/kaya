@@ -1,7 +1,18 @@
-import React, { SetStateAction, Dispatch } from 'react';
+import React, { SetStateAction, Dispatch, useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useCanvasInteraction } from '../hooks/useCanvasInteraction';
 import type { BoardCorners, RawImage } from '@kaya/board-recognition';
+
+/** Check if any corner point falls outside the image bounds. */
+function hasOutOfBoundsCorners(
+  corners: BoardCorners | null,
+  rawDims: { width: number; height: number }
+): boolean {
+  if (!corners) return false;
+  return corners.some(
+    ([x, y]) => x < -0.5 || y < -0.5 || x > rawDims.width + 0.5 || y > rawDims.height + 0.5
+  );
+}
 
 interface PhotoPanelProps {
   rawImage: RawImage | null;
@@ -42,6 +53,15 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
 }) => {
   const { t } = useTranslation();
 
+  const cornersOutOfBounds = useMemo(
+    () => hasOutOfBoundsCorners(corners, rawDimsRef.current),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [corners]
+  );
+  const [fitAll, setFitAll] = useState(false);
+  // Auto-enable fitAll when corners go out of bounds
+  const effectiveFitAll = fitAll || cornersOutOfBounds;
+
   const { canvasRef, containerRef, onPointerDown, onPointerMove, onPointerUp } =
     useCanvasInteraction({
       rawImage,
@@ -55,6 +75,7 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
       cancelReclassify,
       rawDimsRef,
       cornersRef,
+      fitAll: effectiveFitAll,
     });
 
   return (
@@ -83,6 +104,15 @@ export const PhotoPanel: React.FC<PhotoPanelProps> = ({
           <div className="brd-photo-analyzing">
             <div className="brd-spinner" />
           </div>
+        )}
+        {cornersOutOfBounds && (
+          <button
+            className="brd-fit-toggle-btn"
+            onClick={() => setFitAll(f => !f)}
+            title={effectiveFitAll ? t('boardRecognition.fitImage') : t('boardRecognition.fitAll')}
+          >
+            {effectiveFitAll ? t('boardRecognition.fitImage') : t('boardRecognition.fitAll')}
+          </button>
         )}
       </div>
       <div className="brd-corner-actions">

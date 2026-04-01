@@ -706,6 +706,8 @@
     "customSize": "Custom",
     "apply": "Apply",
     "resetCorners": "Reset corners",
+    "fitAll": "Fit all",
+    "fitImage": "Fit image",
     "poweredBy": "Powered by"
   }
 }

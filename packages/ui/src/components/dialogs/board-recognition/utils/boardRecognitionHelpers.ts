@@ -90,11 +90,33 @@ export function buildMokuResult(
 }
 
 /**
- * Apply spreadCollapsedCorners and return the safe corners.
+ * Maximum fraction of image dimension that corners are allowed to overflow
+ * beyond the image bounds. A board that extends past the photo edge needs
+ * corners slightly outside the image for an accurate perspective warp.
+ */
+export const CORNER_OVERFLOW_FRACTION = 0.25;
+
+/**
+ * Clamp corner points to a generous overflow region around the image
+ * so they remain reachable / draggable while still preventing wildly
+ * out-of-bounds values from degenerate detections.
+ */
+function clampCorners(corners: BoardCorners, width: number, height: number): BoardCorners {
+  const overX = width * CORNER_OVERFLOW_FRACTION;
+  const overY = height * CORNER_OVERFLOW_FRACTION;
+  return corners.map(([x, y]) => [
+    Math.max(-overX, Math.min(width - 1 + overX, x)),
+    Math.max(-overY, Math.min(height - 1 + overY, y)),
+  ]) as unknown as BoardCorners;
+}
+
+/**
+ * Apply spreadCollapsedCorners + bounds clamping and return safe corners.
  * Convenience wrapper that discards the "changed" boolean.
  */
 export function safeCorners(corners: BoardCorners, width: number, height: number): BoardCorners {
-  return spreadCollapsedCorners(corners, width, height).corners;
+  const spread = spreadCollapsedCorners(corners, width, height).corners;
+  return clampCorners(spread, width, height);
 }
 
 /**

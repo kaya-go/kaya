@@ -706,6 +706,8 @@
     "customSize": "カスタム",
     "apply": "適用",
     "resetCorners": "コーナーをリセット",
+    "fitAll": "すべて表示",
+    "fitImage": "画像に合わせる",
     "poweredBy": "提供元"
   }
 }

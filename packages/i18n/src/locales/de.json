@@ -703,6 +703,8 @@
     "customSize": "Benutzerdefiniert",
     "apply": "Anwenden",
     "resetCorners": "Ecken zurücksetzen",
+    "fitAll": "Alles anzeigen",
+    "fitImage": "Bild einpassen",
     "poweredBy": "Unterstützt von"
   }
 }

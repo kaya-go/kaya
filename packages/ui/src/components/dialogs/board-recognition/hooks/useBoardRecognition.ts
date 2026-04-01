@@ -67,6 +67,7 @@ export function useBoardRecognition(
 
   const autoCornersRef = useRef<BoardCorners | null>(null);
   const hasInitialDetectionRef = useRef(false);
+  const cornersManuallySetRef = useRef(false);
 
   /** Update grid corners state + ref in one call. */
   const updateGrid = (gc: BoardCorners | null) => {
@@ -93,6 +94,9 @@ export function useBoardRecognition(
   useEffect(() => {
     cornersRef.current = corners;
   }, [corners]);
+  useEffect(() => {
+    cornersManuallySetRef.current = cornersManuallySet;
+  }, [cornersManuallySet]);
   useEffect(() => {
     mokuThresholdRef.current = mokuThreshold;
   }, [mokuThreshold]);
@@ -176,6 +180,31 @@ export function useBoardRecognition(
   useEffect(() => {
     if (!rawImage || !boardSize || !workerRef.current) return;
     if (!mokuReady) return;
+
+    // If corners were manually placed and we already have cached detections,
+    // just re-map stones with the existing manual corners — no worker call needed.
+    if (cornersManuallySetRef.current && hasInitialDetectionRef.current && cornersRef.current) {
+      const currentCorners = cornersRef.current;
+      // Still need to re-filter to get updated raw detections for the new board size
+      workerRef.current
+        .mokuRefilter({
+          boardSize,
+          threshold: 1 - mokuThresholdRef.current,
+        })
+        .then(r => {
+          // Update auto-detected corners reference without overwriting manual corners
+          const { corners: safe } = fixResultCorners(r, rawImage.width, rawImage.height);
+          autoCornersRef.current = safe;
+          // Re-map stones using the user's manual corners
+          const rebuilt = buildMokuResult(r, currentCorners, boardSize);
+          setResult(rebuilt);
+          const insetDst = computeInsetDst();
+          updateGrid(insetDst);
+          setHints([]);
+        })
+        .catch(() => {});
+      return;
+    }
 
     let cancelled = false;
     setAnalyzing(true);

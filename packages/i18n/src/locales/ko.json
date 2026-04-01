@@ -706,6 +706,8 @@
     "customSize": "사용자 지정",
     "apply": "적용",
     "resetCorners": "코너 초기화",
+    "fitAll": "전체 보기",
+    "fitImage": "이미지에 맞추기",
     "poweredBy": "제공"
   }
 }

@@ -703,6 +703,8 @@
     "customSize": "Personnalisé",
     "apply": "Appliquer",
     "resetCorners": "Réinitialiser les coins",
+    "fitAll": "Tout afficher",
+    "fitImage": "Ajuster à l'image",
     "poweredBy": "Propulsé par"
   }
 }

@@ -2,7 +2,7 @@
  * useCanvasInteraction – manages the photo canvas: painting the image
  * with corner handles, and pointer events for dragging corners.
  */
-import React, { useCallback, useLayoutEffect, useRef } from 'react';
+import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { BoardCorners, RawImage } from '@kaya/board-recognition';
 import { orderCorners } from '@kaya/board-recognition';
 
@@ -14,6 +14,8 @@ const MAGNIFIER_ZOOM = 3;
 const MAGNIFIER_OFFSET = 80;
 const GRAB_SCALE = 1.45;
 const GRAB_ANIM_DURATION = 150; // ms
+/** Fraction of image dimension corners may overflow beyond the image edge. */
+const DRAG_OVERFLOW_FRACTION = 0.25;
 
 /** Colors optimized for contrast against Go board (wood tones) images */
 const CORNER_COLORS = ['#00e5ff', '#ff4081', '#76ff03', '#ffd740'];
@@ -40,6 +42,8 @@ interface CanvasInteractionOptions {
   cancelReclassify: () => void;
   rawDimsRef: React.MutableRefObject<{ width: number; height: number }>;
   cornersRef: React.MutableRefObject<BoardCorners | null>;
+  /** When true, zoom out to show all corners even if outside the image. */
+  fitAll?: boolean;
 }
 
 export function useCanvasInteraction(options: CanvasInteractionOptions) {
@@ -56,6 +60,7 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
     rawDimsRef,
     cornersRef,
   } = options;
+  const fitAll = options.fitAll ?? false;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -67,6 +72,14 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
   const dragPosRef = useRef<[number, number] | null>(null);
   const grabAnimRef = useRef<{ startTime: number; rafId: number } | null>(null);
   const grabScaleRef = useRef(1);
+  // Viewport offset in image coords: the top-left of the viewport.
+  // Used by getImagePos to invert canvas coords → image coords.
+  const viewOffsetRef = useRef<[number, number]>([0, 0]);
+  const viewScaleRef = useRef(1);
+  // Incremented when the display image finishes loading so that the
+  // useLayoutEffect that paints corners re-fires (corners may have
+  // arrived before the image was ready).
+  const [imageReadyKey, setImageReadyKey] = useState(0);
 
   // ── Load display image into imgRef ────────────────────
   React.useEffect(() => {
@@ -77,7 +90,7 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
     const img = new Image();
     img.onload = () => {
       imgRef.current = img;
-      paintCanvas(cornersRef.current);
+      setImageReadyKey(k => k + 1);
     };
     img.src = objectURL;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,9 +118,48 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
 
       const { width: rawW, height: rawH } = rawDimsRef.current;
 
-      const scale = Math.min(containerW / rawW, containerH / rawH, 1);
-      const dw = Math.round(rawW * scale);
-      const dh = Math.round(rawH * scale);
+      // Compute viewport in image-space: image rect + all corners (if fitAll).
+      let viewMinX = 0;
+      let viewMinY = 0;
+      let viewMaxX = rawW;
+      let viewMaxY = rawH;
+      const VIEWPORT_PADDING = 0.04; // 4% padding around the expanded viewport
+
+      if (fitAll && currentCorners) {
+        for (const [cx, cy] of currentCorners) {
+          viewMinX = Math.min(viewMinX, cx);
+          viewMinY = Math.min(viewMinY, cy);
+          viewMaxX = Math.max(viewMaxX, cx);
+          viewMaxY = Math.max(viewMaxY, cy);
+        }
+        // Add padding when viewport is expanded beyond the image
+        if (viewMinX < 0 || viewMinY < 0 || viewMaxX > rawW || viewMaxY > rawH) {
+          const padX = (viewMaxX - viewMinX) * VIEWPORT_PADDING;
+          const padY = (viewMaxY - viewMinY) * VIEWPORT_PADDING;
+          viewMinX -= padX;
+          viewMinY -= padY;
+          viewMaxX += padX;
+          viewMaxY += padY;
+        }
+      }
+
+      const viewW = viewMaxX - viewMinX;
+      const viewH = viewMaxY - viewMinY;
+      const scale = Math.min(containerW / viewW, containerH / viewH, 1);
+      const dw = Math.round(viewW * scale);
+      const dh = Math.round(viewH * scale);
+
+      // Store viewport transform for getImagePos
+      viewOffsetRef.current = [viewMinX, viewMinY];
+      viewScaleRef.current = scale;
+
+      // Image position within the canvas
+      const imgOffX = -viewMinX * scale;
+      const imgOffY = -viewMinY * scale;
+      const imgW = Math.round(rawW * scale);
+      const imgH = Math.round(rawH * scale);
+      const isZoomedOut =
+        viewMinX < -0.5 || viewMinY < -0.5 || viewMaxX > rawW + 0.5 || viewMaxY > rawH + 0.5;
 
       // Only invalidate bitmap if size changes significantly to avoid jitter loops
       if (Math.abs(canvas.width - dw) > 1 || Math.abs(canvas.height - dh) > 1) {
@@ -120,19 +172,31 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
 
       const ctx = canvas.getContext('2d')!;
 
-      if (bgBitmapRef.current) {
-        ctx.drawImage(bgBitmapRef.current, 0, 0);
+      // When zoomed out, fill the background with a dark checkerboard hint.
+      if (isZoomedOut) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+        ctx.fillRect(0, 0, dw, dh);
+      }
+
+      // Draw image at its offset position. Skip bitmap cache when zoomed out
+      // because the canvas size differs from the image-only size.
+      if (!isZoomedOut && bgBitmapRef.current) {
+        ctx.drawImage(bgBitmapRef.current, imgOffX, imgOffY);
       } else {
-        ctx.drawImage(img, 0, 0, dw, dh);
-        if (typeof createImageBitmap !== 'undefined' && !isCreatingBitmapRef.current) {
+        ctx.drawImage(img, imgOffX, imgOffY, imgW, imgH);
+        // Cache a bitmap of the image alone (not the full canvas with overlays)
+        // to avoid baking corner handles / magnifier into the background.
+        if (
+          !isZoomedOut &&
+          typeof createImageBitmap !== 'undefined' &&
+          !isCreatingBitmapRef.current
+        ) {
           isCreatingBitmapRef.current = true;
-          createImageBitmap(canvas)
+          createImageBitmap(img, { resizeWidth: imgW, resizeHeight: imgH })
             .then(bmp => {
               bgBitmapRef.current?.close();
               bgBitmapRef.current = bmp;
               isCreatingBitmapRef.current = false;
-              // Force a repaint with the new bitmap
-              paintCanvas(cornersRef.current);
             })
             .catch(() => {
               isCreatingBitmapRef.current = false;
@@ -141,7 +205,10 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
       }
 
       if (currentCorners) {
-        const pts = currentCorners.map(([x, y]: [number, number]) => [x * scale, y * scale]);
+        const pts = currentCorners.map(([x, y]: [number, number]) => [
+          (x - viewMinX) * scale,
+          (y - viewMinY) * scale,
+        ]);
 
         // Dashed quadrilateral between corners
         ctx.beginPath();
@@ -189,9 +256,14 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
         const di = dragIdxRef.current;
         const dragPos = dragPosRef.current;
         if (di !== null && dragPos !== null && img) {
+          // Clamp source position to image bounds for the magnifier so we
+          // never try to sample outside the image, even when the corner
+          // handle is dragged beyond the edge.
           const [rawX, rawY] = dragPos;
-          const sx = rawX * scale;
-          const sy = rawY * scale;
+          const clampedRawX = Math.max(0, Math.min(rawDimsRef.current.width - 1, rawX));
+          const clampedRawY = Math.max(0, Math.min(rawDimsRef.current.height - 1, rawY));
+          const sx = (clampedRawX - viewMinX) * scale;
+          const sy = (clampedRawY - viewMinY) * scale;
 
           // Position magnifier above/below the drag point to avoid occlusion
           const magY =
@@ -205,12 +277,12 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
           ctx.arc(magX, magY, MAGNIFIER_RADIUS, 0, Math.PI * 2);
           ctx.clip();
 
-          // Draw zoomed image region
+          // Draw zoomed image region (use clamped coords for source sampling)
           const imgScale = img.naturalWidth / rawDimsRef.current.width;
           const srcSize = MAGNIFIER_RADIUS / (MAGNIFIER_ZOOM * scale);
           const imgSrcSize = srcSize * imgScale;
-          const imgX = rawX * imgScale;
-          const imgY = rawY * imgScale;
+          const imgX = clampedRawX * imgScale;
+          const imgY = clampedRawY * imgScale;
           ctx.drawImage(
             img,
             imgX - imgSrcSize,
@@ -249,13 +321,14 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
         }
       }
     },
-    [rawDimsRef]
+    [rawDimsRef, fitAll]
   );
 
-  // Repaint when corners state changes
+  // Repaint when corners state changes or when the image finishes loading.
+  // imageReadyKey ensures we repaint if corners arrived before the image.
   useLayoutEffect(() => {
     paintCanvas(corners);
-  }, [corners, paintCanvas]);
+  }, [corners, paintCanvas, imageReadyKey]);
 
   // Repaint when container resizes (e.g. dialog open animation, window resize)
   React.useEffect(() => {
@@ -270,18 +343,18 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
 
   // ── Canvas pointer events ─────────────────────────────
 
-  const getImagePos = useCallback(
-    (e: React.PointerEvent): [number, number] => {
-      const canvas = canvasRef.current!;
-      const rect = canvas.getBoundingClientRect();
-      const { width: rawW, height: rawH } = rawDimsRef.current;
-      return [
-        ((e.clientX - rect.left) / rect.width) * rawW,
-        ((e.clientY - rect.top) / rect.height) * rawH,
-      ];
-    },
-    [rawDimsRef]
-  );
+  const getImagePos = useCallback((e: React.PointerEvent): [number, number] => {
+    const canvas = canvasRef.current!;
+    const rect = canvas.getBoundingClientRect();
+    const [vox, voy] = viewOffsetRef.current;
+    const vScale = viewScaleRef.current;
+    const viewW = canvas.width / vScale;
+    const viewH = canvas.height / vScale;
+    return [
+      ((e.clientX - rect.left) / rect.width) * viewW + vox,
+      ((e.clientY - rect.top) / rect.height) * viewH + voy,
+    ];
+  }, []);
 
   const setCursor = useCallback((cursor: string) => {
     const c = canvasRef.current;
@@ -361,9 +434,11 @@ export function useCanvasInteraction(options: CanvasInteractionOptions) {
       e.preventDefault();
       const [mx, my] = getImagePos(e);
       const [ox, oy] = dragOffsetRef.current;
+      const overX = rawImage.width * DRAG_OVERFLOW_FRACTION;
+      const overY = rawImage.height * DRAG_OVERFLOW_FRACTION;
       const clamped: [number, number] = [
-        Math.max(0, Math.min(rawImage.width - 1, mx + ox)),
-        Math.max(0, Math.min(rawImage.height - 1, my + oy)),
+        Math.max(-overX, Math.min(rawImage.width - 1 + overX, mx + ox)),
+        Math.max(-overY, Math.min(rawImage.height - 1 + overY, my + oy)),
       ];
       const updated = [...cornersRef.current] as BoardCorners;
       updated[di] = clamped;

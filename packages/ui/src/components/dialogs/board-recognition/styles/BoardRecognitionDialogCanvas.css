@@ -30,6 +30,29 @@
   pointer-events: none;
 }
 
+/* Fit-all / fit-image toggle in the photo canvas corner */
+.brd-fit-toggle-btn {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.7rem;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  z-index: 2;
+}
+.brd-fit-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  border-color: var(--accent, #4a9eff);
+}
+
 .brd-preview-wrap {
   position: relative;
   flex: 1;

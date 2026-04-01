@@ -706,6 +706,8 @@
     "customSize": "自定义",
     "apply": "应用",
     "resetCorners": "重置角点",
+    "fitAll": "显示全部",
+    "fitImage": "适应图片",
     "poweredBy": "技术支持"
   }
 }
