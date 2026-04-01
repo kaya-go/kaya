@@ -60,6 +60,11 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
     const [isOverLibrary, setIsOverLibrary] = useState(false);
     const [recognitionFile, setRecognitionFile] = useState<File | null>(null);
 
+    // Counter to track nested dragenter/dragleave pairs reliably
+    const dragCounterRef = useRef(0);
+    // Safety timer: if dragover stops firing, the drag left the window
+    const dragLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
     // Use ref to track library state for Tauri event handler (avoids stale closure)
     const isOverLibraryRef = useRef(false);
 
@@ -190,37 +195,60 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
       [loadSGFAsync, setFileName, clearLoadedFile, onNavigateToBoard]
     );
 
+    const resetDragState = useCallback(() => {
+      dragCounterRef.current = 0;
+      if (dragLeaveTimerRef.current) {
+        clearTimeout(dragLeaveTimerRef.current);
+        dragLeaveTimerRef.current = null;
+      }
+      setIsDragging(false);
+      setIsOverLibrary(false);
+    }, []);
+
     const handleDragEnter = useCallback((e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      dragCounterRef.current++;
       setIsDragging(true);
       // Check if entering library area
       setIsOverLibrary(isInsideLibrary(e.target));
     }, []);
 
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // Continuously update library hover state
-      setIsOverLibrary(isInsideLibrary(e.target));
-    }, []);
+    const handleDragOver = useCallback(
+      (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Continuously update library hover state
+        setIsOverLibrary(isInsideLibrary(e.target));
 
-    const handleDragLeave = useCallback((e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      // Only hide overlay when leaving the dropzone wrapper entirely
-      if (e.currentTarget === e.target) {
-        setIsDragging(false);
-        setIsOverLibrary(false);
-      }
-    }, []);
+        // Safety net: reset drag state if dragover stops firing (drag left window)
+        if (dragLeaveTimerRef.current) {
+          clearTimeout(dragLeaveTimerRef.current);
+        }
+        dragLeaveTimerRef.current = setTimeout(() => {
+          resetDragState();
+        }, 200);
+      },
+      [resetDragState]
+    );
+
+    const handleDragLeave = useCallback(
+      (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dragCounterRef.current--;
+        if (dragCounterRef.current <= 0) {
+          resetDragState();
+        }
+      },
+      [resetDragState]
+    );
 
     const handleDrop = useCallback(
       (e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        setIsDragging(false);
-        setIsOverLibrary(false);
+        resetDragState();
 
         // Don't handle drops on library - LibraryPanel handles those
         if (isInsideLibrary(e.target)) {
