@@ -105,9 +105,15 @@ export function useBoardRecognition(
     }
 
     workerRef.current
-      .mokuInit({ wasmPath }, progress => {
-        if (!cancelled) setMokuProgress(progress);
-      })
+      .mokuInit(
+        {
+          wasmPath,
+          ...(isTauriApp() && { bundledModelUrl: '/models/moku-v3.onnx' }),
+        },
+        progress => {
+          if (!cancelled) setMokuProgress(progress);
+        }
+      )
       .then(() => {
         if (!cancelled) {
           setMokuReady(true);

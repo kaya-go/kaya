@@ -23,6 +23,7 @@ import { buildSGF } from './sgf';
 import {
   mokuLog,
   fetchModelWithCache,
+  fetchModelWithFallback,
   clearModelCache,
   type ProgressCallback,
 } from './moku-model-cache';
@@ -58,7 +59,9 @@ const WARP_OUTPUT_SIZE = 800;
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface MokuDetectorConfig {
-  /** URL to the ONNX model (default: HuggingFace kaya-go/moku-v3) */
+  /** URL to a locally bundled ONNX model (tried first, desktop only) */
+  bundledModelUrl?: string;
+  /** URL to the remote ONNX model (fallback: HuggingFace kaya-go/moku-v3) */
   modelUrl?: string;
   /** Path to ONNX Runtime WASM files (default: '/wasm/') */
   wasmPath?: string;
@@ -157,7 +160,10 @@ export class MokuDetector {
   /** Load the ONNX model. Must be called before `detect()`. */
   async init(): Promise<void> {
     const ort = await getOrt();
-    const modelUrl = this.config.modelUrl ?? DEFAULT_MODEL_URL;
+    const remoteUrl = this.config.modelUrl ?? DEFAULT_MODEL_URL;
+    const modelUrls = this.config.bundledModelUrl
+      ? [this.config.bundledModelUrl, remoteUrl]
+      : [remoteUrl];
 
     // Configure WASM paths so the runtime finds its .wasm files
     const wasmPath = this.config.wasmPath ?? '/wasm/';
@@ -165,9 +171,9 @@ export class MokuDetector {
     ort.env.wasm.numThreads = 1;
     mokuLog('Initializing…');
 
-    // Try Cache API first, then fetch and cache
+    // Try each model URL in order (bundled first, then remote)
     const t0 = performance.now();
-    const modelBuffer = await fetchModelWithCache(modelUrl, this.config.onProgress);
+    const modelBuffer = await fetchModelWithFallback(modelUrls, this.config.onProgress);
 
     const t1 = performance.now();
     this.session = await ort.InferenceSession.create(modelBuffer, {

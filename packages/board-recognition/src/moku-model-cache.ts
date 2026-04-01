@@ -18,7 +18,7 @@ export function mokuWarn(...args: unknown[]) {
 // ── Model caching ────────────────────────────────────────────────────────────
 
 const MODEL_CACHE_NAME = 'kaya-moku-models';
-const ETAG_KEY_PREFIX = 'kaya-moku-etag:';
+const ETAG_KEY_PREFIX = 'https://kaya-moku-etag.local/';
 
 /** Progress callback: receives values in [0, 1]. */
 export type ProgressCallback = (progress: number) => void;
@@ -73,8 +73,11 @@ export async function fetchModelWithCache(
   modelUrl: string,
   onProgress?: ProgressCallback
 ): Promise<ArrayBuffer> {
-  // Try Cache API (available in workers and main thread)
-  if (typeof caches !== 'undefined') {
+  // Skip Cache API for non-HTTP URLs (e.g. local bundled files in Tauri)
+  const isHttpUrl = modelUrl.startsWith('http://') || modelUrl.startsWith('https://');
+
+  // Try Cache API (available in workers and main thread, only for HTTP URLs)
+  if (isHttpUrl && typeof caches !== 'undefined') {
     try {
       const cache = await caches.open(MODEL_CACHE_NAME);
       const cached = await cache.match(modelUrl);
@@ -87,11 +90,13 @@ export async function fetchModelWithCache(
           if (storedEtag && storedEtag !== remoteEtag) {
             await cache.delete(modelUrl);
           } else {
+            mokuLog('Model loaded (cached)');
             onProgress?.(1);
             return cached.arrayBuffer();
           }
         } else {
           // No ETag available — trust the cache
+          mokuLog('Model loaded (cached)');
           onProgress?.(1);
           return cached.arrayBuffer();
         }
@@ -117,12 +122,16 @@ export async function fetchModelWithCache(
       const buffer = await readResponseWithProgress(response, onProgress);
       const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
       const sizeMB = (buffer.byteLength / 1024 / 1024).toFixed(1);
-      mokuLog(`Model downloaded: ${sizeMB} MB in ${elapsed}s`);
+      mokuLog(`Model loaded (remote) from ${modelUrl}: ${sizeMB} MB in ${elapsed}s`);
 
-      // Cache the downloaded buffer and its ETag
-      await cache.put(modelUrl, new Response(buffer.slice(0)));
-      if (etag) {
-        await storeEtag(cache, modelUrl, etag);
+      // Cache the downloaded buffer and its ETag (non-critical — failure is OK)
+      try {
+        await cache.put(modelUrl, new Response(buffer.slice(0)));
+        if (etag) {
+          await storeEtag(cache, modelUrl, etag);
+        }
+      } catch (cacheErr) {
+        mokuWarn('Failed to cache model:', (cacheErr as Error).message);
       }
       return buffer;
     } catch (e) {
@@ -151,8 +160,32 @@ export async function fetchModelWithCache(
   }
   const buffer = await readResponseWithProgress(response, onProgress);
   const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
-  mokuLog(`Model downloaded: ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB in ${elapsed}s`);
+  const source = isHttpUrl ? 'remote' : 'bundled';
+  mokuLog(
+    `Model loaded (${source}) from ${modelUrl}: ${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB in ${elapsed}s`
+  );
   return buffer;
+}
+
+/**
+ * Try multiple model URLs in order, returning the first successful result.
+ * Used to try a bundled local model first, then fall back to remote download.
+ */
+export async function fetchModelWithFallback(
+  modelUrls: string[],
+  onProgress?: ProgressCallback
+): Promise<ArrayBuffer> {
+  const errors: string[] = [];
+  for (const url of modelUrls) {
+    try {
+      return await fetchModelWithCache(url, onProgress);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      mokuWarn(`Failed to load model from ${url}: ${msg}`);
+      errors.push(msg);
+    }
+  }
+  throw new Error(`All model sources failed: ${errors.join(' | ')}`);
 }
 
 /**

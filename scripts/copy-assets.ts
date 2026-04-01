@@ -75,6 +75,35 @@ async function copySpecificFiles(srcDir: string, destDir: string, files: string[
   }
 }
 
+async function downloadMokuModel() {
+  const modelUrl = 'https://huggingface.co/kaya-go/moku-v3/resolve/main/model.onnx';
+  const destDir = path.join(rootDir, 'apps', 'desktop', 'public', 'models');
+  const destFile = path.join(destDir, 'moku-v3.onnx');
+
+  // Skip if already downloaded
+  try {
+    await fs.access(destFile);
+    console.log('✅ Moku model already exists, skipping download');
+    return;
+  } catch {
+    // File doesn't exist, proceed with download
+  }
+
+  console.log('⬇️  Downloading Moku detection model (~80 MB)...');
+  await fs.mkdir(destDir, { recursive: true });
+
+  const response = await fetch(modelUrl);
+  if (!response.ok) {
+    console.warn(`⚠️  Failed to download Moku model: ${response.status} ${response.statusText}`);
+    return;
+  }
+
+  const buffer = await response.arrayBuffer();
+  await fs.writeFile(destFile, Buffer.from(buffer));
+  const sizeMB = (buffer.byteLength / 1024 / 1024).toFixed(1);
+  console.log(`✅ Moku model downloaded: ${sizeMB} MB`);
+}
+
 async function main() {
   console.log('🔄 Starting asset copy...');
 
@@ -120,6 +149,9 @@ async function main() {
 
   // 4. Copy manifest and icons to apps/web/public
   await copySpecificFiles(publicDir, webPublicDir, ['manifest.json', 'og-image.png', 'icon-*.png']);
+
+  // 5. Download Moku detection model for Desktop app (bundled for offline use)
+  await downloadMokuModel();
 
   console.log('✅ Assets copied (sounds)');
 }

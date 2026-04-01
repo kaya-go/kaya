@@ -27,6 +27,9 @@ apps/desktop/public/assets/
 apps/web/public/wasm/
 apps/desktop/public/wasm/
 
+# Moku ONNX model (downloaded by copy-assets script for Desktop)
+apps/desktop/public/models/
+
 # Misc
 .DS_Store
 *.pem
