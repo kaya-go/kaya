@@ -35,8 +35,23 @@ If applicable, add screenshots to help explain your problem.
 - **Browser** (web only): (e.g., Chrome 120, Firefox 121)
 - **Kaya Version**: (e.g., 0.1.8 - check Settings or About)
 
+## Console Logs
+
+If possible, open the developer console and paste any errors or warnings here.
+
+- **Desktop**: `Cmd+Option+I` (macOS) or `Ctrl+Shift+I` (Linux/Windows)
+- **Web**: `F12` or `Cmd+Option+I` (macOS) or `Ctrl+Shift+I` (Linux/Windows)
+
+<details>
+<summary>Console output</summary>
+
+```
+(paste console logs here)
+```
+
+</details>
+
 ## Additional Context
 
 - Does this happen with a specific SGF file? If so, please attach it.
 - Does this happen on a specific board size (9x9, 13x13, 19x19)?
-- Any console errors? (Press F12 to open developer tools)
