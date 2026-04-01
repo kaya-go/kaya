@@ -295,3 +295,63 @@ export class BoardRecognitionWorker {
     });
   }
 }
+
+// ── Singleton worker pool with idle timeout ──────────────────────────────────
+
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+let sharedWorker: BoardRecognitionWorker | null = null;
+let refCount = 0;
+let idleTimer: ReturnType<typeof setTimeout> | null = null;
+let mokuInitialized = false;
+
+function clearIdleTimer() {
+  if (idleTimer !== null) {
+    clearTimeout(idleTimer);
+    idleTimer = null;
+  }
+}
+
+/**
+ * Acquire a shared BoardRecognitionWorker instance.
+ * The worker (and its ONNX session) persists across dialog openings.
+ * Call `releaseSharedWorker()` when the dialog closes.
+ * After all consumers release and an idle timeout elapses, the worker is terminated.
+ */
+export function acquireSharedWorker(): BoardRecognitionWorker {
+  clearIdleTimer();
+  if (!sharedWorker) {
+    sharedWorker = new BoardRecognitionWorker();
+    mokuInitialized = false;
+  }
+  refCount++;
+  return sharedWorker;
+}
+
+/** Whether the shared worker's moku detector is already initialized. */
+export function isSharedMokuReady(): boolean {
+  return mokuInitialized;
+}
+
+/** Mark the shared worker's moku detector as initialized. */
+export function setSharedMokuReady(ready: boolean): void {
+  mokuInitialized = ready;
+}
+
+/**
+ * Release a reference to the shared worker.
+ * When all consumers release, an idle timer starts.
+ * After the timeout, the worker is terminated to free memory.
+ */
+export function releaseSharedWorker(): void {
+  refCount = Math.max(0, refCount - 1);
+  if (refCount === 0) {
+    idleTimer = setTimeout(() => {
+      if (refCount === 0 && sharedWorker) {
+        sharedWorker.dispose();
+        sharedWorker = null;
+        mokuInitialized = false;
+      }
+    }, IDLE_TIMEOUT_MS);
+  }
+}

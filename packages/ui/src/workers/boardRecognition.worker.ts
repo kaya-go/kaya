@@ -176,6 +176,14 @@ self.onmessage = async (e: MessageEvent<WorkerRequest>) => {
         break;
       }
       case 'mokuInit': {
+        // Skip re-initialization if already ready
+        if (mokuDetector?.ready) {
+          (self as unknown as Worker).postMessage({
+            id: msg.id,
+            result: undefined,
+          } satisfies WorkerResponse);
+          return;
+        }
         mokuDetector?.dispose();
         const config = {
           ...msg.config,

@@ -10,7 +10,13 @@ import type {
   RecognitionResult,
   RawImage,
 } from '@kaya/board-recognition';
-import { BoardRecognitionWorker } from '../../../../workers/BoardRecognitionWorker';
+import type { BoardRecognitionWorker } from '../../../../workers/BoardRecognitionWorker';
+import {
+  acquireSharedWorker,
+  releaseSharedWorker,
+  isSharedMokuReady,
+  setSharedMokuReady,
+} from '../../../../workers/BoardRecognitionWorker';
 import { isTauriApp } from '@kaya/platform';
 import {
   computeInsetDst,
@@ -68,12 +74,17 @@ export function useBoardRecognition(
     gridCornersRef.current = gc;
   };
 
-  // ── Worker lifecycle ──────────────────────────────────
+  // ── Worker lifecycle (shared singleton with idle timeout) ───────
   useEffect(() => {
-    const w = new BoardRecognitionWorker();
+    const w = acquireSharedWorker();
     workerRef.current = w;
+    // If moku was already initialized in a previous dialog session, mark ready
+    if (isSharedMokuReady()) {
+      setMokuReady(true);
+      setMokuProgress(1);
+    }
     return () => {
-      w.dispose();
+      releaseSharedWorker();
       workerRef.current = null;
     };
   }, []);
@@ -119,6 +130,7 @@ export function useBoardRecognition(
           setMokuReady(true);
           setMokuLoading(false);
           setMokuProgress(1);
+          setSharedMokuReady(true);
         }
       })
       .catch((err: unknown) => {

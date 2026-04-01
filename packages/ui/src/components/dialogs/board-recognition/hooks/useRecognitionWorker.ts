@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
-import { BoardRecognitionWorker } from '../../../../workers/BoardRecognitionWorker';
+import type { BoardRecognitionWorker } from '../../../../workers/BoardRecognitionWorker';
+import {
+  acquireSharedWorker,
+  releaseSharedWorker,
+} from '../../../../workers/BoardRecognitionWorker';
 
 export function useRecognitionWorker(
   detectionBackend: 'moku' | 'classic',
@@ -11,10 +15,10 @@ export function useRecognitionWorker(
   const workerRef = useRef<BoardRecognitionWorker | null>(null);
 
   useEffect(() => {
-    const w = new BoardRecognitionWorker();
+    const w = acquireSharedWorker();
     workerRef.current = w;
     return () => {
-      w.dispose();
+      releaseSharedWorker();
       workerRef.current = null;
     };
   }, []);
