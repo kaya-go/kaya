@@ -116,6 +116,7 @@
     "deleteModel": "모델 삭제",
     "uploadCustomModel": "사용자 모델 업로드",
     "uploadCustomModelDescription": ".onnx 모델만 지원됩니다. KataGo 가중치(.bin.gz 또는 .bin)는 먼저 변환해야 합니다:",
+    "preConvertedModelsAvailable": "미리 변환된 모델은 다음에서 사용할 수 있습니다:",
     "analysisOptions": "분석 옵션",
     "inferenceBackend": "추론 백엔드",
     "inferenceBackendDescription": "AI 모델 실행 방법을 선택합니다. 네이티브가 가장 빠르고, WebGPU는 GPU 사용, WASM은 CPU(가장 호환성 높음).",

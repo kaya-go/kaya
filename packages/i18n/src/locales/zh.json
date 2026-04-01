@@ -116,6 +116,7 @@
     "deleteModel": "删除模型以释放空间",
     "uploadCustomModel": "上传自定义模型",
     "uploadCustomModelDescription": "仅支持 .onnx 模型。KataGo 权重（.bin.gz 或 .bin）需要先进行转换：",
+    "preConvertedModelsAvailable": "预转换的模型可在此处获取：",
     "analysisOptions": "分析选项",
     "inferenceBackend": "推理后端",
     "inferenceBackendDescription": "选择 AI 模型的运行方式。原生速度最快，WebGPU 使用显卡，WASM 使用 CPU（兼容性最好）。",

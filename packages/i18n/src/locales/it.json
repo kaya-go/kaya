@@ -116,6 +116,7 @@
     "deleteModel": "Elimina modello",
     "uploadCustomModel": "Carica modello personalizzato",
     "uploadCustomModelDescription": "Sono supportati solo modelli .onnx. I pesi KataGo (.bin.gz o .bin) devono essere prima convertiti usando:",
+    "preConvertedModelsAvailable": "Modelli pre-convertiti sono disponibili su:",
     "analysisOptions": "Opzioni di analisi",
     "inferenceBackend": "Backend di inferenza",
     "inferenceBackendDescription": "Scegli come eseguire il modello IA. Native è il più veloce, WebGPU usa la GPU, WASM usa la CPU (massima compatibilità).",

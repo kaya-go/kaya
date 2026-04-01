@@ -291,6 +291,15 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
           >
             kaya-go/katago-onnx
           </a>
+          <br />
+          {t('aiConfig.preConvertedModelsAvailable')}{' '}
+          <a
+            href="https://huggingface.co/kaya-go/kaya/tree/main"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            kaya-go/kaya
+          </a>
         </p>
       </div>
     </section>

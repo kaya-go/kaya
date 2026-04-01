@@ -288,6 +288,15 @@ export const AIAnalysisConfigModelsPanel: React.FC<AIAnalysisConfigModelsPanelPr
           >
             kaya-go/katago-onnx
           </a>
+          <br />
+          {t('aiConfig.preConvertedModelsAvailable')}{' '}
+          <a
+            href="https://huggingface.co/kaya-go/kaya/tree/main"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            kaya-go/kaya
+          </a>
         </p>
       </div>
     </section>
