@@ -83,6 +83,30 @@ function sigmoid(x: number): number {
   return 1 / (1 + Math.exp(-x));
 }
 
+/** Log detected stone counts with timing info. */
+function logStoneStats(
+  label: string,
+  stones: DetectedStone[],
+  rawCount: number,
+  timing: string
+): void {
+  const nBlack = stones.filter(s => s.color === 'black').length;
+  const nWhite = stones.filter(s => s.color === 'white').length;
+  mokuLog(
+    `${label}: ${timing}, stones=${nBlack + nWhite} (B:${nBlack} W:${nWhite}), raw=${rawCount}`
+  );
+}
+
+/** Copy a RecognitionResult with a fresh warpedImage buffer (original gets neutered on transfer). */
+function copyResultForCache(out: RecognitionResult): RecognitionResult {
+  return {
+    ...out,
+    warpedImage: out.warpedImage
+      ? { ...out.warpedImage, data: new Uint8ClampedArray(out.warpedImage.data) }
+      : out.warpedImage,
+  };
+}
+
 /**
  * Return image-edge corners inset by a fraction of the smaller dimension.
  * Used as a fallback when corner detection fails or produces degenerate results.
@@ -220,16 +244,14 @@ export class MokuDetector {
 
     // 3. Postprocess → RecognitionResult
     const out = postprocess(logits, predBoxes, img, options.boardSize, threshold, outputSize);
-    // Cache with a COPY of warpedImage data — the original buffer gets neutered
-    // when postMessage transfers it to the main thread.
-    this.cachedResult = {
-      ...out,
-      warpedImage: out.warpedImage
-        ? { ...out.warpedImage, data: new Uint8ClampedArray(out.warpedImage.data) }
-        : out.warpedImage,
-    };
+    this.cachedResult = copyResultForCache(out);
     const t3 = performance.now();
-    mokuLog(`Detection: ${(t3 - t0).toFixed(0)}ms, stones=${out.stones.length}`);
+    logStoneStats(
+      'Detection',
+      out.stones,
+      out.mokuRawDetections?.length ?? 0,
+      `${(t3 - t0).toFixed(0)}ms (inference ${(t2 - t1).toFixed(0)}ms)`
+    );
     return out;
   }
 
@@ -258,14 +280,14 @@ export class MokuDetector {
         threshold,
         outputSize
       );
-      // Cache with copied warpedImage data (original gets neutered on transfer)
-      this.cachedResult = {
-        ...out,
-        warpedImage: out.warpedImage
-          ? { ...out.warpedImage, data: new Uint8ClampedArray(out.warpedImage.data) }
-          : out.warpedImage,
-      };
+      this.cachedResult = copyResultForCache(out);
       const t1 = performance.now();
+      logStoneStats(
+        'Refilter (full)',
+        out.stones,
+        out.mokuRawDetections?.length ?? 0,
+        `${(t1 - t0).toFixed(0)}ms`
+      );
       return out;
     }
 
@@ -309,16 +331,13 @@ export class MokuDetector {
     }));
 
     const t1 = performance.now();
+    logStoneStats('Refilter (fast)', detectedStones, stones.length, `${(t1 - t0).toFixed(1)}ms`);
 
     // Build return value with a FRESH copy of warpedImage data.
     // The worker will transfer (neuter) this buffer via postMessage,
     // so we must not share the same ArrayBuffer as the cache.
-    const cached = this.cachedResult;
     return {
-      ...cached,
-      warpedImage: cached.warpedImage
-        ? { ...cached.warpedImage, data: new Uint8ClampedArray(cached.warpedImage.data) }
-        : cached.warpedImage,
+      ...copyResultForCache(this.cachedResult),
       stones: detectedStones,
       sgf: buildSGF(options.boardSize, detectedStones),
       mokuRawDetections: rawDetections,

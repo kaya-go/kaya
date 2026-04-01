@@ -76,6 +76,11 @@ export function buildMokuResult(
 ): RecognitionResult {
   const rawDets = base.mokuRawDetections!;
   const stones = mapStonesToGrid(rawDets, corners, boardSize);
+  const nBlack = stones.filter(s => s.color === 'black').length;
+  const nWhite = stones.filter(s => s.color === 'white').length;
+  console.log(
+    `[Moku] Remap: stones=${nBlack + nWhite} (B:${nBlack} W:${nWhite}), raw=${rawDets.length}`
+  );
   const insetDst = computeInsetDst();
   return {
     ...base,
