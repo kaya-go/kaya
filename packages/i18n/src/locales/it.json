@@ -698,7 +698,7 @@
     "cornersAutoDetected": "✓ Moku",
     "cornersAdjusted": "✎ Regolato",
     "loadingModel": "Caricamento modello IA…",
-    "mokuError": "Impossibile caricare il modello di rilevamento IA",
+    "mokuError": "Impossibile caricare il modello di rilevamento IA: {{reason}}",
     "selectSizePrompt": "Seleziona la dimensione della tavola per avviare l'analisi",
     "customSize": "Personalizzato",
     "apply": "Applica",

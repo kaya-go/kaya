@@ -115,11 +115,13 @@ export function useBoardRecognition(
           setMokuProgress(1);
         }
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (!cancelled) {
           setMokuLoading(false);
           setMokuProgress(0);
-          setLoadError(t('boardRecognition.mokuError'));
+          const reason = err instanceof Error ? err.message : String(err);
+          console.error('[BoardRecognition] Moku init failed:', reason);
+          setLoadError(t('boardRecognition.mokuError', { reason }));
         }
       });
     return () => {

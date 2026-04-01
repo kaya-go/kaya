@@ -6,7 +6,7 @@ export function useRecognitionWorker(
   mokuReady: boolean,
   onMokuReady: () => void,
   onMokuLoading: (progress: number) => void,
-  onMokuError: () => void
+  onMokuError: (reason: string) => void
 ) {
   const workerRef = useRef<BoardRecognitionWorker | null>(null);
 
@@ -33,8 +33,11 @@ export function useRecognitionWorker(
         .then(() => {
           if (!cancelled) onMokuReady();
         })
-        .catch(() => {
-          if (!cancelled) onMokuError();
+        .catch((err: unknown) => {
+          if (!cancelled) {
+            const reason = err instanceof Error ? err.message : String(err);
+            onMokuError(reason);
+          }
         });
     }, 50);
 

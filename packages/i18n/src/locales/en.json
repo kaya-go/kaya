@@ -701,7 +701,7 @@
     "cornersAutoDetected": "✓ Moku",
     "cornersAdjusted": "✎ Adjusted",
     "loadingModel": "Loading AI model…",
-    "mokuError": "Failed to load AI detection model",
+    "mokuError": "Failed to load AI detection model: {{reason}}",
     "selectSizePrompt": "Select a board size to begin analysis",
     "customSize": "Custom",
     "apply": "Apply",

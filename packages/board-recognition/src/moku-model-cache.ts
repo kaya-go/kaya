@@ -99,7 +99,14 @@ export async function fetchModelWithCache(
 
       // Fetch from network with progress tracking
       const t0 = performance.now();
-      const response = await fetch(modelUrl);
+      let response: Response;
+      try {
+        response = await fetch(modelUrl);
+      } catch (e) {
+        throw new Error(
+          `Network error while downloading model: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
       if (!response.ok) {
         throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
       }
@@ -120,14 +127,25 @@ export async function fetchModelWithCache(
       return buffer;
     } catch (e) {
       // Cache API failed (e.g. opaque origin, storage quota) — fall through to plain fetch
-      if (e instanceof Error && e.message.startsWith('Failed to download model')) throw e;
+      if (
+        e instanceof Error &&
+        (e.message.startsWith('Failed to download model') || e.message.startsWith('Network error'))
+      )
+        throw e;
       mokuWarn('Cache API unavailable, falling back to plain fetch:', (e as Error).message);
     }
   }
 
   // Fallback: plain fetch without caching
   const t0 = performance.now();
-  const response = await fetch(modelUrl);
+  let response: Response;
+  try {
+    response = await fetch(modelUrl);
+  } catch (e) {
+    throw new Error(
+      `Network error while downloading model: ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
   if (!response.ok) {
     throw new Error(`Failed to download model: ${response.status} ${response.statusText}`);
   }
