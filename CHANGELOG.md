@@ -2,16 +2,63 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.9] - 2026-04-01
+
+### <!-- 0 -->🚀 Features
+
+- *(board-recognition)* Bundle moku model for desktop with HF fallback ([e30cbce](https://github.com/kaya-go/kaya/commit/e30cbce5da54b610b72d7847847fa84eed3cee24)) by @hadim
+
+- *(i18n)* Add HuggingFace link for pre-converted models in upload section ([318f39f](https://github.com/kaya-go/kaya/commit/318f39fc001236b5324307c0465874b9d3348d9a)) by @hadim
+
+- *(board-recognition)* Add custom ONNX detection model upload ([170c163](https://github.com/kaya-go/kaya/commit/170c1637cdc7d80822e07be74d37aa8d91883086)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(board-recognition)* Surface detailed error reason when moku model fails to load ([1c28384](https://github.com/kaya-go/kaya/commit/1c283840ebca0eaf9cb9ec02839c9f1bf4ef0bf3)) by @hadim
+
+- *(ui)* Show library panel by default for new users ([327a9a6](https://github.com/kaya-go/kaya/commit/327a9a61a09e45d2fd69ff974976cae596f2922a)) by @hadim
+
+- *(board-recognition)* Preserve manual corners on size change, fix display bugs ([944911e](https://github.com/kaya-go/kaya/commit/944911ee6b1b45d787205546f271ce48148efa1b)) by @hadim
+
+- *(ui)* Drop overlay not dismissing when dragging out of window ([78aaeea](https://github.com/kaya-go/kaya/commit/78aaeeae06c8a2c42d5df9330c8f015e24acdc97)) by @hadim
+
+- *(ui)* Add aria-label to action bar buttons for accessibility ([76bc881](https://github.com/kaya-go/kaya/commit/76bc88169f228c03c48a8831e8b6d737cae2ddc8)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(board-recognition)* Deduplicate moku logging and cache helpers ([a67abde](https://github.com/kaya-go/kaya/commit/a67abdebf1910a73867362ec779c52d5f73a3616)) by @hadim
+
+### <!-- 3 -->📚 Documentation
+
+- Add console logs section to bug report template ([c77950e](https://github.com/kaya-go/kaya/commit/c77950e72b8ef177a855198af89570712d51652d)) by @hadim
+
+### <!-- 4 -->⚡ Performance
+
+- *(board-recognition)* Reuse worker singleton across dialog openings with 30min idle timeout ([a6d64ce](https://github.com/kaya-go/kaya/commit/a6d64ce6298610c02c2dcbebcbf3ac88589963c1)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- *(ci)* Bump android-actions/setup-android to v4 ([1e5d477](https://github.com/kaya-go/kaya/commit/1e5d4775a182f48b34e92729e6d54989765c796e)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.8] - 2026-03-23
 
 ### <!-- 0 -->🚀 Features
 
 - *(board-recognition)* Upgrade to moku-v3 model and fix threshold defaults ([e9571e9](https://github.com/kaya-go/kaya/commit/e9571e99b22e7584b5b4c06871967b0163e5c50b)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.3.8 ([fa2302c](https://github.com/kaya-go/kaya/commit/fa2302c8b01e38d142132f3af0910ab21f29a3c1)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.7] - 2026-03-15
 
