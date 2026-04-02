@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
-    "@dagrejs/graphlib": "^3.0.4",
+    "@dagrejs/graphlib": "^4.0.1",
     "@kaya/gametree": "workspace:*",
     "@kaya/goboard": "workspace:*",
     "@kaya/sgf": "workspace:*",
