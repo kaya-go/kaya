@@ -19,7 +19,7 @@
     "android:build": "bun run android:setup && ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/$(ls $ANDROID_HOME/ndk | head -1) tauri android build"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^2.0.4",
+    "@dagrejs/dagre": "^3.0.0",
     "@dagrejs/graphlib": "^3.0.4",
     "@kaya/gametree": "workspace:*",
     "@kaya/goboard": "workspace:*",

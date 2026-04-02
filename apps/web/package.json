@@ -12,7 +12,7 @@
     "lint": "eslint src --ext ts,tsx"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^2.0.4",
+    "@dagrejs/dagre": "^3.0.0",
     "@dagrejs/graphlib": "^3.0.4",
     "@kaya/gametree": "workspace:*",
     "@kaya/goboard": "workspace:*",
