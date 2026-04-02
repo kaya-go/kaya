@@ -39,7 +39,7 @@
     "@tauri-apps/plugin-shell": "^2.3.5",
     "elkjs": "^0.11.1",
     "gamecontroller.js": "^1.5.0",
-    "i18next": "^25.8.18",
+    "i18next": "^26.0.3",
     "jszip": "^3.10.1",
     "react-arborist": "^3.4.3",
     "react-i18next": "^16.5.8",
