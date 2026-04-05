@@ -215,6 +215,8 @@ export class MokuDetector {
     // Some ONNX runtime/platform combinations fail graph optimization on
     // RT-DETR models, so we gracefully fall back to less aggressive levels.
     const levels: Array<'all' | 'basic' | 'disabled'> = ['all', 'basic', 'disabled'];
+
+    // Phase 1: Try without freeDimensionOverrides (works on most runtimes)
     for (const level of levels) {
       try {
         this.session = await ort.InferenceSession.create(modelBuffer, {
@@ -227,8 +229,41 @@ export class MokuDetector {
         break;
       } catch (e) {
         const isLast = level === levels[levels.length - 1];
-        if (isLast) throw e;
-        mokuLog(`graphOptimizationLevel '${level}' not supported, trying next level…`);
+        if (!isLast) {
+          mokuLog(`graphOptimizationLevel '${level}' not supported, trying next level…`);
+        }
+      }
+    }
+
+    // Phase 2: If all levels failed, retry with freeDimensionOverrides.
+    // The moku-v3 model has dynamic dims (batch_size, Gatherlogits_dim_1, etc.)
+    // that some ONNX runtime/WebView combinations cannot resolve, causing
+    // "Graph output (logits) does not exist in the graph" errors (e.g. Tauri
+    // WKWebView on macOS). Overriding them to concrete values avoids this.
+    if (!this.session) {
+      mokuLog('Standard session creation failed; retrying with freeDimensionOverrides…');
+      const freeDimensionOverrides: Record<string, number> = {
+        batch_size: 1,
+        Gatherlogits_dim_1: NUM_QUERIES,
+        Gatherpred_boxes_dim_1: NUM_QUERIES,
+        Gatherpred_boxes_dim_2: 4,
+      };
+      for (const level of levels) {
+        try {
+          this.session = await ort.InferenceSession.create(modelBuffer, {
+            executionProviders: ['wasm'],
+            graphOptimizationLevel: level,
+            freeDimensionOverrides,
+          });
+          mokuLog(
+            `Session created with freeDimensionOverrides + graphOptimizationLevel '${level}'`
+          );
+          break;
+        } catch (e) {
+          const isLast = level === levels[levels.length - 1];
+          if (isLast) throw e;
+          mokuLog(`freeDimensionOverrides + '${level}' failed, trying next level…`);
+        }
       }
     }
     const t2 = performance.now();
