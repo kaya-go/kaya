@@ -211,10 +211,26 @@ export class MokuDetector {
     }
 
     const t1 = performance.now();
-    this.session = await ort.InferenceSession.create(modelBuffer, {
-      executionProviders: ['wasm'],
-      graphOptimizationLevel: 'all',
-    });
+    // Try optimization levels from most aggressive to safest.
+    // Some ONNX runtime/platform combinations fail graph optimization on
+    // RT-DETR models, so we gracefully fall back to less aggressive levels.
+    const levels: Array<'all' | 'basic' | 'disabled'> = ['all', 'basic', 'disabled'];
+    for (const level of levels) {
+      try {
+        this.session = await ort.InferenceSession.create(modelBuffer, {
+          executionProviders: ['wasm'],
+          graphOptimizationLevel: level,
+        });
+        if (level !== 'all') {
+          mokuLog(`Session created with graphOptimizationLevel '${level}' (fallback)`);
+        }
+        break;
+      } catch (e) {
+        const isLast = level === levels[levels.length - 1];
+        if (isLast) throw e;
+        mokuLog(`graphOptimizationLevel '${level}' not supported, trying next level…`);
+      }
+    }
     const t2 = performance.now();
     mokuLog(`Ready in ${((t2 - t0) / 1000).toFixed(1)}s`);
   }
