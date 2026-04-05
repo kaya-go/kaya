@@ -1,6 +1,6 @@
 {
   "name": "@kaya/web",
-  "version": "0.3.10-dev",
+  "version": "0.3.10",
   "private": true,
   "description": "Kaya web application",
   "type": "module",

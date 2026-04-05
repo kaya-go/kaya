@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.10] - 2026-04-05
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(board-recognition)* Fallback graph optimization level for ONNX session creation ([d3e9f46](https://github.com/kaya-go/kaya/commit/d3e9f460d44d40e87f0bb19bb2af5c78f6fbf931)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @dependabot[bot]
+- @github-actions[bot]
+
 ## [0.3.9] - 2026-04-01
 
 ### <!-- 0 -->🚀 Features
@@ -40,10 +52,12 @@ All notable changes to this project will be documented in this file.
 
 - *(ci)* Bump android-actions/setup-android to v4 ([1e5d477](https://github.com/kaya-go/kaya/commit/1e5d4775a182f48b34e92729e6d54989765c796e)) by @hadim
 
+- Release v0.3.9 ([76cc65c](https://github.com/kaya-go/kaya/commit/76cc65c7a1cd6fac70ad9b5e586148908b4199bd)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.8] - 2026-03-23
 
