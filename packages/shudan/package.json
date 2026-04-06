@@ -1,6 +1,6 @@
 {
   "name": "@kaya/shudan",
-  "version": "0.3.11",
+  "version": "0.3.12-dev",
   "description": "Go board rendering component (adapted from Sabaki Shudan)",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
