@@ -2,17 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.11] - 2026-04-06
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(board-recognition)* Use freeDimensionOverrides as fallback for ONNX session creation ([ec19f1a](https://github.com/kaya-go/kaya/commit/ec19f1a31e72100805d1764976ec8bd2d50f4d5a)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.10] - 2026-04-05
 
 ### <!-- 1 -->🐛 Bug Fixes
 
 - *(board-recognition)* Fallback graph optimization level for ONNX session creation ([d3e9f46](https://github.com/kaya-go/kaya/commit/d3e9f460d44d40e87f0bb19bb2af5c78f6fbf931)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.3.10 ([f972f58](https://github.com/kaya-go/kaya/commit/f972f58522aa62611e2c88986d667f94126b2d07)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @dependabot[bot]
-- @github-actions[bot]
 
 ## [0.3.9] - 2026-04-01
 
