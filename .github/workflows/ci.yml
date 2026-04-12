@@ -299,6 +299,9 @@ jobs:
     needs: [quality, web, e2e]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     permissions:
       contents: write
     steps:
@@ -310,7 +313,6 @@ jobs:
           name: web-dist
           path: apps/web/dist
 
-      # Robust deployment: checkout gh-pages (if exists), clean next/, copy new build
       - name: Check if gh-pages branch exists
         id: check_branch
         run: |
@@ -327,18 +329,23 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Clean next/ folder and copy new build
+      - name: Prepare deployment
         run: |
           mkdir -p gh-pages
-          # Remove old next/ folder completely
+          rm -rf gh-pages/.git
           rm -rf gh-pages/next
-          # Copy new build to next/
           cp -r apps/web/dist gh-pages/next
+          echo "kayago.app" > gh-pages/CNAME
 
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages
-          cname: kayago.app
-          keep_files: false
+        run: |
+          cd gh-pages
+          git init
+          git checkout -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy next/ from ${GITHUB_SHA::7}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

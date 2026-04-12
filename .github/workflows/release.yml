@@ -77,6 +77,9 @@ jobs:
     name: Deploy Web App (Stable)
     needs: verify
     runs-on: ubuntu-latest
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
     permissions:
       contents: write
     env:
@@ -125,7 +128,7 @@ jobs:
       - name: Build Web App
         run: bun run build:web
 
-      # Robust deployment: checkout gh-pages, clean root (keep next/), copy new build
+      # Checkout gh-pages branch to preserve next/ content
       - name: Checkout gh-pages branch
         uses: actions/checkout@v6
         with:
@@ -139,6 +142,7 @@ jobs:
             mv gh-pages/next /tmp/next-backup
           fi
           # Clean everything in gh-pages
+          rm -rf gh-pages/.git
           rm -rf gh-pages/*
           # Copy new build
           cp -r apps/web/dist/* gh-pages/
@@ -147,13 +151,21 @@ jobs:
             mv /tmp/next-backup gh-pages/next
           fi
 
+      - name: Add CNAME
+        run: echo "kayago.app" > gh-pages/CNAME
+
       - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./gh-pages
-          cname: kayago.app
-          keep_files: false
+        run: |
+          cd gh-pages
+          git init
+          git checkout -b gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Deploy v${{ github.event.inputs.version }}"
+          git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
     name: Build macOS
