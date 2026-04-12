@@ -23,7 +23,7 @@ import {
 import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useFuzzyPlacement } from '../../useFuzzyPlacement';
 import { useBoardSwipeNavigation } from '../../hooks/useSwipeGesture';
-import { useIsTouchDevice, useLayoutMode } from '../../hooks/useMediaQuery';
+import { useIsTouchDevice } from '../../hooks/useMediaQuery';
 import { BoardControls } from './BoardControls';
 import { ScoreEstimator, type ScoreData } from './ScoreEstimator';
 import { EditToolbar } from '../editors/EditToolbar';
@@ -52,11 +52,7 @@ import { useBoardControlsKeyNav } from './useBoardControlsKeyNav';
 import './GameBoard.css';
 import './GameBoardAnalysisSummary.css';
 
-interface GameBoardProps {
-  onScoreData?: (scoreData: ScoreData | null) => void;
-}
-
-export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
+export const GameBoard: React.FC = memo(() => {
   const { t } = useTranslation();
   const {
     currentBoard,
@@ -69,8 +65,16 @@ export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
     setGameSettings,
   } = useGameTreeBoard();
   const { playMove, resign, placeStoneDirect, removeSetupStone } = useGameTreeActions();
-  const { scoringMode, deadStones, toggleDeadStones, toggleScoringMode, territoryMap } =
-    useGameTreeScore();
+  const {
+    scoringMode,
+    deadStones,
+    toggleDeadStones,
+    toggleScoringMode,
+    territoryMap,
+    clearDeadStones,
+    autoEstimateDeadStones,
+    isEstimating,
+  } = useGameTreeScore();
   const { showAnalysisBar, toggleShowAnalysisBar } = useGameTreeAI();
   const [showMoveStrengthInfo, setShowMoveStrengthInfo] = useState(false);
   const { editMode, toggleEditMode, editTool, editPlayMode, addMarker, removeMarker } =
@@ -83,8 +87,6 @@ export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
 
   // Touch/swipe support
   const isTouch = useIsTouchDevice();
-  const layoutMode = useLayoutMode();
-  const isMobile = layoutMode === 'mobile';
   const swipeEnabled = isTouch && !scoringMode && !editMode;
   const swipeHandlers = useBoardSwipeNavigation(goBack, goForward, swipeEnabled);
 
@@ -227,10 +229,12 @@ export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
     komi: gameInfo.komi || 6.5,
   });
 
-  // Notify parent of score data changes
+  // Auto-open board controls area when scoring mode activates
   useEffect(() => {
-    onScoreData?.(scoreData);
-  }, [scoreData, onScoreData]);
+    if (scoringMode && !gameSettings.showBoardControls) {
+      setGameSettings({ showBoardControls: true });
+    }
+  }, [scoringMode, gameSettings.showBoardControls, setGameSettings]);
 
   // Right-click handler
   const handleVertexRightClick = useVertexRightClickHandler({
@@ -299,31 +303,36 @@ export const GameBoard: React.FC<GameBoardProps> = memo(({ onScoreData }) => {
       </div>
 
       {/* Collapse bar for board controls */}
-      <button
-        className="board-controls-collapse-bar"
-        onClick={handleToggleBoardControls}
-        tabIndex={-1}
-        title={
-          gameSettings.showBoardControls
-            ? t('gameboardActions.hideControls')
-            : t('gameboardActions.showControls')
-        }
-      >
-        {gameSettings.showBoardControls ? <LuChevronDown size={14} /> : <LuChevronUp size={14} />}
-      </button>
+      {!scoringMode && (
+        <button
+          className="board-controls-collapse-bar"
+          onClick={handleToggleBoardControls}
+          tabIndex={-1}
+          title={
+            gameSettings.showBoardControls
+              ? t('gameboardActions.hideControls')
+              : t('gameboardActions.showControls')
+          }
+        >
+          {gameSettings.showBoardControls ? <LuChevronDown size={10} /> : <LuChevronUp size={10} />}
+        </button>
+      )}
 
-      {gameSettings.showBoardControls && <BoardControls />}
-      {isMobile && scoringMode && scoreData && (
-        <div style={{ padding: '0.5rem', width: '100%' }}>
-          <ScoreEstimator
-            scoreData={scoreData}
-            deadStones={deadStones}
-            playerBlack={gameInfo.playerBlack}
-            playerWhite={gameInfo.playerWhite}
-            rankBlack={gameInfo.rankBlack}
-            rankWhite={gameInfo.rankWhite}
-          />
-        </div>
+      {scoringMode && scoreData ? (
+        <ScoreEstimator
+          scoreData={scoreData}
+          deadStones={deadStones}
+          playerBlack={gameInfo.playerBlack}
+          playerWhite={gameInfo.playerWhite}
+          rankBlack={gameInfo.rankBlack}
+          rankWhite={gameInfo.rankWhite}
+          onClear={clearDeadStones}
+          onAutoEstimate={autoEstimateDeadStones}
+          onDone={toggleScoringMode}
+          isEstimating={isEstimating}
+        />
+      ) : (
+        gameSettings.showBoardControls && <BoardControls />
       )}
 
       {/* Move Strength Info Modal */}

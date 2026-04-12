@@ -12,7 +12,6 @@ import {
   CommentHeaderActions,
   LoadingOverlay,
   StatusBar,
-  ScoreEstimator,
   AnalysisPanel,
   LandingPage,
   AboutDialog,
@@ -45,9 +44,6 @@ export function AppContent({
     moveUrl,
     patternMatchingEnabled,
     togglePatternMatching,
-    scoringMode,
-    deadStones,
-    gameInfo,
     isMobileOrTablet,
     hasStarted,
     hasSavedGame,
@@ -57,8 +53,6 @@ export function AppContent({
     handleGoHome,
     handleNavigateToBoard,
     handleFileDrop,
-    scoreData,
-    setScoreData,
     showHeader,
     setShowHeader,
     showSidebar,
@@ -142,38 +136,23 @@ export function AppContent({
             onToggleSidebar={() => setShowSidebar(prev => !prev)}
             activeMobileTab={activeMobileTab}
             onMobileTabChange={onMobileTabChange}
-            boardContent={<GameBoard onScoreData={setScoreData} />}
+            boardContent={<GameBoard />}
             gameTreeContent={
-              scoringMode && scoreData ? (
-                <div style={{ padding: '1rem' }}>
-                  <ScoreEstimator
-                    scoreData={scoreData}
-                    deadStones={deadStones}
-                    playerBlack={gameInfo.playerBlack}
-                    playerWhite={gameInfo.playerWhite}
-                    rankBlack={gameInfo.rankBlack}
-                    rankWhite={gameInfo.rankWhite}
-                  />
-                </div>
-              ) : (
-                <GameTreeGraph
-                  ref={gameTreeRef}
-                  horizontal={treeLayoutHorizontal}
-                  onLayoutChange={setTreeLayoutHorizontal}
-                  showMinimap={showMinimap}
-                />
-              )
+              <GameTreeGraph
+                ref={gameTreeRef}
+                horizontal={treeLayoutHorizontal}
+                onLayoutChange={setTreeLayoutHorizontal}
+                showMinimap={showMinimap}
+              />
             }
             gameTreeHeaderActions={
-              scoringMode ? null : (
-                <GameTreeControls
-                  horizontal={treeLayoutHorizontal}
-                  onToggleLayout={() => setTreeLayoutHorizontal(h => !h)}
-                  showMinimap={showMinimap}
-                  onToggleMinimap={() => setShowMinimap(m => !m)}
-                  onCenterOnCurrentNode={() => gameTreeRef.current?.centerOnCurrentNode()}
-                />
-              )
+              <GameTreeControls
+                horizontal={treeLayoutHorizontal}
+                onToggleLayout={() => setTreeLayoutHorizontal(h => !h)}
+                showMinimap={showMinimap}
+                onToggleMinimap={() => setShowMinimap(m => !m)}
+                onCenterOnCurrentNode={() => gameTreeRef.current?.centerOnCurrentNode()}
+              />
             }
             gameInfoHeaderActions={
               <GameInfoHeaderActions

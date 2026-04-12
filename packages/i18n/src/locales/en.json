@@ -441,6 +441,7 @@
     "jigo": "Jigo (Draw)",
     "winsBy": "{{player}} wins by {{points}} points",
     "clickToToggle": "Click on stones to toggle dead/alive status",
+    "details": "Details",
     "stonesMarkedDead": "{{count}} stone marked as dead",
     "stonesMarkedDeadPlural": "{{count}} stones marked as dead"
   },

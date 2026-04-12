@@ -441,6 +441,7 @@
     "jigo": "빅",
     "winsBy": "{{player}} {{points}}집 승",
     "clickToToggle": "돌을 클릭하여 생사 전환",
+    "details": "상세",
     "stonesMarkedDead": "{{count}}개의 돌이 죽은 것으로 표시됨",
     "stonesMarkedDeadPlural": "{{count}}개의 돌이 죽은 것으로 표시됨"
   },

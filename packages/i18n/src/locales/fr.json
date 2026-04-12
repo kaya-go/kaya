@@ -438,6 +438,7 @@
     "jigo": "Jigo (Égalité)",
     "winsBy": "{{player}} gagne de {{points}} points",
     "clickToToggle": "Cliquez sur les pierres pour basculer mort/vivant",
+    "details": "Détails",
     "stonesMarkedDead": "{{count}} pierre marquée morte",
     "stonesMarkedDeadPlural": "{{count}} pierres marquées mortes"
   },

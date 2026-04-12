@@ -441,6 +441,7 @@
     "jigo": "和棋",
     "winsBy": "{{player}} 胜 {{points}} 目",
     "clickToToggle": "点击棋子切换死/活状态",
+    "details": "详情",
     "stonesMarkedDead": "{{count}} 颗棋子标记为死子",
     "stonesMarkedDeadPlural": "{{count}} 颗棋子标记为死子"
   },

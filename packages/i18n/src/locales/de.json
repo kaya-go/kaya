@@ -438,6 +438,7 @@
     "jigo": "Unentschieden",
     "winsBy": "{{player}} gewinnt mit {{points}} Punkten",
     "clickToToggle": "Klicken Sie auf Steine, um den Status umzuschalten",
+    "details": "Details",
     "stonesMarkedDead": "{{count}} Stein als tot markiert",
     "stonesMarkedDeadPlural": "{{count}} Steine als tot markiert"
   },

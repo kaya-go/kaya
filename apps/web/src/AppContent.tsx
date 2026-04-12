@@ -14,10 +14,8 @@ import {
   LoadingOverlay,
   StatusBar,
   useGameTree,
-  ScoreEstimator,
   AnalysisPanel,
   type VersionData,
-  type ScoreData,
   LibraryPanel,
   useLibraryPanel,
   type GameTreeGraphRef,
@@ -75,17 +73,7 @@ function AppContent({
     }
   }, [showMinimap]);
 
-  const {
-    moveName,
-    moveUrl,
-    patternMatchingEnabled,
-    togglePatternMatching,
-    scoringMode,
-    deadStones,
-    gameInfo,
-  } = useGameTree();
-
-  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
+  const { moveName, moveUrl, patternMatchingEnabled, togglePatternMatching } = useGameTree();
 
   // Header visibility state
   const [showHeader, setShowHeader] = useState(() => {
@@ -313,40 +301,25 @@ function AppContent({
             analysisGraphContent={<AnalysisPanel />}
             showSidebar={showSidebar}
             onToggleSidebar={() => setShowSidebar(prev => !prev)}
-            boardContent={<GameBoard onScoreData={setScoreData} />}
+            boardContent={<GameBoard />}
             activeMobileTab={activeMobileTab}
             onMobileTabChange={onMobileTabChange}
             gameTreeContent={
-              !isMobile && scoringMode && scoreData ? (
-                <div style={{ padding: '1rem', height: '100%', overflow: 'auto' }}>
-                  <ScoreEstimator
-                    scoreData={scoreData}
-                    deadStones={deadStones}
-                    playerBlack={gameInfo.playerBlack}
-                    playerWhite={gameInfo.playerWhite}
-                    rankBlack={gameInfo.rankBlack}
-                    rankWhite={gameInfo.rankWhite}
-                  />
-                </div>
-              ) : (
-                <GameTreeGraph
-                  ref={gameTreeRef}
-                  horizontal={treeLayoutHorizontal}
-                  onLayoutChange={setTreeLayoutHorizontal}
-                  showMinimap={showMinimap}
-                />
-              )
+              <GameTreeGraph
+                ref={gameTreeRef}
+                horizontal={treeLayoutHorizontal}
+                onLayoutChange={setTreeLayoutHorizontal}
+                showMinimap={showMinimap}
+              />
             }
             gameTreeHeaderActions={
-              scoringMode ? null : (
-                <GameTreeControls
-                  horizontal={treeLayoutHorizontal}
-                  onToggleLayout={() => setTreeLayoutHorizontal(h => !h)}
-                  showMinimap={showMinimap}
-                  onToggleMinimap={() => setShowMinimap(m => !m)}
-                  onCenterOnCurrentNode={() => gameTreeRef.current?.centerOnCurrentNode()}
-                />
-              )
+              <GameTreeControls
+                horizontal={treeLayoutHorizontal}
+                onToggleLayout={() => setTreeLayoutHorizontal(h => !h)}
+                showMinimap={showMinimap}
+                onToggleMinimap={() => setShowMinimap(m => !m)}
+                onCenterOnCurrentNode={() => gameTreeRef.current?.centerOnCurrentNode()}
+              />
             }
             gameInfoHeaderActions={
               <GameInfoHeaderActions

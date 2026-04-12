@@ -16,11 +16,9 @@ import {
   useGameTreeNavigation,
   useGameTreeBoard,
   useGameTreeActions,
-  useGameTreeScore,
 } from '../../contexts/selectors';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { BoardControlsNavigation } from './BoardControlsNavigation';
-import { BoardControlsScoring } from './BoardControlsScoring';
 import './BoardControls.css';
 
 export const BoardControls: React.FC = memo(() => {
@@ -29,7 +27,6 @@ export const BoardControls: React.FC = memo(() => {
   const { moveNumber } = useGameTreeNavigation();
   const { currentBoard, currentNode, gameInfo } = useGameTreeBoard();
   const { playMove, resign } = useGameTreeActions();
-  const { scoringMode } = useGameTreeScore();
   const [showResignConfirm, setShowResignConfirm] = useState(false);
 
   // Determine whose turn it is
@@ -105,13 +102,9 @@ export const BoardControls: React.FC = memo(() => {
         </div>
       </div>
 
-      {/* Center: Navigation controls or Scoring controls */}
+      {/* Center: Navigation controls */}
       <div className="navigation-section">
-        {scoringMode ? (
-          <BoardControlsScoring />
-        ) : (
-          <BoardControlsNavigation currentPlayer={currentPlayer} />
-        )}
+        <BoardControlsNavigation currentPlayer={currentPlayer} />
       </div>
 
       {/* Right: White player info */}

@@ -8,7 +8,6 @@ import {
   useLayoutMode,
   type GameTreeGraphRef,
   type MobileTab,
-  type ScoreData,
 } from '@kaya/ui';
 import { listen } from '@tauri-apps/api/event';
 import { analytics } from './analytics';
@@ -80,9 +79,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     moveUrl,
     patternMatchingEnabled,
     togglePatternMatching,
-    scoringMode,
-    deadStones,
-    gameInfo,
     gameTree,
     rootId,
     createNewGame,
@@ -183,8 +179,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     [loadSGFAsync, setFileName]
   );
 
-  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
-
   // Header visibility state
   const [showHeader, setShowHeader] = useState(() => {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -250,9 +244,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     moveUrl,
     patternMatchingEnabled,
     togglePatternMatching,
-    scoringMode,
-    deadStones,
-    gameInfo,
     isMobileOrTablet,
     hasStarted,
     hasSavedGame,
@@ -262,8 +253,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     handleGoHome,
     handleNavigateToBoard,
     handleFileDrop,
-    scoreData,
-    setScoreData,
     showHeader,
     setShowHeader,
     showSidebar,

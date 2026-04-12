@@ -441,6 +441,7 @@
     "jigo": "持碁",
     "winsBy": "{{player}}の{{points}}目勝ち",
     "clickToToggle": "石をクリックして生死を切り替え",
+    "details": "詳細",
     "stonesMarkedDead": "{{count}}個の石が死に石としてマーク",
     "stonesMarkedDeadPlural": "{{count}}個の石が死に石としてマーク"
   },

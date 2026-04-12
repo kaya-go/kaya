@@ -438,6 +438,7 @@
     "jigo": "Pareggio",
     "winsBy": "{{player}} vince di {{points}} punti",
     "clickToToggle": "Clicca sulle pietre per cambiare stato",
+    "details": "Dettagli",
     "stonesMarkedDead": "{{count}} pietra segnata come morta",
     "stonesMarkedDeadPlural": "{{count}} pietre segnate come morte"
   },
