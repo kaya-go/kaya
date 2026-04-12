@@ -99,7 +99,7 @@ export {
 export { LoadingOverlay } from './components/ui/LoadingOverlay';
 export { SaveStatus } from './components/ui/SaveStatus';
 export { ScoreEstimator } from './components/board/ScoreEstimator';
-export type { ScoreData } from './components/board/ScoreEstimator';
+export type { ScoreData } from './types/game';
 export { useAIAnalysis } from './components/ai/AIAnalysisOverlay';
 export { AnalysisGraphPanel } from './components/analysis/AnalysisGraphPanel';
 export type { AnalysisGraphPanelProps } from './components/analysis/AnalysisGraphPanel';

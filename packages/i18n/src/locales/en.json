@@ -443,7 +443,10 @@
     "clickToToggle": "Click on stones to toggle dead/alive status",
     "details": "Details",
     "stonesMarkedDead": "{{count}} stone marked as dead",
-    "stonesMarkedDeadPlural": "{{count}} stones marked as dead"
+    "stonesMarkedDeadPlural": "{{count}} stones marked as dead",
+    "finalScore": "Score",
+    "estimate": "Estimate",
+    "estimateDescription": "Estimate territory using Monte Carlo simulation (works with open borders)"
   },
   "mobileTab": {
     "board": "Board",

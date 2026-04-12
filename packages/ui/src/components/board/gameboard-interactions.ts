@@ -6,7 +6,6 @@ import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import type { Sign, Vertex, Marker } from '@kaya/shudan';
 import type GoBoard from '@kaya/goboard';
 import { type SoundType } from '../../services/sounds';
-import { calculateTerritory, countDeadStones } from '../../services/scoring';
 
 // =========================
 // Marker helper
@@ -381,50 +380,18 @@ export function useVertexRightClickHandler(options: RightClickOptions) {
 }
 
 // =========================
-// Scoring data & dimmed vertices
+// Scoring dimmed vertices
 // =========================
 
-interface ScoringOptions {
+interface ScoringDimmedOptions {
   scoringMode: boolean;
-  currentBoard: GoBoard;
   deadStones: Set<string>;
-  komi: number;
 }
 
-export interface ScoreDataResult {
-  blackTerritory: number;
-  whiteTerritory: number;
-  blackCaptures: number;
-  whiteCaptures: number;
-  blackDeadStones: number;
-  whiteDeadStones: number;
-  komi: number;
-}
+export function useScoringDimmedVertices(options: ScoringDimmedOptions) {
+  const { scoringMode, deadStones } = options;
 
-export function useScoringData(options: ScoringOptions) {
-  const { scoringMode, currentBoard, deadStones, komi } = options;
-
-  const scoreData: ScoreDataResult | null = useMemo(() => {
-    if (!scoringMode) return null;
-
-    const { blackTerritory, whiteTerritory } = calculateTerritory(currentBoard.signMap, deadStones);
-    const { blackDeadStones, whiteDeadStones } = countDeadStones(currentBoard.signMap, deadStones);
-
-    const blackCaptures = currentBoard.getCaptures(1);
-    const whiteCaptures = currentBoard.getCaptures(-1);
-
-    return {
-      blackTerritory,
-      whiteTerritory,
-      blackCaptures,
-      whiteCaptures,
-      blackDeadStones,
-      whiteDeadStones,
-      komi,
-    };
-  }, [scoringMode, currentBoard.signMap, currentBoard, deadStones, komi]);
-
-  const dimmedVertices = useMemo(() => {
+  return useMemo(() => {
     if (!scoringMode) return [];
     const vertices: Vertex[] = [];
     deadStones.forEach(key => {
@@ -433,6 +400,4 @@ export function useScoringData(options: ScoringOptions) {
     });
     return vertices;
   }, [scoringMode, deadStones]);
-
-  return { scoreData, dimmedVertices };
 }

@@ -25,7 +25,7 @@ import { useFuzzyPlacement } from '../../useFuzzyPlacement';
 import { useBoardSwipeNavigation } from '../../hooks/useSwipeGesture';
 import { useIsTouchDevice } from '../../hooks/useMediaQuery';
 import { BoardControls } from './BoardControls';
-import { ScoreEstimator, type ScoreData } from './ScoreEstimator';
+import { ScoreEstimator } from './ScoreEstimator';
 import { EditToolbar } from '../editors/EditToolbar';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { useGameTree } from '../../contexts/GameTreeContext';
@@ -46,7 +46,7 @@ import {
   useVertexClickHandler,
   useMarkerDragHandlers,
   useVertexRightClickHandler,
-  useScoringData,
+  useScoringDimmedVertices,
 } from './gameboard-interactions';
 import { useBoardControlsKeyNav } from './useBoardControlsKeyNav';
 import './GameBoard.css';
@@ -74,6 +74,9 @@ export const GameBoard: React.FC = memo(() => {
     clearDeadStones,
     autoEstimateDeadStones,
     isEstimating,
+    estimationMode,
+    toggleEstimationMode,
+    scoreData,
   } = useGameTreeScore();
   const { showAnalysisBar, toggleShowAnalysisBar } = useGameTreeAI();
   const [showMoveStrengthInfo, setShowMoveStrengthInfo] = useState(false);
@@ -221,12 +224,10 @@ export const GameBoard: React.FC = memo(() => {
 
   const handleResignCancel = useCallback(() => setShowResignConfirm(false), []);
 
-  // Scoring data & dimmed vertices
-  const { scoreData, dimmedVertices } = useScoringData({
+  // Scoring dimmed vertices
+  const dimmedVertices = useScoringDimmedVertices({
     scoringMode,
-    currentBoard,
     deadStones,
-    komi: gameInfo.komi || 6.5,
   });
 
   // Auto-open board controls area when scoring mode activates
@@ -328,6 +329,8 @@ export const GameBoard: React.FC = memo(() => {
           onAutoEstimate={autoEstimateDeadStones}
           onDone={toggleScoringMode}
           isEstimating={isEstimating}
+          estimationMode={estimationMode}
+          onToggleEstimationMode={toggleEstimationMode}
         />
       ) : (
         gameSettings.showBoardControls && <BoardControls />

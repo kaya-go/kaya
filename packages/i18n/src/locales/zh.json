@@ -443,7 +443,10 @@
     "clickToToggle": "点击棋子切换死/活状态",
     "details": "详情",
     "stonesMarkedDead": "{{count}} 颗棋子标记为死子",
-    "stonesMarkedDeadPlural": "{{count}} 颗棋子标记为死子"
+    "stonesMarkedDeadPlural": "{{count}} 颗棋子标记为死子",
+    "finalScore": "计分",
+    "estimate": "估算",
+    "estimateDescription": "使用蒙特卡洛模拟估算领地（适用于未封闭边界）"
   },
   "mobileTab": {
     "board": "棋盘",

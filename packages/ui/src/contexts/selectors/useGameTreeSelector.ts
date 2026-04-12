@@ -212,7 +212,7 @@ export function useGameTreeScore() {
       (ctx: GameTreeContextValue) => ({
         scoringMode: ctx.scoringMode,
         toggleScoringMode: ctx.toggleScoringMode,
-        scoreResult: ctx.scoreResult,
+        scoreData: ctx.scoreData,
         deadStones: ctx.deadStones,
         toggleDeadStone: ctx.toggleDeadStone,
         toggleDeadStones: ctx.toggleDeadStones,
@@ -222,6 +222,8 @@ export function useGameTreeScore() {
         autoEstimateDeadStones: ctx.autoEstimateDeadStones,
         clearDeadStones: ctx.clearDeadStones,
         isEstimating: ctx.isEstimating,
+        estimationMode: ctx.estimationMode,
+        toggleEstimationMode: ctx.toggleEstimationMode,
       }),
       []
     ),

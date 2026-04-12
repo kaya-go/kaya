@@ -443,7 +443,10 @@
     "clickToToggle": "돌을 클릭하여 생사 전환",
     "details": "상세",
     "stonesMarkedDead": "{{count}}개의 돌이 죽은 것으로 표시됨",
-    "stonesMarkedDeadPlural": "{{count}}개의 돌이 죽은 것으로 표시됨"
+    "stonesMarkedDeadPlural": "{{count}}개의 돌이 죽은 것으로 표시됨",
+    "finalScore": "계가",
+    "estimate": "추정",
+    "estimateDescription": "몬테카를로 시뮬레이션으로 영역 추정 (열린 경계에서도 작동)"
   },
   "mobileTab": {
     "board": "바둑판",

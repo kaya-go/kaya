@@ -9,6 +9,8 @@
   gap: 6px;
   padding: 8px;
   width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
 }
 
 /* ---- Hero: Result banner ---- */
@@ -53,6 +55,16 @@
 .score-result-icon {
   flex-shrink: 0;
   font-size: 16px;
+}
+
+.score-result-banner.estimation {
+  border-style: dashed;
+}
+
+.score-approx-badge {
+  font-size: 18px;
+  font-weight: 800;
+  opacity: 0.5;
 }
 
 /* ---- Totals row ---- */
@@ -274,6 +286,48 @@
   color: var(--text-secondary);
   padding: 0 4px;
   line-height: 1.4;
+}
+
+/* ---- Scoring method toggle ---- */
+
+.score-method-toggle {
+  display: flex;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid var(--border-color);
+}
+
+.score-method-btn {
+  flex: 1;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 0;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+  position: relative;
+}
+
+.score-method-btn + .score-method-btn {
+  border-left: 2px solid var(--border-color);
+}
+
+.score-method-btn:hover:not(.active) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.score-method-btn.active {
+  background: var(--accent);
+  color: #fff;
+  cursor: default;
+  font-weight: 700;
 }
 
 /* =============================

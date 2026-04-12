@@ -10,17 +10,8 @@ import React, { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuCalculator, LuLoader, LuX, LuChevronDown, LuChevronUp, LuTrophy } from 'react-icons/lu';
 import { useLayoutMode } from '../../hooks/useMediaQuery';
+import { type ScoreData } from '../../types/game';
 import './ScoreEstimator.css';
-
-export interface ScoreData {
-  blackTerritory: number;
-  whiteTerritory: number;
-  blackCaptures: number;
-  whiteCaptures: number;
-  blackDeadStones: number;
-  whiteDeadStones: number;
-  komi: number;
-}
 
 interface ScoreEstimatorProps {
   scoreData: ScoreData;
@@ -31,6 +22,8 @@ interface ScoreEstimatorProps {
   onAutoEstimate: () => void;
   onDone: () => void;
   isEstimating: boolean;
+  estimationMode: boolean;
+  onToggleEstimationMode: () => void;
 }
 
 export const ScoreEstimator: React.FC<ScoreEstimatorProps> = memo(
@@ -43,6 +36,8 @@ export const ScoreEstimator: React.FC<ScoreEstimatorProps> = memo(
     onAutoEstimate,
     onDone,
     isEstimating,
+    estimationMode,
+    onToggleEstimationMode,
   }) => {
     const { t } = useTranslation();
     const layoutMode = useLayoutMode();
@@ -75,12 +70,35 @@ export const ScoreEstimator: React.FC<ScoreEstimatorProps> = memo(
 
     return (
       <div className="score-estimator">
+        {/* Scoring method toggle: Estimate (default) | Final */}
+        <div className="score-method-toggle">
+          <button
+            className={`score-method-btn ${estimationMode ? 'active' : ''}`}
+            onClick={!estimationMode ? onToggleEstimationMode : undefined}
+            type="button"
+            title={t('scoring.estimateDescription')}
+          >
+            {t('scoring.estimate')} ≈
+          </button>
+          <button
+            className={`score-method-btn ${!estimationMode ? 'active' : ''}`}
+            onClick={estimationMode ? onToggleEstimationMode : undefined}
+            type="button"
+          >
+            {t('scoring.finalScore')}
+          </button>
+        </div>
+
         {/* Hero: Result banner */}
         <div
-          className={`score-result-banner ${finalScore.winner === 'Black' ? 'winner-black' : finalScore.winner === 'White' ? 'winner-white' : ''}`}
+          className={`score-result-banner ${estimationMode ? 'estimation' : ''} ${finalScore.winner === 'Black' ? 'winner-black' : finalScore.winner === 'White' ? 'winner-white' : ''}`}
         >
           <span className="score-result-text">
-            {finalScore.winner !== 'Jigo' && <LuTrophy className="score-result-icon" />}
+            {isEstimating && <LuLoader size={14} className="score-spinner" />}
+            {!isEstimating && finalScore.winner !== 'Jigo' && (
+              <LuTrophy className="score-result-icon" />
+            )}
+            {estimationMode && <span className="score-approx-badge">≈</span>}
             {finalScore.winner === 'Jigo'
               ? t('scoring.jigo')
               : t('scoring.winsBy', {
@@ -95,13 +113,19 @@ export const ScoreEstimator: React.FC<ScoreEstimatorProps> = memo(
           <div className="score-total-player black">
             <span className="score-stone black-stone" />
             <span className="score-total-name">{blackName}</span>
-            <span className="score-total-value">{finalScore.blackScore}</span>
+            <span className="score-total-value">
+              {estimationMode && '≈ '}
+              {finalScore.blackScore}
+            </span>
           </div>
           <div className="score-total-divider" />
           <div className="score-total-player white">
             <span className="score-stone white-stone" />
             <span className="score-total-name">{whiteName}</span>
-            <span className="score-total-value">{finalScore.whiteScore}</span>
+            <span className="score-total-value">
+              {estimationMode && '≈ '}
+              {finalScore.whiteScore}
+            </span>
           </div>
         </div>
 

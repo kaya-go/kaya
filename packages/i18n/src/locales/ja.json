@@ -443,7 +443,10 @@
     "clickToToggle": "石をクリックして生死を切り替え",
     "details": "詳細",
     "stonesMarkedDead": "{{count}}個の石が死に石としてマーク",
-    "stonesMarkedDeadPlural": "{{count}}個の石が死に石としてマーク"
+    "stonesMarkedDeadPlural": "{{count}}個の石が死に石としてマーク",
+    "finalScore": "計算",
+    "estimate": "推定",
+    "estimateDescription": "モンテカルロシミュレーションで地を推定（境界が閉じていなくても機能）"
   },
   "mobileTab": {
     "board": "碁盤",

@@ -440,7 +440,10 @@
     "clickToToggle": "Cliquez sur les pierres pour basculer mort/vivant",
     "details": "Détails",
     "stonesMarkedDead": "{{count}} pierre marquée morte",
-    "stonesMarkedDeadPlural": "{{count}} pierres marquées mortes"
+    "stonesMarkedDeadPlural": "{{count}} pierres marquées mortes",
+    "finalScore": "Score",
+    "estimate": "Estimation",
+    "estimateDescription": "Estimer le territoire par simulation Monte Carlo (fonctionne avec des frontières ouvertes)"
   },
   "mobileTab": {
     "board": "Goban",

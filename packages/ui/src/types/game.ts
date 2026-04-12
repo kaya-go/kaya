@@ -22,6 +22,16 @@ export interface NewGameConfig {
   handicap?: number;
 }
 
+export interface ScoreData {
+  blackTerritory: number;
+  whiteTerritory: number;
+  blackCaptures: number;
+  whiteCaptures: number;
+  blackDeadStones: number;
+  whiteDeadStones: number;
+  komi: number;
+}
+
 export interface AISettings {
   minProb: number; // 0.0 to 1.0
   maxTopMoves: number; // Maximum number of top moves to display (1-10)
@@ -229,7 +239,7 @@ export interface GameTreeContextValue {
   // Scoring
   scoreMode: boolean;
   setScoreMode: (mode: boolean) => void;
-  scoreResult: any;
+  scoreData: ScoreData | null;
   deadStones: Set<string>;
   toggleDeadStone: (vertex: Vertex | Vertex[], targetDead?: boolean) => void;
   autoScore: () => void;
@@ -277,6 +287,8 @@ export interface GameTreeContextValue {
   autoEstimateDeadStones: () => void;
   clearDeadStones: () => void;
   isEstimating: boolean;
+  estimationMode: boolean;
+  toggleEstimationMode: () => void;
   toggleAnalysisMode: () => void;
   updateComment: (comment: string) => void;
   editPlayMode: boolean;

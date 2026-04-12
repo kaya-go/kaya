@@ -4,6 +4,12 @@
 
 import type { SignMap, Sign, Vertex } from '@kaya/goboard';
 
+/** Probability threshold for territory assignment (lower = more inclusive near edges) */
+const TERRITORY_THRESHOLD = 0.2;
+
+/** Probability threshold for dead stone detection (higher = more conservative) */
+export const DEAD_STONE_THRESHOLD = 0.4;
+
 interface TerritoryResult {
   blackTerritory: number;
   whiteTerritory: number;
@@ -121,8 +127,48 @@ function determineOwner(board: SignMap, region: Vertex[]): Sign {
 }
 
 /**
- * Count captures from current board state
- * In scoring mode, we need to track historical captures
+ * Calculate territory using a hybrid approach:
+ * 1. Flood fill for closed regions (certain territory)
+ * 2. Probability map for open/contested regions (estimated territory)
+ * This ensures closed areas near edges are always counted, even if
+ * the Monte Carlo probability is low there.
+ */
+export function calculateEstimatedTerritory(
+  signMap: SignMap,
+  probabilityMap: number[][],
+  deadStones: Set<string>
+): TerritoryResult {
+  const height = signMap.length;
+  const width = signMap[0]?.length || 0;
+
+  // Step 1: Flood fill on the board with dead stones removed
+  const floodResult = calculateTerritory(signMap, deadStones);
+  const territories: SignMap = floodResult.territories;
+  let blackTerritory = floodResult.blackTerritory;
+  let whiteTerritory = floodResult.whiteTerritory;
+
+  // Step 2: For cells that flood fill left as neutral (dame), use prob map
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      // Only fill neutral empty cells with prob map data
+      if (signMap[y][x] !== 0 || territories[y][x] !== 0) continue;
+
+      const prob = probabilityMap[y]?.[x] ?? 0;
+      if (prob > TERRITORY_THRESHOLD) {
+        territories[y][x] = 1;
+        blackTerritory++;
+      } else if (prob < -TERRITORY_THRESHOLD) {
+        territories[y][x] = -1 as Sign;
+        whiteTerritory++;
+      }
+    }
+  }
+
+  return { blackTerritory, whiteTerritory, territories };
+}
+
+/**
+ * Count dead stones by color from the dead stones set
  */
 export function countDeadStones(
   signMap: SignMap,

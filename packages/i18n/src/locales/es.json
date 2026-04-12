@@ -440,7 +440,10 @@
     "clickToToggle": "Haz clic en las piedras para cambiar su estado",
     "details": "Detalles",
     "stonesMarkedDead": "{{count}} piedra marcada como muerta",
-    "stonesMarkedDeadPlural": "{{count}} piedras marcadas como muertas"
+    "stonesMarkedDeadPlural": "{{count}} piedras marcadas como muertas",
+    "finalScore": "Puntuación",
+    "estimate": "Estimación",
+    "estimateDescription": "Estimar territorio usando simulación Monte Carlo (funciona con fronteras abiertas)"
   },
   "mobileTab": {
     "board": "Tablero",
