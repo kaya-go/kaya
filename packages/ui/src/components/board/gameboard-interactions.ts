@@ -124,7 +124,7 @@ interface VertexClickOptions {
   lastPlacedColor: Sign;
   setLastPlacedColor: (color: Sign) => void;
   deadStones: Set<string>;
-  toggleDeadStones: (vertices: Vertex[]) => void;
+  toggleDeadStones: (vertices: Vertex[], targetDead?: boolean) => void;
   playMove: (vertex: Vertex, color: Sign) => void;
   placeStoneDirect: (vertex: Vertex, color: Sign) => void;
   addMarker: (vertex: Vertex, tool: string) => void;
@@ -165,11 +165,8 @@ export function useVertexClickHandler(options: VertexClickOptions) {
           const chain = currentBoard.getChain(vertex);
           const key = `${x},${y}`;
           const isCurrentlyDead = deadStones.has(key);
-          const stonesToToggle = chain.filter(([cx, cy]: [number, number]) => {
-            const chainKey = `${cx},${cy}`;
-            return isCurrentlyDead ? deadStones.has(chainKey) : !deadStones.has(chainKey);
-          });
-          if (stonesToToggle.length > 0) toggleDeadStones(stonesToToggle);
+          // Pass entire chain with explicit target state to avoid stale closure issues
+          toggleDeadStones(chain, !isCurrentlyDead);
         }
         return;
       }

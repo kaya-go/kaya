@@ -231,7 +231,7 @@ export interface GameTreeContextValue {
   setScoreMode: (mode: boolean) => void;
   scoreResult: any;
   deadStones: Set<string>;
-  toggleDeadStone: (vertex: Vertex | Vertex[]) => void;
+  toggleDeadStone: (vertex: Vertex | Vertex[], targetDead?: boolean) => void;
   autoScore: () => void;
   resetScore: () => void;
   territoryMap: number[][] | null;
@@ -298,7 +298,7 @@ export interface GameTreeContextValue {
   isLoadingSGF: boolean;
   loadingProgress: number;
   loadingMessage: string;
-  toggleDeadStones: (vertex: Vertex | Vertex[]) => void;
+  toggleDeadStones: (vertex: Vertex | Vertex[], targetDead?: boolean) => void;
   placeStoneDirect: (vertex: Vertex, sign: Sign) => void;
   removeSetupStone: (vertex: Vertex) => void;
 

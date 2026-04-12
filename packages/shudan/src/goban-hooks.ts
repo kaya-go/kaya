@@ -363,6 +363,10 @@ export function useGobanTouchHandlers(options: {
         onVertexClick &&
         !onVertexTouchEnd
       ) {
+        // Prevent synthetic mouse events (mousedown/mouseup/click) that the browser
+        // generates after touch events. Without this, onVertexClick fires twice:
+        // once here and once from the synthetic click event.
+        evt.preventDefault();
         onVertexClick(evt as unknown as React.MouseEvent, currentVertex);
       }
 
