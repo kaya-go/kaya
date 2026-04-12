@@ -324,8 +324,6 @@ export const GameBoard: React.FC = memo(() => {
           deadStones={deadStones}
           playerBlack={gameInfo.playerBlack}
           playerWhite={gameInfo.playerWhite}
-          rankBlack={gameInfo.rankBlack}
-          rankWhite={gameInfo.rankWhite}
           onClear={clearDeadStones}
           onAutoEstimate={autoEstimateDeadStones}
           onDone={toggleScoringMode}

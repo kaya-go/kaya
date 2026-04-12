@@ -253,11 +253,11 @@
   color: #fff;
 }
 
-.spinner {
-  animation: spin 1s linear infinite;
+.score-spinner {
+  animation: score-spin 1s linear infinite;
 }
 
-@keyframes spin {
+@keyframes score-spin {
   from {
     transform: rotate(0deg);
   }
