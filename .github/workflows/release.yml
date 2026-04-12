@@ -258,7 +258,7 @@ jobs:
           bun run generate-updater-json "${{ github.event.inputs.version }}" "${{ steps.changelog.outputs.changelog }}"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: Release v${{ github.event.inputs.version }}
