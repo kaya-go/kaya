@@ -2,16 +2,49 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-04-12
+
+### <!-- 0 -->🚀 Features
+
+- *(ui)* Redesign scoring panel with result-first layout and unified rendering ([aa08f61](https://github.com/kaya-go/kaya/commit/aa08f61c890996724a70be575acf6359129bbd9b)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Fix scoring mode rapid toggle and stale closure bugs ([79c17b8](https://github.com/kaya-go/kaya/commit/79c17b8c82272f1c1c291e0b3b29f05ce7c4bd63)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ui)* Clean up scoring panel dead code and optimize ([48ffdec](https://github.com/kaya-go/kaya/commit/48ffdecf9f7e26b09dd3d9f18c775d1603868387)) by @hadim
+
+- *(ui)* Unify scoring system with Monte Carlo estimation ([5486064](https://github.com/kaya-go/kaya/commit/5486064d6066b1d7fc04a3dcdae057a8b96bcd3f)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Update softprops/action-gh-release from v2 to v3 ([5976bd7](https://github.com/kaya-go/kaya/commit/5976bd74fe13b9755228d15875a3124d8d00f937)) by @hadim
+
+- *(ci)* Replace peaceiris/actions-gh-pages with native git commands ([3dbd267](https://github.com/kaya-go/kaya/commit/3dbd267911ab587c433c9899346f3cbc08c55ae3)) by @hadim
+
+- *(desktop)* Bump Cargo.lock version to 0.3.12-dev ([9bfbdd3](https://github.com/kaya-go/kaya/commit/9bfbdd39bc057d9babbbb9f0b2c969886092bc8c)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.3.11] - 2026-04-06
 
 ### <!-- 1 -->🐛 Bug Fixes
 
 - *(board-recognition)* Use freeDimensionOverrides as fallback for ONNX session creation ([ec19f1a](https://github.com/kaya-go/kaya/commit/ec19f1a31e72100805d1764976ec8bd2d50f4d5a)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.3.11 ([8f2547c](https://github.com/kaya-go/kaya/commit/8f2547c45c015cf9b16ae04f69939d7c65ec2c0e)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.10] - 2026-04-05
 
