@@ -1,6 +1,6 @@
 {
   "name": "@kaya/gametree",
-  "version": "0.4.0",
+  "version": "0.4.1-dev",
   "description": "Immutable game tree data structure (adapted from Sabaki immutable-gametree)",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
