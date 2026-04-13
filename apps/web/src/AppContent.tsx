@@ -24,6 +24,8 @@ import {
   LandingPage,
   AboutDialog,
   useKeyboardShortcuts,
+  usePwaInstall,
+  PwaInstallBanner,
 } from '@kaya/ui';
 
 function AppContent({
@@ -97,6 +99,9 @@ function AppContent({
   const { isEditMode: gameInfoEditMode, toggleEditMode: toggleGameInfoEditMode } =
     useGameInfoEditMode();
   const { matchesShortcut, getBinding, bindingToDisplayString } = useKeyboardShortcuts();
+
+  // PWA install prompt
+  const pwaInstall = usePwaInstall();
 
   // About dialog state
   const [showAboutDialog, setShowAboutDialog] = useState(false);
@@ -240,6 +245,8 @@ function AppContent({
         onNavigateToBoard={handleNavigateToBoard}
         version={versionData?.version}
         hasSavedGame={hasSavedGame}
+        logoUrl={`${import.meta.env.VITE_ASSET_PREFIX || '/'}logo.svg`}
+        pwaInstall={pwaInstall}
       />
     );
   }
@@ -247,6 +254,7 @@ function AppContent({
   return (
     <AppDropZone onNavigateToBoard={handleNavigateToBoard}>
       <div className="app">
+        <PwaInstallBanner pwa={pwaInstall} />
         {showHeader ? (
           <Header
             showThemeToggle={true}
@@ -258,6 +266,7 @@ function AppContent({
             onGoHome={isMobile ? handleGoHome : undefined}
             onNavigateToBoard={handleNavigateToBoard}
             versionData={versionData}
+            pwaInstall={pwaInstall}
           />
         ) : (
           <div

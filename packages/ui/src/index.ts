@@ -152,6 +152,11 @@ export type {
 // External links (opens URLs in default browser in Tauri)
 export { useExternalLinks } from './hooks/useExternalLinks';
 
+// PWA install prompt
+export { usePwaInstall } from './hooks/usePwaInstall';
+export type { PwaInstallState } from './hooks/usePwaInstall';
+export { PwaInstallBanner } from './components/pwa/PwaInstallBanner';
+
 // Game controller management
 export {
   GameControllerManagerProvider,

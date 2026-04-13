@@ -26,6 +26,7 @@ import { useGameSounds } from '../../useGameSounds';
 import { useI18n } from '@kaya/i18n';
 import type { Locale } from '@kaya/i18n';
 import type { VersionData } from './StatusBar';
+import type { PwaInstallState } from '../../hooks/usePwaInstall';
 import './MobileMenu.css';
 
 // Flag emojis for each locale
@@ -57,6 +58,8 @@ interface MobileMenuProps {
   isDirty?: boolean;
   /** Whether the current game is loaded from the library */
   isInLibrary?: boolean;
+  /** PWA install state (web only) */
+  pwaInstall?: PwaInstallState;
 }
 
 export const MobileMenu: React.FC<MobileMenuProps> = ({
@@ -75,6 +78,7 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   onGoHome,
   isDirty = false,
   isInLibrary = false,
+  pwaInstall,
 }) => {
   const { theme, toggleTheme } = useTheme();
   const { soundEnabled, toggleSound } = useGameSounds();
@@ -257,6 +261,28 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
               </div>
             )}
           </div>
+
+          {pwaInstall && !pwaInstall.isInstalled && (pwaInstall.canPrompt || pwaInstall.isIOS) && (
+            <div className="mobile-menu-section">
+              {pwaInstall.canPrompt ? (
+                <button
+                  className="mobile-menu-item"
+                  onClick={() => {
+                    pwaInstall.promptInstall();
+                    onClose();
+                  }}
+                >
+                  <LuDownload size={20} />
+                  <span>{t('pwa.installApp')}</span>
+                </button>
+              ) : (
+                <div className="mobile-menu-item" style={{ opacity: 0.8, cursor: 'default' }}>
+                  <LuDownload size={20} />
+                  <span>{t('pwa.iosTapShare')}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mobile-menu-section">
             <a

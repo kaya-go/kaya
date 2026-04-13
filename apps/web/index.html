@@ -78,6 +78,11 @@
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="<%= assetPrefix %>manifest.json" />
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Kaya" />
+    <link rel="apple-touch-icon" href="<%= assetPrefix %>icon-192.png" />
     <!-- gamecontroller.js for unified gamepad support (deferred - not critical for initial render) -->
     <script defer src="<%= assetPrefix %>vendor/gamecontroller.min.js"></script>
   </head>

@@ -734,5 +734,11 @@
     "resetToDefault": "重置为默认模型",
     "resetSuccess": "检测模型已重置为默认",
     "modelSettingsLink": "模型设置"
+  },
+  "pwa": {
+    "installApp": "安装应用",
+    "install": "安装",
+    "installPrompt": "安装 Kaya 以获得更好的体验",
+    "iosTapShare": "点击分享然后选择「添加到主屏幕」来安装"
   }
 }

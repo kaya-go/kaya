@@ -1,8 +1,9 @@
 import React, { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuPlay, LuFolderOpen, LuLibrary, LuCamera } from 'react-icons/lu';
+import { LuPlay, LuFolderOpen, LuLibrary, LuCamera, LuDownload, LuShare } from 'react-icons/lu';
 import { AppDropZone, type AppDropZoneRef } from '../file/AppDropZone';
 import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
+import type { PwaInstallState } from '../../hooks/usePwaInstall';
 import './LandingPage.css';
 
 export interface LandingPageProps {
@@ -13,6 +14,8 @@ export interface LandingPageProps {
   onNavigateToBoard?: () => void;
   version?: string;
   hasSavedGame?: boolean;
+  logoUrl?: string;
+  pwaInstall?: PwaInstallState;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -23,6 +26,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onNavigateToBoard,
   version,
   hasSavedGame,
+  logoUrl,
+  pwaInstall,
 }) => {
   const { t } = useTranslation();
   const dropZoneRef = useRef<AppDropZoneRef>(null);
@@ -54,7 +59,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <AppDropZone ref={dropZoneRef} onFileDrop={onFileDrop} onNavigateToBoard={onNavigateToBoard}>
       <div className="landing-page">
         <div className="landing-content">
-          <h1 className="landing-title">Kaya</h1>
+          <div className="landing-brand">
+            {logoUrl && <img src={logoUrl} alt="Kaya" className="landing-logo" />}
+            <h1 className="landing-title">Kaya</h1>
+          </div>
           <p className="landing-subtitle">{t('landing.tagline')}</p>
 
           <div className="landing-actions">
@@ -103,6 +111,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <LuFolderOpen size={24} />
               <span>{t('landing.openFile')}</span>
             </button>
+
+            {pwaInstall &&
+              !pwaInstall.isInstalled &&
+              (pwaInstall.canPrompt ? (
+                <button className="landing-button secondary" onClick={pwaInstall.promptInstall}>
+                  <LuDownload size={24} />
+                  <span>{t('pwa.installApp')}</span>
+                </button>
+              ) : pwaInstall.isIOS ? (
+                <div className="landing-ios-install">
+                  <LuShare size={16} />
+                  <span>{t('pwa.iosTapShare')}</span>
+                </div>
+              ) : null)}
 
             <div className="landing-drop-text">
               <LuFolderOpen size={16} />

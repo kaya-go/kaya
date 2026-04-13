@@ -734,5 +734,11 @@
     "resetToDefault": "기본 모델로 재설정",
     "resetSuccess": "감지 모델이 기본값으로 재설정되었습니다",
     "modelSettingsLink": "모델 설정"
+  },
+  "pwa": {
+    "installApp": "앱 설치",
+    "install": "설치",
+    "installPrompt": "더 나은 경험을 위해 Kaya를 설치하세요",
+    "iosTapShare": "공유를 탭한 후 \"홈 화면에 추가\"를 눌러 설치하세요"
   }
 }

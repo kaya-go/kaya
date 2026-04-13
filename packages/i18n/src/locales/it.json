@@ -731,5 +731,11 @@
     "resetToDefault": "Ripristina modello predefinito",
     "resetSuccess": "Modello di rilevamento ripristinato al predefinito",
     "modelSettingsLink": "Impostazioni modello"
+  },
+  "pwa": {
+    "installApp": "Installa app",
+    "install": "Installa",
+    "installPrompt": "Installa Kaya per un'esperienza migliore",
+    "iosTapShare": "Tocca Condividi e poi \"Aggiungi alla schermata Home\" per installare"
   }
 }

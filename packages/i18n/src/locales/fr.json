@@ -731,5 +731,11 @@
     "resetToDefault": "Réinitialiser au modèle par défaut",
     "resetSuccess": "Modèle de détection réinitialisé",
     "modelSettingsLink": "Paramètres du modèle"
+  },
+  "pwa": {
+    "installApp": "Installer l'application",
+    "install": "Installer",
+    "installPrompt": "Installez Kaya pour une meilleure expérience",
+    "iosTapShare": "Appuyez sur Partager puis \"Sur l'écran d'accueil\" pour installer"
   }
 }

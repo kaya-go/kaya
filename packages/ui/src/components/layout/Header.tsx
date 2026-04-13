@@ -10,6 +10,7 @@ import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
 import { useHeaderActions } from './useHeaderActions';
 import { HeaderFileControls } from './HeaderFileControls';
 import { HeaderRightGroup } from './HeaderRightGroup';
+import type { PwaInstallState } from '../../hooks/usePwaInstall';
 
 import type { VersionData } from './StatusBar';
 
@@ -23,6 +24,7 @@ interface HeaderProps {
   onGoHome?: () => void;
   onNavigateToBoard?: () => void;
   versionData?: VersionData;
+  pwaInstall?: PwaInstallState;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -35,6 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
   onGoHome,
   onNavigateToBoard,
   versionData,
+  pwaInstall,
 }) => {
   const { t } = useTranslation();
   const actions = useHeaderActions({ onNavigateToBoard });
@@ -143,6 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
           onGoHome={onGoHome}
           isDirty={actions.isDirty}
           isInLibrary={actions.loadedFileId !== null}
+          pwaInstall={pwaInstall}
         />
       </header>
       <ScanOptionsModal

@@ -734,5 +734,11 @@
     "resetToDefault": "Reset to Default Model",
     "resetSuccess": "Detection model reset to default",
     "modelSettingsLink": "Model settings"
+  },
+  "pwa": {
+    "installApp": "Install App",
+    "install": "Install",
+    "installPrompt": "Install Kaya for a better experience",
+    "iosTapShare": "Tap Share then \"Add to Home Screen\" to install"
   }
 }

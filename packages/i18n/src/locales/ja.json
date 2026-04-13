@@ -734,5 +734,11 @@
     "resetToDefault": "デフォルトモデルにリセット",
     "resetSuccess": "検出モデルをデフォルトにリセットしました",
     "modelSettingsLink": "モデル設定"
+  },
+  "pwa": {
+    "installApp": "アプリをインストール",
+    "install": "インストール",
+    "installPrompt": "Kayaをインストールしてより快適に",
+    "iosTapShare": "共有をタップし「ホーム画面に追加」でインストール"
   }
 }

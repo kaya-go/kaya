@@ -731,5 +731,11 @@
     "resetToDefault": "Auf Standardmodell zurücksetzen",
     "resetSuccess": "Erkennungsmodell auf Standard zurückgesetzt",
     "modelSettingsLink": "Modelleinstellungen"
+  },
+  "pwa": {
+    "installApp": "App installieren",
+    "install": "Installieren",
+    "installPrompt": "Installieren Sie Kaya für ein besseres Erlebnis",
+    "iosTapShare": "Tippen Sie auf Teilen und dann \"Zum Home-Bildschirm\" zum Installieren"
   }
 }
