@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] - 2026-04-13
+
+### <!-- 0 -->🚀 Features
+
+- *(ui)* Add PWA install prompt for Android and iOS ([87c0b8e](https://github.com/kaya-go/kaya/commit/87c0b8e4748d3b899d9ca91215a4668e107f1fcf)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(board-recognition)* Improve model loading cache and progress feedback ([01df3f5](https://github.com/kaya-go/kaya/commit/01df3f507bb664ccde75a145401db703b7d28454)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.4.0] - 2026-04-12
 
 ### <!-- 0 -->🚀 Features
@@ -26,10 +41,12 @@ All notable changes to this project will be documented in this file.
 
 - *(desktop)* Bump Cargo.lock version to 0.3.12-dev ([9bfbdd3](https://github.com/kaya-go/kaya/commit/9bfbdd39bc057d9babbbb9f0b2c969886092bc8c)) by @hadim
 
+- Release v0.4.0 ([bc7c70e](https://github.com/kaya-go/kaya/commit/bc7c70e216f7b6cc609354c31cfe6e75ac4f8e3e)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.3.11] - 2026-04-06
 

@@ -1,6 +1,6 @@
 {
   "productName": "Kaya",
-  "version": "0.4.1-dev",
+  "version": "0.4.1",
   "identifier": "com.kaya.desktop",
   "build": {
     "beforeDevCommand": "bun run dev",
