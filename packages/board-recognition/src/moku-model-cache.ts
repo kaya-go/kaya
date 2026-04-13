@@ -2,7 +2,7 @@
 // Moku Model Cache – ONNX model download, caching, and progress tracking
 //
 // Handles fetching the ONNX model with Cache API persistence and
-// hash-based invalidation so subsequent loads are instant.
+// ETag-based invalidation (with 24h TTL) so subsequent loads are instant.
 // ============================================================================
 
 // ── Logging ──────────────────────────────────────────────────────────────────
@@ -19,6 +19,13 @@ export function mokuWarn(...args: unknown[]) {
 
 const MODEL_CACHE_NAME = 'kaya-moku-models';
 const ETAG_KEY_PREFIX = 'https://kaya-moku-etag.local/';
+const TIMESTAMP_KEY_PREFIX = 'https://kaya-moku-ts.local/';
+
+/** Revalidation interval: skip HEAD request if last check was within this window. */
+const ETAG_REVALIDATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/** Timeout for HEAD requests to avoid blocking on slow networks. */
+const HEAD_REQUEST_TIMEOUT_MS = 5_000;
 
 /** Progress callback: receives values in [0, 1]. */
 export type ProgressCallback = (progress: number) => void;
@@ -40,14 +47,39 @@ async function storeEtag(cache: Cache, modelUrl: string, etag: string): Promise<
 }
 
 /**
+ * Store and retrieve the last-checked timestamp for a model URL.
+ * Used to skip ETag HEAD requests within the revalidation window.
+ */
+async function getStoredTimestamp(cache: Cache, modelUrl: string): Promise<number | null> {
+  const key = `${TIMESTAMP_KEY_PREFIX}${modelUrl}`;
+  const resp = await cache.match(key);
+  if (!resp) return null;
+  const text = await resp.text();
+  const ts = Number(text);
+  return Number.isFinite(ts) ? ts : null;
+}
+
+async function storeTimestamp(cache: Cache, modelUrl: string): Promise<void> {
+  const key = `${TIMESTAMP_KEY_PREFIX}${modelUrl}`;
+  await cache.put(key, new Response(String(Date.now())));
+}
+
+/**
  * Fetch the remote ETag via a lightweight HEAD request.
- * Returns null if the server doesn't provide an ETag or the request fails.
+ * Returns null if the server doesn't provide an ETag, the request fails,
+ * or the request times out (5 seconds).
  */
 async function fetchRemoteEtag(modelUrl: string): Promise<string | null> {
   try {
-    const resp = await fetch(modelUrl, { method: 'HEAD' });
-    if (!resp.ok) return null;
-    return resp.headers.get('etag');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), HEAD_REQUEST_TIMEOUT_MS);
+    try {
+      const resp = await fetch(modelUrl, { method: 'HEAD', signal: controller.signal });
+      if (!resp.ok) return null;
+      return resp.headers.get('etag');
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch {
     return null;
   }
@@ -66,8 +98,9 @@ export async function clearModelCache(): Promise<void> {
  * Fetch the ONNX model with Cache API persistence and ETag-based invalidation.
  * On first load, the model is fetched from the network and stored in the
  * browser Cache API so subsequent loads are instant without re-downloading.
- * On subsequent loads, a lightweight HEAD request checks the server ETag;
- * if it differs from the cached ETag the model is re-downloaded automatically.
+ * On subsequent loads, a lightweight HEAD request checks the server ETag
+ * only if the last check was more than 24 hours ago. If the HEAD request
+ * times out (5s) or the ETag is unchanged, the cached copy is returned.
  */
 export async function fetchModelWithCache(
   modelUrl: string,
@@ -83,19 +116,38 @@ export async function fetchModelWithCache(
       const cached = await cache.match(modelUrl);
 
       if (cached) {
-        // Check if the remote file has changed via ETag
-        const remoteEtag = await fetchRemoteEtag(modelUrl);
-        if (remoteEtag) {
-          const storedEtag = await getStoredEtag(cache, modelUrl);
-          if (storedEtag && storedEtag !== remoteEtag) {
-            await cache.delete(modelUrl);
+        // Check if we need to revalidate the ETag
+        const lastChecked = await getStoredTimestamp(cache, modelUrl);
+        const needsRevalidation =
+          lastChecked === null || Date.now() - lastChecked > ETAG_REVALIDATION_MS;
+
+        if (needsRevalidation) {
+          // Only revalidate if the TTL has expired
+          const remoteEtag = await fetchRemoteEtag(modelUrl);
+          if (remoteEtag) {
+            const storedEtag = await getStoredEtag(cache, modelUrl);
+            if (storedEtag && storedEtag !== remoteEtag) {
+              // ETag changed: model has been updated, re-download
+              mokuLog('ETag changed, re-downloading model');
+              await cache.delete(modelUrl);
+            } else {
+              // ETag unchanged (or first time storing it): update timestamp, return cache
+              await storeTimestamp(cache, modelUrl);
+              if (!storedEtag && remoteEtag) {
+                await storeEtag(cache, modelUrl, remoteEtag);
+              }
+              mokuLog('Model loaded (cached, revalidated)');
+              onProgress?.(1);
+              return cached.arrayBuffer();
+            }
           } else {
-            mokuLog('Model loaded (cached)');
+            // HEAD request failed or timed out: trust the cache
+            mokuLog('Model loaded (cached, revalidation skipped)');
             onProgress?.(1);
             return cached.arrayBuffer();
           }
         } else {
-          // No ETag available — trust the cache
+          // Within TTL window: skip HEAD request entirely
           mokuLog('Model loaded (cached)');
           onProgress?.(1);
           return cached.arrayBuffer();
@@ -130,6 +182,7 @@ export async function fetchModelWithCache(
         if (etag) {
           await storeEtag(cache, modelUrl, etag);
         }
+        await storeTimestamp(cache, modelUrl);
       } catch (cacheErr) {
         mokuWarn('Failed to cache model:', (cacheErr as Error).message);
       }

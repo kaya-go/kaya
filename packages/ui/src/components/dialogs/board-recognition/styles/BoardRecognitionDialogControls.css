@@ -25,6 +25,26 @@
   transition: width 0.2s ease;
 }
 
+.brd-progress-bar--indeterminate {
+  width: 30%;
+  animation: brd-progress-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes brd-progress-indeterminate {
+  0% {
+    margin-left: 0;
+    width: 30%;
+  }
+  50% {
+    margin-left: 35%;
+    width: 40%;
+  }
+  100% {
+    margin-left: 70%;
+    width: 30%;
+  }
+}
+
 .brd-size-custom-input {
   width: 70px;
   padding: 6px 10px;

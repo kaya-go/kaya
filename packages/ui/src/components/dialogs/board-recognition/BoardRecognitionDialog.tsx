@@ -348,7 +348,9 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
           />
           {mokuLoading && (
             <span className="brd-moku-status brd-moku-loading">
-              {t('boardRecognition.loadingModel')}
+              {mokuProgress >= 1
+                ? t('boardRecognition.initializingModel')
+                : t('boardRecognition.loadingModel')}
               {mokuProgress > 0 && mokuProgress < 1 && <> ({Math.round(mokuProgress * 100)}%)</>}
             </span>
           )}
@@ -439,10 +441,14 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
           )}
         </div>
 
-        {/* Progress bar for model download */}
-        {mokuLoading && mokuProgress > 0 && mokuProgress < 1 && (
+        {/* Progress bar for model download / indeterminate for session init */}
+        {mokuLoading && mokuProgress > 0 && (
           <div className="brd-progress-bar-wrap">
-            <div className="brd-progress-bar" style={{ width: `${mokuProgress * 100}%` }} />
+            {mokuProgress < 1 ? (
+              <div className="brd-progress-bar" style={{ width: `${mokuProgress * 100}%` }} />
+            ) : (
+              <div className="brd-progress-bar brd-progress-bar--indeterminate" />
+            )}
           </div>
         )}
 

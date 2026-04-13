@@ -704,6 +704,7 @@
     "cornersAutoDetected": "✓ Moku",
     "cornersAdjusted": "✎ Ajusté",
     "loadingModel": "Chargement du modèle IA…",
+    "initializingModel": "Initialisation du modèle…",
     "mokuError": "Échec du chargement du modèle de détection IA : {{reason}}",
     "selectSizePrompt": "Sélectionnez la taille du goban pour commencer l'analyse",
     "customSize": "Personnalisé",

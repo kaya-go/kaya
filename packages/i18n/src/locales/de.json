@@ -704,6 +704,7 @@
     "cornersAutoDetected": "✓ Moku",
     "cornersAdjusted": "✎ Angepasst",
     "loadingModel": "KI-Modell wird geladen…",
+    "initializingModel": "Modell wird initialisiert…",
     "mokuError": "KI-Erkennungsmodell konnte nicht geladen werden: {{reason}}",
     "selectSizePrompt": "Brettgröße auswählen, um die Analyse zu starten",
     "customSize": "Benutzerdefiniert",

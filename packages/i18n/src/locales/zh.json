@@ -707,6 +707,7 @@
     "cornersAutoDetected": "✓ Moku",
     "cornersAdjusted": "✎ 已调整",
     "loadingModel": "正在加载 AI 模型…",
+    "initializingModel": "正在初始化模型…",
     "mokuError": "AI 检测模型加载失败：{{reason}}",
     "selectSizePrompt": "请选择棋盘大小以开始分析",
     "customSize": "自定义",

@@ -3,12 +3,14 @@
 // PWA Service Worker for Kaya
 // This service worker enables the "install" prompt and provides basic caching
 // IMPORTANT: This SW must NOT interfere with:
-// - WASM files (need special headers for SharedArrayBuffer)
 // - IndexedDB/blob URLs (for cached models)
 // - The coi-serviceworker (handles CORS isolation)
 
-const CACHE_NAME = 'kaya-v3';
-const RUNTIME_CACHE = 'kaya-runtime-v3';
+const CACHE_NAME = 'kaya-v4';
+const RUNTIME_CACHE = 'kaya-runtime-v4';
+
+// Caches managed by other parts of the app (not by this SW) that must survive updates
+const PRESERVED_CACHES = new Set([CACHE_NAME, RUNTIME_CACHE, 'kaya-moku-models']);
 
 // Assets to precache (critical for app shell)
 const PRECACHE_ASSETS = [
@@ -39,7 +41,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames
-          .filter(name => name !== CACHE_NAME && name !== RUNTIME_CACHE)
+          .filter(name => !PRESERVED_CACHES.has(name))
           .map(name => {
             console.log('[SW] Deleting old cache:', name);
             return caches.delete(name);
@@ -84,14 +86,31 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // CRITICAL: Skip WASM files - they need special CORS headers for SharedArrayBuffer
+  // WASM/MJS files: cache-first for same-origin ONNX Runtime assets.
+  // These files are large (~15 MB) and rarely change, so caching avoids
+  // slow re-downloads on throttled connections. The response is cloned with
+  // all headers preserved (including CORS headers needed for SharedArrayBuffer).
+  // .onnx model files are NOT cached here (they use their own Cache API store).
   if (
-    url.pathname.endsWith('.wasm') ||
-    url.pathname.endsWith('.mjs') ||
-    url.pathname.endsWith('.onnx') ||
-    url.pathname.includes('/wasm/') ||
-    url.pathname.includes('/static/wasm/')
+    (url.pathname.endsWith('.wasm') ||
+      url.pathname.endsWith('.mjs') ||
+      url.pathname.includes('/wasm/') ||
+      url.pathname.includes('/static/wasm/')) &&
+    !url.pathname.endsWith('.onnx')
   ) {
+    event.respondWith(
+      caches.open(RUNTIME_CACHE).then(cache =>
+        cache.match(request).then(cached => {
+          if (cached) return cached;
+          return fetch(request).then(response => {
+            if (response.ok) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          });
+        })
+      )
+    );
     return;
   }
 

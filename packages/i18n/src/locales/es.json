@@ -704,6 +704,7 @@
     "cornersAutoDetected": "✓ Moku",
     "cornersAdjusted": "✎ Ajustado",
     "loadingModel": "Cargando modelo de IA…",
+    "initializingModel": "Inicializando modelo…",
     "mokuError": "Error al cargar el modelo de detección IA: {{reason}}",
     "selectSizePrompt": "Selecciona el tamaño del tablero para iniciar el análisis",
     "customSize": "Personalizado",
