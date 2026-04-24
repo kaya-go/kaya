@@ -116,6 +116,9 @@ export function featurizeToBuffer(
   if (len >= 4 && history[len - 4].x < 0) setGlobal(3, 1.0);
   if (len >= 5 && history[len - 5].x < 0) setGlobal(4, 1.0);
 
-  // Komi
-  setGlobal(5, komi / 20.0);
+  // Komi (as selfKomi — komi from the perspective of the side to move).
+  // KataGo encodes rowGlobal[5] = selfKomi * 0.05, where selfKomi is +komi for
+  // White-to-move and -komi for Black-to-move. Kaya's Sign has Black=1, White=-1,
+  // so selfKomi = -pla * komi.
+  setGlobal(5, (-pla * komi) / 20.0);
 }

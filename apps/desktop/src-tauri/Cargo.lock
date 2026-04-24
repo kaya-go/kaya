@@ -2098,7 +2098,7 @@ dependencies = [
 
 [[package]]
 name = "kaya"
-version = "0.3.12-dev"
+version = "0.4.2-dev"
 dependencies = [
  "base64 0.22.1",
  "futures",

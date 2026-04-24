@@ -138,8 +138,11 @@ pub fn featurize_into(
         }
     }
 
-    // Komi
-    set_global(5, komi / 20.0);
+    // Komi (as selfKomi — komi from the perspective of the side to move).
+    // KataGo encodes rowGlobal[5] = selfKomi * 0.05, where selfKomi is +komi for
+    // White-to-move and -komi for Black-to-move. Kaya's Sign has Black=1, White=-1,
+    // so selfKomi = -pla * komi.
+    set_global(5, (-(pla as f32) * komi) / 20.0);
 }
 
 /// Featurize a board position into flat Vec<f32> (for PyTorch engine)
