@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] - 2026-04-24
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ai-engine)* Encode komi as selfKomi in featurization ([9bb3b7f](https://github.com/kaya-go/kaya/commit/9bb3b7f5d69dc070a967f07a5cf61e8494e076f2)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.4.1] - 2026-04-13
 
 ### <!-- 0 -->🚀 Features
@@ -12,10 +23,14 @@ All notable changes to this project will be documented in this file.
 
 - *(board-recognition)* Improve model loading cache and progress feedback ([01df3f5](https://github.com/kaya-go/kaya/commit/01df3f507bb664ccde75a145401db703b7d28454)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.1 ([bbc0985](https://github.com/kaya-go/kaya/commit/bbc0985850825c2a5f675b590555cebe7cca5fb5)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.4.0] - 2026-04-12
 
