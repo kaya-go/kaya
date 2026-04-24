@@ -328,6 +328,19 @@ export class TauriEngine extends Engine {
       throw new Error('TauriEngine can only be used in a Tauri environment');
     }
 
+    // When any input requests multiple visits, the batched policy-only command
+    // cannot provide per-move winRate/scoreLead. Fall back to per-position MCTS
+    // (onnx_analyze_mcts) so the ΔScore / ΔWin% heatmap toggles receive populated
+    // per-move statistics. Mirrors OnnxEngine.analyzeBatch behavior.
+    const hasMultiVisit = inputs.some(i => ((i.options as any)?.numVisits ?? 1) > 1);
+    if (hasMultiVisit) {
+      const results: AnalysisResult[] = [];
+      for (const input of inputs) {
+        results.push(await this.analyze(input.signMap, input.options));
+      }
+      return results;
+    }
+
     const batchStart = performance.now();
 
     // Check cache first
