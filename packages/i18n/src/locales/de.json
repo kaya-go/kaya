@@ -527,7 +527,16 @@
     "visits": "Besuche",
     "visitsFresh": "Analyse mit konfigurierter Besuchszahl abgeschlossen",
     "visitsStale": "Aus Cache mit weniger Besuchen — wird neu analysiert",
-    "visitsTooltip": "Suchtiefe: {{count}} Besuche (klicken zum Ändern, Doppelklick zum Zurücksetzen)",
+    "visitsTooltip": "Suchtiefe: {{count}} Besuche — zum Ändern klicken",
+    "visitsPopover": {
+      "title": "Suchtiefe",
+      "fast": "Schnell",
+      "balanced": "Ausgewogen",
+      "deep": "Tief",
+      "veryDeep": "Sehr tief",
+      "fastDescription": "Sofort — nutzt nur die Intuition der KI. Keine Gewinnrate oder Score-Differenz (—).",
+      "deepDescription": "Langsamer — die KI rechnet voraus, um präzise Gewinnrate und Score-Differenz zu berechnen."
+    },
     "bestMove": "Bester",
     "metricTooltip": "Steintext-Metrik umschalten — Farben zeigen immer Policy-Wahrscheinlichkeit. Policy: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuell, ΔScore: Scoreänderung vs aktuell",
     "metric_policy": "Policy",

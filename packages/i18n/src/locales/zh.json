@@ -530,7 +530,16 @@
     "visits": "访问次数",
     "visitsFresh": "使用配置的访问次数完成分析",
     "visitsStale": "缓存自较低访问次数 — 将重新分析",
-    "visitsTooltip": "搜索深度：{{count}} 次访问（点击切换，双击重置）",
+    "visitsTooltip": "搜索深度：{{count}} 次访问 — 点击更改",
+    "visitsPopover": {
+      "title": "搜索深度",
+      "fast": "快速",
+      "balanced": "平衡",
+      "deep": "深入",
+      "veryDeep": "非常深入",
+      "fastDescription": "即时 — 仅使用 AI 的直觉。不显示胜率或目数差（—）。",
+      "deepDescription": "较慢 — AI 会预读以计算精确的胜率和目数差。"
+    },
     "bestMove": "最佳",
     "metricTooltip": "切换棋子文字指标 — 颜色始终显示策略概率。策略：落子概率，Δ胜%：相对当前局面的胜率变化，Δ目数：相对当前局面的目数变化",
     "metric_policy": "策略",

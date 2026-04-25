@@ -527,7 +527,16 @@
     "visits": "Visite",
     "visitsFresh": "Analisi completata con il numero di visite configurato",
     "visitsStale": "Cache con meno visite — verrà ri-analizzato",
-    "visitsTooltip": "Profondità di ricerca: {{count}} visite (clicca per cambiare, doppio clic per reimpostare)",
+    "visitsTooltip": "Profondità di ricerca: {{count}} visite — clicca per cambiare",
+    "visitsPopover": {
+      "title": "Profondità di ricerca",
+      "fast": "Veloce",
+      "balanced": "Bilanciato",
+      "deep": "Profondo",
+      "veryDeep": "Molto profondo",
+      "fastDescription": "Istantaneo — usa solo l'intuizione dell'IA. Nessun tasso di vittoria o differenza di punteggio (—).",
+      "deepDescription": "Più lento — l'IA calcola in anticipo per ottenere tasso di vittoria e differenza di punteggio precisi."
+    },
     "bestMove": "Migliore",
     "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di policy. Policy: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
     "metric_policy": "Policy",

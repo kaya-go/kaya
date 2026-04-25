@@ -527,7 +527,16 @@
     "visits": "Visites",
     "visitsFresh": "Analyse complète avec le nombre de visites configuré",
     "visitsStale": "Résultat en cache avec moins de visites — sera ré-analysé",
-    "visitsTooltip": "Profondeur de recherche : {{count}} visites (cliquer pour changer, double-clic pour réinitialiser)",
+    "visitsTooltip": "Profondeur de recherche : {{count}} visites — cliquer pour changer",
+    "visitsPopover": {
+      "title": "Profondeur de recherche",
+      "fast": "Rapide",
+      "balanced": "Équilibré",
+      "deep": "Profond",
+      "veryDeep": "Très profond",
+      "fastDescription": "Instantané — utilise uniquement l'intuition de l'IA. Pas de taux de victoire ni de différence de score (—).",
+      "deepDescription": "Plus lent — l'IA anticipe pour calculer un taux de victoire et une différence de score précis."
+    },
     "bestMove": "Meilleur",
     "metricTooltip": "Changer le texte sur les pierres — les couleurs montrent toujours la probabilité de politique. Politique : probabilité, ΔVict% : variation du taux de victoire vs actuel, ΔScore : variation du score vs actuel",
     "metric_policy": "Politique",

@@ -530,7 +530,16 @@
     "visits": "訪問回数",
     "visitsFresh": "設定された訪問回数で分析完了",
     "visitsStale": "少ない訪問回数のキャッシュ — 再分析されます",
-    "visitsTooltip": "探索深度：{{count}}回訪問（クリックで変更、ダブルクリックでリセット）",
+    "visitsTooltip": "探索深度：{{count}}回訪問 — クリックで変更",
+    "visitsPopover": {
+      "title": "探索深度",
+      "fast": "高速",
+      "balanced": "バランス",
+      "deep": "深い",
+      "veryDeep": "非常に深い",
+      "fastDescription": "瞬時 — AIの直感のみを使用。勝率や目差は表示されません（—）。",
+      "deepDescription": "低速 — AIが先読みして正確な勝率と目差を計算します。"
+    },
     "bestMove": "最善",
     "metricTooltip": "石のテキスト指標切替 — 色は常にポリシー確率を表示。ポリシー: 着手確率、Δ勝%: 現在局面との勝率差、Δスコア: 現在局面とのスコア差",
     "metric_policy": "ポリシー",

@@ -530,7 +530,16 @@
     "visits": "Visits",
     "visitsFresh": "Analysis complete with configured visit count",
     "visitsStale": "Cached from a lower visit count — will re-analyze",
-    "visitsTooltip": "Search depth: {{count}} visits (click to cycle, double-click to reset)",
+    "visitsTooltip": "Search depth: {{count}} visits — click to change",
+    "visitsPopover": {
+      "title": "Search depth",
+      "fast": "Fast",
+      "balanced": "Balanced",
+      "deep": "Deep",
+      "veryDeep": "Very deep",
+      "fastDescription": "Instant — uses the AI's intuition only. No win rate or score deltas (—).",
+      "deepDescription": "Slower — the AI reads ahead to compute precise win rate and score deltas."
+    },
     "bestMove": "Best",
     "metricTooltip": "Toggle stone text metric — colors always show policy probability. Policy: move probability, ΔWin%: win rate change vs current, ΔScore: score lead change vs current",
     "metric_policy": "Policy",

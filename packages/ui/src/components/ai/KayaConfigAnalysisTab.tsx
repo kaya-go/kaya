@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { LuSettings } from 'react-icons/lu';
 import { BackendSelector } from './BackendSelector';
 import { KayaConfigModelList } from './KayaConfigModelList';
+import { MctsVisitsSelector } from './MctsVisitsSelector';
 import type { UseKayaConfigReturn } from './useKayaConfig';
 import './KayaConfigSettings.css';
 
@@ -161,21 +162,16 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
           {/* Search Visits */}
           <div className="setting-item setting-item-full">
             <div className="setting-info">
-              <label htmlFor="num-visits-slider" className="setting-label">
+              <label htmlFor="num-visits-selector" className="setting-label">
                 {t('aiConfig.numVisits')}
                 <span className="setting-value">{aiSettings.numVisits}</span>
               </label>
               <p className="setting-description">{t('aiConfig.numVisitsDescription')}</p>
             </div>
-            <input
-              id="num-visits-slider"
-              type="range"
-              min="1"
-              max="400"
-              step="1"
+            <MctsVisitsSelector
+              id="num-visits-selector"
               value={aiSettings.numVisits}
-              onChange={e => setAISettings({ numVisits: parseInt(e.target.value) })}
-              className="ai-slider"
+              onChange={visits => setAISettings({ numVisits: visits })}
             />
           </div>
 

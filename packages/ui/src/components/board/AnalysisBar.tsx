@@ -5,7 +5,7 @@
  * Self-contained: calls its own hooks for AI analysis state.
  */
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   LuMap,
@@ -20,8 +20,8 @@ import {
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useGameTreeAI } from '../../contexts/selectors';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
-
-const VISITS_PRESETS = [1, 4, 10, 32, 64, 128, 256, 400];
+import { VISITS_PRESETS } from '../ai/mcts-visits-presets';
+import { MctsVisitsPopover } from './MctsVisitsPopover';
 
 interface AnalysisBarProps {
   onShowLegend: () => void;
@@ -31,6 +31,8 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
   const { t } = useTranslation();
   const { bindingToDisplayString, getBinding } = useKeyboardShortcuts();
   const { showAnalysisBar, setAISettings, aiSettings } = useGameTreeAI();
+  const [visitsPopoverOpen, setVisitsPopoverOpen] = useState(false);
+  const visitsButtonRef = useRef<HTMLButtonElement>(null);
 
   const {
     showOwnership,
@@ -77,8 +79,44 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
   const displayScoreLead = showLiveProgress ? mctsProgress.scoreLead : analysisResult?.scoreLead;
   const hasMetrics = showLiveProgress || analysisResult != null;
 
+  // Non-disruptive activity indicator (top progress bar). Determinate while
+  // native model upload is happening, indeterminate otherwise.
+  const isBusy = isInitializing || isAnalyzing;
+  const uploadPct =
+    isInitializing && nativeUploadProgress?.stage === 'uploading'
+      ? nativeUploadProgress.progress
+      : null;
+  const busyLabel = isBusy
+    ? isInitializing
+      ? nativeUploadProgress
+        ? nativeUploadProgress.stage === 'uploading'
+          ? t('analysisBar.uploadingModel', { progress: nativeUploadProgress.progress })
+          : nativeUploadProgress.stage === 'checking-cache'
+            ? t('analysisBar.checkingCache')
+            : t('analysisBar.initializing')
+        : t('analysisBar.loading')
+      : mctsProgress
+        ? t('analysisBar.searching')
+        : t('analysisBar.evaluating')
+    : '';
+
   return (
-    <div className="ai-analysis-summary">
+    <div className="ai-analysis-summary" title={busyLabel || undefined}>
+      {isBusy && (
+        <div
+          className={`ai-analysis-summary__progress-bar${uploadPct !== null ? ' is-determinate' : ''}`}
+          role="progressbar"
+          aria-label={busyLabel}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={uploadPct ?? undefined}
+        >
+          <div
+            className="ai-analysis-summary__progress-bar-fill"
+            style={uploadPct !== null ? { width: `${uploadPct}%` } : undefined}
+          />
+        </div>
+      )}
       {analysisError ? (
         <div className="ai-analysis-summary__error">
           <span>⚠️</span> {analysisError}
@@ -90,27 +128,6 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
         >
           <div className="ai-analysis-summary__content">
             <div className="ai-analysis-summary__metrics-group">
-              {/* Loading/Analyzing indicator - always reserves space to prevent layout shift */}
-              {(isInitializing || isAnalyzing) && (
-                <div className="ai-analysis-summary__loading-indicator">
-                  <span className="ai-analysis-summary__spinner">⟳</span>
-                  <span className="ai-analysis-summary__loading-text">
-                    {isInitializing
-                      ? nativeUploadProgress
-                        ? nativeUploadProgress.stage === 'uploading'
-                          ? t('analysisBar.uploadingModel', {
-                              progress: nativeUploadProgress.progress,
-                            })
-                          : nativeUploadProgress.stage === 'checking-cache'
-                            ? t('analysisBar.checkingCache')
-                            : t('analysisBar.initializing')
-                        : t('analysisBar.loading')
-                      : mctsProgress
-                        ? t('analysisBar.searching')
-                        : t('analysisBar.evaluating')}
-                  </span>
-                </div>
-              )}
               <div
                 className={`ai-analysis-summary__metric${showLiveProgress ? ' ai-analysis-summary__metric--in-progress' : ''}`}
                 style={{ minWidth: '90px' }}
@@ -194,26 +211,46 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                   {t(`analysisBar.metric_${aiSettings.heatMapMetric ?? 'policy'}`)}
                 </span>
               </button>
-              <button
-                className={`gameboard-action-button gameboard-visits-button ${configuredNumVisits > 1 ? 'active' : ''}`}
-                title={t('analysisBar.visitsTooltip', { count: configuredNumVisits })}
-                onClick={() => {
-                  const idx = VISITS_PRESETS.indexOf(configuredNumVisits);
-                  const next = VISITS_PRESETS[(idx + 1) % VISITS_PRESETS.length];
-                  setAISettings({ numVisits: next });
-                }}
-                onDoubleClick={() => {
-                  setAISettings({ numVisits: 1 });
-                }}
-                disabled={isInitializing}
-              >
-                <LuSearch />
-                <span className="gameboard-visits-button__label">
-                  {mctsProgress
-                    ? `${mctsProgress.completedVisits}/${mctsProgress.totalVisits}`
-                    : configuredNumVisits}
-                </span>
-              </button>
+              <div style={{ display: 'inline-flex' }}>
+                <button
+                  ref={visitsButtonRef}
+                  className={`gameboard-action-button gameboard-visits-button ${configuredNumVisits > 1 ? 'active' : ''} ${configuredNumVisits === 1 ? 'is-fast' : ''}`}
+                  title={t('analysisBar.visitsTooltip', { count: configuredNumVisits })}
+                  aria-haspopup="dialog"
+                  aria-expanded={visitsPopoverOpen}
+                  onClick={() => setVisitsPopoverOpen(open => !open)}
+                  disabled={isInitializing}
+                >
+                  <span className="gameboard-visits-button__row">
+                    <LuSearch />
+                    <span className="gameboard-visits-button__label">
+                      {mctsProgress
+                        ? `${mctsProgress.completedVisits}/${mctsProgress.totalVisits}`
+                        : configuredNumVisits}
+                    </span>
+                  </span>
+                  <span className="gameboard-visits-button__depth" aria-hidden>
+                    {VISITS_PRESETS.map((preset, idx) => {
+                      const currentIdx = VISITS_PRESETS.indexOf(configuredNumVisits);
+                      const active = currentIdx >= 0 && idx <= currentIdx;
+                      return (
+                        <span
+                          key={preset}
+                          className={`gameboard-visits-button__depth-segment${active ? ' is-active' : ''}`}
+                        />
+                      );
+                    })}
+                  </span>
+                </button>
+                <MctsVisitsPopover
+                  open={visitsPopoverOpen}
+                  presets={VISITS_PRESETS}
+                  current={configuredNumVisits}
+                  anchorRef={visitsButtonRef}
+                  onSelect={value => setAISettings({ numVisits: value })}
+                  onClose={() => setVisitsPopoverOpen(false)}
+                />
+              </div>
               <button
                 className={`gameboard-action-button gameboard-heatmap-button ${showOwnership ? 'active' : ''}`}
                 title={`${t('analysis.toggleOwnership')} (${bindingToDisplayString(getBinding('ai.toggleOwnership'))})`}
