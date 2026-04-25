@@ -1,6 +1,6 @@
 {
   "name": "@kaya/goboard",
-  "version": "0.4.3-dev",
+  "version": "0.4.3",
   "description": "Go board logic and game rules (adapted from Sabaki go-board)",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

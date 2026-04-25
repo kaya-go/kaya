@@ -2,16 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.3] - 2026-04-25
+
+### <!-- 0 -->🚀 Features
+
+- *(ui)* Redesign MCTS search depth picker with chip-based UI ([ca9a7a7](https://github.com/kaya-go/kaya/commit/ca9a7a7c065e68ce51badac37dd9b21ee3677352)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ai-engine)* Populate per-move scores in desktop full-game analysis ([b6890ea](https://github.com/kaya-go/kaya/commit/b6890ea2630d9c6251805d177b74921c9d08f49b)) by @hadim
+
+### <!-- 5 -->🎨 Styling
+
+- *(ui)* Stack metric label below value in analysis bar ([4fc731b](https://github.com/kaya-go/kaya/commit/4fc731b90538a6d0bb33f904672391bae6f21786)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @dependabot[bot]
+- @github-actions[bot]
+
 ## [0.4.2] - 2026-04-24
 
 ### <!-- 1 -->🐛 Bug Fixes
 
 - *(ai-engine)* Encode komi as selfKomi in featurization ([9bb3b7f](https://github.com/kaya-go/kaya/commit/9bb3b7f5d69dc070a967f07a5cf61e8494e076f2)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.2 ([6a9200c](https://github.com/kaya-go/kaya/commit/6a9200c005b65031c713850c5188f4347a0cadaa)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.4.1] - 2026-04-13
 
