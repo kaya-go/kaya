@@ -86,30 +86,35 @@
 .ai-analysis-summary__metrics-group {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1rem;
   flex-shrink: 0;
 }
 
 .ai-analysis-summary__metric {
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  line-height: 1.1;
 }
 
 .ai-analysis-summary__metric-value {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .ai-analysis-summary__metric-label {
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-secondary);
   font-weight: 600;
+  white-space: nowrap;
+  line-height: 1;
 }
 
 .ai-analysis-summary__separator {
