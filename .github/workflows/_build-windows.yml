@@ -54,7 +54,7 @@ jobs:
           echo "rustc_hash=$RUSTC_HASH" >> "$GITHUB_OUTPUT"
 
       - name: Setup sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Configure Rust build cache env
         id: sccache_config
