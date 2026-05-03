@@ -217,9 +217,11 @@ export class OnnxEngine extends Engine {
     const signal = (options as any).signal as AbortSignal | undefined;
     const includeMove = options.includeMove;
 
-    // Cap MCTS batch size so that backends with unbounded inference batch
-    // (e.g. WASM where maxInferenceBatch=Infinity) still emit incremental progress.
-    const maxMctsBatch = Math.min(this.maxInferenceBatch, 16);
+    // Cap MCTS batch size. Smaller batches = more frequent abort checks +
+    // more frequent progress emission, at the cost of slightly higher
+    // per-inference overhead. 8 strikes a balance for interactive use:
+    // abort latency is ~halved vs 16 with only marginal throughput loss.
+    const maxMctsBatch = Math.min(this.maxInferenceBatch, 8);
 
     return runMCTS(
       board,

@@ -537,8 +537,10 @@
       "balanced": "균형",
       "deep": "깊이",
       "veryDeep": "매우 깊이",
+      "extreme": "최대 심도",
       "fastDescription": "즉시 — AI의 직관만 사용합니다. 승률이나 집 차이가 표시되지 않습니다(—).",
-      "deepDescription": "느림 — AI가 미리 읽어 정확한 승률과 집 차이를 계산합니다."
+      "deepDescription": "느림 — AI가 미리 읽어 정확한 승률과 집 차이를 계산합니다.",
+      "extremeDescription": "매우 느림 — 중요한 국면을 깊이 분석합니다. 계산 시간이 오래 걸립니다."
     },
     "bestMove": "최선",
     "metricTooltip": "돌 텍스트 지표 전환 — 색상은 항상 정책 확률 표시. 정책: 수 확률, Δ승%: 현재 대비 승률 변화, Δ점수: 현재 대비 점수 변화",

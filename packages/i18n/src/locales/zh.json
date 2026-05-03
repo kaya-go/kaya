@@ -537,8 +537,10 @@
       "balanced": "平衡",
       "deep": "深入",
       "veryDeep": "非常深入",
+      "extreme": "极深",
       "fastDescription": "即时 — 仅使用 AI 的直觉。不显示胜率或目数差（—）。",
-      "deepDescription": "较慢 — AI 会预读以计算精确的胜率和目数差。"
+      "deepDescription": "较慢 — AI 会预读以计算精确的胜率和目数差。",
+      "extremeDescription": "非常慢 — 用于关键局面的深入分析。计算时间较长。"
     },
     "bestMove": "最佳",
     "metricTooltip": "切换棋子文字指标 — 颜色始终显示策略概率。策略：落子概率，Δ胜%：相对当前局面的胜率变化，Δ目数：相对当前局面的目数变化",

@@ -93,6 +93,19 @@
   background: rgba(245, 158, 11, 0.15);
 }
 
+.mcts-visits-popover__chip.is-extreme .mcts-visits-popover__chip-value {
+  color: var(--danger, #a855f7);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mcts-visits-popover__chip.is-extreme.is-current {
+  border-color: var(--danger, #a855f7);
+  background: rgba(168, 85, 247, 0.15);
+  color: var(--danger, #a855f7);
+}
+
 .mcts-visits-popover__chip-value {
   font-size: 0.95rem;
   font-weight: 600;

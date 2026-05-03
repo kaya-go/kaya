@@ -415,11 +415,16 @@ pub fn run_mcts_analysis(
     options: mcts::MCTSAnalysisOptions,
     progress_callback: &mut dyn FnMut(mcts::MCTSProgress),
 ) -> Result<mcts::MCTSAnalysisResult, String> {
-    // Reset abort flag before starting
-    MCTS_ABORT.store(false, Ordering::Relaxed);
-
+    // Acquire the engine lock FIRST. If a previous MCTS is still running, this
+    // blocks until it releases the lock — which only happens after it observes
+    // any pending abort signal. Resetting MCTS_ABORT before this point would
+    // race with an in-flight abort meant for the previous run, causing either
+    // (a) the old run to ignore the abort, or (b) the new run to inherit a
+    // stale `true` flag and self-abort immediately.
     let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
     let engine = global.as_mut().ok_or("Engine not initialized")?;
+    // Now that the previous run is fully done, clear the flag for our run.
+    MCTS_ABORT.store(false, Ordering::Relaxed);
     engine.run_mcts(&sign_map, &options, &MCTS_ABORT, progress_callback)
 }
 

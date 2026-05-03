@@ -534,8 +534,10 @@
       "balanced": "Equilibrado",
       "deep": "Profundo",
       "veryDeep": "Muy profundo",
+      "extreme": "Extremo",
       "fastDescription": "Instantáneo — usa solo la intuición de la IA. Sin tasa de victoria ni diferencia de puntos (—).",
-      "deepDescription": "Más lento — la IA calcula con anticipación para obtener tasa de victoria y diferencia de puntos precisas."
+      "deepDescription": "Más lento — la IA calcula con anticipación para obtener tasa de victoria y diferencia de puntos precisas.",
+      "extremeDescription": "Muy lento — para análisis profundo de posiciones críticas. Espere tiempos de cómputo largos."
     },
     "bestMove": "Mejor",
     "metricTooltip": "Cambiar texto en piedras — los colores siempre muestran probabilidad de política. Política: probabilidad, ΔVic%: cambio en tasa de victoria vs actual, ΔPunt.: cambio en puntuación vs actual",

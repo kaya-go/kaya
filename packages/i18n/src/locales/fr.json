@@ -534,8 +534,10 @@
       "balanced": "Équilibré",
       "deep": "Profond",
       "veryDeep": "Très profond",
+      "extreme": "Extrême",
       "fastDescription": "Instantané — utilise uniquement l'intuition de l'IA. Pas de taux de victoire ni de différence de score (—).",
-      "deepDescription": "Plus lent — l'IA anticipe pour calculer un taux de victoire et une différence de score précis."
+      "deepDescription": "Plus lent — l'IA anticipe pour calculer un taux de victoire et une différence de score précis.",
+      "extremeDescription": "Très lent — pour une analyse approfondie de positions critiques. Temps de calcul élevé."
     },
     "bestMove": "Meilleur",
     "metricTooltip": "Changer le texte sur les pierres — les couleurs montrent toujours la probabilité de politique. Politique : probabilité, ΔVict% : variation du taux de victoire vs actuel, ΔScore : variation du score vs actuel",

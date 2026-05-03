@@ -489,6 +489,10 @@ impl OnnxEngine {
                 });
             }
 
+            // Check abort before starting the (slow) ONNX inference. If the user
+            // navigated away during leaf selection, skip the inference entirely.
+            if abort_flag.load(Ordering::Relaxed) { break; }
+
             // Phase 2: Batch evaluate unexpanded leaves
             let to_evaluate: Vec<usize> = pending.iter().enumerate()
                 .filter(|(_, p)| p.needs_eval)
@@ -514,6 +518,11 @@ impl OnnxEngine {
             } else {
                 Vec::new()
             };
+
+            // Inference is the dominant per-batch cost. Check abort right after
+            // it returns so we don't waste time on backup + progress emit when
+            // the user has already moved on.
+            if abort_flag.load(Ordering::Relaxed) { break; }
 
             // Phase 3: Remove virtual loss, expand leaves, backup values
             let mut eval_idx: usize = 0;

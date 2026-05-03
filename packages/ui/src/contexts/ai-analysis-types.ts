@@ -10,6 +10,9 @@ export const analysisGlobals = {
   isAnalyzing: false,
   analysisId: 0,
   analyzingForNodeId: null as number | string | null,
+  /** numVisits used by the in-flight analysis. Tracked so a settings change
+   *  forces a restart rather than being deduped as "same position". */
+  analyzingForVisits: null as number | null,
 };
 
 /** Info about the next move played in the game (for comparing vs AI suggestions) */

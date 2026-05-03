@@ -7,8 +7,8 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuZap } from 'react-icons/lu';
-import { VISITS_PRESETS, visitsLabelKey } from './mcts-visits-presets';
+import { LuZap, LuFlame } from 'react-icons/lu';
+import { VISITS_PRESETS, isExtremeVisits, visitsLabelKey } from './mcts-visits-presets';
 import './MctsVisitsSelector.css';
 
 export interface MctsVisitsSelectorProps {
@@ -30,17 +30,19 @@ export const MctsVisitsSelector: React.FC<MctsVisitsSelectorProps> = ({
       {presets.map(preset => {
         const isCurrent = preset === value;
         const isFast = preset === 1;
+        const isExtreme = isExtremeVisits(preset);
         return (
           <button
             key={preset}
             type="button"
             role="radio"
             aria-checked={isCurrent}
-            className={`mcts-visits-selector__chip${isCurrent ? ' is-current' : ''}${isFast ? ' is-fast' : ''}`}
+            className={`mcts-visits-selector__chip${isCurrent ? ' is-current' : ''}${isFast ? ' is-fast' : ''}${isExtreme ? ' is-extreme' : ''}`}
             onClick={() => onChange(preset)}
           >
             <span className="mcts-visits-selector__chip-value">
-              {isFast && <LuZap aria-hidden />} {preset}
+              {isFast && <LuZap aria-hidden />}
+              {isExtreme && <LuFlame aria-hidden />} {preset}
             </span>
             <span className="mcts-visits-selector__chip-label">{t(visitsLabelKey(preset))}</span>
           </button>

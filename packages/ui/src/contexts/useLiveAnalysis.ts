@@ -124,15 +124,29 @@ export function useLiveAnalysis({
 
   // Run analysis when mode is enabled and engine is ready
   const runAnalysis = useCallback(async () => {
-    // Skip if we're already analyzing this exact position
-    if (analysisGlobals.isAnalyzing && analysisGlobals.analyzingForNodeId === currentNodeId) return;
+    // Skip only if we're already analyzing this exact position with the same
+    // numVisits — otherwise (different node OR different visit count) we must
+    // proceed so the abort below cancels the stale in-flight search.
+    const requestedVisits = aiSettings.numVisits ?? 1;
+    if (
+      analysisGlobals.isAnalyzing &&
+      analysisGlobals.analyzingForNodeId === currentNodeId &&
+      analysisGlobals.analyzingForVisits === requestedVisits
+    ) {
+      return;
+    }
     analysisGlobals.isAnalyzing = true;
     analysisGlobals.analyzingForNodeId = currentNodeId;
+    analysisGlobals.analyzingForVisits = requestedVisits;
 
-    // Abort any in-flight MCTS search
+    // Abort any in-flight MCTS search and reset transient UI state immediately so
+    // the heatmap / top-moves overlay don't show stale data from the previous
+    // position while we set up the new run. The previous run's onProgress
+    // callback is also short-circuited via the requestId check below.
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setMctsProgress(null);
+    setAnalysisResult(null);
 
     if (!analysisMode || isFullGameAnalyzingRef.current) {
       analysisGlobals.isAnalyzing = false;
@@ -294,7 +308,15 @@ export function useLiveAnalysis({
               vertex: [number, number];
             },
             signal: abortController.signal,
-            onProgress: (p: MCTSProgress) => setMctsProgress(p),
+            // Filter progress by requestId. After abort, the engine may keep
+            // emitting events for a few hundred ms while the MCTS loop unwinds
+            // — those are for a position the user has already left. Without
+            // this guard, the heatmap / progress bar would show stale data
+            // attributed to the new position.
+            onProgress: (p: MCTSProgress) => {
+              if (currentRequestId !== analysisGlobals.analysisId) return;
+              setMctsProgress(p);
+            },
             includeMove,
           },
           cacheKey: positions.current.cacheKey,
@@ -308,6 +330,11 @@ export function useLiveAnalysis({
       for (const item of toAnalyze) {
         if (currentRequestId !== analysisGlobals.analysisId) break;
         const result = await engine.analyze(item.signMap, item.options);
+        // Re-check after await: an aborted engine.analyze still resolves with
+        // a partial result. If our request was superseded while we awaited,
+        // discard the result rather than writing it to cache (which would
+        // pollute the cache with low-visit/aborted data).
+        if (currentRequestId !== analysisGlobals.analysisId) break;
         newResults[item.key] = result;
         analysisCache.current.set(item.cacheKey, result);
       }
@@ -398,14 +425,22 @@ export function useLiveAnalysis({
         });
       }
     } catch (err) {
-      if (currentRequestId === analysisGlobals.analysisId) {
-        const message = err instanceof Error ? err.message : String(err);
+      const message = err instanceof Error ? err.message : String(err);
+      // Aborted errors are expected (the user navigated away mid-analysis).
+      // They are surfaced explicitly by the worker so the cache write is
+      // skipped — but they should not appear as a user-facing failure.
+      const isAbort =
+        message === 'aborted' ||
+        message.includes('Analysis aborted') ||
+        (err instanceof Error && err.name === 'AbortedError');
+      if (!isAbort && currentRequestId === analysisGlobals.analysisId) {
         setError(`Analysis failed: ${message}`);
         console.error('[AI] Analysis failed:', err);
       }
     } finally {
       analysisGlobals.isAnalyzing = false;
       analysisGlobals.analyzingForNodeId = null;
+      analysisGlobals.analyzingForVisits = null;
       analysisCompleteRef.current?.();
       analysisCompleteRef.current = null;
       abortControllerRef.current = null;

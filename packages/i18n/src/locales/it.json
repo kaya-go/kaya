@@ -534,8 +534,10 @@
       "balanced": "Bilanciato",
       "deep": "Profondo",
       "veryDeep": "Molto profondo",
+      "extreme": "Estremo",
       "fastDescription": "Istantaneo — usa solo l'intuizione dell'IA. Nessun tasso di vittoria o differenza di punteggio (—).",
-      "deepDescription": "Più lento — l'IA calcola in anticipo per ottenere tasso di vittoria e differenza di punteggio precisi."
+      "deepDescription": "Più lento — l'IA calcola in anticipo per ottenere tasso di vittoria e differenza di punteggio precisi.",
+      "extremeDescription": "Molto lento — per analisi approfondite di posizioni critiche. Tempi di calcolo lunghi."
     },
     "bestMove": "Migliore",
     "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di policy. Policy: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",

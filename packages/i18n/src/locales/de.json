@@ -534,8 +534,10 @@
       "balanced": "Ausgewogen",
       "deep": "Tief",
       "veryDeep": "Sehr tief",
+      "extreme": "Extrem",
       "fastDescription": "Sofort — nutzt nur die Intuition der KI. Keine Gewinnrate oder Score-Differenz (—).",
-      "deepDescription": "Langsamer — die KI rechnet voraus, um präzise Gewinnrate und Score-Differenz zu berechnen."
+      "deepDescription": "Langsamer — die KI rechnet voraus, um präzise Gewinnrate und Score-Differenz zu berechnen.",
+      "extremeDescription": "Sehr langsam — für tiefgehende Analyse kritischer Stellungen. Lange Rechenzeit erwartet."
     },
     "bestMove": "Bester",
     "metricTooltip": "Steintext-Metrik umschalten — Farben zeigen immer Policy-Wahrscheinlichkeit. Policy: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuell, ΔScore: Scoreänderung vs aktuell",

@@ -9,8 +9,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { LuZap } from 'react-icons/lu';
-import { visitsLabelKey } from '../ai/mcts-visits-presets';
+import { LuZap, LuFlame } from 'react-icons/lu';
+import { isExtremeVisits, visitsLabelKey } from '../ai/mcts-visits-presets';
 import './MctsVisitsPopover.css';
 
 interface PopoverPosition {
@@ -29,7 +29,7 @@ export interface MctsVisitsPopoverProps {
   onClose: () => void;
 }
 
-type HintCategory = 'fast' | 'deep';
+type HintCategory = 'fast' | 'deep' | 'extreme';
 
 export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
   open,
@@ -42,7 +42,11 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
   const { t } = useTranslation();
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
-  const categoryOf = (v: number): HintCategory => (v === 1 ? 'fast' : 'deep');
+  const categoryOf = (v: number): HintCategory => {
+    if (v === 1) return 'fast';
+    if (isExtremeVisits(v)) return 'extreme';
+    return 'deep';
+  };
   const [hintCategory, setHintCategory] = useState<HintCategory>(categoryOf(current));
   const setHoverCategory = (next: HintCategory) =>
     setHintCategory(prev => (prev === next ? prev : next));
@@ -152,13 +156,14 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
         {presets.map(value => {
           const isCurrent = value === current;
           const isFast = value === 1;
+          const isExtreme = isExtremeVisits(value);
           return (
             <button
               key={value}
               type="button"
               role="radio"
               aria-checked={isCurrent}
-              className={`mcts-visits-popover__chip${isCurrent ? ' is-current' : ''}${isFast ? ' is-fast' : ''}`}
+              className={`mcts-visits-popover__chip${isCurrent ? ' is-current' : ''}${isFast ? ' is-fast' : ''}${isExtreme ? ' is-extreme' : ''}`}
               onMouseEnter={() => setHoverCategory(categoryOf(value))}
               onFocus={() => setHoverCategory(categoryOf(value))}
               onClick={() => {
@@ -167,7 +172,8 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
               }}
             >
               <span className="mcts-visits-popover__chip-value">
-                {isFast && <LuZap aria-hidden />} {value}
+                {isFast && <LuZap aria-hidden />}
+                {isExtreme && <LuFlame aria-hidden />} {value}
               </span>
               <span className="mcts-visits-popover__chip-label">{t(visitsLabelKey(value))}</span>
             </button>
@@ -177,7 +183,9 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
       <p className="mcts-visits-popover__hint">
         {hintCategory === 'fast'
           ? t('analysisBar.visitsPopover.fastDescription')
-          : t('analysisBar.visitsPopover.deepDescription')}
+          : hintCategory === 'extreme'
+            ? t('analysisBar.visitsPopover.extremeDescription')
+            : t('analysisBar.visitsPopover.deepDescription')}
       </p>
     </div>
   );

@@ -537,8 +537,10 @@
       "balanced": "Balanced",
       "deep": "Deep",
       "veryDeep": "Very deep",
+      "extreme": "Extreme",
       "fastDescription": "Instant — uses the AI's intuition only. No win rate or score deltas (—).",
-      "deepDescription": "Slower — the AI reads ahead to compute precise win rate and score deltas."
+      "deepDescription": "Slower — the AI reads ahead to compute precise win rate and score deltas.",
+      "extremeDescription": "Very slow — for deep analysis of critical positions. Expect long compute times."
     },
     "bestMove": "Best",
     "metricTooltip": "Toggle stone text metric — colors always show policy probability. Policy: move probability, ΔWin%: win rate change vs current, ΔScore: score lead change vs current",

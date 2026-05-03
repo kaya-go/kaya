@@ -277,31 +277,29 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       prevEngineRef.current = engine;
       analysisGlobals.isAnalyzing = false;
       analysisGlobals.analyzingForNodeId = null;
+      analysisGlobals.analyzingForVisits = null;
     }
   }, [engine]);
 
-  // Trigger analysis when conditions are met
+  // Trigger analysis on every intent change (node, settings, mode toggle).
+  //
+  // Always invoke runAnalysis() — never short-circuit via a cache lookup at
+  // this layer. runAnalysis() owns:
+  //   1. Aborting any in-flight MCTS (critical even on cache hit, otherwise
+  //      the previous run keeps emitting progress and consuming the engine)
+  //   2. Resetting the visual state (heatmap, progress bar, top moves)
+  //   3. Fast-pathing cache hits internally
+  //   4. Starting a fresh MCTS only on cache miss
+  //
+  // Putting cache lookup here would skip the abort and leave a zombie MCTS
+  // running for a position the user has already left.
   useEffect(() => {
-    if (analysisMode && engine && !isFullGameAnalyzing && !analysisGlobals.isAnalyzing) {
-      const cached = lookupCachedResult();
-      if (!cached) {
-        // Clear stale results immediately to avoid showing top moves from wrong position
-        // This ensures the UI doesn't show misleading suggestions during inference lag
-        setAnalysisResult(null);
-        runAnalysis();
-      }
+    if (analysisMode && engine && !isFullGameAnalyzing) {
+      runAnalysis();
     } else if (!analysisMode) {
       setAnalysisResult(null);
     }
-  }, [
-    analysisMode,
-    engine,
-    currentNodeId,
-    isFullGameAnalyzing,
-    lookupCachedResult,
-    runAnalysis,
-    setAnalysisResult,
-  ]);
+  }, [analysisMode, engine, currentNodeId, isFullGameAnalyzing, runAnalysis, setAnalysisResult]);
 
   // Compute the next move from the game tree (the actual move played in the game)
   const nextMoveVertex = useMemo(() => {

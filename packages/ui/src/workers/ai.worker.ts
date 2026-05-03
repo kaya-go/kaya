@@ -43,19 +43,36 @@ const processQueue = async () => {
 
       case 'analyze': {
         if (!engine) throw new Error('Engine not initialized');
-        // Create AbortController and progress callback for MCTS
+        // Create AbortController and progress callback for MCTS.
         const ac = new AbortController();
         activeAbortControllers.set(msg.id, ac);
         const optionsWithCallbacks = {
           ...msg.options,
           signal: ac.signal,
           onProgress: (progress: any) => {
+            // Suppress progress emission for aborted requests. The MCTS loop
+            // may emit one or two more progress events between the abort
+            // signal and its actual exit; without this guard those events
+            // arrive at the UI tagged to a request the user already left.
+            if (!activeAbortControllers.has(msg.id)) return;
             self.postMessage({ type: 'mcts_progress', id: msg.id, progress });
           },
         };
         const result = await engine.analyze(msg.signMap, optionsWithCallbacks);
+        // If the request was aborted, the controller has already been removed.
+        // Treat the partial result as discarded — surface an explicit error so
+        // the UI knows not to use it (and not to write it to cache).
+        const wasAborted = !activeAbortControllers.has(msg.id);
         activeAbortControllers.delete(msg.id);
-        self.postMessage({ type: 'analyze_success', id: msg.id, result });
+        if (wasAborted) {
+          self.postMessage({
+            type: 'error',
+            id: msg.id,
+            error: 'aborted',
+          });
+        } else {
+          self.postMessage({ type: 'analyze_success', id: msg.id, result });
+        }
         break;
       }
 
@@ -114,6 +131,30 @@ self.onmessage = (e: MessageEvent<WorkerMessage>) => {
     }
     return;
   }
+
+  // Fire an immediate 0/N progress acknowledgment for analyze requests so the
+  // UI can transition to its "preparing" state right away — without this, the
+  // user sees nothing during the 100ms-2s window between aborting an in-flight
+  // MCTS and the queue actually starting the new run. The MCTS itself will
+  // emit its own initial 0/N event again when it actually starts; the UI
+  // dedupes naturally since the values are identical.
+  if (e.data.type === 'analyze') {
+    const numVisits = (e.data.options?.numVisits as number | undefined) ?? 1;
+    self.postMessage({
+      type: 'mcts_progress',
+      id: e.data.id,
+      progress: {
+        completedVisits: 0,
+        totalVisits: numVisits,
+        bestMove: '',
+        bestMoveVisits: 0,
+        winRate: 0.5,
+        scoreLead: 0,
+        topMoves: [],
+      },
+    });
+  }
+
   messageQueue.push(e);
   processQueue();
 };

@@ -1,4 +1,5 @@
 import { type AISettings } from '../../types/game';
+import { MAX_VISITS } from '../../components/ai/mcts-visits-presets';
 import { Vertex } from '@kaya/goboard';
 
 const AI_SETTINGS_STORAGE_KEY = 'kaya-ai-settings';
@@ -208,7 +209,9 @@ export function loadAISettings(): AISettings {
             ? parsed.saveAnalysisToSgf
             : DEFAULT_AI_SETTINGS.saveAnalysisToSgf,
         numVisits:
-          typeof parsed.numVisits === 'number' && parsed.numVisits >= 1 && parsed.numVisits <= 400
+          typeof parsed.numVisits === 'number' &&
+          parsed.numVisits >= 1 &&
+          parsed.numVisits <= MAX_VISITS
             ? Math.round(parsed.numVisits)
             : DEFAULT_AI_SETTINGS.numVisits,
         webgpuBatchSize:
