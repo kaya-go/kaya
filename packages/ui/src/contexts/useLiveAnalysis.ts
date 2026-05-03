@@ -259,6 +259,11 @@ export function useLiveAnalysis({
       }> = [];
 
       if (positions.prev && !cachedResults.prev) {
+        // prev is only used as a smoothing baseline (averages winRate/scoreLead
+        // with current — see smoothAnalysisResult). The raw NN output is fine
+        // for that; running a full MCTS here would block `current` from starting
+        // for minutes on CPU at high visit counts, with no progress UI since
+        // we don't wire onProgress for prev.
         toAnalyze.push({
           key: 'prev',
           signMap: positions.prev.state.board.signMap,
@@ -266,7 +271,7 @@ export function useLiveAnalysis({
             history: positions.prev.state.history,
             nextToPlay: positions.prev.state.nextToPlay,
             komi,
-            numVisits,
+            numVisits: 1,
             koInfo: positions.prev.state.board._koInfo as {
               sign: number;
               vertex: [number, number];

@@ -268,6 +268,19 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     gameInfo,
   ]);
 
+  // analysisGlobals is module-scope so it survives HMR / page navigation /
+  // provider remounts. Reset it once on provider mount — without this, a
+  // previous session that left isAnalyzing=true (HMR cycle, error mid-run,
+  // etc.) silently blocks the first analysis of the new session via the
+  // dedup check in runAnalysis. This is the "click Analyse but nothing
+  // happens" failure mode.
+  useEffect(() => {
+    analysisGlobals.isAnalyzing = false;
+    analysisGlobals.analyzingForNodeId = null;
+    analysisGlobals.analyzingForVisits = null;
+    analysisGlobals.analysisId++;
+  }, []);
+
   // Reset analysis lock when engine instance changes (e.g., backend switch).
   // Without this, an in-flight analysis on the old (now disposed) engine
   // keeps analysisGlobals.isAnalyzing=true, blocking the new engine.

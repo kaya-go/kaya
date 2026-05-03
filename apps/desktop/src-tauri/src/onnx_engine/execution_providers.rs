@@ -4,7 +4,7 @@ use ort::execution_providers::{CUDAExecutionProvider, DirectMLExecutionProvider}
 #[cfg(target_os = "macos")]
 use ort::execution_providers::CoreMLExecutionProvider;
 #[cfg(target_os = "macos")]
-use ort::ep::coreml::{ModelFormat, SpecializationStrategy};
+use ort::ep::coreml::{ComputeUnits, ModelFormat, SpecializationStrategy};
 use ort::session::builder::SessionBuilder;
 #[cfg(target_os = "android")]
 use ort::execution_providers::NNAPIExecutionProvider;
@@ -164,17 +164,28 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
 
 /// Build an optimized CoreML execution provider (macOS only).
 ///
-/// Key optimizations over bare defaults:
+/// Key options:
 /// - MLProgram format: newer, more performant (requires macOS 12+)
 /// - FastPrediction specialization: optimize for inference latency
 /// - Model caching: avoids recompiling CoreML model on every session load
-/// - Static input shapes: allows CoreML to optimize graph for fixed dimensions
+/// - ComputeUnits::All: lets CoreML pick CPU / GPU / Neural Engine per op
+///
+/// KNOWN LIMITATION (verified 2026-05 against ORT 2.0.0-rc.12 + KataGo
+/// `kata1-b28c512nbt-s11165M`): CoreML EP rejects 100% of the model's 2214
+/// nodes regardless of `static_input_shapes` and `compute_units` settings.
+/// The session is built and runs, but every op falls back to the CPU EP.
+/// Diagnosed via ORT's "Placed N on CPUExecutionProvider" partition log.
+/// We deliberately leave `static_input_shapes` at its default (false) — the
+/// previous code set it to `true`, which made things strictly worse for
+/// other models without unblocking KataGo. Once a newer ort release ships
+/// better op coverage, this EP should start picking up nodes again with no
+/// further changes here.
 #[cfg(target_os = "macos")]
 fn build_coreml_provider(cache_dir: Option<&str>) -> ort::execution_providers::ExecutionProviderDispatch {
     let mut ep = CoreMLExecutionProvider::default()
         .with_model_format(ModelFormat::MLProgram)
         .with_specialization_strategy(SpecializationStrategy::FastPrediction)
-        .with_static_input_shapes(true);
+        .with_compute_units(ComputeUnits::All);
 
     if let Some(dir) = cache_dir {
         let coreml_cache = format!("{}/coreml", dir);

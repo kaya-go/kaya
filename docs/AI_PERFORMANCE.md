@@ -197,6 +197,62 @@ Raw GPU compute tests (single conv2d 384ch 19x19):
 - **onnx2torch SAME_UPPER**: Fixed by preprocessing ONNX model to explicit padding
 - **FP16 mixed dtype**: onnx2torch `.half()` on FP32 model fails on some MatMul nodes
 
+### CoreML EP on macOS (verified 2026-05, ORT 2.0.0-rc.12)
+
+**TL;DR**: native GPU path on Mac currently runs at native-CPU speed for KataGo
+b28-class models. The CoreML EP loads, the session builds, and inferences
+succeed — but every op falls back to the CPU EP at runtime.
+
+**Diagnosis**:
+
+1. ORT's CoreML partitioner runs and produces:
+   `All nodes placed on [CPUExecutionProvider]. Number of nodes: 2214`
+2. `log stream --predicate 'subsystem CONTAINS "coreml"'` is silent during
+   inference, confirming the CoreML runtime is never invoked.
+3. Cause is op-compatibility, not shape: pinning all dynamic axes via
+   `with_dimension_override(...)` (so the input becomes `[8,22,19,19]` with
+   no symbolic dims) does not change the partition outcome.
+
+**Settings tried, all ineffective**:
+
+- `with_static_input_shapes(true)` — strictly worse for other models, no
+  effect on KataGo
+- `with_compute_units(All)` — kept (defensive, no downside)
+- `MLProgram` vs `NeuralNetwork` model format — same outcome
+- `FastPrediction` specialization — same outcome
+- Cleared `~/Library/Application Support/kaya/ep_cache/coreml/` — same
+  outcome on rebuild
+
+**Recommendation**:
+
+- On Mac, manually select `native-cpu` in settings until ORT ships better
+  CoreML op coverage or KataGo exports a CoreML-friendly model variant.
+- Re-test on every `ort` crate bump — code keeps `ComputeUnits::All` set so
+  no further changes are needed once compatibility lands upstream.
+
+### WebGPU on Tauri desktop webview
+
+**TL;DR**: WebGPU on the desktop app falls back to WASM on macOS and Linux.
+
+**Cause**: Tauri uses the OS-native webview. WebGPU support varies:
+
+- **macOS (WKWebView)**: WebGPU is not exposed in WKWebView in current
+  macOS releases. `navigator.gpu` is undefined. The check at
+  `packages/ai-engine/src/onnx-session.ts` logs `"WebGPU not available:
+navigator.gpu not found"` and the provider list is filtered down to WASM.
+- **Linux (WebKitGTK)**: same situation — WebGPU not exposed.
+- **Windows (WebView2 / Edge Chromium)**: WebGPU should work since Edge
+  113+ shipped WebGPU. Untested in our matrix.
+
+**Why we can't easily fix this**: WebGPU exposure in WKWebView/WebKitGTK is
+controlled by the OS-shipped WebKit version, not by Tauri config flags. No
+runtime workaround on our side.
+
+**Workaround**: use the native ONNX path (`native` backend) on desktop —
+that's the whole reason it exists. WebGPU on desktop should be considered
+unavailable by default; users who need GPU on Mac currently hit the CoreML
+limitation above and end up on `native-cpu`.
+
 ## Optimization Paths
 
 ### Path 1: PyTorch Sidecar (WORKING ✅)
