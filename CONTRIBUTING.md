@@ -170,10 +170,11 @@ This copies sound files from `public/sounds/` into the directories expected by T
 
 ## Additional Resources
 
-- 📚 [Developer Guide](docs/DEVELOPER_GUIDE.md) - Architecture and advanced topics
+- 📚 [Architecture](docs/ARCHITECTURE.md) - Design objectives, monorepo layout, key invariants
 - 🎨 [Brand Guide](docs/BRAND_GUIDE.md) - Design guidelines
-- 📱 [Mobile Responsive](docs/MOBILE_RESPONSIVE.md) - Mobile/tablet development
+- 📱 [Responsive](docs/RESPONSIVE.md) - Mobile/tablet breakpoints and touch interactions
 - 🌍 [Internationalization](docs/I18N.md) - Adding translations
+- 🗒️ [Specs](specs/) - Timestamped notes on past decisions and learnings
 
 ---
 

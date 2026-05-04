@@ -1,254 +1,127 @@
-# Kaya Theme System
+# Board themes
 
-This document describes the architecture and implementation of Kaya's board theming system.
+Kaya uses a **JSON-declarative theme format**: themes describe values, not
+CSS. A theme cannot inject styles, run scripts, or load external resources —
+each theme is a `theme.json` plus a folder of bundled images. This makes
+themes safe to add, easy to validate, and identical across web and desktop.
 
-## Overview
+## Layout
 
-Kaya uses a **JSON-based declarative theme format** that is secure, type-safe, and cross-platform compatible. Unlike CSS-based theming systems (e.g., Sabaki), Kaya themes cannot execute arbitrary styles or load external resources, eliminating security risks while providing comprehensive visual customization.
-
-## Architecture Principles
-
-### Security First
-
-- **No arbitrary CSS**: Themes define values, not CSS rules
-- **No external resources**: All assets must be bundled with the theme
-- **Type-safe**: All theme properties are validated against TypeScript types
-- **Allowlisted properties**: Only safe visual properties can be customized
-
-### Built-in Themes Only (v1)
-
-For the initial release, Kaya ships with built-in themes only. This ensures:
-
-- Guaranteed quality and consistency
-- Tested across all platforms (web + desktop)
-- No security vulnerabilities from third-party themes
-- Smaller bundle size through shared asset optimization
-
-## Theme Structure
-
-Each theme is defined in a `theme.json` file with optional image assets:
+The theme system lives in its own package:
+[`packages/themes/`](../packages/themes/).
 
 ```
-packages/ui/src/themes/
-├── index.ts              # Theme registry and exports
-├── types.ts              # TypeScript type definitions
-├── hikaru/               # Default theme
+packages/themes/src/
+├── index.ts              public API
+├── types.ts              TypeScript types
+├── themes.ts             registry: BUILT_IN_THEMES, DEFAULT_THEME_ID
+├── BoardThemeContext.tsx React context + useBoardTheme()
+├── hikaru/               default
 │   ├── theme.json
-│   └── assets/
-│       ├── board.svg
-│       ├── stone-black.svg
-│       └── stone-white.svg
-├── shell-slate/
-│   ├── theme.json
-│   └── assets/
-│       ├── board.png
-│       ├── stone-black.png
-│       └── stone-white.png
-├── yunzi/
-│   ├── theme.json
-│   └── assets/
-│       ├── board.png
-│       ├── stone-black.png
-│       └── stone-white.png
-├── happy-stones/
-│   ├── theme.json
-│   └── assets/
-│       ├── board.png
-│       ├── stone-black.png
-│       └── stone-white.png
-├── kifu/                 # No images (CSS-only theme)
-│   └── theme.json
-└── baduktv/
-    ├── theme.json
-    └── assets/
-        ├── board.png
-        ├── stone-black.png
-        └── stone-white.png
+│   └── assets/{board.svg, stone-black.svg, stone-white.svg}
+├── shell-slate/          traditional Japanese clamshell + slate
+├── yunzi/                Chinese Yunzi biconvex
+├── happy-stones/         friendly cartoon
+├── kifu/                 minimalist B&W (no images)
+└── baduktv/              broadcast-style
 ```
 
-## Theme JSON Schema
+Apps consume via `BoardThemeProvider` and `useBoardTheme()` from
+`@kaya/themes`. Theme assets are copied to each app's `public/` by
+`scripts/copy-assets.ts` — see [ARCHITECTURE.md](ARCHITECTURE.md#assets).
 
-```typescript
+## Schema
+
+```ts
 interface BoardThemeConfig {
-  /** Unique theme identifier */
-  id: string;
-
-  /** Display name for UI */
-  name: string;
-
-  /** Theme description */
+  id: string; // unique identifier
+  name: string; // display name
   description: string;
-
-  /** Theme author */
   author?: string;
 
-  /** Board configuration */
   board: {
-    /** Background color (hex) */
-    backgroundColor: string;
-    /** Border color (hex) */
-    borderColor: string;
-    /** Grid/foreground color (hex) */
-    foregroundColor: string;
-    /** Border width in em units (0 = no border) */
-    borderWidth: number;
-    /** Path to board texture image (relative to theme folder) */
-    texture?: string;
+    backgroundColor: string; // hex
+    borderColor: string; // hex
+    foregroundColor: string; // grid color, hex
+    borderWidth: number; // em (0 = no border)
+    texture?: string; // path relative to theme folder
   };
 
-  /** Stone configuration */
   stones: {
-    black: {
-      /** Path to black stone image (relative to theme folder) */
-      image?: string;
-      /** Fallback background color (hex) */
-      backgroundColor: string;
-      /** Text/marker color on stone (hex) */
-      foregroundColor: string;
-      /** Shadow color (rgba string) */
-      shadowColor: string;
-      /** Shadow X offset in em */
-      shadowOffsetX: string;
-      /** Shadow Y offset in em */
-      shadowOffsetY: string;
-      /** Shadow blur in em */
-      shadowBlur: string;
-    };
-    white: {
-      image?: string;
-      backgroundColor: string;
-      foregroundColor: string;
-      shadowColor: string;
-      shadowOffsetX: string;
-      shadowOffsetY: string;
-      shadowBlur: string;
-    };
+    black: StoneConfig;
+    white: StoneConfig;
   };
 
-  /** Coordinate label color */
   coordColor?: string;
 }
-```
 
-## Built-in Themes
-
-### Hikaru (Default)
-
-The default Kaya theme with clean SVG graphics.
-
-- **Board**: Traditional kaya wood color
-- **Stones**: Clean SVG-based black and white stones
-- **Style**: Modern, crisp appearance
-
-### Shell-Slate
-
-Traditional Japanese stones on a kaya board.
-
-- **Board**: Kaya wood texture
-- **Stones**: Realistic clamshell (white) and slate (black)
-- **Style**: Traditional, elegant
-
-### Yunzi
-
-Chinese Yunzi stones on a kaya board.
-
-- **Board**: Warm kaya wood texture
-- **Stones**: Biconvex Yunzi stones with characteristic luster
-- **Style**: Traditional Chinese aesthetic
-
-### Happy Stones
-
-Playful, friendly stone design.
-
-- **Board**: Warm wood tone
-- **Stones**: Cartoon-style friendly stones
-- **Style**: Casual, approachable
-
-### Kifu
-
-Minimalist black and white style.
-
-- **Board**: Plain background with clean grid
-- **Stones**: Simple flat circles
-- **Style**: Document/record style, good for printing
-
-### BadukTV
-
-Broadcast-style appearance inspired by Korean Go TV.
-
-- **Board**: Professional broadcast look
-- **Stones**: Clear, high-contrast stones
-- **Style**: TV broadcast aesthetic
-
-## Implementation Details
-
-### Theme Loading
-
-1. Themes are loaded from the theme registry at startup
-2. The active theme ID is stored in localStorage
-3. Theme CSS custom properties are applied to the document root
-4. Images are loaded as data URLs for offline support
-
-### CSS Custom Properties
-
-Themes are applied via CSS custom properties on `.shudan-goban`:
-
-```css
-.shudan-goban {
-  --shudan-board-border-width: 0.15em;
-  --shudan-board-border-color: #ca933a;
-  --shudan-board-background-color: #f1b458;
-  --shudan-board-foreground-color: #5e2e0c;
-  --shudan-black-background-color: #222;
-  --shudan-black-foreground-color: #eee;
-  --shudan-white-background-color: #eee;
-  --shudan-white-foreground-color: #222;
-  --shudan-coord-color: rgba(94, 46, 12, 0.8);
+interface StoneConfig {
+  image?: string; // optional override
+  backgroundColor: string; // hex
+  foregroundColor: string; // marker text color, hex
+  shadowColor: string; // rgba string
+  shadowOffsetX: string; // em
+  shadowOffsetY: string; // em
+  shadowBlur: string; // em
 }
 ```
 
-### Stone Image Overrides
+Allowlisted properties only. Anything not in this schema can't be set.
 
-When a theme provides stone images, they override the default SVG stones:
+## Built-in themes
 
-```css
-[data-board-theme='yunzi'] .shudan-stone_black {
-  background-image: url('/assets/themes/yunzi/stone-black.png');
-}
-```
+| ID                 | Stones | Style                                  |
+| ------------------ | ------ | -------------------------------------- |
+| `hikaru` (default) | SVG    | Clean, modern                          |
+| `shell-slate`      | PNG    | Traditional Japanese clamshell + slate |
+| `yunzi`            | PNG    | Chinese Yunzi biconvex                 |
+| `happy-stones`     | PNG    | Friendly cartoon                       |
+| `kifu`             | none   | Flat B&W, document style               |
+| `baduktv`          | PNG    | TV broadcast aesthetic                 |
 
-## Adding New Built-in Themes
+## How a theme is applied
 
-1. Create a new folder under `packages/ui/src/themes/`
-2. Add `theme.json` with the theme configuration
-3. Add any image assets to `assets/` subfolder
-4. Register the theme in `packages/ui/src/themes/index.ts`
-5. Add theme assets to the build copy script
-6. Add i18n translations for the theme name/description
+1. The active theme ID is persisted in `localStorage`.
+2. `BoardThemeProvider` resolves it through `getThemeById()` from
+   `@kaya/themes/themes.ts`.
+3. CSS custom properties are written on the `.shudan-goban` element:
 
-## Future Considerations
+   ```css
+   .shudan-goban {
+     --shudan-board-border-width: 0.15em;
+     --shudan-board-border-color: #ca933a;
+     --shudan-board-background-color: #f1b458;
+     --shudan-board-foreground-color: #5e2e0c;
+     --shudan-black-background-color: #222;
+     --shudan-black-foreground-color: #eee;
+     --shudan-white-background-color: #eee;
+     --shudan-white-foreground-color: #222;
+     --shudan-coord-color: rgba(94, 46, 12, 0.8);
+   }
+   ```
 
-### User-Loadable Themes (v2+)
+4. Stone images, when provided, are scoped via `[data-board-theme=...]`
+   attribute selectors so they don't leak between themes.
 
-If user themes are added in the future:
+Stone CSS lives in [`packages/shudan/src/goban.css`](../packages/shudan/src/goban.css).
 
-1. Themes will be loaded from a `.kaya-themes` folder
-2. All assets must be bundled (no external URLs)
-3. JSON schema validation will reject invalid themes
-4. Image size limits will be enforced (max 2MB per image)
-5. Only PNG/JPG/SVG formats will be allowed
+## Adding a built-in theme
 
-### Theme Conversion Tool
+1. Create `packages/themes/src/<id>/theme.json` plus optional
+   `assets/` folder.
+2. Register it in `packages/themes/src/themes.ts`
+   (`BUILT_IN_THEMES` + the appropriate ID lists).
+3. Add the theme assets to the copy step (`scripts/copy-assets.ts`) so
+   both apps ship them.
+4. Add display name + description translations under
+   `themes.<id>` in every locale.
 
-A tool could be provided to convert Sabaki `.asar` themes to Kaya format by:
+## Constraints (deliberate)
 
-1. Extracting the archive
-2. Parsing `styles.css` for CSS custom property values
-3. Copying image assets
-4. Generating a `theme.json` file
-
-## Related Files
-
-- [packages/ui/src/themes/](../packages/ui/src/themes/) - Theme definitions
-- [packages/ui/src/contexts/BoardThemeContext.tsx](../packages/ui/src/contexts/BoardThemeContext.tsx) - Theme context provider
-- [packages/shudan/src/goban.css](../packages/shudan/src/goban.css) - Board CSS with theme variables
+- **No arbitrary CSS** — values only, no rules. Themes can't break out
+  of the board container.
+- **No external URLs** — `image` paths must resolve inside the theme
+  folder. Bundled or nothing.
+- **No third-party themes (yet)** — built-in only. User-loadable themes
+  are out of scope until v2; if/when that lands it'll go through schema
+  validation, size limits (≤ 2 MB per image), and a PNG/JPG/SVG allowlist.

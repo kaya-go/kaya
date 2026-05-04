@@ -15,7 +15,7 @@
    - Mobile and tablet screens (portrait orientation)
    - Landscape orientation on mobile and tablet devices
 
-   Refer to [MOBILE_RESPONSIVE.md](docs/MOBILE_RESPONSIVE.md) for breakpoints and implementation patterns.
+   Refer to [RESPONSIVE.md](docs/RESPONSIVE.md) for breakpoints and implementation patterns.
 
 4. **Internationalization (i18n)** - All user-facing strings **must** be localized:
    - Use translation keys via `useTranslation()` hook from `react-i18next`
@@ -24,12 +24,13 @@
    - Regularly verify all translation files have complete coverage
    - Never hardcode user-visible text in components
 
-5. **Documentation Maintenance** - When making structural changes (adding/removing/moving packages, renaming files, changing architecture), **always update** the relevant documentation files:
-   - `AGENTS.md` - Monorepo layout, architecture points, key patterns
-   - `docs/PROJECT_STATE.md` - Package structure, feature list
-   - `docs/DEVELOPER_GUIDE.md` - Monorepo structure diagram, data flow
-   - `docs/I18N.md` - Translation file locations (if i18n paths change)
-   - Any other doc that references moved/renamed/restructured code
+5. **Documentation Maintenance** - `docs/` is a static snapshot of the project as it is now; `specs/` is the timestamped evolution log (decisions, learnings, things tried).
+   - Update `docs/` when structural facts change: package layout, key invariants, schemas, data flow. Touch:
+     - `AGENTS.md` — monorepo layout, architecture points, key patterns
+     - `docs/ARCHITECTURE.md` — design objectives, package list, invariants
+     - `docs/THEMES.md`, `docs/I18N.md`, `docs/RESPONSIVE.md`, etc. when their domain changes
+   - Add a new file in `specs/` (named `YYYY-MM-DD-kebab-name.md`) when shipping a non-trivial change with rationale, alternatives considered, or learnings worth recording. See [specs/README.md](specs/README.md) for the convention.
+   - Don't write specs for routine refactors. Don't keep status/progress trackers in `docs/`.
 
    Do this proactively — don't wait to be asked.
 
@@ -57,15 +58,20 @@ bun run test:e2e       # E2E tests (Playwright)
 
 ## Documentation Index
 
-- **[PROJECT_STATE.md](docs/PROJECT_STATE.md)** - Current status and features
-- **[DEVELOPER_GUIDE.md](docs/DEVELOPER_GUIDE.md)** - Workflows and debugging
-- **[USER_GUIDE.md](docs/USER_GUIDE.md)** - End-user documentation
-- **[THEMES.md](docs/THEMES.md)** - Board theme system
-- **[ASSET_MANAGEMENT.md](docs/ASSET_MANAGEMENT.md)** - No symlinks! Copy-based assets
-- **[PERFORMANCE.md](docs/PERFORMANCE.md)** - Navigation performance guide
-- **[PERFORMANCE_REPORT.md](docs/PERFORMANCE_REPORT.md)** - Game performance report and move classification
-- **[MOBILE_RESPONSIVE.md](docs/MOBILE_RESPONSIVE.md)** - Mobile/tablet layout and touch interactions
-- **[I18N.md](docs/I18N.md)** - Internationalization guidelines and translation workflow
+Static snapshot:
+
+- **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — design objectives, monorepo layout, key invariants, asset strategy
+- **[docs/THEMES.md](docs/THEMES.md)** — board theme system
+- **[docs/I18N.md](docs/I18N.md)** — translation workflow
+- **[docs/RESPONSIVE.md](docs/RESPONSIVE.md)** — breakpoints and touch interactions
+- **[docs/PERFORMANCE.md](docs/PERFORMANCE.md)** — navigation performance
+- **[docs/AI_ANALYSIS_FORMAT.md](docs/AI_ANALYSIS_FORMAT.md)** — SGF `KA` property
+- **[docs/RELEASE.md](docs/RELEASE.md)** — release workflow
+- **[docs/BRAND_GUIDE.md](docs/BRAND_GUIDE.md)** — visual identity
+
+Evolution log:
+
+- **[specs/](specs/)** — timestamped notes on decisions, alternatives, learnings (start with [specs/README.md](specs/README.md))
 
 ## Architecture
 
