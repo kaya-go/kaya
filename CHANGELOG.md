@@ -2,6 +2,38 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.4] - 2026-05-05
+
+### <!-- 0 -->🚀 Features
+
+- *(ai)* Rework MCTS cancellation and extend visit presets ([4ba346d](https://github.com/kaya-go/kaya/commit/4ba346d5d3e0888786e9c1018b8eef7090c00a7f)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ai)* Unblock MCTS startup on desktop and clean up CoreML config ([14e2ed6](https://github.com/kaya-go/kaya/commit/14e2ed6eae91ae54c0e7508d3947ee4ed013a144)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ai)* Mcts-first architecture with auto-config and unified queue ([#105](https://github.com/kaya-go/kaya/issues/105)) by @hadim
+
+- *(ai)* Unify search-depth controls in one popover ([d9cd176](https://github.com/kaya-go/kaya/commit/d9cd176bac6d3d19acdc602cfaceeebcc5ae7734)) by @hadim
+
+- *(ai)* Use engine winrate, decouple full-game search depth ([fa3d818](https://github.com/kaya-go/kaya/commit/fa3d818d9084d98aa8353535b8eddc2edaa0e785)) by @hadim
+
+### <!-- 3 -->📚 Documentation
+
+- Split static reference (docs/) from evolution log (specs/) ([96381b7](https://github.com/kaya-go/kaya/commit/96381b78076e44cae5d419eebf489fccf4cad55e)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- *(ci)* Bump mozilla-actions/sccache-action from 0.0.9 to 0.0.10 ([#99](https://github.com/kaya-go/kaya/issues/99)) by @dependabot[bot]
+
+### 🙏 Contributors
+
+- @hadim
+- @dependabot[bot]
+- @github-actions[bot]
+
 ## [0.4.3] - 2026-04-25
 
 ### <!-- 0 -->🚀 Features
@@ -16,11 +48,15 @@ All notable changes to this project will be documented in this file.
 
 - *(ui)* Stack metric label below value in analysis bar ([4fc731b](https://github.com/kaya-go/kaya/commit/4fc731b90538a6d0bb33f904672391bae6f21786)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.3 ([b450e04](https://github.com/kaya-go/kaya/commit/b450e04b0924428d09e416eb6ac8395aed836c5f)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @dependabot[bot]
-- @github-actions[bot]
 
 ## [0.4.2] - 2026-04-24
 
