@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { LuChevronDown, LuChevronRight, LuSettings } from 'react-icons/lu';
 import { BackendSelector } from './BackendSelector';
 import { KayaConfigModelList } from './KayaConfigModelList';
-import { MctsVisitsSelector } from './MctsVisitsSelector';
 import type { UseKayaConfigReturn } from './useKayaConfig';
 import './KayaConfigSettings.css';
 
@@ -125,22 +124,6 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
               value={aiSettings.minProb}
               onChange={e => setAISettings({ minProb: parseFloat(e.target.value) })}
               className="ai-slider"
-            />
-          </div>
-
-          {/* Search Visits */}
-          <div className="setting-item setting-item-full">
-            <div className="setting-info">
-              <label htmlFor="num-visits-selector" className="setting-label">
-                {t('aiConfig.numVisits')}
-                <span className="setting-value">{aiSettings.numVisits}</span>
-              </label>
-              <p className="setting-description">{t('aiConfig.numVisitsDescription')}</p>
-            </div>
-            <MctsVisitsSelector
-              id="num-visits-selector"
-              value={aiSettings.numVisits}
-              onChange={visits => setAISettings({ numVisits: visits })}
             />
           </div>
 

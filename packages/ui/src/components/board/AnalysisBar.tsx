@@ -230,9 +230,8 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                     </span>
                   </span>
                   <span className="gameboard-visits-button__depth" aria-hidden>
-                    {VISITS_PRESETS.map((preset, idx) => {
-                      const currentIdx = VISITS_PRESETS.indexOf(configuredNumVisits);
-                      const active = currentIdx >= 0 && idx <= currentIdx;
+                    {VISITS_PRESETS.map(preset => {
+                      const active = configuredNumVisits >= preset;
                       return (
                         <span
                           key={preset}

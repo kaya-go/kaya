@@ -76,11 +76,30 @@ a compact status pill near the analysis panel:
 Manual override moves under **Advanced / Diagnostics** for power users and
 bug reports.
 
-### 3. Visit count: 12 round-number presets
+### 3. Visit count: chips + log slider + custom input, all in one popover
 
-Existing chip selector (1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000) already covers the user-requested round-number scale (5/10/100,
-not powers of 2). No change needed; left as-is. Large searches remain
-reachable via the higher chips.
+Replace the 12-chip wall with **three synchronized controls** in the
+analysis-bar popover above the goban:
+
+| ⚡ Fast | Balanced | Deep | 🔥 Extreme |
+| ------- | -------- | ---- | ---------- |
+| 1       | 50       | 500  | 2500       |
+
+Below the chips, a **log-scale slider** (1 → 50000) and a **numeric input**
+sit side by side. All three controls reflect and drive the same value:
+
+- Click a chip → snaps to a preset
+- Drag the slider → smooth scrubbing on log scale, snapped to "nice"
+  rounding (1-2 sig figs) so the value lands on readable numbers
+- Type in the input → exact custom value, clamped to `[1, 50000]`
+
+The duplicate "Search Visits" row in `AISettings` is **removed**; the
+above-goban popover is now the single place to set search depth.
+
+This replaces both the original 12-preset selector (1, 5, 10, 25, 50, 100,
+250, 500, 1000, 2500, 5000, 10000) and the brief intermediate version that
+had a separate custom input in `AISettings`. The unified popover with all
+three controls is more discoverable and more elegant.
 
 ### 4. Heatmap metrics — keep all three
 

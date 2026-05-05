@@ -135,8 +135,6 @@
     "minProbabilityDescription": "この閾値以下の確率の着手を非表示。",
     "saveAnalysisToSgf": "分析をSGFに保存",
     "saveAnalysisToSgfDescription": "SGF保存時にAI分析データ（勝率、目差、着手候補）を埋め込む。ファイルサイズは増加しますが分析結果を保持。",
-    "numVisits": "探索回数",
-    "numVisitsDescription": "一手あたりのMCTSシミュレーション回数。1 = ポリシーのみ（最速）。値が大きいほど着手の質は向上しますが、速度は低下します。強い対局には50–200を推奨。",
     "advancedSettings": "詳細設定",
     "advancedSettingsHint": "上級者向けの手動モデル・バックエンド設定。デフォルトの「Auto」がデバイスに最適なものを選びます。",
     "auto": "自動",
@@ -549,11 +547,12 @@
       "fast": "高速",
       "balanced": "バランス",
       "deep": "深い",
-      "veryDeep": "非常に深い",
       "extreme": "超深層",
       "fastDescription": "瞬時 — AIの直感のみを使用。勝率や目差は表示されません（—）。",
       "deepDescription": "低速 — AIが先読みして正確な勝率と目差を計算します。",
-      "extremeDescription": "非常に低速 — 重要な局面を徹底的に解析します。計算に長時間かかります。"
+      "extremeDescription": "非常に低速 — 重要な局面を徹底的に解析します。計算に長時間かかります。",
+      "sliderLabel": "探索深さスライダー",
+      "inputLabel": "カスタム探索深さ"
     },
     "bestMove": "最善",
     "metricTooltip": "石のテキスト指標切替 — 色は常にポリシー確率を表示。ポリシー: 着手確率、Δ勝%: 現在局面との勝率差、Δスコア: 現在局面とのスコア差",

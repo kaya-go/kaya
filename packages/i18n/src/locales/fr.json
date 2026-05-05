@@ -135,8 +135,6 @@
     "minProbabilityDescription": "Masquer les coups avec une probabilité inférieure.",
     "saveAnalysisToSgf": "Sauver l'analyse dans le SGF",
     "saveAnalysisToSgfDescription": "Intégrer les données d'analyse IA lors de la sauvegarde. Augmente la taille du fichier.",
-    "numVisits": "Visites de recherche",
-    "numVisitsDescription": "Simulations MCTS par coup. 1 = politique seule (le plus rapide). Des valeurs plus élevées améliorent la qualité des coups au détriment de la vitesse. Utilisez 50–200 pour un jeu plus fort.",
     "advancedSettings": "Avancé",
     "advancedSettingsHint": "Surcharges manuelles du modèle et du backend pour utilisateurs avancés. L'option par défaut « Auto » choisit ce qui convient à votre appareil.",
     "auto": "Auto",
@@ -546,11 +544,12 @@
       "fast": "Rapide",
       "balanced": "Équilibré",
       "deep": "Profond",
-      "veryDeep": "Très profond",
       "extreme": "Extrême",
       "fastDescription": "Instantané — utilise uniquement l'intuition de l'IA. Pas de taux de victoire ni de différence de score (—).",
       "deepDescription": "Plus lent — l'IA anticipe pour calculer un taux de victoire et une différence de score précis.",
-      "extremeDescription": "Très lent — pour une analyse approfondie de positions critiques. Temps de calcul élevé."
+      "extremeDescription": "Très lent — pour une analyse approfondie de positions critiques. Temps de calcul élevé.",
+      "sliderLabel": "Curseur de profondeur de recherche",
+      "inputLabel": "Profondeur de recherche personnalisée"
     },
     "bestMove": "Meilleur",
     "metricTooltip": "Changer le texte sur les pierres — les couleurs montrent toujours la probabilité de politique. Politique : probabilité, ΔVict% : variation du taux de victoire vs actuel, ΔScore : variation du score vs actuel",

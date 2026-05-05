@@ -135,8 +135,6 @@
     "minProbabilityDescription": "이 임계값 이하 확률의 착수는 숨깁니다.",
     "saveAnalysisToSgf": "분석을 SGF에 저장",
     "saveAnalysisToSgfDescription": "SGF 저장 시 AI 분석 데이터(승률, 목차, 착수 후보)를 포함합니다. 파일 크기는 증가하지만 분석 결과가 보존됩니다.",
-    "numVisits": "탐색 횟수",
-    "numVisitsDescription": "수당 MCTS 시뮬레이션 횟수. 1 = 정책만 사용(가장 빠름). 값이 높을수록 수 품질이 향상되지만 속도가 느려집니다. 강한 대국에는 50–200을 사용하세요.",
     "advancedSettings": "고급 설정",
     "advancedSettingsHint": "고급 사용자용 수동 모델 및 백엔드 재정의. 기본값 ‚자동‘은 사용자의 장치에 가장 적합한 옵션을 선택합니다.",
     "auto": "자동",
@@ -549,11 +547,12 @@
       "fast": "빠름",
       "balanced": "균형",
       "deep": "깊이",
-      "veryDeep": "매우 깊이",
       "extreme": "최대 심도",
       "fastDescription": "즉시 — AI의 직관만 사용합니다. 승률이나 집 차이가 표시되지 않습니다(—).",
       "deepDescription": "느림 — AI가 미리 읽어 정확한 승률과 집 차이를 계산합니다.",
-      "extremeDescription": "매우 느림 — 중요한 국면을 깊이 분석합니다. 계산 시간이 오래 걸립니다."
+      "extremeDescription": "매우 느림 — 중요한 국면을 깊이 분석합니다. 계산 시간이 오래 걸립니다.",
+      "sliderLabel": "탐색 깊이 슬라이더",
+      "inputLabel": "사용자 지정 탐색 깊이"
     },
     "bestMove": "최선",
     "metricTooltip": "돌 텍스트 지표 전환 — 색상은 항상 정책 확률 표시. 정책: 수 확률, Δ승%: 현재 대비 승률 변화, Δ점수: 현재 대비 점수 변화",

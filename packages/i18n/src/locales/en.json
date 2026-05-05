@@ -135,8 +135,6 @@
     "minProbabilityDescription": "Hide moves with probability below this threshold.",
     "saveAnalysisToSgf": "Save Analysis to SGF",
     "saveAnalysisToSgfDescription": "Embed AI analysis data (win rate, score, move suggestions) when saving SGF files. Increases file size but preserves your analysis.",
-    "numVisits": "Search Visits",
-    "numVisitsDescription": "MCTS simulations per move. 1 = policy-only (fastest). Higher values improve move quality at the cost of speed. Use 50–200 for stronger play.",
     "advancedSettings": "Advanced",
     "advancedSettingsHint": "Manual model and backend overrides for power users. The default ‘Auto’ chooses what's best for your device.",
     "auto": "Auto",
@@ -549,11 +547,12 @@
       "fast": "Fast",
       "balanced": "Balanced",
       "deep": "Deep",
-      "veryDeep": "Very deep",
       "extreme": "Extreme",
       "fastDescription": "Instant — uses the AI's intuition only. No win rate or score deltas (—).",
       "deepDescription": "Slower — the AI reads ahead to compute precise win rate and score deltas.",
-      "extremeDescription": "Very slow — for deep analysis of critical positions. Expect long compute times."
+      "extremeDescription": "Very slow — for deep analysis of critical positions. Expect long compute times.",
+      "sliderLabel": "Search depth slider",
+      "inputLabel": "Custom search depth"
     },
     "bestMove": "Best",
     "metricTooltip": "Toggle stone text metric — colors always show policy probability. Policy: move probability, ΔWin%: win rate change vs current, ΔScore: score lead change vs current",
