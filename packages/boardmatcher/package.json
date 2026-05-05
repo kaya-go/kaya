@@ -1,6 +1,6 @@
 {
   "name": "@kaya/boardmatcher",
-  "version": "0.4.4",
+  "version": "0.4.5-dev",
   "description": "Pattern matching on Go boards (adapted from Sabaki boardmatcher)",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

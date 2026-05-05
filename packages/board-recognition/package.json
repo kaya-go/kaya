@@ -1,6 +1,6 @@
 {
   "name": "@kaya/board-recognition",
-  "version": "0.4.4",
+  "version": "0.4.5-dev",
   "description": "Go board recognition from photos",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
