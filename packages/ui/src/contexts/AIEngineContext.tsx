@@ -40,6 +40,9 @@ let globalEngine: Engine | null = null;
 let globalQueue: AnalysisQueue | null = null;
 let globalEnginePromise: Promise<Engine> | null = null;
 let globalEngineKey: string | null = null;
+// Captured so the status pill can show backend + reasoning across
+// provider remounts without re-running the probe.
+let globalReadyStatus: EngineStatus | null = null;
 
 export interface AIEngineContextValue {
   // New primary API
@@ -147,7 +150,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [engine, setEngine] = useState<Engine | null>(globalEngine);
   const [queue, setQueue] = useState<AnalysisQueue | null>(globalQueue);
   const [status, setStatus] = useState<EngineStatus>(
-    globalEngine ? buildReadyStatus() : idleStatus
+    globalEngine ? (globalReadyStatus ?? buildReadyStatus()) : idleStatus
   );
   const [nativeUploadProgress, setNativeUploadProgress] = useState<{
     stage: string;
@@ -190,6 +193,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       globalEngine = null;
       globalEnginePromise = null;
       globalEngineKey = null;
+      globalReadyStatus = null;
     }
   }, []);
 
@@ -200,7 +204,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (globalEngine && globalQueue && globalEngineKey === key) {
       setEngine(globalEngine);
       setQueue(globalQueue);
-      setStatus(buildReadyStatus());
+      setStatus(globalReadyStatus ?? buildReadyStatus());
       return;
     }
 
@@ -215,7 +219,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (globalEngine && globalQueue) {
           setEngine(globalEngine);
           setQueue(globalQueue);
-          setStatus(buildReadyStatus());
+          setStatus(globalReadyStatus ?? buildReadyStatus());
         }
       } catch {
         // The original initialization will have already surfaced the error.
@@ -236,6 +240,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         globalEngine = null;
         globalQueue = null;
         globalEnginePromise = null;
+        globalReadyStatus = null;
       }
 
       if (!globalEnginePromise) {
@@ -342,6 +347,15 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             `[AIEngine] ready — backend=${result.activeBackend} precision=${result.inputDataType} model=${modelName || 'custom'}`
           );
 
+          // Capture the ready status (backend + reasoning) so subsequent
+          // mounts/setState calls can show the same pill without re-probing.
+          globalReadyStatus = {
+            phase: 'ready',
+            backend: result.activeBackend,
+            quantization: quant,
+            reasoning: autoPick.reasoning,
+          };
+
           return result.engine;
         })();
       }
@@ -355,12 +369,13 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       setEngine(newEngine);
       setQueue(newQueue);
-      setStatus(buildReadyStatus());
+      setStatus(globalReadyStatus ?? buildReadyStatus());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setStatus({ phase: 'error', message });
       globalEnginePromise = null;
       globalEngineKey = null;
+      globalReadyStatus = null;
       console.error('[AIEngine] Initialization failed:', err);
       showModelErrorRecoveryToast(
         message,

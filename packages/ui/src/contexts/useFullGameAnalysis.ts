@@ -78,6 +78,11 @@ export function useFullGameAnalysis({
     isFullGameAnalyzingRef.current = isFullGameAnalyzing;
   }, [isFullGameAnalyzing]);
 
+  // Monotonic counter — increments on every analyzeFullGame() call so a
+  // newer run that supersedes an older one isn't clobbered by the older
+  // run's finally block.
+  const runCounterRef = useRef(0);
+
   const analyzeFullGame = useCallback(async () => {
     if (!gameTree || currentNodeId === null || currentNodeId === undefined) return;
 
@@ -90,6 +95,9 @@ export function useFullGameAnalysis({
       setPendingFullGameAnalysis(true);
       return;
     }
+
+    const runId = ++runCounterRef.current;
+    const isStale = () => runId !== runCounterRef.current;
 
     setPendingFullGameAnalysis(false);
     setAllAnalyzedMessage(null);
@@ -241,16 +249,19 @@ export function useFullGameAnalysis({
         runtimePrecision: runtimeInfo.inputDataType,
       });
     } catch (err) {
-      if (!isAbort(err)) {
+      if (!isAbort(err) && !isStale()) {
         console.error('[BatchAnalysis] Failed:', err);
         setAllAnalyzedMessage('Analysis failed');
       }
     } finally {
-      setIsFullGameAnalyzing(false);
-      setIsStopping(false);
-      setFullGameETA(null);
-      setPendingFullGameAnalysis(false);
-      lookupCachedResult();
+      // Don't clobber a newer run that started while we were unwinding.
+      if (!isStale()) {
+        setIsFullGameAnalyzing(false);
+        setIsStopping(false);
+        setFullGameETA(null);
+        setPendingFullGameAnalysis(false);
+        lookupCachedResult();
+      }
     }
   }, [
     queue,

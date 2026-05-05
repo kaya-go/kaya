@@ -69,6 +69,11 @@ export function useLiveAnalysis({
 
   const completionRef = useRef<(() => void) | null>(null);
   const waiterRef = useRef<Promise<void>>(Promise.resolve());
+  // Monotonic counter — increments on every runAnalysis() call. The local
+  // copy at the start of a run is compared against this ref before
+  // touching React state in the finally block; if they differ, a newer
+  // run started while we were awaiting and we must not clobber its state.
+  const runCounterRef = useRef(0);
   const waitForCurrentAnalysis = useCallback(() => waiterRef.current, []);
 
   const lookupCachedResult = useCallback((): boolean => {
@@ -139,6 +144,9 @@ export function useLiveAnalysis({
     if (!queue || !analysisMode) return;
     if (!gameTree || currentNodeId === null || currentNodeId === undefined) return;
 
+    const runId = ++runCounterRef.current;
+    const isStale = () => runId !== runCounterRef.current;
+
     setMctsProgress(null);
     setAnalysisResult(null);
     setIsAnalyzing(true);
@@ -192,9 +200,11 @@ export function useLiveAnalysis({
     }
 
     if (!currentPos) {
-      setIsAnalyzing(false);
-      completionRef.current?.();
-      completionRef.current = null;
+      if (!isStale()) {
+        setIsAnalyzing(false);
+        completionRef.current?.();
+        completionRef.current = null;
+      }
       return;
     }
 
@@ -242,7 +252,10 @@ export function useLiveAnalysis({
         }
       }
 
-      // Step 2: current (full MCTS at user visits)
+      // Step 2: current (full MCTS at user visits). Filter progress by
+      // runId — after a preempt the engine may keep emitting events for
+      // a few hundred ms while MCTS unwinds, attributed to a position
+      // the user has already left.
       const currentHandle = queue.submit({
         signMap: currentPos.signMap,
         nextToPlay: currentPos.nextToPlay,
@@ -252,7 +265,10 @@ export function useLiveAnalysis({
         priority: 'live',
         cacheKey: currentPos.cacheKey,
         includeMove,
-        onProgress: setMctsProgress,
+        onProgress: (p: MCTSProgress) => {
+          if (isStale()) return;
+          setMctsProgress(p);
+        },
         extra: { koInfo: currentPos.koInfo },
       });
       const wasCurrentCacheHit = currentHandle.id === '';
@@ -265,6 +281,7 @@ export function useLiveAnalysis({
         throw err;
       }
 
+      if (isStale()) return;
       if (inferences > 0) updateAnalysisCacheSize();
 
       const smoothed = smoothAnalysisResult(currentResult, prevResult);
@@ -289,14 +306,18 @@ export function useLiveAnalysis({
       });
     } catch (err) {
       if (isAbort(err)) return;
+      if (isStale()) return;
       const message = err instanceof Error ? err.message : String(err);
       setError(`Analysis failed: ${message}`);
       console.error('[AI] Analysis failed:', err);
     } finally {
-      setMctsProgress(null);
-      setIsAnalyzing(false);
-      completionRef.current?.();
-      completionRef.current = null;
+      // Only clear UI state if a newer run hasn't already taken over.
+      if (!isStale()) {
+        setMctsProgress(null);
+        setIsAnalyzing(false);
+        completionRef.current?.();
+        completionRef.current = null;
+      }
     }
   }, [
     queue,

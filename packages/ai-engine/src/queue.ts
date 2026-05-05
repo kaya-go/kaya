@@ -219,10 +219,13 @@ export class AnalysisQueue {
     if (drop(this.liveQueue)) return;
     if (drop(this.batchQueue)) return;
     if (this.inFlight && this.inFlight.id === id) {
+      // Mark + abort + reject; let pump's finally clean up inFlight. We
+      // must NOT clear inFlight from here — the suspended pump still
+      // holds it, and racing a new pump while the old await is unwinding
+      // could lead to two concurrent analyses.
+      this.inFlight.preempted = true;
       this.inFlight.controller.abort();
       this.rejectItem(this.inFlight, abortError());
-      this.inFlight = null;
-      void this.pump();
     }
   }
 
@@ -238,10 +241,9 @@ export class AnalysisQueue {
     filterTag(this.liveQueue);
     filterTag(this.batchQueue);
     if (this.inFlight && itemTag(this.inFlight) === tag) {
+      this.inFlight.preempted = true;
       this.inFlight.controller.abort();
       this.rejectItem(this.inFlight, abortError());
-      this.inFlight = null;
-      void this.pump();
     }
   }
 
@@ -249,9 +251,9 @@ export class AnalysisQueue {
     for (const item of this.liveQueue.splice(0)) this.rejectItem(item, abortError());
     for (const item of this.batchQueue.splice(0)) this.rejectItem(item, abortError());
     if (this.inFlight) {
+      this.inFlight.preempted = true;
       this.inFlight.controller.abort();
       this.rejectItem(this.inFlight, abortError());
-      this.inFlight = null;
     }
   }
 
