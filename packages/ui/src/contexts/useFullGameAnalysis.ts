@@ -1,27 +1,33 @@
 /**
- * Hook for full game (batch) AI analysis.
- * Manages batch analysis of all game positions with progress tracking.
+ * Full-game (batch) AI analysis. Walks the game tree, submits all
+ * positions to the AnalysisQueue under the 'full-game' tag, and tracks
+ * progress. Cancellation is via queue.cancelTag('full-game').
+ *
+ * The queue handles serialization, cache reuse, and live preemption
+ * automatically — when the user navigates while a full-game run is in
+ * progress, the queue suspends the batch transparently so the live
+ * analysis can run, then resumes the batch.
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { MutableRefObject } from 'react';
-import type { AnalysisResult } from '@kaya/ai-engine';
+import type { AnalysisQueue, AnalysisRequest, AnalysisResult, Engine } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { SGFProperty } from '../types/game';
-import { WorkerEngine } from '../workers/WorkerEngine';
 import { getPathToNode, boardCache } from '../utils/gameCache';
 import {
   createInitialAnalysisState,
   updateAnalysisState,
   generateAnalysisCacheKey,
 } from '../utils/aiAnalysis';
-import { analysisGlobals } from './ai-analysis-types';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 
+const TAG = 'full-game';
+
 interface UseFullGameAnalysisParams {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  engine: any;
+  queue: AnalysisQueue | null;
+  engine: Engine | null;
   analysisMode: boolean;
   setAnalysisMode: (mode: boolean) => void;
   currentBoard: { signMap: SignMap };
@@ -30,16 +36,21 @@ interface UseFullGameAnalysisParams {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gameInfo: any;
   aiSettings: { numVisits?: number; webgpuBatchSize?: number };
-  analysisCache: MutableRefObject<Map<string, AnalysisResult>>;
   updateAnalysisCacheSize: () => void;
   lookupCachedResult: () => boolean;
   currentNodeIdRef: MutableRefObject<number | string | null | undefined>;
-  setIsAnalyzing: (v: boolean) => void;
-  isFullGameAnalyzingRef: MutableRefObject<boolean>;
   selectedQuantization: ModelQuantization | null;
 }
 
+function isAbort(err: unknown): boolean {
+  if (err instanceof Error) {
+    return err.name === 'AbortError' || /aborted|cancelled/i.test(err.message);
+  }
+  return false;
+}
+
 export function useFullGameAnalysis({
+  queue,
   engine,
   analysisMode,
   setAnalysisMode,
@@ -48,12 +59,9 @@ export function useFullGameAnalysis({
   currentNodeId,
   gameInfo,
   aiSettings,
-  analysisCache,
   updateAnalysisCacheSize,
   lookupCachedResult,
   currentNodeIdRef,
-  setIsAnalyzing,
-  isFullGameAnalyzingRef,
   selectedQuantization,
 }: UseFullGameAnalysisParams) {
   const [isFullGameAnalyzing, setIsFullGameAnalyzing] = useState(false);
@@ -65,12 +73,15 @@ export function useFullGameAnalysis({
   const [allAnalyzedMessage, setAllAnalyzedMessage] = useState<string | null>(null);
   const [pendingFullGameAnalysis, setPendingFullGameAnalysis] = useState(false);
 
-  const stopAnalysisRef = useRef(false);
-
-  // Keep ref in sync with state
+  const isFullGameAnalyzingRef = useRef(false);
   useEffect(() => {
     isFullGameAnalyzingRef.current = isFullGameAnalyzing;
-  }, [isFullGameAnalyzing, isFullGameAnalyzingRef]);
+  }, [isFullGameAnalyzing]);
+
+  // Monotonic counter — increments on every analyzeFullGame() call so a
+  // newer run that supersedes an older one isn't clobbered by the older
+  // run's finally block.
+  const runCounterRef = useRef(0);
 
   const analyzeFullGame = useCallback(async () => {
     if (!gameTree || currentNodeId === null || currentNodeId === undefined) return;
@@ -80,60 +91,49 @@ export function useFullGameAnalysis({
       setAnalysisMode(true);
       return;
     }
-
-    if (!engine) {
+    if (!queue) {
       setPendingFullGameAnalysis(true);
       return;
     }
 
+    const runId = ++runCounterRef.current;
+    const isStale = () => runId !== runCounterRef.current;
+
     setPendingFullGameAnalysis(false);
-    isFullGameAnalyzingRef.current = true;
     setAllAnalyzedMessage(null);
 
-    analysisGlobals.analysisId++;
-    setIsAnalyzing(false);
+    // Drop any previous full-game submissions.
+    queue.cancelTag(TAG);
 
-    if (engine instanceof WorkerEngine) {
-      engine.abortPendingRequests();
-    }
-
-    const boardCacheSize = boardCache.size;
-    if (boardCacheSize > 0) {
-      boardCache.clear();
-    }
+    boardCache.clear();
 
     setIsFullGameAnalyzing(true);
     setFullGameProgress(0);
     setFullGameETA(null);
-    stopAnalysisRef.current = false;
+    setIsStopping(false);
 
     try {
       const historyNodes = getPathToNode(gameTree, currentNodeId);
       const futureNodes = Array.from(gameTree.listNodesVertically(currentNodeId, 1)).slice(1);
       const fullSequence = [...historyNodes, ...futureNodes];
-
       setFullGameTotalMoves(fullSequence.length);
 
       const boardSize = currentBoard.signMap.length;
       const komi = gameInfo?.komi ?? 7.5;
-
-      let state = createInitialAnalysisState(boardSize);
-      const positionsToAnalyze: {
-        index: number;
-        signMap: SignMap;
-        history: typeof state.history;
-        nextToPlay: 'B' | 'W';
-        cacheKey: string;
-        koInfo: { sign: number; vertex: [number, number] };
-      }[] = [];
-
-      // When numVisits > 1, MCTS is sequential per position, so reduce batch size
       const numVisits = aiSettings.numVisits ?? 1;
 
-      for (let i = 0; i < fullSequence.length; i++) {
-        const node = fullSequence[i];
-        state = updateAnalysisState(state, node, i);
+      // Build all positions; queue.peek skips ones already cached at numVisits ≥ required.
+      type Position = {
+        index: number;
+        request: AnalysisRequest;
+      };
 
+      let state = createInitialAnalysisState(boardSize);
+      const positions: Position[] = [];
+      let cachedCount = 0;
+
+      for (let i = 0; i < fullSequence.length; i++) {
+        state = updateAnalysisState(state, fullSequence[i], i);
         const cacheKey = generateAnalysisCacheKey(
           state.board.signMap,
           state.nextToPlay,
@@ -141,183 +141,167 @@ export function useFullGameAnalysis({
           state.history
         );
 
-        // Skip positions that are already cached with enough visits
-        const cached = analysisCache.current.get(cacheKey);
-        if (cached && (cached.visits ?? 1) >= numVisits) {
+        const request: AnalysisRequest = {
+          signMap: state.board.clone().signMap,
+          nextToPlay: state.nextToPlay,
+          komi,
+          history: [...state.history],
+          numVisits,
+          priority: 'batch',
+          tag: TAG,
+          cacheKey,
+          extra: { koInfo: state.board._koInfo },
+        };
+
+        if (queue.peek(request)) {
+          cachedCount++;
           continue;
         }
-
-        positionsToAnalyze.push({
-          index: i,
-          signMap: state.board.clone().signMap,
-          history: [...state.history],
-          nextToPlay: state.nextToPlay,
-          cacheKey,
-          koInfo: state.board._koInfo as { sign: number; vertex: [number, number] },
-        });
+        positions.push({ index: i, request });
       }
 
-      const cachedCount = fullSequence.length - positionsToAnalyze.length;
-      if (positionsToAnalyze.length === 0) {
+      if (positions.length === 0) {
         setAllAnalyzedMessage(`All ${fullSequence.length} positions are already analyzed`);
         setTimeout(() => setAllAnalyzedMessage(null), 3000);
         return;
       }
 
-      let processedCount = cachedCount;
-      const BATCH_SIZE = numVisits > 1 ? 1 : aiSettings.webgpuBatchSize || 8;
-      let totalBatchTime = 0;
-      let totalBatchPositions = 0;
+      let processed = cachedCount;
+      setFullGameProgress(Math.round((processed / fullSequence.length) * 100));
+      setFullGameCurrentMove(processed);
 
-      setFullGameProgress(Math.round((processedCount / fullSequence.length) * 100));
-      setFullGameCurrentMove(processedCount);
+      // GPU-batched policy-only fast path. With MCTS (numVisits>1) batching
+      // is moot — MCTS is sequential per position internally — so submit one
+      // at a time and let the queue serialize.
+      const useBatch = numVisits === 1;
+      const batchSize = useBatch ? aiSettings.webgpuBatchSize || 8 : 1;
 
-      for (let i = 0; i < positionsToAnalyze.length; i += BATCH_SIZE) {
-        if (stopAnalysisRef.current) break;
+      const startTime = performance.now();
+      let totalInferenceTime = 0;
+      let totalInferences = 0;
 
-        const batch = positionsToAnalyze.slice(i, i + BATCH_SIZE);
-        const inputs = batch.map(p => ({
-          signMap: p.signMap,
-          options: {
-            history: p.history,
-            nextToPlay: p.nextToPlay,
-            komi,
-            numVisits,
-            koInfo: p.koInfo,
-          },
-        }));
+      for (let i = 0; i < positions.length; i += batchSize) {
+        const slice = positions.slice(i, i + batchSize);
+        const sliceStart = performance.now();
 
         try {
-          const batchStartTime = performance.now();
-          const results = await engine.analyzeBatch(inputs);
-          const batchTime = performance.now() - batchStartTime;
-
-          totalBatchTime += batchTime;
-          totalBatchPositions += batch.length;
-
-          const posPerSec = (totalBatchPositions / totalBatchTime) * 1000;
-          const remainingPositions = positionsToAnalyze.length - (i + batch.length);
-          const etaSeconds = remainingPositions / posPerSec;
-          const etaStr =
-            etaSeconds < 60
-              ? `${Math.round(etaSeconds)}s`
-              : `${Math.floor(etaSeconds / 60)}m ${Math.round(etaSeconds % 60)}s`;
-          setFullGameETA(remainingPositions > 0 ? etaStr : null);
-
-          // Log batch analysis details
-          const moveRange = batch.map(p => p.index);
-          const firstMove = Math.min(...moveRange);
-          const lastMove = Math.max(...moveRange);
-
-          // Log individual position results
-          const positionDetails = results.map((result: AnalysisResult, idx: number) => {
-            const position = batch[idx];
-            const topMoves = result.moveSuggestions.slice(0, 3).map(m => ({
-              move: m.move,
-              prob: `${(m.probability * 100).toFixed(1)}%`,
-            }));
-            return {
-              move: position.index,
-              nextToPlay: position.nextToPlay,
-              winRate: `${(result.winRate * 100).toFixed(1)}%`,
-              scoreLead: result.scoreLead.toFixed(1),
-              topMoves,
-            };
-          });
-
-          const runtimeInfo = engine?.getRuntimeInfo?.() ?? {};
-          console.log('[AI] Batch analysis:', {
-            moves: batch.length === 1 ? firstMove : `${firstMove}-${lastMove}`,
-            positions: batch.length,
-            durationMs: Math.round(batchTime),
-            msPerMove: Math.round(batchTime / batch.length),
-            progress: `${processedCount + batch.length}/${fullSequence.length}`,
-            eta: remainingPositions > 0 ? etaStr : 'done',
-            backend: runtimeInfo.backend ?? 'unknown',
-            selectedPrecision: selectedQuantization ?? 'unknown',
-            runtimePrecision: runtimeInfo.inputDataType ?? 'unknown',
-            results: positionDetails,
-          });
-
-          results.forEach((result: AnalysisResult, idx: number) => {
-            const position = batch[idx];
-            analysisCache.current.set(position.cacheKey, result);
-
-            const curNodeId = currentNodeIdRef.current;
-            const currentNodeIndex = fullSequence.findIndex(
-              (n: GameTreeNode<SGFProperty>) => String(n.id) === String(curNodeId)
-            );
-            if (position.index === currentNodeIndex) {
-              lookupCachedResult();
+          if (useBatch && slice.length > 1) {
+            const handles = queue.submitBatch(slice.map(p => p.request));
+            await Promise.all(handles.map(h => h.result));
+          } else {
+            for (const p of slice) {
+              const handle = queue.submit(p.request);
+              await handle.result;
             }
-          });
-
-          updateAnalysisCacheSize();
-
-          processedCount += batch.length;
-          setFullGameProgress(Math.round((processedCount / fullSequence.length) * 100));
-          setFullGameCurrentMove(processedCount);
+          }
         } catch (err) {
-          console.error('[BatchAnalysis] Batch failed:', err);
+          if (isAbort(err)) break;
+          console.error('[BatchAnalysis] Slice failed:', err);
           break;
         }
+
+        const sliceDuration = performance.now() - sliceStart;
+        totalInferenceTime += sliceDuration;
+        totalInferences += slice.length;
+
+        // ETA: extrapolate from observed pace.
+        const remaining = positions.length - (i + slice.length);
+        if (remaining > 0 && totalInferenceTime > 0) {
+          const perPosMs = totalInferenceTime / totalInferences;
+          const etaSec = (remaining * perPosMs) / 1000;
+          const etaStr =
+            etaSec < 60
+              ? `${Math.round(etaSec)}s`
+              : `${Math.floor(etaSec / 60)}m ${Math.round(etaSec % 60)}s`;
+          setFullGameETA(etaStr);
+        } else {
+          setFullGameETA(null);
+        }
+
+        processed += slice.length;
+        setFullGameProgress(Math.round((processed / fullSequence.length) * 100));
+        setFullGameCurrentMove(processed);
+        updateAnalysisCacheSize();
+
+        // If the user is currently looking at one of the just-analyzed
+        // positions, refresh the visible result from cache.
+        const curId = currentNodeIdRef.current;
+        const curIdxInSeq = fullSequence.findIndex(
+          (n: GameTreeNode<SGFProperty>) => String(n.id) === String(curId)
+        );
+        if (slice.some(p => p.index === curIdxInSeq)) {
+          lookupCachedResult();
+        }
       }
+
+      const totalDuration = performance.now() - startTime;
+      const runtimeInfo = engine?.getRuntimeInfo?.() ?? {
+        backend: 'unknown',
+        inputDataType: 'unknown',
+      };
+      console.log('[AI] Full-game analysis complete:', {
+        positions: positions.length,
+        cached: cachedCount,
+        durationMs: Math.round(totalDuration),
+        msPerPos: positions.length > 0 ? Math.round(totalDuration / positions.length) : 0,
+        backend: runtimeInfo.backend,
+        selectedPrecision: selectedQuantization ?? 'unknown',
+        runtimePrecision: runtimeInfo.inputDataType,
+      });
     } catch (err) {
-      console.error('[BatchAnalysis] Failed:', err);
-      setAllAnalyzedMessage('Analysis failed');
+      if (!isAbort(err) && !isStale()) {
+        console.error('[BatchAnalysis] Failed:', err);
+        setAllAnalyzedMessage('Analysis failed');
+      }
     } finally {
-      setIsFullGameAnalyzing(false);
-      setIsStopping(false);
-      isFullGameAnalyzingRef.current = false;
-      setFullGameETA(null);
-      setPendingFullGameAnalysis(false);
-      lookupCachedResult();
+      // Don't clobber a newer run that started while we were unwinding.
+      if (!isStale()) {
+        setIsFullGameAnalyzing(false);
+        setIsStopping(false);
+        setFullGameETA(null);
+        setPendingFullGameAnalysis(false);
+        lookupCachedResult();
+      }
     }
   }, [
+    queue,
+    engine,
     gameTree,
     currentNodeId,
     analysisMode,
-    engine,
+    setAnalysisMode,
     currentBoard,
     gameInfo,
     aiSettings.numVisits,
-    analysisCache,
-    lookupCachedResult,
-    setAnalysisMode,
+    aiSettings.webgpuBatchSize,
     updateAnalysisCacheSize,
+    lookupCachedResult,
     currentNodeIdRef,
-    setIsAnalyzing,
-    isFullGameAnalyzingRef,
+    selectedQuantization,
   ]);
 
-  // Handle stop
   const stopFullGameAnalysis = useCallback(() => {
-    if (isFullGameAnalyzing) {
-      stopAnalysisRef.current = true;
-      setIsStopping(true);
-    }
-  }, [isFullGameAnalyzing]);
+    if (!isFullGameAnalyzing || !queue) return;
+    setIsStopping(true);
+    queue.cancelTag(TAG);
+  }, [isFullGameAnalyzing, queue]);
 
-  // Trigger pending full game analysis when engine becomes ready
+  // If user enabled analysis mode and we have a pending request, kick it off.
   useEffect(() => {
-    if (pendingFullGameAnalysis && engine && analysisMode) {
+    if (pendingFullGameAnalysis && queue && analysisMode) {
       analyzeFullGame();
     }
-  }, [pendingFullGameAnalysis, engine, analysisMode, analyzeFullGame]);
+  }, [pendingFullGameAnalysis, queue, analysisMode, analyzeFullGame]);
 
-  /** Reset full game analysis state (e.g., on game change) */
   const resetFullGameState = useCallback(() => {
-    if (isFullGameAnalyzingRef.current) {
-      stopAnalysisRef.current = true;
-      setIsStopping(true);
-    }
+    if (queue) queue.cancelTag(TAG);
     setIsFullGameAnalyzing(false);
     setIsStopping(false);
     setFullGameProgress(0);
     setFullGameCurrentMove(0);
     setFullGameTotalMoves(0);
     setFullGameETA(null);
-  }, [isFullGameAnalyzingRef]);
+  }, [queue]);
 
   return {
     isFullGameAnalyzing,

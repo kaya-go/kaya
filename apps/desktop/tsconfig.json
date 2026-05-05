@@ -19,7 +19,6 @@
     { "path": "../../packages/goboard" },
     { "path": "../../packages/sgf" },
     { "path": "../../packages/gametree" },
-    { "path": "../../packages/shudan" },
-    { "path": "../../packages/gtp" }
+    { "path": "../../packages/shudan" }
   ]
 }

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuSettings } from 'react-icons/lu';
+import { LuChevronDown, LuChevronRight, LuSettings } from 'react-icons/lu';
 import { BackendSelector } from './BackendSelector';
 import { KayaConfigModelList } from './KayaConfigModelList';
 import { MctsVisitsSelector } from './MctsVisitsSelector';
@@ -52,6 +52,12 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
   webnnAvailable,
 }) => {
   const { t } = useTranslation();
+  // Auto-expand Advanced if user has a non-auto backend stored — they're
+  // already off the happy path, surface the override they're using.
+  const [advancedOpen, setAdvancedOpen] = useState(
+    aiSettings.backend !== undefined && aiSettings.backend !== 'auto'
+  );
+  const showBatchSlider = aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn';
 
   return (
     <>
@@ -80,43 +86,6 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
         </div>
 
         <div className="settings-list">
-          {/* Backend Selection + Batch Size - Full width */}
-          <div className="setting-item setting-item-full">
-            <div className="setting-info">
-              <label className="setting-label">{t('aiConfig.inferenceBackend')}</label>
-              <p className="setting-description">{t('aiConfig.inferenceBackendDescription')}</p>
-            </div>
-            <BackendSelector
-              value={aiSettings.backend}
-              onChange={backend => setAISettings({ backend })}
-              isLinuxDesktop={isLinuxDesktop}
-              pytorchAvailable={pytorchAvailable}
-              webnnAvailable={webnnAvailable}
-            />
-            <div
-              className={`batch-size-setting${aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn' ? '' : ' batch-size-disabled'}`}
-            >
-              <div className="setting-info">
-                <label htmlFor="webgpu-batch-slider" className="setting-label">
-                  {t('aiConfig.webgpuBatchSize')}
-                  <span className="setting-value">{aiSettings.webgpuBatchSize}</span>
-                </label>
-                <p className="setting-description">{t('aiConfig.webgpuBatchSizeDescription')}</p>
-              </div>
-              <input
-                id="webgpu-batch-slider"
-                type="range"
-                min="1"
-                max="16"
-                step="1"
-                value={aiSettings.webgpuBatchSize}
-                onChange={e => setAISettings({ webgpuBatchSize: parseInt(e.target.value) })}
-                className="ai-slider"
-                disabled={aiSettings.backend !== 'webgpu' && aiSettings.backend !== 'webnn'}
-              />
-            </div>
-          </div>
-
           {/* Max Top Moves */}
           <div className="setting-item">
             <div className="setting-info">
@@ -198,6 +167,63 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
                 <span className="toggle-switch-handle" />
               </button>
             </div>
+          </div>
+
+          {/* Advanced disclosure: backend override + WebGPU batch size */}
+          <div className="setting-item setting-item-full ai-advanced-section">
+            <button
+              type="button"
+              className="ai-advanced-toggle"
+              aria-expanded={advancedOpen}
+              onClick={() => setAdvancedOpen(o => !o)}
+            >
+              {advancedOpen ? <LuChevronDown /> : <LuChevronRight />}
+              <span>{t('aiConfig.advancedSettings')}</span>
+            </button>
+            {!advancedOpen && (
+              <p className="setting-description ai-advanced-hint">
+                {t('aiConfig.advancedSettingsHint')}
+              </p>
+            )}
+            {advancedOpen && (
+              <div className="ai-advanced-body">
+                <div className="setting-info">
+                  <label className="setting-label">{t('aiConfig.inferenceBackend')}</label>
+                  <p className="setting-description">{t('aiConfig.inferenceBackendDescription')}</p>
+                </div>
+                <BackendSelector
+                  value={aiSettings.backend}
+                  onChange={backend => setAISettings({ backend })}
+                  isLinuxDesktop={isLinuxDesktop}
+                  pytorchAvailable={pytorchAvailable}
+                  webnnAvailable={webnnAvailable}
+                />
+                <div
+                  className={`batch-size-setting${showBatchSlider ? '' : ' batch-size-disabled'}`}
+                >
+                  <div className="setting-info">
+                    <label htmlFor="webgpu-batch-slider" className="setting-label">
+                      {t('aiConfig.webgpuBatchSize')}
+                      <span className="setting-value">{aiSettings.webgpuBatchSize}</span>
+                    </label>
+                    <p className="setting-description">
+                      {t('aiConfig.webgpuBatchSizeDescription')}
+                    </p>
+                  </div>
+                  <input
+                    id="webgpu-batch-slider"
+                    type="range"
+                    min="1"
+                    max="16"
+                    step="1"
+                    value={aiSettings.webgpuBatchSize}
+                    onChange={e => setAISettings({ webgpuBatchSize: parseInt(e.target.value) })}
+                    className="ai-slider"
+                    disabled={!showBatchSlider}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -110,20 +110,21 @@ kaya/
 
 **2. AI Engine Lifecycle** (`packages/ui/src/contexts/AIEngineContext.tsx`)
 
-- Singleton engine managed via `AIEngineProvider` / `useAIEngine()` hook
-- Runs in Web Worker (web) or native Rust ONNX Runtime (desktop)
-- Automatic GPU→WASM fallback: warm-up validation detects silent WebGPU failures, runtime try-catch catches thrown GPU errors; both reinitialize with WASM and show a toast notification
-- Desktop: GPU→CPU fallback for native ONNX engine
-- Tracks model quantization (`selectedQuantization`) and native upload progress
-- Dispose engine to free resources when disabled
+- Singleton engine + `AnalysisQueue` managed via `AIEngineProvider` / `useAIEngine()`
+- Default backend `'auto'`: [`probeEnvironment`](packages/ai-engine/src/auto-config.ts) + [`pickConfig`](packages/ai-engine/src/auto-config.ts) detect Tauri / WebGPU / shader-f16 / PyTorch sidecar at mount and return a backend chain plus a one-line reasoning string
+- Status surfaced as a single discriminated union `EngineStatus` (idle / probing / loading-model / initializing / ready / error) — the [`AIStatusPill`](packages/ui/src/components/ai/AIStatusPill.tsx) reads it directly
+- Fallback chain runner extracted into [`engineChain.ts`](packages/ui/src/contexts/ai/engineChain.ts) with warm-up validation (catches silent WebGPU/CoreML fp16 failures); model loading helpers in [`engineLoader.ts`](packages/ui/src/contexts/ai/engineLoader.ts)
+- Manual overrides (Backend selector, WebGPU batch size) live behind the **Advanced** disclosure in `KayaConfigAnalysisTab`
 
 **2b. AI Analysis & MCTS** (`packages/ui/src/contexts/AIAnalysisContext.tsx`)
 
-- MCTS search with live progress reporting (visit count, top moves, win rate)
+- All analysis goes through one [`AnalysisQueue`](packages/ai-engine/src/queue.ts): priority lanes (live preempts batch transparently), monotonic LRU cache shared with `GameTreeContext.analysisCache` (so SGF `KA` persistence keeps working), unified cancellation via `cancel(id)` / `cancelTag('full-game')`
+- `useLiveAnalysis` and `useFullGameAnalysis` are thin queue submitters — no module-level guard state
 - Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts` command) — zero IPC overhead
-- Web: MCTS runs in Web Worker with batched inference
+- Web: MCTS runs in Web Worker with batched inference; full-game uses `queue.submitBatch()` for the policy-only fast path
 - Heatmap metric toggle: policy / ΔWin% / ΔScore (colors always show policy probability)
 - Next move display: compares played move to AI's top suggestion with rank and delta metrics
+- See [`specs/2026-05-04-ai-analysis-mcts-first.md`](specs/2026-05-04-ai-analysis-mcts-first.md) for the rationale
 
 **3. Asset Management: No Symlinks!**
 

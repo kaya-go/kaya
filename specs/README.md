@@ -37,3 +37,4 @@ link forward to the replacement. Don't delete history.
 | 2026-05-03 | [CoreML EP falls back to CPU on KataGo b28](2026-05-03-coreml-ep-falls-back-to-cpu.md)                  | reference |
 | 2026-05-03 | [WebGPU unavailable in Tauri webview on macOS/Linux](2026-05-03-webgpu-unavailable-in-tauri-webview.md) | reference |
 | 2026-05-03 | [Native ONNX engine: single session, dynamic axes](2026-05-03-onnx-engine-single-session.md)            | shipped   |
+| 2026-05-04 | [AI analysis: MCTS-first, painless setup, unified queue](2026-05-04-ai-analysis-mcts-first.md)          | shipped   |

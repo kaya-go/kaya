@@ -110,8 +110,17 @@ Web: ONNX Runtime in a Web Worker. Desktop: native Rust ORT or PyTorch
 sidecar (Linux GPU). Lifecycle owned by [`AIEngineContext`](../packages/ui/src/contexts/AIEngineContext.tsx);
 analysis state by [`AIAnalysisContext`](../packages/ui/src/contexts/AIAnalysisContext.tsx).
 
-Fallback chain — if a fast path fails, downgrade transparently and toast
-the user, don't crash:
+The default backend is **`auto`** — at provider mount time
+[`probeEnvironment`](../packages/ai-engine/src/auto-config.ts) detects
+Tauri / WebGPU / shader-f16 / PyTorch-sidecar availability and
+[`pickConfig`](../packages/ai-engine/src/auto-config.ts) returns a
+backend chain plus a one-line reasoning string. The status pill
+([`AIStatusPill`](../packages/ui/src/components/ai/AIStatusPill.tsx))
+surfaces that reasoning to the user. Manual overrides live behind the
+**Advanced** disclosure in the AI settings modal — see
+[`specs/2026-05-04-ai-analysis-mcts-first.md`](../specs/2026-05-04-ai-analysis-mcts-first.md).
+
+Fallback chain — if a fast path fails, downgrade transparently:
 
 - Web: WebGPU → WASM. Warm-up validation catches silent WebGPU failures;
   runtime try/catch catches thrown ones.
@@ -120,7 +129,21 @@ the user, don't crash:
 The engine is disposed when the AI feature is turned off, freeing model
 memory.
 
-### 4. MCTS lives close to the model
+### 4. AnalysisQueue is the single coordination point
+
+Both live (per-position) and batch (full-game) analysis go through one
+[`AnalysisQueue`](../packages/ai-engine/src/queue.ts) owned by
+`AIEngineContext`. It serializes engine access (one in-flight call at a
+time), implements priority lanes (live preempts batch transparently;
+new live also drops in-flight live), centralizes cancellation
+(`cancel(id)` / `cancelTag('full-game')`), and exposes a monotonic LRU
+cache that's shared with `GameTreeContext.analysisCache` so SGF `KA`
+persistence Just Works against the same Map.
+
+`useLiveAnalysis` and `useFullGameAnalysis` are thin submitters — they
+no longer carry their own coordination state.
+
+### 5. MCTS lives close to the model
 
 Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts`
 command), zero IPC overhead per playout. Web: MCTS runs in the Web Worker
