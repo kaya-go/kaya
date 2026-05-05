@@ -76,19 +76,11 @@ a compact status pill near the analysis panel:
 Manual override moves under **Advanced / Diagnostics** for power users and
 bug reports.
 
-### 3. Visit count: presets first, freeform under Advanced
+### 3. Visit count: 12 round-number presets
 
-Three presets visible by default:
-
-| Preset   | Visits | When                                         |
-| -------- | ------ | -------------------------------------------- |
-| Quick    | 5      | Live heatmap while reviewing                 |
-| Balanced | 10     | Default; smooth interactivity, useful policy |
-| Deep     | 100    | Strong analysis on a single position         |
-
-Picked round-number presets per user direction (5/10/100, not powers of 2).
-Freeform slider (1–10 000) stays in **Advanced** for power users — large
-searches still possible.
+Existing chip selector (1, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000) already covers the user-requested round-number scale (5/10/100,
+not powers of 2). No change needed; left as-is. Large searches remain
+reachable via the higher chips.
 
 ### 4. Heatmap metrics — keep all three
 
@@ -139,12 +131,12 @@ the runtime converter becomes redundant.
 For this refactor we **keep it as a safety net** but isolate it so
 removing it later is mechanical. Tracked in [Future](#future-work) below.
 
-### 10. Native Rust MCTS — light pass, no algorithmic changes
+### 10. Native Rust MCTS — deferred
 
-`apps/desktop/src-tauri/src/onnx_engine/mcts.rs` (885 lines) is correct
-and the architecture (single session, dynamic axes, in-process MCTS) is
-already validated by [2026-05-03-onnx-engine-single-session.md](2026-05-03-onnx-engine-single-session.md). Don't change the algorithm.
-Look only for cosmetic / dead-code wins.
+Considered as a light cosmetic pass. After scanning, no obvious
+dead-code markers, and [2026-05-03-onnx-engine-single-session.md](2026-05-03-onnx-engine-single-session.md) explicitly cautions against
+speculative changes there. Skipped to avoid regression risk; revisit
+when there's a specific issue to address.
 
 ## Architecture target
 
