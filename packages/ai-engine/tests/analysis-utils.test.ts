@@ -92,6 +92,24 @@ describe('processAnalysis', () => {
     expect(processAnalysis(10, 'B').currentTurn).toBe('B');
     expect(processAnalysis(10, 'W').currentTurn).toBe('W');
   });
+
+  test('engine winRate is used when provided (instead of tanh approximation)', () => {
+    // tanh-derived winrate at scoreLead=10 ≈ 0.7311; engine value 0.83 should be returned as-is.
+    const result = processAnalysis(10, 'B', 0.83);
+    expect(result.blackWinRate).toBeCloseTo(0.83, 5);
+    expect(result.whiteWinRate).toBeCloseTo(0.17, 5);
+  });
+
+  test('engine winRate is clamped to [0, 1]', () => {
+    expect(processAnalysis(0, 'B', -0.1).blackWinRate).toBe(0);
+    expect(processAnalysis(0, 'B', 1.5).blackWinRate).toBe(1);
+  });
+
+  test('non-finite winRate falls back to tanh approximation', () => {
+    const expected = 0.5 + Math.tanh(10 / 20) / 2;
+    expect(processAnalysis(10, 'B', NaN).blackWinRate).toBeCloseTo(expected, 5);
+    expect(processAnalysis(10, 'B').blackWinRate).toBeCloseTo(expected, 5);
+  });
 });
 
 describe('formatWinRate', () => {

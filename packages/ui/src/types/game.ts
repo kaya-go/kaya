@@ -52,6 +52,17 @@ export interface AISettings {
   /** Number of MCTS visits per position (1 = policy-only, >1 enables tree search) */
   numVisits: number;
   /**
+   * Number of MCTS visits per position for full-game (batch) analysis.
+   *
+   * Decoupled from `numVisits` because the two regimes have different
+   * cost/quality tradeoffs: live analysis runs once per nav and benefits
+   * from deeper search; full-game runs N times (one per move) so a
+   * shallower default keeps total runtime reasonable. Default is 10 — a
+   * compromise that gives meaningful winrate swings without exploding
+   * runtime on a 250-move game.
+   */
+  fullGameNumVisits: number;
+  /**
    * Batch size for WebGPU graph capture (1–8, default 8).
    * Lower values use less GPU memory at the cost of analysis throughput.
    */

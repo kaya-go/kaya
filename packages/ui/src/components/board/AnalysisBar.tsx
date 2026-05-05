@@ -273,7 +273,7 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                     ? t('analysis.stopAnalysis')
                     : pendingFullGameAnalysis
                       ? t('analysis.waitingForEngine')
-                      : t('analysisBar.analyzeFullGameLong')
+                      : `${t('analysisBar.analyzeFullGameLong')} (${aiSettings.fullGameNumVisits ?? 10}× MCTS / position)`
                 }
                 onClick={isFullGameAnalyzing ? stopFullGameAnalysis : analyzeFullGame}
                 disabled={isInitializing || isStopping || pendingFullGameAnalysis}

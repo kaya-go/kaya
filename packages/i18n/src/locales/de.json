@@ -131,6 +131,8 @@
     "wasm": "WASM (Browser-CPU)",
     "maxTopMoves": "Maximale Anzeigeanzahl",
     "maxTopMovesDescription": "Maximale Anzahl der auf dem Brett angezeigten Zugkandidaten.",
+    "fullGameNumVisits": "Suchtiefe Gesamtanalyse",
+    "fullGameNumVisitsDescription": "MCTS-Besuche pro Position bei der Analyse der gesamten Partie. Niedriger = schneller, ungenauere Gewinnrate. Höher = langsamer, aber genauer. Unabhängig von der Live-Suchtiefe in der Analyseleiste.",
     "minProbability": "Minimale Wahrscheinlichkeit",
     "minProbabilityDescription": "Züge mit einer Wahrscheinlichkeit unter diesem Schwellenwert ausblenden.",
     "saveAnalysisToSgf": "Analyse in SGF speichern",

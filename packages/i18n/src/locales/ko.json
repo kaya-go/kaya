@@ -131,6 +131,8 @@
     "wasm": "WASM (브라우저 CPU)",
     "maxTopMoves": "표시할 최대 착수 수",
     "maxTopMovesDescription": "바둑판에 표시할 착수 후보의 최대 개수.",
+    "fullGameNumVisits": "전체 게임 검색 깊이",
+    "fullGameNumVisitsDescription": "전체 게임을 분석할 때 위치당 MCTS 방문 횟수. 낮음 = 빠름, 승률이 부정확. 높음 = 느리지만 정확. 분석 바의 실시간 검색 깊이와는 독립.",
     "minProbability": "최소 확률",
     "minProbabilityDescription": "이 임계값 이하 확률의 착수는 숨깁니다.",
     "saveAnalysisToSgf": "분석을 SGF에 저장",

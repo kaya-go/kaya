@@ -131,6 +131,8 @@
     "wasm": "WASM（ブラウザCPU）",
     "maxTopMoves": "表示する最大着手数",
     "maxTopMovesDescription": "碁盤に表示する着手候補の最大数。",
+    "fullGameNumVisits": "全局解析の探索深さ",
+    "fullGameNumVisitsDescription": "全局を解析する際の各局面の MCTS 訪問回数。低い = 高速だが勝率は不正確。高い = 低速だが正確。解析バーのライブ探索深さとは独立。",
     "minProbability": "最小確率",
     "minProbabilityDescription": "この閾値以下の確率の着手を非表示。",
     "saveAnalysisToSgf": "分析をSGFに保存",

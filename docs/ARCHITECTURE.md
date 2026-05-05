@@ -141,7 +141,12 @@ cache that's shared with `GameTreeContext.analysisCache` so SGF `KA`
 persistence Just Works against the same Map.
 
 `useLiveAnalysis` and `useFullGameAnalysis` are thin submitters — they
-no longer carry their own coordination state.
+no longer carry their own coordination state. They use independent
+visit-count settings (`numVisits` and `fullGameNumVisits`): live
+defaults to deeper search since it runs once per nav, full-game defaults
+to a shallower 10 since it runs N times. Processed analysis (winrate,
+score lead) prefers the engine's own `winRate` (MCTS W/N or value head)
+over a tanh approximation from `scoreLead`.
 
 ### 5. MCTS lives close to the model
 

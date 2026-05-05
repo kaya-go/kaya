@@ -131,6 +131,8 @@
     "wasm": "WASM (CPU del navegador)",
     "maxTopMoves": "Máximo de movimientos a mostrar",
     "maxTopMovesDescription": "Número máximo de movimientos candidatos a mostrar en el tablero.",
+    "fullGameNumVisits": "Profundidad de búsqueda partida completa",
+    "fullGameNumVisitsDescription": "Visitas MCTS por posición al analizar toda la partida. Menor = más rápido, tasa de victoria menos precisa. Mayor = más lento pero más preciso. Independiente de la profundidad de búsqueda en vivo en la barra de análisis.",
     "minProbability": "Probabilidad mínima",
     "minProbabilityDescription": "Ocultar movimientos con probabilidad por debajo de este umbral.",
     "saveAnalysisToSgf": "Guardar análisis en SGF",

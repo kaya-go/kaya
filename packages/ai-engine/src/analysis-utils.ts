@@ -33,30 +33,36 @@ export function calculateCurrentTurn(
 }
 
 /**
- * Process raw analysis results to get consistent win rates and score leads
+ * Process raw analysis results to get consistent win rates and score leads.
  *
- * KataGo convention:
- * - scoreLead is ALWAYS from Black's perspective (positive = Black ahead, negative = White ahead)
- * - winRate from the engine is from the current player's perspective
+ * KataGo convention: scoreLead and winRate from the engine are both already
+ * normalized to Black's perspective (positive scoreLead = Black ahead;
+ * winRate is Black's probability of winning).
  *
- * This function recalculates everything from the scoreLead (which is always reliable)
- * to ensure consistency between win rates and score leads.
+ * Prefers the engine's winRate when supplied — with MCTS this is the
+ * tree-derived W/N, which is more accurate than approximating from
+ * scoreLead. Falls back to a tanh approximation only when no winRate is
+ * available (legacy callers / tests).
  *
- * @param scoreLead - Score lead from Black's perspective (from neural network)
+ * @param scoreLead - Score lead from Black's perspective
  * @param currentTurn - Whose turn it is
+ * @param winRate - Optional Black-perspective winRate from the engine
  * @returns Processed analysis with consistent win rates and score leads
  */
-export function processAnalysis(scoreLead: number, currentTurn: 'B' | 'W'): ProcessedAnalysis {
-  // Score lead is always from Black's perspective
+export function processAnalysis(
+  scoreLead: number,
+  currentTurn: 'B' | 'W',
+  winRate?: number
+): ProcessedAnalysis {
   const blackScoreLead = scoreLead;
   const whiteScoreLead = -scoreLead;
 
-  // Calculate Black's win rate from score lead using tanh approximation
-  // This matches KataGo's internal calculation
-  const blackWinRate = 0.5 + Math.tanh(blackScoreLead / 20) / 2;
+  const blackWinRate =
+    typeof winRate === 'number' && Number.isFinite(winRate)
+      ? Math.max(0, Math.min(1, winRate))
+      : 0.5 + Math.tanh(blackScoreLead / 20) / 2;
   const whiteWinRate = 1 - blackWinRate;
 
-  // Determine who is leading
   const leadingPlayer = blackScoreLead > 0 ? 'B' : 'W';
   const leadAmount = Math.abs(blackScoreLead);
 

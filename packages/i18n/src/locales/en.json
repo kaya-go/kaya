@@ -131,6 +131,8 @@
     "wasm": "WASM (Browser CPU)",
     "maxTopMoves": "Max Top Moves",
     "maxTopMovesDescription": "Maximum number of move suggestions to display on the board.",
+    "fullGameNumVisits": "Full Game Search Depth",
+    "fullGameNumVisitsDescription": "MCTS visits per position when analyzing the entire game. Lower = faster, less precise winrate. Higher = slower but more accurate. Independent from the live search depth in the analysis bar.",
     "minProbability": "Min Probability",
     "minProbabilityDescription": "Hide moves with probability below this threshold.",
     "saveAnalysisToSgf": "Save Analysis to SGF",

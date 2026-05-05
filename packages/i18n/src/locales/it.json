@@ -131,6 +131,8 @@
     "wasm": "WASM (CPU browser)",
     "maxTopMoves": "Massimo mosse da mostrare",
     "maxTopMovesDescription": "Numero massimo di mosse candidate da mostrare sulla tavola.",
+    "fullGameNumVisits": "Profondità ricerca partita completa",
+    "fullGameNumVisitsDescription": "Visite MCTS per posizione durante l'analisi dell'intera partita. Più basso = più veloce, winrate meno preciso. Più alto = più lento ma più preciso. Indipendente dalla profondità di ricerca live nella barra di analisi.",
     "minProbability": "Probabilità minima",
     "minProbabilityDescription": "Nascondere le mosse con probabilità sotto questa soglia.",
     "saveAnalysisToSgf": "Salva analisi in SGF",

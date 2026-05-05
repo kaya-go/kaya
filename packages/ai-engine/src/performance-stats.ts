@@ -44,7 +44,16 @@ export interface PositionData {
 
 /**
  * Generate move statistics from position data.
- * Uses rank and relative probability for classification (suitable for single-pass inference).
+ *
+ * Classification uses rank + relative policy probability rather than
+ * point/winrate swing. Reason: rank is well-defined for any analysis
+ * depth, while swing-based thresholds would need re-tuning per
+ * numVisits regime. Swing values (pointsLost, winRateSwing) are still
+ * computed and exposed for display.
+ *
+ * When analysisAfterMove is null, "after" metrics fall back to the
+ * "before" snapshot — swing/loss become 0 for that move. Aggregations
+ * (mean loss, turning points) treat such moves as no-op.
  */
 export function generateMoveStats(
   position: PositionData,
@@ -58,25 +67,27 @@ export function generateMoveStats(
     return null;
   }
 
-  // Get score leads (for display, not classification)
   const scoreLeadBefore = analysisBeforeMove.scoreLead;
   const scoreLeadAfter = analysisAfterMove?.scoreLead ?? scoreLeadBefore;
 
-  // Calculate points lost/gained (for display only - not reliable for single-pass)
   const pointsLost = calculatePointsLost(scoreLeadBefore, scoreLeadAfter, player);
   const pointsGained = calculatePointsGained(scoreLeadBefore, scoreLeadAfter, player);
 
-  // Win rates (for display)
-  const winRateBefore = scoreLeadToWinRate(scoreLeadBefore);
-  const winRateAfter = scoreLeadToWinRate(scoreLeadAfter);
+  // Prefer engine winRate (MCTS W/N or value head) over the tanh
+  // approximation derived from scoreLead; fall back to the approximation
+  // only when the engine didn't supply one.
+  const winRateBefore =
+    typeof analysisBeforeMove.winRate === 'number' && Number.isFinite(analysisBeforeMove.winRate)
+      ? analysisBeforeMove.winRate
+      : scoreLeadToWinRate(scoreLeadBefore);
+  const winRateAfter = analysisAfterMove
+    ? typeof analysisAfterMove.winRate === 'number' && Number.isFinite(analysisAfterMove.winRate)
+      ? analysisAfterMove.winRate
+      : scoreLeadToWinRate(analysisAfterMove.scoreLead)
+    : winRateBefore;
 
-  // Win rate swing from this player's perspective
-  let winRateSwing: number;
-  if (player === 'B') {
-    winRateSwing = winRateAfter - winRateBefore;
-  } else {
-    winRateSwing = winRateBefore - winRateAfter;
-  }
+  // Win rate swing from this player's perspective (Black wants up, White wants down).
+  const winRateSwing = player === 'B' ? winRateAfter - winRateBefore : winRateBefore - winRateAfter;
 
   // Policy metrics - these are what we use for classification
   const suggestions = analysisBeforeMove.moveSuggestions ?? [];

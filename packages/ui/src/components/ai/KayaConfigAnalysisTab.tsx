@@ -3,6 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { LuChevronDown, LuChevronRight, LuSettings } from 'react-icons/lu';
 import { BackendSelector } from './BackendSelector';
 import { KayaConfigModelList } from './KayaConfigModelList';
+import { MAX_VISITS, MIN_VISITS } from './mcts-visits-presets';
+
+// Quick-pick presets for full-game analysis. The default (10) is the
+// middle option so it's visually anchored.
+const FULL_GAME_PRESETS: readonly number[] = [1, 5, 10, 25, 50];
 import type { UseKayaConfigReturn } from './useKayaConfig';
 import './KayaConfigSettings.css';
 
@@ -104,6 +109,49 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
               onChange={e => setAISettings({ maxTopMoves: parseInt(e.target.value) })}
               className="ai-slider"
             />
+          </div>
+
+          {/* Full Game Search Depth */}
+          <div className="setting-item">
+            <div className="setting-info">
+              <label className="setting-label">
+                {t('aiConfig.fullGameNumVisits')}
+                <span className="setting-value">{aiSettings.fullGameNumVisits}</span>
+              </label>
+              <p className="setting-description">{t('aiConfig.fullGameNumVisitsDescription')}</p>
+            </div>
+            <div className="ai-preset-row">
+              {FULL_GAME_PRESETS.map(preset => {
+                const active = aiSettings.fullGameNumVisits === preset;
+                return (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`ai-preset-chip${active ? ' is-active' : ''}`}
+                    aria-pressed={active}
+                    onClick={() => setAISettings({ fullGameNumVisits: preset })}
+                  >
+                    {preset}
+                  </button>
+                );
+              })}
+              <input
+                id="full-game-visits-input"
+                type="number"
+                min={MIN_VISITS}
+                max={MAX_VISITS}
+                step={1}
+                value={aiSettings.fullGameNumVisits}
+                aria-label={t('aiConfig.fullGameNumVisits')}
+                onChange={e => {
+                  const parsed = Number.parseInt(e.target.value, 10);
+                  if (!Number.isFinite(parsed)) return;
+                  const clamped = Math.min(MAX_VISITS, Math.max(MIN_VISITS, parsed));
+                  setAISettings({ fullGameNumVisits: clamped });
+                }}
+                className={`ai-preset-input${FULL_GAME_PRESETS.includes(aiSettings.fullGameNumVisits) ? '' : ' is-custom'}`}
+              />
+            </div>
           </div>
 
           {/* Min Probability */}

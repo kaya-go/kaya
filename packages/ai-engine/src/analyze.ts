@@ -78,8 +78,10 @@ export async function analyzePosition(
   // Calculate actual turn (needed for correct processing)
   const actualCurrentTurn = rawAnalysis.currentTurn;
 
-  // Process analysis results using utility functions
-  const processed = processAnalysis(rawAnalysis.scoreLead, actualCurrentTurn);
+  // Process analysis results using utility functions. Pass the engine's
+  // winRate so MCTS-derived W/N (or the value head with numVisits=1) is
+  // used directly rather than re-derived from scoreLead.
+  const processed = processAnalysis(rawAnalysis.scoreLead, actualCurrentTurn, rawAnalysis.winRate);
 
   // Count stones on board
   let moveCount = 0;

@@ -162,6 +162,7 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   backend: 'auto',
   saveAnalysisToSgf: true,
   numVisits: 32,
+  fullGameNumVisits: 10,
   webgpuBatchSize: 4,
   heatMapMetric: 'policy',
 };
@@ -214,6 +215,12 @@ export function loadAISettings(): AISettings {
           parsed.numVisits <= MAX_VISITS
             ? Math.round(parsed.numVisits)
             : DEFAULT_AI_SETTINGS.numVisits,
+        fullGameNumVisits:
+          typeof parsed.fullGameNumVisits === 'number' &&
+          parsed.fullGameNumVisits >= 1 &&
+          parsed.fullGameNumVisits <= MAX_VISITS
+            ? Math.round(parsed.fullGameNumVisits)
+            : DEFAULT_AI_SETTINGS.fullGameNumVisits,
         webgpuBatchSize:
           typeof parsed.webgpuBatchSize === 'number' &&
           parsed.webgpuBatchSize >= 1 &&

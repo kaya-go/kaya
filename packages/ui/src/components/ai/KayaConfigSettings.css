@@ -184,6 +184,108 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
+.ai-preset-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-preset-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #333);
+  background-color: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.12s,
+    border-color 0.12s,
+    color 0.12s;
+  text-align: center;
+}
+
+.ai-preset-chip:hover:not(.is-active) {
+  border-color: var(--accent-color, #007bff);
+  color: var(--accent-color, #007bff);
+}
+
+.ai-preset-chip.is-active {
+  background-color: var(--accent-color, #007bff);
+  border-color: var(--accent-color, #007bff);
+  color: #fff;
+}
+
+.ai-preset-input {
+  width: 64px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  background-color: transparent;
+  border: 1px dashed var(--border-color, #ddd);
+  border-radius: 6px;
+  outline: none;
+  transition:
+    border-color 0.12s,
+    color 0.12s;
+}
+
+.ai-preset-input::-webkit-outer-spin-button,
+.ai-preset-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.ai-preset-input {
+  -moz-appearance: textfield;
+}
+
+.ai-preset-input:hover {
+  border-color: var(--accent-color, #007bff);
+}
+
+.ai-preset-input:focus {
+  border-style: solid;
+  border-color: var(--accent-color, #007bff);
+  color: var(--text-primary, #333);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+}
+
+.ai-preset-input.is-custom {
+  border-style: solid;
+  border-color: var(--accent-color, #007bff);
+  color: var(--accent-color, #007bff);
+}
+
+[data-theme='dark'] .ai-preset-chip {
+  background-color: #1a1a1a;
+  border-color: #444;
+  color: #ddd;
+}
+
+[data-theme='dark'] .ai-preset-chip.is-active {
+  background-color: var(--accent-color, #007bff);
+  border-color: var(--accent-color, #007bff);
+  color: #fff;
+}
+
+[data-theme='dark'] .ai-preset-input {
+  border-color: #444;
+  color: #aaa;
+}
+
+[data-theme='dark'] .ai-preset-input:focus {
+  color: #eee;
+}
+
 /* Dark Mode - Settings */
 [data-theme='dark'] .setting-label {
   color: #eee;

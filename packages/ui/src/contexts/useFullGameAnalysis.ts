@@ -35,7 +35,7 @@ interface UseFullGameAnalysisParams {
   currentNodeId: number | string | null | undefined;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gameInfo: any;
-  aiSettings: { numVisits?: number; webgpuBatchSize?: number };
+  aiSettings: { numVisits?: number; fullGameNumVisits?: number; webgpuBatchSize?: number };
   updateAnalysisCacheSize: () => void;
   lookupCachedResult: () => boolean;
   currentNodeIdRef: MutableRefObject<number | string | null | undefined>;
@@ -120,7 +120,9 @@ export function useFullGameAnalysis({
 
       const boardSize = currentBoard.signMap.length;
       const komi = gameInfo?.komi ?? 7.5;
-      const numVisits = aiSettings.numVisits ?? 1;
+      // Full-game uses its own visit setting (default 10) so deep live
+      // search doesn't accidentally make a whole-game pass take hours.
+      const numVisits = aiSettings.fullGameNumVisits ?? aiSettings.numVisits ?? 1;
 
       // Build all positions; queue.peek skips ones already cached at numVisits ≥ required.
       type Position = {
@@ -273,6 +275,7 @@ export function useFullGameAnalysis({
     currentBoard,
     gameInfo,
     aiSettings.numVisits,
+    aiSettings.fullGameNumVisits,
     aiSettings.webgpuBatchSize,
     updateAnalysisCacheSize,
     lookupCachedResult,

@@ -131,6 +131,8 @@
     "wasm": "WASM (CPU navigateur)",
     "maxTopMoves": "Coups max affichés",
     "maxTopMovesDescription": "Nombre maximum de suggestions de coups à afficher.",
+    "fullGameNumVisits": "Profondeur de recherche full game",
+    "fullGameNumVisitsDescription": "Visites MCTS par position lors de l'analyse complète de la partie. Plus bas = plus rapide, winrate moins précis. Plus haut = plus lent mais plus précis. Indépendant de la profondeur de recherche live dans la barre d'analyse.",
     "minProbability": "Probabilité min",
     "minProbabilityDescription": "Masquer les coups avec une probabilité inférieure.",
     "saveAnalysisToSgf": "Sauver l'analyse dans le SGF",

@@ -131,6 +131,8 @@
     "wasm": "WASM（浏览器 CPU）",
     "maxTopMoves": "最多显示着法",
     "maxTopMovesDescription": "棋盘上显示的最大着法建议数量。",
+    "fullGameNumVisits": "全局搜索深度",
+    "fullGameNumVisitsDescription": "分析整局棋时每个位置的 MCTS 访问次数。较低 = 更快，胜率不够精确。较高 = 较慢但更精确。独立于分析栏中的实时搜索深度。",
     "minProbability": "最小概率",
     "minProbabilityDescription": "隐藏概率低于此阈值的着法。",
     "saveAnalysisToSgf": "将分析保存到 SGF",
