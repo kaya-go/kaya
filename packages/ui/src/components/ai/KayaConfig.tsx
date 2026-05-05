@@ -16,6 +16,7 @@ import { useKayaConfig, type UseKayaConfigReturn } from './useKayaConfig';
 import { KayaConfigAnalysisTab } from './KayaConfigAnalysisTab';
 import { KayaConfigThemeTab } from './KayaConfigThemeTab';
 import { KayaConfigDetectionTab } from './KayaConfigDetectionTab';
+import { AIStatusPill } from './AIStatusPill';
 import './KayaConfig.css';
 
 // Game Tab Content (small enough to keep inline)
@@ -121,6 +122,7 @@ export const KayaConfig: React.FC = () => {
           <div className="kaya-config-title">
             <LuSettings className="kaya-config-icon-main" />
             <h2>{t('kayaConfig.title')}</h2>
+            <AIStatusPill className="kaya-config-status-pill" />
           </div>
           <button
             className="kaya-config-close"

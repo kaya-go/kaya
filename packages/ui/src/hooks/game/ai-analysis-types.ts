@@ -44,19 +44,19 @@ export interface QuantizationVariant {
   size: string;
 }
 
-// Base model definitions - exported for UI components
+// Base model definitions - exported for UI components.
+// Single canonical model — picked at refactor 2026-05-04. The previously
+// shipped "strongest" variant (kata1-b28c512nbt-adam-s11165M) is no longer
+// listed; getModelId/parseModelId still understand its IDs so users with
+// stored model selections continue to work, but they're guided toward the
+// latest by recommended/isDefault.
 export const BASE_MODELS: BaseModelDefinition[] = [
-  {
-    name: 'kata1-b28c512nbt-adam-s11165M-d5387M',
-    displayName: 'kata1-b28c512nbt-s11165M',
-    description: 'Strongest network',
-    recommended: true,
-    isDefault: true,
-  },
   {
     name: 'kata1-b28c512nbt-s12043015936-d5616446734',
     displayName: 'kata1-b28c512nbt-s12043M',
     description: 'Latest checkpoint (Dec 2025)',
+    recommended: true,
+    isDefault: true,
   },
 ];
 
@@ -82,21 +82,25 @@ export const QUANTIZATION_OPTIONS: QuantizationVariant[] = [
   },
 ];
 
-// Helper to generate model ID from base model index and quantization
+// Helper to generate model ID from base model index and quantization.
+// The single canonical model uses the 'latest' prefix. The legacy
+// 'strongest' prefix still parses (for back-compat with stored
+// selectedModelId values), and resolves to the same baseModelIndex=0.
 export function getModelId(baseModelIndex: number, quantization: ModelQuantization): string {
-  const prefix = baseModelIndex === 0 ? 'strongest' : 'latest';
+  // baseModelIndex is always 0 in the current single-model lineup.
   const suffix = quantization === 'fp32' ? '' : quantization === 'fp16' ? '-fp16' : '-quant';
-  return `katago-${prefix}${suffix}`;
+  return `katago-latest${suffix}`;
 }
 
-// Helper to parse model ID back to base model index and quantization
+// Helper to parse model ID back to base model index and quantization.
+// Accepts the legacy 'strongest' prefix; both map to baseModelIndex=0.
 export function parseModelId(
   modelId: string
 ): { baseModelIndex: number; quantization: ModelQuantization } | null {
   const match = modelId.match(/^katago-(strongest|latest)(-fp16|-quant)?$/);
   if (!match) return null;
 
-  const baseModelIndex = match[1] === 'strongest' ? 0 : 1;
+  const baseModelIndex = 0;
   const quantization: ModelQuantization =
     match[2] === '-fp16' ? 'fp16' : match[2] === '-quant' ? 'uint8' : 'fp32';
 

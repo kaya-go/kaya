@@ -76,14 +76,18 @@ export function useModelLibrary() {
 
         setModelLibrary(library);
 
-        // Set selected model
-        if (savedSelectedId && library.some(m => m.id === savedSelectedId && m.isDownloaded)) {
-          setSelectedModelIdState(savedSelectedId);
+        // Set selected model. Migrate legacy 'katago-strongest-*' IDs to
+        // their 'katago-latest-*' equivalents — the strongest model was
+        // dropped from the lineup at refactor 2026-05-04.
+        const migratedId = savedSelectedId?.replace(/^katago-strongest/, 'katago-latest') ?? null;
+        if (migratedId && library.some(m => m.id === migratedId && m.isDownloaded)) {
+          setSelectedModelIdState(migratedId);
+          if (migratedId !== savedSelectedId) {
+            await saveSelectedModelId(migratedId);
+          }
         } else {
-          // Default to strongest model if downloaded, otherwise first downloaded
-          const defaultModel =
-            library.find(m => m.predefinedId === 'strongest' && m.isDownloaded) ||
-            library.find(m => m.isDownloaded);
+          // Default to the first downloaded model.
+          const defaultModel = library.find(m => m.isDownloaded);
           if (defaultModel) {
             setSelectedModelIdState(defaultModel.id);
             await saveSelectedModelId(defaultModel.id);
