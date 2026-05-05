@@ -101,6 +101,7 @@ export { SaveStatus } from './components/ui/SaveStatus';
 export { ScoreEstimator } from './components/board/ScoreEstimator';
 export type { ScoreData } from './types/game';
 export { useAIAnalysis } from './components/ai/AIAnalysisOverlay';
+export { AIStatusPill } from './components/ai/AIStatusPill';
 export { AnalysisGraphPanel } from './components/analysis/AnalysisGraphPanel';
 export type { AnalysisGraphPanelProps } from './components/analysis/AnalysisGraphPanel';
 export { AnalysisPanel } from './components/analysis/AnalysisPanel';

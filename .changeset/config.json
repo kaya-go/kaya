@@ -12,7 +12,6 @@
       "@kaya/goboard",
       "@kaya/sgf",
       "@kaya/gametree",
-      "@kaya/gtp",
       "@kaya/shudan",
       "@kaya/boardmatcher",
       "@kaya/deadstones",

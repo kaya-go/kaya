@@ -144,22 +144,18 @@ function isTauriDesktop(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
-// Get default backend based on environment
-function getDefaultBackend(): 'native' | 'webgpu' | 'wasm' {
-  if (isTauriDesktop()) {
-    return 'native';
-  }
-  if (isWebGPUAvailable()) {
-    return 'webgpu';
-  }
-  return 'wasm';
+// Default backend is 'auto' — AIEngineContext probes the host and picks
+// the best chain (see packages/ai-engine/src/auto-config.ts). Explicit
+// values remain available for advanced overrides.
+function getDefaultBackend(): AISettings['backend'] {
+  return 'auto';
 }
 
 // Default AI settings
 const DEFAULT_AI_SETTINGS: AISettings = {
   minProb: 0.01,
   maxTopMoves: 5,
-  backend: 'webgpu', // This will be overridden by loadAISettings
+  backend: 'auto',
   saveAnalysisToSgf: true,
   numVisits: 32,
   webgpuBatchSize: 4,
@@ -180,16 +176,16 @@ export function loadAISettings(): AISettings {
 
       // 'native', 'native-cpu', and 'pytorch' are only valid in Tauri desktop app
       if ((backend === 'native' || backend === 'native-cpu' || backend === 'pytorch') && !isTauri) {
-        console.log(
-          '[AI Settings] Native/PyTorch backend not available on web, falling back to wasm'
-        );
-        backend = 'wasm';
+        console.log('[AI Settings] Native/PyTorch backend not available on web, using auto');
+        backend = 'auto';
       } else if (
-        !['native', 'native-cpu', 'pytorch', 'webgpu', 'webnn', 'webgl', 'wasm'].includes(backend)
+        !['auto', 'native', 'native-cpu', 'pytorch', 'webgpu', 'webnn', 'webgl', 'wasm'].includes(
+          backend
+        )
       ) {
         backend = defaultBackend;
       } else if (backend === 'webgpu' && !hasGPU) {
-        backend = 'wasm';
+        backend = 'auto';
       }
 
       return {

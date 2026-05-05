@@ -21,7 +21,7 @@ import {
   formatProbability,
 } from '../utils/aiAnalysis';
 import { vertexToGTP } from '../utils/gtpUtils';
-import { AIAnalysisContext, analysisGlobals } from './ai-analysis-types';
+import { AIAnalysisContext } from './ai-analysis-types';
 import type { AIAnalysisContextValue, NextMoveInfo } from './ai-analysis-types';
 import { useLiveAnalysis } from './useLiveAnalysis';
 import { useFullGameAnalysis } from './useFullGameAnalysis';
@@ -55,8 +55,9 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     isLoadingSGF,
   } = useGameTree();
 
-  // Get engine from AIEngineContext
+  // Get queue from AIEngineContext (engine kept for runtime info logs only)
   const {
+    queue,
     engine,
     isInitializing,
     error: engineError,
@@ -64,18 +65,13 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     selectedQuantization,
   } = useAIEngine();
 
-  // Shared refs
   const currentNodeIdRef = useRef(currentNodeId);
   useEffect(() => {
     currentNodeIdRef.current = currentNodeId;
   }, [currentNodeId]);
 
-  const isFullGameAnalyzingRef = useRef(false);
-
-  // Live analysis hook
   const {
     isAnalyzing,
-    setIsAnalyzing,
     error,
     setError,
     runAnalysis,
@@ -83,6 +79,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     waitForCurrentAnalysis,
     mctsProgress,
   } = useLiveAnalysis({
+    queue,
     engine,
     analysisMode,
     currentBoard,
@@ -91,14 +88,11 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     moveNumber,
     gameInfo,
     aiSettings,
-    analysisCache,
     updateAnalysisCacheSize,
     setAnalysisResult,
-    isFullGameAnalyzingRef,
     selectedQuantization,
   });
 
-  // Full game analysis hook
   const {
     isFullGameAnalyzing,
     isStopping,
@@ -112,6 +106,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     stopFullGameAnalysis,
     resetFullGameState,
   } = useFullGameAnalysis({
+    queue,
     engine,
     analysisMode,
     setAnalysisMode,
@@ -120,12 +115,9 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     currentNodeId,
     gameInfo,
     aiSettings,
-    analysisCache,
     updateAnalysisCacheSize,
     lookupCachedResult,
     currentNodeIdRef,
-    setIsAnalyzing,
-    isFullGameAnalyzingRef,
     selectedQuantization,
   });
 
@@ -134,26 +126,21 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     updateAnalysisCacheSize();
   }, [updateAnalysisCacheSize, gameId]);
 
-  // Function to clear the analysis cache
   const clearAnalysisCache = useCallback(() => {
-    // Mark as dirty if there was analysis to clear (and saving is enabled)
     if (analysisCache.current.size > 0 && aiSettings.saveAnalysisToSgf) {
       setIsDirty(true);
     }
-    analysisCache.current.clear();
+    // Cancel any in-flight work and clear the shared cache map.
+    queue?.cancelAll();
+    queue?.clearCache();
+    // analysisCache shares the same Map ref as queue.cache; clearCache cleared it.
     updateAnalysisCacheSize();
     setAnalysisResult(null);
-    // Increment analysis ID to invalidate any pending results
-    analysisGlobals.analysisId++;
-    // Clear engine cache as well (e.g. worker cache)
-    if (engine) {
-      engine.clearCache();
-    }
   }, [
     analysisCache,
     updateAnalysisCacheSize,
     setAnalysisResult,
-    engine,
+    queue,
     aiSettings.saveAnalysisToSgf,
     setIsDirty,
   ]);
@@ -268,51 +255,17 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     gameInfo,
   ]);
 
-  // analysisGlobals is module-scope so it survives HMR / page navigation /
-  // provider remounts. Reset it once on provider mount — without this, a
-  // previous session that left isAnalyzing=true (HMR cycle, error mid-run,
-  // etc.) silently blocks the first analysis of the new session via the
-  // dedup check in runAnalysis. This is the "click Analyse but nothing
-  // happens" failure mode.
-  useEffect(() => {
-    analysisGlobals.isAnalyzing = false;
-    analysisGlobals.analyzingForNodeId = null;
-    analysisGlobals.analyzingForVisits = null;
-    analysisGlobals.analysisId++;
-  }, []);
-
-  // Reset analysis lock when engine instance changes (e.g., backend switch).
-  // Without this, an in-flight analysis on the old (now disposed) engine
-  // keeps analysisGlobals.isAnalyzing=true, blocking the new engine.
-  const prevEngineRef = useRef(engine);
-  useEffect(() => {
-    if (prevEngineRef.current !== engine) {
-      prevEngineRef.current = engine;
-      analysisGlobals.isAnalyzing = false;
-      analysisGlobals.analyzingForNodeId = null;
-      analysisGlobals.analyzingForVisits = null;
-    }
-  }, [engine]);
-
   // Trigger analysis on every intent change (node, settings, mode toggle).
-  //
-  // Always invoke runAnalysis() — never short-circuit via a cache lookup at
-  // this layer. runAnalysis() owns:
-  //   1. Aborting any in-flight MCTS (critical even on cache hit, otherwise
-  //      the previous run keeps emitting progress and consuming the engine)
-  //   2. Resetting the visual state (heatmap, progress bar, top moves)
-  //   3. Fast-pathing cache hits internally
-  //   4. Starting a fresh MCTS only on cache miss
-  //
-  // Putting cache lookup here would skip the abort and leave a zombie MCTS
-  // running for a position the user has already left.
+  // The queue handles serialization and cancellation, so we don't need the
+  // module-level guard the old code used. Live preempts batch transparently,
+  // so we no longer suppress live while full-game is running.
   useEffect(() => {
-    if (analysisMode && engine && !isFullGameAnalyzing) {
+    if (analysisMode && queue) {
       runAnalysis();
     } else if (!analysisMode) {
       setAnalysisResult(null);
     }
-  }, [analysisMode, engine, currentNodeId, isFullGameAnalyzing, runAnalysis, setAnalysisResult]);
+  }, [analysisMode, queue, currentNodeId, runAnalysis, setAnalysisResult]);
 
   // Compute the next move from the game tree (the actual move played in the game)
   const nextMoveVertex = useMemo(() => {

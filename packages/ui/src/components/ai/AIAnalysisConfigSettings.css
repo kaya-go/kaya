@@ -291,3 +291,48 @@
 [data-theme='dark'] .ai-slider {
   background: #444;
 }
+
+/* Advanced disclosure */
+.ai-advanced-section {
+  border-top: 1px solid var(--border-color, #e5e5e5);
+  padding-top: 1rem;
+  margin-top: 0.5rem;
+}
+
+.ai-advanced-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  background: none;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-color, #333);
+  cursor: pointer;
+}
+
+.ai-advanced-toggle:hover {
+  color: var(--accent-color, #1976d2);
+}
+
+.ai-advanced-hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-color-muted, #888);
+}
+
+.ai-advanced-body {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-theme='dark'] .ai-advanced-section {
+  border-top-color: #444;
+}
+
+[data-theme='dark'] .ai-advanced-toggle {
+  color: #eee;
+}

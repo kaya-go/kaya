@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuSettings } from 'react-icons/lu';
+import { LuSettings, LuChevronDown, LuChevronRight } from 'react-icons/lu';
 import type { AISettings } from '../../types/game';
 import { BackendSelector } from './BackendSelector';
 import { MctsVisitsSelector } from './MctsVisitsSelector';
@@ -15,6 +15,13 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
   setAISettings,
 }) => {
   const { t } = useTranslation();
+  // Auto-expand the Advanced section if the user has a non-auto backend set —
+  // they're already off the happy path and shouldn't have to hunt for it.
+  const [advancedOpen, setAdvancedOpen] = useState(
+    aiSettings.backend !== undefined && aiSettings.backend !== 'auto'
+  );
+
+  const showBatchSlider = aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn';
 
   return (
     <section className="ai-config-section">
@@ -24,41 +31,23 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
       </div>
 
       <div className="settings-list">
-        {/* Backend Selection + Batch Size - Full width */}
+        {/* Search Visits — primary user control */}
         <div className="setting-item setting-item-full">
           <div className="setting-info">
-            <label className="setting-label">{t('aiConfig.inferenceBackend')}</label>
-            <p className="setting-description">{t('aiConfig.inferenceBackendDescription')}</p>
+            <label htmlFor="num-visits-selector" className="setting-label">
+              {t('aiConfig.numVisits')}
+              <span className="setting-value">{aiSettings.numVisits}</span>
+            </label>
+            <p className="setting-description">{t('aiConfig.numVisitsDescription')}</p>
           </div>
-          <BackendSelector
-            value={aiSettings.backend}
-            onChange={backend => setAISettings({ backend })}
+          <MctsVisitsSelector
+            id="num-visits-selector"
+            value={aiSettings.numVisits}
+            onChange={visits => setAISettings({ numVisits: visits })}
           />
-          <div
-            className={`batch-size-setting${aiSettings.backend === 'webgpu' || aiSettings.backend === 'webnn' ? '' : ' batch-size-disabled'}`}
-          >
-            <div className="setting-info">
-              <label htmlFor="webgpu-batch-slider" className="setting-label">
-                {t('aiConfig.webgpuBatchSize')}
-                <span className="setting-value">{aiSettings.webgpuBatchSize}</span>
-              </label>
-              <p className="setting-description">{t('aiConfig.webgpuBatchSizeDescription')}</p>
-            </div>
-            <input
-              id="webgpu-batch-slider"
-              type="range"
-              min="1"
-              max="16"
-              step="1"
-              value={aiSettings.webgpuBatchSize}
-              onChange={e => setAISettings({ webgpuBatchSize: parseInt(e.target.value) })}
-              className="ai-slider"
-              disabled={aiSettings.backend !== 'webgpu' && aiSettings.backend !== 'webnn'}
-            />
-          </div>
         </div>
 
-        {/* Max Top Moves - Left column */}
+        {/* Heatmap display controls */}
         <div className="setting-item">
           <div className="setting-info">
             <label htmlFor="max-top-moves-slider" className="setting-label">
@@ -79,7 +68,6 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
           />
         </div>
 
-        {/* Min Probability - Right column */}
         <div className="setting-item">
           <div className="setting-info">
             <label htmlFor="min-prob-slider" className="setting-label">
@@ -100,23 +88,7 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
           />
         </div>
 
-        {/* Search Visits - Full width */}
-        <div className="setting-item setting-item-full">
-          <div className="setting-info">
-            <label htmlFor="num-visits-selector" className="setting-label">
-              {t('aiConfig.numVisits')}
-              <span className="setting-value">{aiSettings.numVisits}</span>
-            </label>
-            <p className="setting-description">{t('aiConfig.numVisitsDescription')}</p>
-          </div>
-          <MctsVisitsSelector
-            id="num-visits-selector"
-            value={aiSettings.numVisits}
-            onChange={visits => setAISettings({ numVisits: visits })}
-          />
-        </div>
-
-        {/* Save Analysis to SGF - Full width toggle */}
+        {/* Save Analysis to SGF */}
         <div className="setting-item setting-item-toggle setting-item-full">
           <div className="setting-info">
             <label htmlFor="save-analysis-check" className="setting-label">
@@ -134,6 +106,56 @@ export const AIAnalysisConfigSettingsPanel: React.FC<AIAnalysisConfigSettingsPan
           >
             <span className="toggle-switch-handle" />
           </button>
+        </div>
+
+        {/* Advanced disclosure */}
+        <div className="setting-item setting-item-full ai-advanced-section">
+          <button
+            type="button"
+            className="ai-advanced-toggle"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen(o => !o)}
+          >
+            {advancedOpen ? <LuChevronDown /> : <LuChevronRight />}
+            <span>{t('aiConfig.advancedSettings')}</span>
+          </button>
+          {!advancedOpen && (
+            <p className="setting-description ai-advanced-hint">
+              {t('aiConfig.advancedSettingsHint')}
+            </p>
+          )}
+          {advancedOpen && (
+            <div className="ai-advanced-body">
+              <div className="setting-info">
+                <label className="setting-label">{t('aiConfig.inferenceBackend')}</label>
+                <p className="setting-description">{t('aiConfig.inferenceBackendDescription')}</p>
+              </div>
+              <BackendSelector
+                value={aiSettings.backend}
+                onChange={backend => setAISettings({ backend })}
+              />
+              <div className={`batch-size-setting${showBatchSlider ? '' : ' batch-size-disabled'}`}>
+                <div className="setting-info">
+                  <label htmlFor="webgpu-batch-slider" className="setting-label">
+                    {t('aiConfig.webgpuBatchSize')}
+                    <span className="setting-value">{aiSettings.webgpuBatchSize}</span>
+                  </label>
+                  <p className="setting-description">{t('aiConfig.webgpuBatchSizeDescription')}</p>
+                </div>
+                <input
+                  id="webgpu-batch-slider"
+                  type="range"
+                  min="1"
+                  max="16"
+                  step="1"
+                  value={aiSettings.webgpuBatchSize}
+                  onChange={e => setAISettings({ webgpuBatchSize: parseInt(e.target.value) })}
+                  className="ai-slider"
+                  disabled={!showBatchSlider}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

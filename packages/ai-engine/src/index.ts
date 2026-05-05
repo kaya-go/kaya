@@ -68,5 +68,25 @@ export * from './analyze';
 export * from './performance-types';
 export * from './performance-report';
 
-// GTP Protocol (Go Text Protocol)
-export * from './gtp';
+// Auto-configuration: probe environment + pick model/backend
+export {
+  CANONICAL_MODEL,
+  probeEnvironment,
+  pickConfig,
+  type BackendId,
+  type Quantization,
+  type ModelId,
+  type Probe,
+  type AutoPick,
+} from './auto-config';
+
+// Analysis queue: single-source-of-truth for live + batch analysis
+export {
+  AnalysisQueue,
+  type AnalysisRequest,
+  type AnalysisQueueOptions,
+  type CacheRef,
+  type Priority,
+  type RequestId,
+  type SubmitHandle,
+} from './queue';

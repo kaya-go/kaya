@@ -36,7 +36,9 @@ export interface AISettings {
   minProb: number; // 0.0 to 1.0
   maxTopMoves: number; // Maximum number of top moves to display (1-10)
   /**
-   * Backend for AI inference:
+   * Backend for AI inference. Default is 'auto' — Kaya probes the host and
+   * picks the best available chain.
+   * - 'auto': Auto-pick (probeEnvironment + pickConfig). Recommended.
    * - 'native': Native ONNX Runtime via Tauri (fastest, desktop only)
    * - 'native-cpu': Native ONNX Runtime CPU only (desktop only)
    * - 'pytorch': PyTorch GPU via sidecar (Linux with ROCm/CUDA, fastest GPU)
@@ -45,7 +47,7 @@ export interface AISettings {
    * - 'wasm': WebAssembly backend (CPU, most compatible)
    * - 'webgl': Deprecated, falls back to wasm
    */
-  backend: 'native' | 'native-cpu' | 'pytorch' | 'webgpu' | 'webnn' | 'webgl' | 'wasm';
+  backend: 'auto' | 'native' | 'native-cpu' | 'pytorch' | 'webgpu' | 'webnn' | 'webgl' | 'wasm';
   saveAnalysisToSgf: boolean;
   /** Number of MCTS visits per position (1 = policy-only, >1 enables tree search) */
   numVisits: number;

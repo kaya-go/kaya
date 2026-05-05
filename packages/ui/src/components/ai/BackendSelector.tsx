@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LuCheck, LuCpu, LuZap, LuGlobe, LuMonitor } from 'react-icons/lu';
+import { LuCheck, LuCpu, LuZap, LuGlobe, LuMonitor, LuSparkles } from 'react-icons/lu';
 import { isTauriApp } from '@kaya/platform';
 import type { AISettings } from '../../types/game';
 import './BackendSelector.css';
@@ -42,6 +42,17 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
   const options = useMemo((): BackendOption[] => {
     const opts: BackendOption[] = [];
 
+    // Auto is always available and is the default recommendation. Picks
+    // the best chain at probe time (see auto-config.ts).
+    opts.push({
+      value: 'auto',
+      labelKey: 'aiConfig.auto',
+      descKey: 'aiConfig.autoDescription',
+      icon: <LuSparkles size={18} />,
+      available: true,
+      recommended: true,
+    });
+
     if (isTauri) {
       opts.push({
         value: 'native',
@@ -49,7 +60,6 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
         descKey: 'aiConfig.backendDesc.native',
         icon: <LuZap size={18} />,
         available: true,
-        recommended: true,
       });
       opts.push({
         value: 'native-cpu',
@@ -94,7 +104,6 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
         icon: <LuZap size={18} />,
         available: hasWebGPU,
         unavailableKey: hasWebGPU ? undefined : 'aiConfig.backendUnavailable.webgpu',
-        recommended: hasWebGPU,
       });
 
       if (webnnAvailable) {
@@ -113,7 +122,6 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
         descKey: 'aiConfig.backendDesc.wasm',
         icon: <LuGlobe size={18} />,
         available: true,
-        recommended: !hasWebGPU,
       });
     }
 

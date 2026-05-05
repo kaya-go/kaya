@@ -7,6 +7,7 @@ import { useToast } from '../ui/Toast';
 import { BASE_MODELS, parseModelId, getModelId } from '../../hooks/game/useAIAnalysis';
 import { AIAnalysisConfigModelsPanel } from './AIAnalysisConfigModelsPanel';
 import { AIAnalysisConfigSettingsPanel } from './AIAnalysisConfigSettingsPanel';
+import { AIStatusPill } from './AIStatusPill';
 import './AIAnalysisConfig.css';
 import './AIAnalysisConfigModels.css';
 import './AIAnalysisConfigModelItems.css';
@@ -186,6 +187,7 @@ export const AIAnalysisConfig: React.FC = () => {
           <div className="ai-info-title">
             <LuBrain className="ai-info-icon-main" />
             <h2>{t('aiConfig.title')}</h2>
+            <AIStatusPill className="ai-info-status-pill" />
           </div>
           <button
             className="ai-info-close"
