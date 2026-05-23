@@ -49,13 +49,15 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack*
-          key: ${{ runner.os }}-wasm-pack-0.13
+          key: ${{ runner.os }}-wasm-pack-0.15.0
 
       - name: Install wasm-pack
-        run: command -v wasm-pack || curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: command -v wasm-pack || cargo install wasm-pack --version 0.15.0 --locked
 
-      - name: Set version to ${{ github.event.inputs.version }}
-        run: bun run set-version ${{ github.event.inputs.version }}
+      - name: Set version
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
+        run: bun run set-version "$KAYA_VERSION"
 
       - name: Check formatting
         run: bun run format:check
@@ -70,7 +72,7 @@ jobs:
       - name: Run tests
         run: bun run test
 
-      - name: ✅ Verification passed
+      - name: Verification passed
         run: echo "All quality checks passed! Ready to build and release."
 
   deploy-web:
@@ -114,13 +116,15 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack*
-          key: ${{ runner.os }}-wasm-pack-0.13
+          key: ${{ runner.os }}-wasm-pack-0.15.0
 
       - name: Install wasm-pack
-        run: command -v wasm-pack || curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: command -v wasm-pack || cargo install wasm-pack --version 0.15.0 --locked
 
-      - name: Set version to ${{ github.event.inputs.version }}
-        run: bun run set-version ${{ github.event.inputs.version }}
+      - name: Set version
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
+        run: bun run set-version "$KAYA_VERSION"
 
       - name: Build packages
         run: bun run build:packages
@@ -155,6 +159,9 @@ jobs:
         run: echo "kayago.app" > gh-pages/CNAME
 
       - name: Deploy to GitHub Pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KAYA_VERSION: ${{ github.event.inputs.version }}
         run: |
           cd gh-pages
           git init
@@ -162,10 +169,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Deploy v${{ github.event.inputs.version }}"
+          git commit -m "Deploy v${KAYA_VERSION}"
           git push --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-macos:
     name: Build macOS
@@ -188,7 +193,7 @@ jobs:
     secrets: inherit
 
   build-linux:
-    name: Build Linux
+    name: Build Linux (AppImage)
     needs: verify
     uses: ./.github/workflows/_build-linux.yml
     with:
@@ -197,10 +202,20 @@ jobs:
       bun-version: '1.3.2'
     secrets: inherit
 
+  build-linux-deb:
+    name: Build Linux (.deb/.rpm)
+    needs: verify
+    uses: ./.github/workflows/_build-linux-deb.yml
+    with:
+      set-version: ${{ github.event.inputs.version }}
+      artifact-name: desktop-linux-deb
+      bun-version: '1.3.2'
+    secrets: inherit
+
   # Commit version bump and create release ONLY after successful builds
   commit-and-release:
     name: Commit Version & Create Release
-    needs: [build-macos, build-windows, build-linux, deploy-web]
+    needs: [build-macos, build-windows, build-linux, build-linux-deb, deploy-web]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -218,19 +233,22 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Set version to ${{ github.event.inputs.version }}
-        run: bun run set-version ${{ github.event.inputs.version }}
+      - name: Set version
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
+        run: bun run set-version "$KAYA_VERSION"
 
       - name: Generate changelog from commits
         id: changelog
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KAYA_VERSION: ${{ github.event.inputs.version }}
         run: |
           # Generate full changelog (skip_tags in cliff.toml handles old versions)
-          bun run git-cliff --tag "v${{ github.event.inputs.version }}" -o CHANGELOG.md
+          bun run git-cliff --tag "v${KAYA_VERSION}" -o CHANGELOG.md
 
           # Generate release notes for this version only
-          bun run git-cliff --tag "v${{ github.event.inputs.version }}" --unreleased --strip header -o CHANGELOG-NEW.md
+          bun run git-cliff --tag "v${KAYA_VERSION}" --unreleased --strip header -o CHANGELOG-NEW.md
 
           # Read the generated changelog for GitHub release
           CHANGELOG=$(cat CHANGELOG-NEW.md)
@@ -244,6 +262,8 @@ jobs:
           rm CHANGELOG-NEW.md
 
       - name: Commit and push version changes + changelog
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -252,22 +272,27 @@ jobs:
           bun run format
 
           git add .
-          git commit -m "chore: release v${{ github.event.inputs.version }}"
+          git commit -m "chore: release v${KAYA_VERSION}"
           git pull --rebase
           git push
 
       - name: Create and push tag
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
         run: |
-          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
+          git tag -a "v${KAYA_VERSION}" -m "Release v${KAYA_VERSION}"
+          git push origin "v${KAYA_VERSION}"
 
       - name: Download all artifacts
         uses: actions/download-artifact@v8
 
       - name: Generate updater JSON
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
+          KAYA_CHANGELOG: ${{ steps.changelog.outputs.changelog }}
         run: |
           # Generate latest.json for Tauri updater
-          bun run generate-updater-json "${{ github.event.inputs.version }}" "${{ steps.changelog.outputs.changelog }}"
+          bun run generate-updater-json "$KAYA_VERSION" "$KAYA_CHANGELOG"
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -279,10 +304,10 @@ jobs:
             desktop-macos/**/*.dmg.sig
             desktop-macos/**/*.app.tar.gz
             desktop-macos/**/*.app.tar.gz.sig
-            desktop-linux/**/*.deb
-            desktop-linux/**/*.rpm
             desktop-linux/**/*.AppImage
             desktop-linux/**/*.AppImage.sig
+            desktop-linux-deb/**/*.deb
+            desktop-linux-deb/**/*.rpm
             desktop-windows/**/*.exe
             desktop-windows/**/*.exe.sig
             latest.json
@@ -324,8 +349,10 @@ jobs:
 
       - name: Calculate next version
         id: next_version
+        env:
+          KAYA_VERSION: ${{ github.event.inputs.version }}
         run: |
-          CURRENT_VERSION="${{ github.event.inputs.version }}"
+          CURRENT_VERSION="$KAYA_VERSION"
           # Split into parts
           IFS='.' read -r -a parts <<< "$CURRENT_VERSION"
           MAJOR="${parts[0]}"
@@ -340,13 +367,17 @@ jobs:
           echo "version=$NEXT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Set version to next dev
-        run: bun run set-version ${{ steps.next_version.outputs.version }}
+        env:
+          KAYA_NEXT_VERSION: ${{ steps.next_version.outputs.version }}
+        run: bun run set-version "$KAYA_NEXT_VERSION"
 
       - name: Commit and push dev bump
+        env:
+          KAYA_NEXT_VERSION: ${{ steps.next_version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
-          git commit -m "chore: bump version to ${{ steps.next_version.outputs.version }}"
+          git commit -m "chore: bump version to ${KAYA_NEXT_VERSION}"
           git pull --rebase
           git push

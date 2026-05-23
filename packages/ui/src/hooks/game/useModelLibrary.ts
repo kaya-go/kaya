@@ -141,7 +141,7 @@ export function useModelLibrary() {
       );
 
       try {
-        let buffer: ArrayBuffer;
+        let downloadedSize: number;
 
         if (isTauriApp()) {
           // Use Rust-side download for reliable streaming + progress on all platforms
@@ -166,24 +166,20 @@ export function useModelLibrary() {
             // Rust downloads to a temp file and returns the path
             tempPath = await invoke<string>('download_file', { url: model.url });
 
-            // Cache the downloaded file directly in Rust's model cache dir.
-            // This avoids re-uploading via chunked IPC when the native engine initializes.
+            // Disk cache is the source of truth on Tauri — skip the IndexedDB
+            // mirror (would re-read $APPDATA via plugin-fs, rejected on Linux, #103).
             const modelCacheId = id.replace(/[^a-zA-Z0-9-_]/g, '_');
             const cacheResult = await invoke<{ path: string; size: number }>(
               'onnx_cache_downloaded_file',
               { tempPath, modelId: modelCacheId }
             );
-
-            // Read the cached copy into JS for IndexedDB storage
-            // (needed for web engine / WebGPU backend fallback)
-            const { readFile } = await import('@tauri-apps/plugin-fs');
-            const bytes = await readFile(cacheResult.path);
-            buffer = bytes.buffer as ArrayBuffer;
+            downloadedSize = cacheResult.size;
           } finally {
             unlisten();
           }
         } else {
-          // Web environment: Direct download from Hugging Face (CORS enabled)
+          // Web environment: Direct download from Hugging Face (CORS enabled).
+          // Browser users need the bytes in IndexedDB (no native disk cache).
           let response: Response;
           try {
             console.log(`[ModelDownload] Downloading: ${model.url}`);
@@ -219,7 +215,7 @@ export function useModelLibrary() {
 
           // Concatenate chunks into a single ArrayBuffer
           const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-          buffer = new ArrayBuffer(totalLength);
+          const buffer = new ArrayBuffer(totalLength);
           const view = new Uint8Array(buffer);
           let offset = 0;
           for (const chunk of chunks) {
@@ -227,18 +223,18 @@ export function useModelLibrary() {
             offset += chunk.length;
           }
           chunks.length = 0;
+
+          await saveModelData(id, buffer);
+          downloadedSize = buffer.byteLength;
         }
 
-        // Save to storage
-        await saveModelData(id, buffer);
-
-        // Update metadata
+        // Update metadata (size comes from disk on Tauri, from buffer on web)
         const storedMetadata = await loadModelLibrary();
         const newMetadata: StoredModelMetadata = {
           id,
           name: model.name,
           description: model.description,
-          size: buffer.byteLength,
+          size: downloadedSize,
           date: Date.now(),
           predefinedId: model.predefinedId,
           url: model.url,
@@ -261,7 +257,7 @@ export function useModelLibrary() {
                   isDownloaded: true,
                   isDownloading: false,
                   downloadProgress: undefined,
-                  size: buffer.byteLength,
+                  size: downloadedSize,
                   date: Date.now(),
                 }
               : m

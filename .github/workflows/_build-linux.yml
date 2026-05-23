@@ -1,8 +1,12 @@
-name: Build Desktop (Linux)
+name: Build Desktop (Linux AppImage)
 
-# Runs in an Arch Linux container because the new Tauri AppImage format
-# (quick-sharun) requires Arch Linux.
+# Builds the AppImage bundle. Runs in an Arch Linux container because
+# the new Tauri AppImage format (quick-sharun) requires Arch Linux.
 # See: https://github.com/tauri-apps/tauri/pull/12491
+#
+# The .deb and .rpm packages are built separately on Ubuntu 22.04 in
+# `_build-linux-deb.yml` to link against an older glibc (Arch's rolling
+# glibc 2.43+ otherwise breaks Debian/Ubuntu/Mint users). See #103.
 
 on:
   workflow_call:
@@ -25,7 +29,7 @@ on:
 
 jobs:
   build:
-    name: Build Desktop - Linux
+    name: Build Desktop - Linux (AppImage)
     runs-on: ubuntu-latest
     container:
       image: archlinux:base-devel
@@ -38,7 +42,7 @@ jobs:
             clang cmake mold \
             webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
             alsa-lib \
-            patchelf dpkg rpm-tools \
+            patchelf \
             nodejs npm \
             xorg-server-xvfb zsync
 
@@ -138,18 +142,20 @@ jobs:
           path: |
             ~/.cargo/bin/wasm-pack*
             ~/wasm-pack-*
-          key: Linux-arch-wasm-pack-0.13
+          key: Linux-arch-wasm-pack-0.15.0
 
       - name: Install wasm-pack
         shell: bash
         run: |
           if ! command -v wasm-pack &> /dev/null; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            cargo install wasm-pack --version 0.15.0 --locked
           fi
 
       - name: Set version
         if: inputs.set-version != ''
-        run: bun run set-version ${{ inputs.set-version }}
+        env:
+          KAYA_VERSION: ${{ inputs.set-version }}
+        run: bun run set-version "$KAYA_VERSION"
 
       # Bun's rsbuild crashes with SIGILL in the Arch Linux container.
       # Workaround: pre-build packages with Bun (works fine), then use
@@ -161,9 +167,9 @@ jobs:
           bun run build:packages
           cd apps/desktop && npx rsbuild build
 
-      - name: Build desktop app
+      - name: Build desktop app (AppImage only)
         working-directory: apps/desktop
-        run: cargo tauri build --config '{"build":{"beforeBuildCommand":""}}'
+        run: cargo tauri build --bundles appimage --config '{"build":{"beforeBuildCommand":""}}'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
@@ -172,15 +178,15 @@ jobs:
       - name: Collect artifact info
         shell: bash
         run: |
-          echo "Collecting Linux artifacts..."
-          find apps/desktop/src-tauri/target/release/bundle -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) -exec ls -lh {} \;
+          echo "Collecting Linux AppImage artifacts..."
+          find apps/desktop/src-tauri/target/release/bundle -type f -name "*.AppImage*" -exec ls -lh {} \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
           path: |
-            apps/desktop/src-tauri/target/release/bundle/
+            apps/desktop/src-tauri/target/release/bundle/appimage/
           retention-days: ${{ inputs.artifact-retention-days }}
 
       # Save caches only when they were not found

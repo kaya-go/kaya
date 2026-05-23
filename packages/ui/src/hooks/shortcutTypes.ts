@@ -152,7 +152,7 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutId, Omit<ShortcutDefinition, 'id'
   },
   'view.toggleFullscreen': {
     category: 'view',
-    defaultBinding: createBinding('f'),
+    defaultBinding: createBinding('f11'),
   },
   'view.openSettings': {
     category: 'view',

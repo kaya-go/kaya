@@ -1,4 +1,14 @@
-name: Build Desktop (macOS)
+name: Build Desktop (Linux .deb/.rpm)
+
+# Builds Debian (.deb) and RPM (.rpm) packages on Ubuntu 22.04 so they
+# link against an older glibc (2.35), keeping them compatible with the
+# vast majority of Debian/Ubuntu/Mint/Fedora installs in the wild.
+#
+# The Arch-based AppImage build (`_build-linux.yml`) inherits Arch's
+# bleeding-edge glibc (currently 2.43) which breaks .deb users on
+# anything older than the latest rolling releases. AppImage stays on
+# Arch because the new quick-sharun format requires it; .deb/.rpm don't.
+# See: https://github.com/kaya-go/kaya/issues/103
 
 on:
   workflow_call:
@@ -11,45 +21,51 @@ on:
         default: ''
       artifact-name:
         type: string
-        default: 'desktop-macos'
+        default: 'desktop-linux-deb'
       artifact-retention-days:
         type: number
         default: 90
       bun-version:
         type: string
         required: true
-    outputs:
-      version:
-        description: 'App version from package.json'
-        value: ${{ jobs.build.outputs.version }}
-      short_sha:
-        description: 'Short commit SHA'
-        value: ${{ jobs.build.outputs.short_sha }}
 
 jobs:
   build:
-    name: Build Desktop - macOS
-    runs-on: macos-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      short_sha: ${{ steps.version.outputs.short_sha }}
+    name: Build Desktop - Linux (.deb/.rpm)
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:22.04
     steps:
-      - uses: actions/checkout@v6
-
-      - name: Get version info
-        id: version
-        shell: bash
+      - name: Install system dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "Build version: $VERSION ($SHORT_SHA)"
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential clang cmake mold pkg-config \
+            curl wget unzip git ca-certificates \
+            libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev \
+            libasound2-dev \
+            patchelf rpm \
+            file sudo
+
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ inputs.bun-version }}
+
+      # rsbuild runs under Node, not Bun: `bun run --bun rsbuild build`
+      # crashes with SIGILL in this Ubuntu container, the same way it does
+      # in the Arch AppImage container (see `_build-linux.yml`). Ubuntu
+      # 22.04's apt nodejs is 12.x, too old for @rsbuild/core 2.x, so pull
+      # a modern Node from setup-node.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Cache node_modules
         if: ${{ !inputs.skip-cache }}
@@ -57,9 +73,9 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-cache-${{ hashFiles('**/bun.lock') }}
+          key: Linux-ubuntu22-bun-cache-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            ${{ runner.os }}-bun-cache-
+            Linux-ubuntu22-bun-cache-
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -92,10 +108,10 @@ jobs:
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
-          key: ${{ runner.os }}-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-ubuntu22-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
-            ${{ runner.os }}-sccache-
+            Linux-ubuntu22-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-ubuntu22-sccache-
 
       - name: Enable sccache (strict)
         shell: bash
@@ -119,10 +135,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
-          key: ${{ runner.os }}-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-ubuntu22-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
-            ${{ runner.os }}-cargo-
+            Linux-ubuntu22-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-ubuntu22-cargo-
+
+      # Stable tauri-cli is fine for .deb/.rpm — the truly-portable AppImage
+      # fork is only required for the AppImage bundle, which we don't produce here.
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2.0" --locked
 
       - name: Install dependencies
         run: bun install
@@ -133,7 +154,7 @@ jobs:
           path: |
             ~/.cargo/bin/wasm-pack*
             ~/wasm-pack-*
-          key: ${{ runner.os }}-wasm-pack-0.15.0
+          key: Linux-ubuntu22-wasm-pack-0.15.0
 
       - name: Install wasm-pack
         shell: bash
@@ -142,59 +163,51 @@ jobs:
             cargo install wasm-pack --version 0.15.0 --locked
           fi
 
-      - name: Add Rust targets
-        run: rustup target add aarch64-apple-darwin
-
-      # macOS code signing: Import Apple certificates into temporary keychain
-      - name: Import Apple certificates
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
-          security import $RUNNER_TEMP/certificate.p12 -P "$APPLE_CERTIFICATE_PASSWORD" \
-            -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
-
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
-
       - name: Set version
         if: inputs.set-version != ''
-        run: bun run set-version ${{ inputs.set-version }}
+        env:
+          KAYA_VERSION: ${{ inputs.set-version }}
+        run: bun run set-version "$KAYA_VERSION"
 
-      - name: Build desktop app
-        run: bun run tauri:build -- --target aarch64-apple-darwin
+      # Bun's rsbuild crashes with SIGILL in this container too, so mirror
+      # the AppImage workflow: pre-build packages with Bun (works fine),
+      # then use Node.js/npx for rsbuild.
+      - name: Pre-build frontend
+        run: |
+          bun run generate-version-info
+          bun run copy-assets
+          bun run build:packages
+          cd apps/desktop && npx rsbuild build
+
+      - name: Build desktop app (.deb + .rpm)
+        working-directory: apps/desktop
+        run: cargo tauri build --bundles deb,rpm --config '{"build":{"beforeBuildCommand":""}}'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Collect artifact info
         shell: bash
         run: |
-          echo "Collecting macOS artifacts..."
-          find apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.app.tar.gz" \) -exec ls -lh {} \;
+          echo "Collecting Linux .deb/.rpm artifacts..."
+          find apps/desktop/src-tauri/target/release/bundle -type f \( -name "*.deb" -o -name "*.rpm" \) -exec ls -lh {} \;
+          echo ""
+          echo "Verifying glibc compatibility of the binary..."
+          BIN=$(find apps/desktop/src-tauri/target/release -maxdepth 1 -type f -executable | head -1)
+          if [ -n "$BIN" ]; then
+            echo "Binary: $BIN"
+            objdump -T "$BIN" 2>/dev/null | grep -oE 'GLIBC_[0-9.]+' | sort -V -u | tail -5 || true
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
           path: |
-            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/
+            apps/desktop/src-tauri/target/release/bundle/deb/
+            apps/desktop/src-tauri/target/release/bundle/rpm/
           retention-days: ${{ inputs.artifact-retention-days }}
 
-      # Save caches only when they were not found
       - name: Save Cargo registry/git cache (if miss)
         if: ${{ !inputs.skip-cache && steps.cargo_cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v5

@@ -58,7 +58,11 @@ export function bindingToDisplayString(binding: KeyBinding): string {
       displayKey = ',';
       break;
     default:
-      displayKey = key.length === 1 ? key.toUpperCase() : key;
+      if (/^f\d{1,2}$/.test(key)) {
+        displayKey = key.toUpperCase();
+      } else {
+        displayKey = key.length === 1 ? key.toUpperCase() : key;
+      }
   }
 
   parts.push(displayKey);
