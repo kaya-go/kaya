@@ -4,7 +4,7 @@
 
 **Kaya**: Desktop + Web Go (Baduk/Weiqi) game application with AI analysis  
 **Stack**: Bun + TypeScript + Tauri v2 + React 19 + Rsbuild  
-**Architecture**: Monorepo with 14 core packages + 2 apps
+**Architecture**: Monorepo with 13 core packages + 2 apps
 
 ## Agent Behavior Rules
 
@@ -94,7 +94,6 @@ kaya/
     ├── i18n/            # Internationalization (8 languages)
     ├── themes/          # Board theme system (6 built-in themes)
     ├── game-library/    # IndexedDB-based SGF file storage
-    ├── gtp/             # GTP protocol (legacy, see ai-engine)
     ├── platform/        # File save, clipboard, Tauri detection
     └── ui/              # Shared React components, contexts, and hooks
 ```
