@@ -57,6 +57,16 @@ jobs:
         with:
           bun-version: ${{ inputs.bun-version }}
 
+      # rsbuild runs under Node, not Bun: `bun run --bun rsbuild build`
+      # crashes with SIGILL in this Ubuntu container, the same way it does
+      # in the Arch AppImage container (see `_build-linux.yml`). Ubuntu
+      # 22.04's apt nodejs is 12.x, too old for @rsbuild/core 2.x, so pull
+      # a modern Node from setup-node.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
       - name: Cache node_modules
         if: ${{ !inputs.skip-cache }}
         uses: actions/cache@v5
@@ -159,12 +169,15 @@ jobs:
           KAYA_VERSION: ${{ inputs.set-version }}
         run: bun run set-version "$KAYA_VERSION"
 
+      # Bun's rsbuild crashes with SIGILL in this container too, so mirror
+      # the AppImage workflow: pre-build packages with Bun (works fine),
+      # then use Node.js/npx for rsbuild.
       - name: Pre-build frontend
         run: |
           bun run generate-version-info
           bun run copy-assets
           bun run build:packages
-          cd apps/desktop && bun run --bun rsbuild build
+          cd apps/desktop && npx rsbuild build
 
       - name: Build desktop app (.deb + .rpm)
         working-directory: apps/desktop
