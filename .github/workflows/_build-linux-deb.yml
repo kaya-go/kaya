@@ -63,7 +63,7 @@ jobs:
       # 22.04's apt nodejs is 12.x, too old for @rsbuild/core 2.x, so pull
       # a modern Node from setup-node.
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
