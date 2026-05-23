@@ -33,7 +33,7 @@
     "typescript": "^6.0.2"
   },
   "optionalDependencies": {
-    "wasm-pack": "^0.14.0"
+    "wasm-pack": "^0.15.0"
   },
   "dependencies": {}
 }
