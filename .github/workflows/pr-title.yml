@@ -18,7 +18,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          # Configure which types are allowed (based on your AGENTS.md)
+          # Configure which types are allowed (based on CLAUDE.md)
           types: |
             feat
             fix

@@ -4,7 +4,7 @@ This folder is a **static snapshot** of how Kaya is built today. For the
 evolution log — why specific decisions were made, what was tried, what was
 learned — see [`specs/`](../specs/).
 
-The agent-facing entry point is [`AGENTS.md`](../AGENTS.md) at the repo root.
+The agent-facing entry point is [`CLAUDE.md`](../CLAUDE.md) at the repo root.
 
 ## Index
 
