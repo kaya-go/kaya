@@ -458,6 +458,9 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
         return;
       }
       if (matchesShortcut(e, 'view.toggleFullscreen')) {
+        // preventDefault matters for F11 on Linux/Wayland — some compositors
+        // would otherwise consume it for their own window fullscreen action.
+        e.preventDefault();
         toggleFullscreen();
         return;
       }
