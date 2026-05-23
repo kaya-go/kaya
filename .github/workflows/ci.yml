@@ -44,12 +44,12 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack
-          key: ${{ runner.os }}-wasm-pack
+          key: ${{ runner.os }}-wasm-pack-0.15.0
 
       - name: Install wasm-pack
         run: |
           if ! command -v wasm-pack &> /dev/null; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            cargo install wasm-pack --version 0.15.0 --locked
           fi
 
       - name: Check formatting
@@ -100,7 +100,7 @@ jobs:
       - name: Install wasm-pack
         run: |
           if ! command -v wasm-pack &> /dev/null; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            cargo install wasm-pack --version 0.15.0 --locked
           fi
 
       - name: Build Web App
@@ -147,7 +147,7 @@ jobs:
       - name: Install wasm-pack
         run: |
           if ! command -v wasm-pack &> /dev/null; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            cargo install wasm-pack --version 0.15.0 --locked
           fi
 
       - name: Install Tauri system dependencies
@@ -273,7 +273,7 @@ jobs:
       - name: Install wasm-pack
         run: |
           if ! command -v wasm-pack &> /dev/null; then
-            curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+            cargo install wasm-pack --version 0.15.0 --locked
           fi
 
       - name: Build packages

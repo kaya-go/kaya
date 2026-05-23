@@ -31,6 +31,7 @@ pub fn run() {
             commands::onnx_save_model,
             commands::onnx_get_cached_model,
             commands::onnx_cache_downloaded_file,
+            commands::onnx_read_model_bytes,
             commands::onnx_delete_cached_model,
             commands::onnx_initialize,
             commands::onnx_initialize_base64,
