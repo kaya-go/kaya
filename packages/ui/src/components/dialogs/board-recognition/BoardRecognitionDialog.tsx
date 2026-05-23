@@ -2,7 +2,7 @@
  * BoardRecognitionDialog – photo → SGF import with corner dragging,
  * stone calibration, and AI-powered board detection.
  */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type {
   BoardCorners,
@@ -16,23 +16,20 @@ import type { GoBoard } from '@kaya/goboard';
 import type { Sign, Vertex } from '@kaya/goboard';
 import { BoardPreview } from './components/BoardPreview';
 import { CalibrationToolbar } from './components/CalibrationToolbar';
+import { ImportDropdown } from './components/ImportDropdown';
 import { PRESET_SIZES, useBoardRecognition } from './hooks/useBoardRecognition';
 import { DEFAULT_THRESHOLD } from '@kaya/board-recognition';
 import { PhotoPanel } from './components/PhotoPanel';
 import { useLayoutMode } from '../../../hooks/useMediaQuery';
 import { useGameTree } from '../../../contexts/GameTreeContext';
+import { computeDeltaStones, type DeltaStone } from './utils/deltaStones';
 import './styles/BoardRecognitionDialog.css';
 import './styles/BoardRecognitionDialogControls.css';
 import './styles/BoardRecognitionDialogCanvas.css';
 
 export type ImportMode = 'blank' | 'merge';
 
-export interface DeltaStone {
-  x: number;
-  y: number;
-  color: 'black' | 'white';
-  type: 'added' | 'removed';
-}
+export type { DeltaStone } from './utils/deltaStones';
 
 interface Props {
   file: File;
@@ -64,10 +61,8 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   const [settingGrid, setSettingGrid] = useState(false);
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [customSizeActive, setCustomSizeActive] = useState(false);
-  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const [showDelta, setShowDelta] = useState(false);
   const [mobileTab, setMobileTab] = useState<'photo' | 'preview'>('photo');
-  const addMenuRef = useRef<HTMLDivElement>(null);
   const layoutMode = useLayoutMode();
   const isMobile = layoutMode === 'mobile';
   const { gameSettings, setAIConfigOpen, setConfigInitialTab } = useGameTree();
@@ -200,50 +195,10 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
     }
   }, [result, onImportSGF]);
 
-  // Compute delta between current board and detected stones
-  const delta = useMemo<DeltaStone[]>(() => {
-    if (!result || !currentBoard) return [];
-    const bs = result.boardSize;
-    if (currentBoard.width !== bs || currentBoard.height !== bs) return [];
-
-    const stones: DeltaStone[] = [];
-    // Build a lookup of detected stones
-    const detectedMap = new Map<string, StoneColor>();
-    for (const s of result.stones) {
-      detectedMap.set(`${s.x},${s.y}`, s.color);
-    }
-
-    // Check all intersections
-    for (let y = 0; y < bs; y++) {
-      for (let x = 0; x < bs; x++) {
-        const current = currentBoard.get([x, y]);
-        const detected = detectedMap.get(`${x},${y}`) ?? null;
-        const detectedSign = detected === 'black' ? 1 : detected === 'white' ? -1 : 0;
-
-        if (current === detectedSign) continue;
-
-        // Stone in detected but not on current board → added
-        if (detectedSign !== 0 && (current === 0 || current === null)) {
-          stones.push({ x, y, color: detected!, type: 'added' });
-        }
-        // Stone on current board but not in detected → removed
-        else if ((current === 1 || current === -1) && detectedSign === 0) {
-          stones.push({ x, y, color: current === 1 ? 'black' : 'white', type: 'removed' });
-        }
-        // Different color → show both
-        else if (
-          detectedSign !== 0 &&
-          current !== 0 &&
-          current !== null &&
-          current !== detectedSign
-        ) {
-          stones.push({ x, y, color: current === 1 ? 'black' : 'white', type: 'removed' });
-          stones.push({ x, y, color: detected!, type: 'added' });
-        }
-      }
-    }
-    return stones;
-  }, [result, currentBoard]);
+  const delta = useMemo<DeltaStone[]>(
+    () => computeDeltaStones(result, currentBoard),
+    [result, currentBoard]
+  );
 
   const canAddAsMove = delta.length === 1 && delta[0].type === 'added';
   const deltaMove = canAddAsMove ? delta[0] : null;
@@ -261,18 +216,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
     onPlayMove([deltaMove.x, deltaMove.y], sign);
     onClose();
   }, [deltaMove, onPlayMove, onClose]);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    if (!addMenuOpen) return;
-    const handleClick = (e: MouseEvent) => {
-      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) {
-        setAddMenuOpen(false);
-      }
-    };
-    document.addEventListener('pointerdown', handleClick);
-    return () => document.removeEventListener('pointerdown', handleClick);
-  }, [addMenuOpen]);
 
   const isCustomSize =
     customSizeActive || (boardSize !== null && !PRESET_SIZES.includes(boardSize));
@@ -682,78 +625,18 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
           <button className="brd-btn brd-btn-cancel" onClick={onClose}>
             {t('cancel')}
           </button>
-          <div className="brd-dropdown" ref={addMenuRef}>
-            <button
-              className="brd-btn brd-btn-secondary"
-              onClick={() => setAddMenuOpen(prev => !prev)}
-              disabled={!result || analyzing}
-            >
-              {t('boardRecognition.addToBoard')}
-              <span className="brd-dropdown-arrow">{addMenuOpen ? '▴' : '▾'}</span>
-            </button>
-            {addMenuOpen && (
-              <div className="brd-dropdown-menu">
-                <button
-                  className="brd-dropdown-item"
-                  onClick={() => {
-                    setAddMenuOpen(false);
-                    handleImport('blank');
-                  }}
-                >
-                  {t('boardRecognition.addBlankBoard')}
-                </button>
-                <button
-                  className={`brd-dropdown-item${sizeMismatch ? ' brd-dropdown-item-disabled' : ''}`}
-                  onClick={() => {
-                    if (sizeMismatch) return;
-                    setAddMenuOpen(false);
-                    handleImport('merge');
-                  }}
-                  disabled={sizeMismatch}
-                  title={
-                    sizeMismatch
-                      ? t('boardRecognition.sizeMismatch', {
-                          detected: result?.boardSize ?? '?',
-                          current: `${currentBoard?.width ?? '?'}×${currentBoard?.height ?? '?'}`,
-                        })
-                      : undefined
-                  }
-                >
-                  {t('boardRecognition.addMerge')}
-                </button>
-                {onPlayMove && currentBoard && (
-                  <button
-                    className={`brd-dropdown-item${!canAddAsMove || sizeMismatch ? ' brd-dropdown-item-disabled' : ''}`}
-                    onClick={() => {
-                      if (!canAddAsMove || sizeMismatch) return;
-                      setAddMenuOpen(false);
-                      handlePlayMove();
-                    }}
-                    disabled={!canAddAsMove || sizeMismatch}
-                    title={
-                      sizeMismatch
-                        ? t('boardRecognition.sizeMismatch', {
-                            detected: result?.boardSize ?? '?',
-                            current: `${currentBoard.width}×${currentBoard.height}`,
-                          })
-                        : !canAddAsMove
-                          ? delta.length === 0
-                            ? t('boardRecognition.addAsMoveNoDelta')
-                            : t('boardRecognition.addAsMoveMultiDelta', { count: delta.length })
-                          : undefined
-                    }
-                  >
-                    {t('boardRecognition.addAsMove')}
-                    {deltaMove && (
-                      <span className="brd-dropdown-item-badge">
-                        {deltaMove.color === 'black' ? '●' : '○'}
-                      </span>
-                    )}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+          <ImportDropdown
+            result={result}
+            analyzing={analyzing}
+            currentBoard={currentBoard}
+            sizeMismatch={sizeMismatch}
+            delta={delta}
+            canAddAsMove={canAddAsMove}
+            deltaMove={deltaMove}
+            showPlayMove={!!onPlayMove}
+            onImport={handleImport}
+            onPlayMove={handlePlayMove}
+          />
           {onImportSGF && (
             <button
               className="brd-btn brd-btn-import"
