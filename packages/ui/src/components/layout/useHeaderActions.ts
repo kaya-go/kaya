@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
@@ -12,10 +12,13 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { useGameSounds } from '../../useGameSounds';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import type { NewGameConfig } from '../../contexts/GameTreeContext';
-import { saveFile, isTauriApp } from '@kaya/platform';
+import { saveFile } from '@kaya/platform';
 import { loadContentOrOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { readClipboardText, writeClipboardText } from '@kaya/platform';
 import { useToast } from '../ui/Toast';
+import { useFullscreen } from './useFullscreen';
+import { useFilenameEditor } from './useFilenameEditor';
+import { useHeaderKeyboardShortcuts } from './useHeaderKeyboardShortcuts';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 
@@ -23,7 +26,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const { soundEnabled, toggleSound } = useGameSounds();
-  const { matchesShortcut, getBinding, bindingToDisplayString } = useKeyboardShortcuts();
+  const { getBinding, bindingToDisplayString } = useKeyboardShortcuts();
   const { loadSGFAsync, exportSGF, newGame, fileName, setFileName, isDirty, triggerAutoSave } =
     useGameTreeFile();
   const { currentBoard, gameInfo } = useGameTreeBoard();
@@ -43,19 +46,18 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const scanBoardInputRef = useRef<HTMLInputElement>(null);
-  const filenameInputRef = useRef<HTMLInputElement>(null);
 
   const [recognitionFile, setRecognitionFile] = useState<File | null>(null);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isNewGameDialogOpen, setIsNewGameDialogOpen] = useState(false);
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
   const [isSaveToLibraryDialogOpen, setIsSaveToLibraryDialogOpen] = useState(false);
-  const [isEditingFilename, setIsEditingFilename] = useState(false);
-  const [editedFilename, setEditedFilename] = useState('');
 
   const { messages, showToast, closeToast } = useToast();
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
+  const filenameEditor = useFilenameEditor({ fileName, setFileName, loadedFileId, renameItem });
 
   const defaultSaveFileName = useMemo(() => {
     if (fileName) return fileName;
@@ -267,54 +269,6 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     setIsConfirmationDialogOpen(false);
   }, []);
 
-  const handleFilenameClick = useCallback(() => {
-    if (fileName) {
-      setEditedFilename(fileName);
-      setIsEditingFilename(true);
-    }
-  }, [fileName]);
-
-  const handleFilenameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setEditedFilename(e.target.value);
-  }, []);
-
-  const handleFilenameBlur = useCallback(async () => {
-    if (editedFilename.trim()) {
-      const newName = editedFilename.trim().endsWith('.sgf')
-        ? editedFilename.trim()
-        : `${editedFilename.trim()}.sgf`;
-      setFileName(newName);
-      if (loadedFileId) {
-        try {
-          await renameItem(loadedFileId, newName);
-        } catch (error) {
-          console.error('Failed to rename file in library:', error);
-        }
-      }
-    }
-    setIsEditingFilename(false);
-  }, [editedFilename, setFileName, loadedFileId, renameItem]);
-
-  const handleFilenameKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      e.stopPropagation();
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleFilenameBlur();
-      } else if (e.key === 'Escape') {
-        setIsEditingFilename(false);
-      }
-    },
-    [handleFilenameBlur]
-  );
-
-  useEffect(() => {
-    if (isEditingFilename && filenameInputRef.current) {
-      filenameInputRef.current.focus();
-      filenameInputRef.current.select();
-    }
-  }, [isEditingFilename]);
-
   const handleQuickNewGame = useCallback(async () => {
     const canProceed = await checkUnsavedChanges();
     if (!canProceed) return;
@@ -371,105 +325,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     }
   }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast]);
 
-  const toggleFullscreen = useCallback(async () => {
-    const isTauri =
-      isTauriApp() ||
-      (typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window));
-
-    if (isTauri) {
-      try {
-        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-        const appWindow = getCurrentWindow();
-        const isFullscreen = await appWindow.isFullscreen();
-        await appWindow.setFullscreen(!isFullscreen);
-        setIsFullscreen(!isFullscreen);
-      } catch (e) {
-        console.error('Failed to toggle fullscreen in Tauri:', e);
-      }
-      return;
-    }
-
-    if (!document.fullscreenElement && !(document as any).webkitFullscreenElement) {
-      const docEl = document.documentElement as any;
-      if (docEl.requestFullscreen) {
-        docEl.requestFullscreen().catch((e: any) => {
-          console.error(`Error attempting to enable full-screen mode: ${e.message} (${e.name})`);
-        });
-        setIsFullscreen(true);
-      } else if (docEl.webkitRequestFullscreen) {
-        docEl.webkitRequestFullscreen();
-        setIsFullscreen(true);
-      } else {
-        console.warn('Fullscreen API is not supported in this environment');
-      }
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      } else if ((document as any).webkitExitFullscreen) {
-        (document as any).webkitExitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      if (matchesShortcut(e, 'file.save')) {
-        e.preventDefault();
-        handleSaveClick();
-        return;
-      }
-      if (matchesShortcut(e, 'file.saveAs')) {
-        e.preventDefault();
-        handleSaveAsClick();
-        return;
-      }
-      if (matchesShortcut(e, 'edit.makeMainBranch')) {
-        e.preventDefault();
-        makeMainVariation();
-        return;
-      }
-      if (matchesShortcut(e, 'edit.undo')) {
-        e.preventDefault();
-        if (canUndo) undo();
-        return;
-      }
-      if (matchesShortcut(e, 'edit.redo')) {
-        e.preventDefault();
-        if (canRedo) redo();
-        return;
-      }
-      if (matchesShortcut(e, 'view.openSettings')) {
-        e.preventDefault();
-        setAIConfigOpen(true);
-        return;
-      }
-      if (matchesShortcut(e, 'view.toggleFullscreen')) {
-        toggleFullscreen();
-        return;
-      }
-      if (matchesShortcut(e, 'board.toggleSound')) {
-        toggleSound();
-        return;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
+  useHeaderKeyboardShortcuts({
     handleSaveClick,
     handleSaveAsClick,
     toggleFullscreen,
@@ -480,13 +336,12 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     canUndo,
     canRedo,
     setAIConfigOpen,
-    matchesShortcut,
-  ]);
+  });
 
   return {
     fileInputRef,
     scanBoardInputRef,
-    filenameInputRef,
+    filenameInputRef: filenameEditor.filenameInputRef,
     t,
     theme,
     toggleTheme,
@@ -507,8 +362,8 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     isConfirmationDialogOpen,
     isSaveToLibraryDialogOpen,
     setIsSaveToLibraryDialogOpen,
-    isEditingFilename,
-    editedFilename,
+    isEditingFilename: filenameEditor.isEditingFilename,
+    editedFilename: filenameEditor.editedFilename,
 
     messages,
     closeToast,
@@ -537,10 +392,10 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     handleNewGameConfirm,
     handleCopyClick,
     handlePasteClick,
-    handleFilenameClick,
-    handleFilenameChange,
-    handleFilenameBlur,
-    handleFilenameKeyDown,
+    handleFilenameClick: filenameEditor.handleFilenameClick,
+    handleFilenameChange: filenameEditor.handleFilenameChange,
+    handleFilenameBlur: filenameEditor.handleFilenameBlur,
+    handleFilenameKeyDown: filenameEditor.handleFilenameKeyDown,
     toggleFullscreen,
   };
 }
