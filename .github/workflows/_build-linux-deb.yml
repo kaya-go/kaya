@@ -1,12 +1,14 @@
-name: Build Desktop (Linux AppImage)
+name: Build Desktop (Linux .deb/.rpm)
 
-# Builds the AppImage bundle. Runs in an Arch Linux container because
-# the new Tauri AppImage format (quick-sharun) requires Arch Linux.
-# See: https://github.com/tauri-apps/tauri/pull/12491
+# Builds Debian (.deb) and RPM (.rpm) packages on Ubuntu 22.04 so they
+# link against an older glibc (2.35), keeping them compatible with the
+# vast majority of Debian/Ubuntu/Mint/Fedora installs in the wild.
 #
-# The .deb and .rpm packages are built separately on Ubuntu 22.04 in
-# `_build-linux-deb.yml` to link against an older glibc (Arch's rolling
-# glibc 2.43+ otherwise breaks Debian/Ubuntu/Mint users). See #103.
+# The Arch-based AppImage build (`_build-linux.yml`) inherits Arch's
+# bleeding-edge glibc (currently 2.43) which breaks .deb users on
+# anything older than the latest rolling releases. AppImage stays on
+# Arch because the new quick-sharun format requires it; .deb/.rpm don't.
+# See: https://github.com/kaya-go/kaya/issues/103
 
 on:
   workflow_call:
@@ -19,7 +21,7 @@ on:
         default: ''
       artifact-name:
         type: string
-        default: 'desktop-linux'
+        default: 'desktop-linux-deb'
       artifact-retention-days:
         type: number
         default: 90
@@ -29,22 +31,24 @@ on:
 
 jobs:
   build:
-    name: Build Desktop - Linux (AppImage)
+    name: Build Desktop - Linux (.deb/.rpm)
     runs-on: ubuntu-latest
     container:
-      image: archlinux:base-devel
+      image: ubuntu:22.04
     steps:
       - name: Install system dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm --needed \
-            git curl wget unzip \
-            clang cmake mold \
-            webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
-            alsa-lib \
-            patchelf \
-            nodejs npm \
-            xorg-server-xvfb zsync
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential clang cmake mold pkg-config \
+            curl wget unzip git ca-certificates \
+            libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev \
+            libasound2-dev \
+            patchelf rpm \
+            file sudo
 
       - uses: actions/checkout@v6
 
@@ -59,9 +63,9 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-          key: Linux-arch-bun-cache-${{ hashFiles('**/bun.lock') }}
+          key: Linux-ubuntu22-bun-cache-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            Linux-arch-bun-cache-
+            Linux-ubuntu22-bun-cache-
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -94,10 +98,10 @@ jobs:
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
-          key: Linux-arch-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-ubuntu22-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            Linux-arch-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
-            Linux-arch-sccache-
+            Linux-ubuntu22-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-ubuntu22-sccache-
 
       - name: Enable sccache (strict)
         shell: bash
@@ -121,17 +125,15 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
-          key: Linux-arch-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-ubuntu22-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            Linux-arch-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
-            Linux-arch-cargo-
+            Linux-ubuntu22-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-ubuntu22-cargo-
 
-      # Install tauri-cli with new AppImage format (Arch Linux container)
-      # Uses the feat/truly-portable-appimage branch which uses quick-sharun
-      # See: https://github.com/tauri-apps/tauri/pull/12491
-      # TODO: Remove once this is merged into stable tauri-cli release
-      - name: Install tauri-cli with new AppImage format
-        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage --force
+      # Stable tauri-cli is fine for .deb/.rpm — the truly-portable AppImage
+      # fork is only required for the AppImage bundle, which we don't produce here.
+      - name: Install tauri-cli
+        run: cargo install tauri-cli --version "^2.0" --locked
 
       - name: Install dependencies
         run: bun install
@@ -142,7 +144,7 @@ jobs:
           path: |
             ~/.cargo/bin/wasm-pack*
             ~/wasm-pack-*
-          key: Linux-arch-wasm-pack-0.13
+          key: Linux-ubuntu22-wasm-pack-0.13
 
       - name: Install wasm-pack
         shell: bash
@@ -157,39 +159,42 @@ jobs:
           KAYA_VERSION: ${{ inputs.set-version }}
         run: bun run set-version "$KAYA_VERSION"
 
-      # Bun's rsbuild crashes with SIGILL in the Arch Linux container.
-      # Workaround: pre-build packages with Bun (works fine), then use
-      # Node.js/npx for rsbuild, and skip Tauri's beforeBuildCommand.
       - name: Pre-build frontend
         run: |
           bun run generate-version-info
           bun run copy-assets
           bun run build:packages
-          cd apps/desktop && npx rsbuild build
+          cd apps/desktop && bun run --bun rsbuild build
 
-      - name: Build desktop app (AppImage only)
+      - name: Build desktop app (.deb + .rpm)
         working-directory: apps/desktop
-        run: cargo tauri build --bundles appimage --config '{"build":{"beforeBuildCommand":""}}'
+        run: cargo tauri build --bundles deb,rpm --config '{"build":{"beforeBuildCommand":""}}'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
-          TAURI_BUNDLER_NEW_APPIMAGE_FORMAT: 'true'
 
       - name: Collect artifact info
         shell: bash
         run: |
-          echo "Collecting Linux AppImage artifacts..."
-          find apps/desktop/src-tauri/target/release/bundle -type f -name "*.AppImage*" -exec ls -lh {} \;
+          echo "Collecting Linux .deb/.rpm artifacts..."
+          find apps/desktop/src-tauri/target/release/bundle -type f \( -name "*.deb" -o -name "*.rpm" \) -exec ls -lh {} \;
+          echo ""
+          echo "Verifying glibc compatibility of the binary..."
+          BIN=$(find apps/desktop/src-tauri/target/release -maxdepth 1 -type f -executable | head -1)
+          if [ -n "$BIN" ]; then
+            echo "Binary: $BIN"
+            objdump -T "$BIN" 2>/dev/null | grep -oE 'GLIBC_[0-9.]+' | sort -V -u | tail -5 || true
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
           path: |
-            apps/desktop/src-tauri/target/release/bundle/appimage/
+            apps/desktop/src-tauri/target/release/bundle/deb/
+            apps/desktop/src-tauri/target/release/bundle/rpm/
           retention-days: ${{ inputs.artifact-retention-days }}
 
-      # Save caches only when they were not found
       - name: Save Cargo registry/git cache (if miss)
         if: ${{ !inputs.skip-cache && steps.cargo_cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v5

@@ -37,7 +37,7 @@ jobs:
     secrets: inherit
 
   build-linux:
-    name: Build Linux
+    name: Build Linux (AppImage)
     uses: ./.github/workflows/_build-linux.yml
     with:
       skip-cache: ${{ inputs.skip_cache || false }}
@@ -46,10 +46,20 @@ jobs:
       bun-version: '1.3.2'
     secrets: inherit
 
+  build-linux-deb:
+    name: Build Linux (.deb/.rpm)
+    uses: ./.github/workflows/_build-linux-deb.yml
+    with:
+      skip-cache: ${{ inputs.skip_cache || false }}
+      artifact-name: nightly-linux-deb
+      artifact-retention-days: 14
+      bun-version: '1.3.2'
+    secrets: inherit
+
   # Generate summary after all builds complete
   summary:
     name: Generate Summary
-    needs: [build-macos, build-windows, build-linux]
+    needs: [build-macos, build-windows, build-linux, build-linux-deb]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
@@ -118,13 +128,23 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
           echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          # AppImage from Arch container
           if [ -d "artifacts/nightly-linux" ]; then
-            find artifacts/nightly-linux -type f \( -name "*.deb" -o -name "*.rpm" -o -name "*.AppImage" \) | while read file; do
+            find artifacts/nightly-linux -type f -name "*.AppImage" | while read file; do
               filename=$(basename "$file")
               size=$(ls -lh "$file" | awk '{print $5}')
               echo "| \`$filename\` | $size |" >> $GITHUB_STEP_SUMMARY
             done
-          else
+          fi
+          # .deb / .rpm from Ubuntu 22.04 container
+          if [ -d "artifacts/nightly-linux-deb" ]; then
+            find artifacts/nightly-linux-deb -type f \( -name "*.deb" -o -name "*.rpm" \) | while read file; do
+              filename=$(basename "$file")
+              size=$(ls -lh "$file" | awk '{print $5}')
+              echo "| \`$filename\` | $size |" >> $GITHUB_STEP_SUMMARY
+            done
+          fi
+          if [ ! -d "artifacts/nightly-linux" ] && [ ! -d "artifacts/nightly-linux-deb" ]; then
             echo "| *No artifacts found* | - |" >> $GITHUB_STEP_SUMMARY
           fi
           echo "" >> $GITHUB_STEP_SUMMARY

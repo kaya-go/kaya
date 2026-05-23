@@ -3,9 +3,29 @@
  * concrete ArrayBuffer ready for the engine. Pure helper, no React.
  */
 
+import { isTauriApp } from '@kaya/platform';
 import { loadModelData } from '../../services/modelStorage';
 
 export type ModelDataSource = File | ArrayBuffer | string;
+
+function modelCacheIdFromStorageId(storageId: string): string {
+  return storageId.replace(/[^a-zA-Z0-9-_]/g, '_');
+}
+
+// On Tauri, downloaded models live on disk only; IndexedDB is the fallback
+// for user uploads not yet materialized via `onnx_finish_upload`. See #103.
+async function readFromTauriDiskCache(storageId: string): Promise<ArrayBuffer | null> {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const bytes = await invoke<number[] | Uint8Array>('onnx_read_model_bytes', {
+      modelId: modelCacheIdFromStorageId(storageId),
+    });
+    const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    return u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
+  } catch {
+    return null;
+  }
+}
 
 export async function loadModelBuffer(data: ModelDataSource): Promise<ArrayBuffer> {
   if (data instanceof File) {
@@ -15,6 +35,10 @@ export async function loadModelBuffer(data: ModelDataSource): Promise<ArrayBuffe
     return data;
   }
   if (typeof data === 'string') {
+    if (isTauriApp()) {
+      const fromDisk = await readFromTauriDiskCache(data);
+      if (fromDisk) return fromDisk;
+    }
     const stored = await loadModelData(data);
     if (!stored) {
       throw new Error(`Model not found in storage: ${data}`);

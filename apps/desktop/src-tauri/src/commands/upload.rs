@@ -186,6 +186,29 @@ pub async fn onnx_cache_downloaded_file(
     })
 }
 
+/// Read a cached model's bytes from disk. Native fs read — bypasses the JS
+/// `@tauri-apps/plugin-fs` scope that rejects `$APPDATA` paths on Linux (#103).
+#[tauri::command]
+pub async fn onnx_read_model_bytes(
+    model_id: String,
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<u8>, String> {
+    sanitize_model_id(&model_id)?;
+    let app_data = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    let cached_path = app_data.join("models").join(format!("{}.onnx", model_id));
+
+    if !cached_path.exists() {
+        return Err(format!("Model not cached on disk: {}", model_id));
+    }
+
+    tokio::fs::read(&cached_path)
+        .await
+        .map_err(|e| format!("Failed to read cached model: {}", e))
+}
+
 /// Delete a cached model from the app data directory
 #[tauri::command]
 pub async fn onnx_delete_cached_model(model_id: String, app_handle: tauri::AppHandle) -> Result<bool, String> {
