@@ -83,3 +83,30 @@ The workflow files now use `env:` blocks for `${{ github.event.inputs.version }}
 - **Drop `@tauri-apps/plugin-fs` from `packages/ui`**. Still used by `useDropZoneEffects.ts` for SGF drops; removing the `readFile` call in `useModelLibrary.ts` is enough to fix the bug without touching the dependency.
 
 Tracking issue: <https://github.com/kaya-go/kaya/issues/103>
+
+## Follow-up (same day): Ubuntu 22.04 → 24.04
+
+The .deb/.rpm build started failing at link time with mold reporting
+`undefined symbol: __isoc23_strtoull` (and `__isoc23_strtoll`,
+`__isoc23_strtol`, etc.) coming out of `libort_sys-*.rlib`.
+
+These `__isoc23_*` symbols are the C23-conforming variants of `strtoul`
+& friends that glibc 2.38 introduced. The ort crate's
+`download-binaries` feature pulls a prebuilt ONNX Runtime that was
+compiled against glibc ≥ 2.38, so when mold tries to resolve those
+symbols against Ubuntu 22.04's glibc 2.35 the link aborts.
+
+Two ways out: build ORT from source, or bump the build container.
+Building from source would add 10–20 min to CI and a maintenance
+surface for a problem that gets harder over time (every ORT release
+will track newer glibc). The 2.35-targeting in the original split was
+already broken the moment ORT's prebuilt required 2.38; we just hadn't
+noticed because the previous CI run on this workflow happened to use
+a cached link result.
+
+Bumped the container to `ubuntu:24.04` (glibc 2.39). Distros covered:
+Ubuntu 24.04+, Debian 13+, Mint 22+, Fedora 40+. Older glibc users can
+still use the AppImage, which bundles its own runtime.
+
+All `Linux-ubuntu22-*` cache keys were renamed to `Linux-ubuntu24-*` so
+old caches don't bleed in.

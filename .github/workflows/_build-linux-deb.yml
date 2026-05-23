@@ -1,13 +1,16 @@
 name: Build Desktop (Linux .deb/.rpm)
 
-# Builds Debian (.deb) and RPM (.rpm) packages on Ubuntu 22.04 so they
-# link against an older glibc (2.35), keeping them compatible with the
-# vast majority of Debian/Ubuntu/Mint/Fedora installs in the wild.
+# Builds Debian (.deb) and RPM (.rpm) packages on Ubuntu 24.04 so they
+# link against glibc 2.39, the oldest version that still satisfies ort's
+# prebuilt ONNX Runtime — those binaries reference C23 libc symbols
+# (`__isoc23_strtoull`, etc.) that were added in glibc 2.38, so building
+# on 22.04 (glibc 2.35) fails at link time with mold "undefined symbol"
+# errors. 24.04 covers Ubuntu 24.04+, Debian 13+, Mint 22+, Fedora 40+.
 #
 # The Arch-based AppImage build (`_build-linux.yml`) inherits Arch's
-# bleeding-edge glibc (currently 2.43) which breaks .deb users on
-# anything older than the latest rolling releases. AppImage stays on
-# Arch because the new quick-sharun format requires it; .deb/.rpm don't.
+# bleeding-edge glibc (currently 2.43) which is even newer; AppImage
+# bundles its own libs and stays portable. AppImage stays on Arch
+# because the new quick-sharun format requires it; .deb/.rpm don't.
 # See: https://github.com/kaya-go/kaya/issues/103
 
 on:
@@ -34,7 +37,7 @@ jobs:
     name: Build Desktop - Linux (.deb/.rpm)
     runs-on: ubuntu-latest
     container:
-      image: ubuntu:22.04
+      image: ubuntu:24.04
     steps:
       - name: Install system dependencies
         env:
@@ -59,8 +62,8 @@ jobs:
 
       # rsbuild runs under Node, not Bun: `bun run --bun rsbuild build`
       # crashes with SIGILL in this Ubuntu container, the same way it does
-      # in the Arch AppImage container (see `_build-linux.yml`). Ubuntu
-      # 22.04's apt nodejs is 12.x, too old for @rsbuild/core 2.x, so pull
+      # in the Arch AppImage container (see `_build-linux.yml`). The apt
+      # nodejs in the container is too old for @rsbuild/core 2.x, so pull
       # a modern Node from setup-node.
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -73,9 +76,9 @@ jobs:
         with:
           path: |
             ~/.bun/install/cache
-          key: Linux-ubuntu22-bun-cache-${{ hashFiles('**/bun.lock') }}
+          key: Linux-ubuntu24-bun-cache-${{ hashFiles('**/bun.lock') }}
           restore-keys: |
-            Linux-ubuntu22-bun-cache-
+            Linux-ubuntu24-bun-cache-
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -108,10 +111,10 @@ jobs:
         continue-on-error: true
         with:
           path: ${{ steps.sccache_config.outputs.cache_path }}
-          key: Linux-ubuntu22-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-ubuntu24-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            Linux-ubuntu22-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
-            Linux-ubuntu22-sccache-
+            Linux-ubuntu24-sccache-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-ubuntu24-sccache-
 
       - name: Enable sccache (strict)
         shell: bash
@@ -135,10 +138,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
-          key: Linux-ubuntu22-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
+          key: Linux-ubuntu24-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock', 'packages/deadstones/src-rust/Cargo.lock') }}
           restore-keys: |
-            Linux-ubuntu22-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
-            Linux-ubuntu22-cargo-
+            Linux-ubuntu24-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
+            Linux-ubuntu24-cargo-
 
       # Stable tauri-cli is fine for .deb/.rpm — the truly-portable AppImage
       # fork is only required for the AppImage bundle, which we don't produce here.
@@ -154,7 +157,7 @@ jobs:
           path: |
             ~/.cargo/bin/wasm-pack*
             ~/wasm-pack-*
-          key: Linux-ubuntu22-wasm-pack-0.15.0
+          key: Linux-ubuntu24-wasm-pack-0.15.0
 
       - name: Install wasm-pack
         shell: bash
