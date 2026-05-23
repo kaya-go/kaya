@@ -8,8 +8,6 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: 'chore(deps)'
-    labels:
-      - 'javascript'
     groups:
       # Group minor/patch updates together to reduce PR noise
       minor-and-patch:
@@ -27,8 +25,6 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: 'chore(deps)'
-    labels:
-      - '🦀 rust'
     groups:
       rust-minor-patch:
         patterns:
@@ -44,8 +40,6 @@ updates:
     open-pull-requests-limit: 3
     commit-message:
       prefix: 'chore(deps)'
-    labels:
-      - '🦀 rust'
 
   # GitHub Actions
   - package-ecosystem: 'github-actions'
@@ -54,5 +48,3 @@ updates:
       interval: 'monthly'
     commit-message:
       prefix: 'chore(ci)'
-    labels:
-      - '⚙️ ci'

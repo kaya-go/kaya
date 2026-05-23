@@ -17,7 +17,7 @@ import {
   processBatchResults,
 } from './onnx-utils';
 import { filterKoMoves, runMCTS } from './onnx-mcts';
-import { featurize, featurizeToBuffer } from './onnx-featurization';
+import { featurizeToBuffer } from './onnx-featurization';
 import type { MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
 import { createOnnxSession } from './onnx-session';
 import {
@@ -240,90 +240,6 @@ export class OnnxEngine extends Engine {
     );
   }
 
-  /** Single-position inference used by warm-up validation. */
-  private async runSingleInference(
-    board: GoBoard,
-    nextPla: Sign,
-    komi: number,
-    history: { color: Sign; x: number; y: number }[],
-    size: number
-  ): Promise<AnalysisResult> {
-    const { bin_input, global_input } = featurize(board, nextPla, komi, history, size);
-    validateTensorData(bin_input, 'bin_input', this.debugEnabled);
-    validateTensorData(global_input, 'global_input', this.debugEnabled);
-
-    let { binTensor, globalTensor, usingGpuBuffers } = await this.prepareInputTensors(
-      bin_input,
-      global_input,
-      1,
-      size
-    );
-
-    const inferenceStart = performance.now();
-    let results: ort.InferenceSession.OnnxValueMapType;
-
-    // Push WebGPU error scope to catch async GPU validation errors
-    this.gpuDevice?.pushErrorScope('validation');
-
-    try {
-      results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
-    } catch (error) {
-      // Pop error scope before rethrowing to keep the scope stack balanced
-      if (this.gpuDevice) {
-        await this.gpuDevice.popErrorScope().catch(() => {});
-      }
-      const errorMsg = String(error);
-      if (errorMsg.includes('expected: (tensor(float16))') && this.inputDataType === 'float32') {
-        console.warn('[OnnxEngine] Detected FP16 model at runtime, switching input type');
-        this.inputDataType = 'float16';
-        if (!usingGpuBuffers) {
-          binTensor.dispose();
-          globalTensor.dispose();
-        }
-        const batchDim =
-          this.maxInferenceBatch !== Infinity && this.maxInferenceBatch > 1
-            ? this.maxInferenceBatch
-            : 1;
-        if (batchDim > 1) {
-          const batchBin = new Float32Array(batchDim * 22 * size * size);
-          batchBin.set(bin_input);
-          const batchGlobal = new Float32Array(batchDim * 19);
-          batchGlobal.set(global_input);
-          binTensor = createTensor(batchBin, [batchDim, 22, size, size], this.inputDataType);
-          globalTensor = createTensor(batchGlobal, [batchDim, 19], this.inputDataType);
-        } else {
-          binTensor = createTensor(bin_input, [1, 22, size, size], this.inputDataType);
-          globalTensor = createTensor(global_input, [1, 19], this.inputDataType);
-        }
-        usingGpuBuffers = false;
-
-        this.gpuDevice?.pushErrorScope('validation');
-        results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
-        await this.checkGpuErrorScope();
-      } else {
-        if (errorMsg.includes('Tensor not found') && this.usedProviders.includes('webnn')) {
-          throw new Error(
-            'WebNN inference failed (Tensor not found). ' +
-              'Try switching to an FP32 model or the WebGPU backend.'
-          );
-        }
-        throw error;
-      }
-    }
-
-    // Check for async GPU validation errors that don't throw in JS
-    await this.checkGpuErrorScope();
-
-    this.debugLog('NN inference', { ms: performance.now() - inferenceStart });
-    if (!usingGpuBuffers) {
-      binTensor.dispose();
-      globalTensor.dispose();
-    }
-
-    const analysisResult = await this.processResults(results, nextPla, size);
-    return filterKoMoves(analysisResult, board, nextPla, size);
-  }
-
   private async runBatchInference(
     bin_input: Float32Array,
     global_input: Float32Array,
@@ -528,15 +444,6 @@ export class OnnxEngine extends Engine {
     });
 
     return results as AnalysisResult[];
-  }
-
-  private async processResults(
-    results: ort.InferenceSession.ReturnType,
-    pla: Sign,
-    size: number
-  ): Promise<AnalysisResult> {
-    const batchResults = await processBatchResults(results, [pla], size, 1);
-    return batchResults[0];
   }
 
   async dispose(): Promise<void> {
