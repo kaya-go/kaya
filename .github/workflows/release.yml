@@ -49,10 +49,10 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack*
-          key: ${{ runner.os }}-wasm-pack-0.13
+          key: ${{ runner.os }}-wasm-pack-0.15.0
 
       - name: Install wasm-pack
-        run: command -v wasm-pack || curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: command -v wasm-pack || cargo install wasm-pack --version 0.15.0 --locked
 
       - name: Set version
         env:
@@ -116,10 +116,10 @@ jobs:
         uses: actions/cache@v5
         with:
           path: ~/.cargo/bin/wasm-pack*
-          key: ${{ runner.os }}-wasm-pack-0.13
+          key: ${{ runner.os }}-wasm-pack-0.15.0
 
       - name: Install wasm-pack
-        run: command -v wasm-pack || curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        run: command -v wasm-pack || cargo install wasm-pack --version 0.15.0 --locked
 
       - name: Set version
         env:
