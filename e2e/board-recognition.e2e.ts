@@ -22,6 +22,14 @@ const TINY_PNG = Buffer.from(
 
 async function openDialog(page: Page) {
   await page.goto('/');
+  // On mobile viewports the app renders a LandingPage gate until the user
+  // picks an action — click "New Game" to dismiss it so the Header (which
+  // owns the hidden scan-board file input) mounts. On desktop the button
+  // doesn't exist, so this is a no-op.
+  const newGame = page.getByRole('button', { name: 'New Game', exact: true });
+  if (await newGame.isVisible().catch(() => false)) {
+    await newGame.click();
+  }
   // The header renders two hidden file inputs; the scan-board one accepts
   // only images (no .sgf), which makes its `accept` attribute unique.
   const scanInput = page.locator('input[type="file"][accept=".jpg,.jpeg,.png,.webp,.bmp"]');
