@@ -146,7 +146,7 @@ jobs:
       # Stable tauri-cli is fine for .deb/.rpm — the truly-portable AppImage
       # fork is only required for the AppImage bundle, which we don't produce here.
       - name: Install tauri-cli
-        run: cargo install tauri-cli --version "^2.0" --locked
+        run: cargo install tauri-cli --version "^2.0" --locked --force
 
       - name: Install dependencies
         run: bun install
