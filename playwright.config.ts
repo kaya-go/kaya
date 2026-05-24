@@ -23,7 +23,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Locally, use the system-installed Chrome to skip Playwright's
+        // chromium download (Microsoft CDN occasionally hangs on macOS).
+        // In CI we rely on `playwright install chromium --with-deps`.
+        ...(process.env.CI ? {} : { channel: 'chrome' }),
+      },
     },
   ],
 
