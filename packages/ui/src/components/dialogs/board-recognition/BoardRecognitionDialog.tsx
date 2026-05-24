@@ -14,12 +14,14 @@ import type {
 import { buildSGF, orderCorners } from '@kaya/board-recognition';
 import type { GoBoard } from '@kaya/goboard';
 import type { Sign, Vertex } from '@kaya/goboard';
-import { BoardPreview } from './components/BoardPreview';
-import { CalibrationToolbar } from './components/CalibrationToolbar';
+import { BoardSizeSelector } from './components/BoardSizeSelector';
 import { ImportDropdown } from './components/ImportDropdown';
-import { PRESET_SIZES, useBoardRecognition } from './hooks/useBoardRecognition';
+import { MobileTabs, type MobileTab } from './components/MobileTabs';
+import { useBoardRecognition } from './hooks/useBoardRecognition';
 import { DEFAULT_THRESHOLD } from '@kaya/board-recognition';
 import { PhotoPanel } from './components/PhotoPanel';
+import { PreviewPanel } from './components/PreviewPanel';
+import { SensitivitySlider } from './components/SensitivitySlider';
 import { useLayoutMode } from '../../../hooks/useMediaQuery';
 import { useGameTree } from '../../../contexts/GameTreeContext';
 import { computeDeltaStones, type DeltaStone } from './utils/deltaStones';
@@ -62,7 +64,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   const [customSizeInput, setCustomSizeInput] = useState('');
   const [customSizeActive, setCustomSizeActive] = useState(false);
   const [showDelta, setShowDelta] = useState(false);
-  const [mobileTab, setMobileTab] = useState<'photo' | 'preview'>('photo');
+  const [mobileTab, setMobileTab] = useState<MobileTab>('photo');
   const layoutMode = useLayoutMode();
   const isMobile = layoutMode === 'mobile';
   const { gameSettings, setAIConfigOpen, setConfigInitialTab } = useGameTree();
@@ -217,9 +219,6 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
     onClose();
   }, [deltaMove, onPlayMove, onClose]);
 
-  const isCustomSize =
-    customSizeActive || (boardSize !== null && !PRESET_SIZES.includes(boardSize));
-
   return (
     <div
       className="brd-overlay"
@@ -249,45 +248,15 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
           </div>
         </div>
 
-        {/* Board size + backend selector */}
+        {/* Board size + sensitivity slider */}
         <div className="brd-size-row">
-          <span className="brd-size-label">{t('boardRecognition.selectSize')}</span>
-          {PRESET_SIZES.map(s => (
-            <button
-              key={s}
-              className={`brd-size-btn${boardSize === s && !isCustomSize ? ' active' : ''}`}
-              onClick={() => {
-                setBoardSize(s);
-                setCustomSizeActive(false);
-                setCustomSizeInput('');
-              }}
-            >
-              {s}×{s}
-            </button>
-          ))}
-          <input
-            type="number"
-            className={`brd-size-custom-input brd-size-custom-input-inline${isCustomSize ? ' active' : ''}`}
-            min={2}
-            max={52}
-            placeholder={t('boardRecognition.customSize')}
-            value={
-              isCustomSize
-                ? customSizeInput ||
-                  (boardSize && !PRESET_SIZES.includes(boardSize) ? String(boardSize) : '')
-                : ''
-            }
-            onFocus={() => setCustomSizeActive(true)}
-            onBlur={() => {
-              if (!customSizeInput) setCustomSizeActive(false);
-            }}
-            onChange={e => {
-              const val = e.target.value;
-              setCustomSizeInput(val);
-              setCustomSizeActive(true);
-              const n = parseInt(val, 10);
-              if (n >= 2 && n <= 52) setBoardSize(n);
-            }}
+          <BoardSizeSelector
+            boardSize={boardSize}
+            setBoardSize={setBoardSize}
+            customSizeInput={customSizeInput}
+            setCustomSizeInput={setCustomSizeInput}
+            customSizeActive={customSizeActive}
+            setCustomSizeActive={setCustomSizeActive}
           />
           {mokuLoading && (
             <span className="brd-moku-status brd-moku-loading">
@@ -298,89 +267,12 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
             </span>
           )}
           {mokuReady && (
-            <>
-              <span className="brd-size-sep" />
-              <span
-                className="brd-size-label brd-threshold-label"
-                title={t('boardRecognition.sensitivityTooltip')}
-              >
-                {t('boardRecognition.sensitivity')}
-              </span>
-              <button
-                className="brd-fine-btn"
-                onClick={() => {
-                  const v = Math.max(0.5, mokuThreshold - 0.01);
-                  handleMokuThresholdChange(v);
-                  commitMokuThreshold();
-                }}
-                title={t('boardRecognition.sensitivityFewer')}
-              >
-                ‹
-              </button>
-              <button
-                className="brd-fine-btn brd-fine-btn-sm"
-                onClick={() => {
-                  const v = Math.max(0.5, mokuThreshold - 0.001);
-                  handleMokuThresholdChange(v);
-                  commitMokuThreshold();
-                }}
-                title={t('boardRecognition.sensitivityFewer')}
-              >
-                ‹
-              </button>
-              <span className="brd-threshold-end-label">
-                {t('boardRecognition.sensitivityFewer')}
-              </span>
-              <input
-                type="range"
-                className="brd-threshold-slider"
-                min={0.5}
-                max={1}
-                step={0.001}
-                value={mokuThreshold}
-                onChange={e => {
-                  handleMokuThresholdChange(Number(e.target.value));
-                  commitMokuThreshold();
-                }}
-              />
-              <span className="brd-threshold-end-label">
-                {t('boardRecognition.sensitivityMore')}
-              </span>
-              <button
-                className="brd-fine-btn brd-fine-btn-sm"
-                onClick={() => {
-                  const v = Math.min(1, mokuThreshold + 0.001);
-                  handleMokuThresholdChange(v);
-                  commitMokuThreshold();
-                }}
-                title={t('boardRecognition.sensitivityMore')}
-              >
-                ›
-              </button>
-              <button
-                className="brd-fine-btn"
-                onClick={() => {
-                  const v = Math.min(1, mokuThreshold + 0.01);
-                  handleMokuThresholdChange(v);
-                  commitMokuThreshold();
-                }}
-                title={t('boardRecognition.sensitivityMore')}
-              >
-                ›
-              </button>
-              <span className="brd-threshold-value">{mokuThreshold.toFixed(3)}</span>
-              <button
-                className="brd-threshold-reset"
-                disabled={mokuThreshold === 1 - DEFAULT_THRESHOLD}
-                onClick={() => {
-                  handleMokuThresholdChange(1 - DEFAULT_THRESHOLD);
-                  commitMokuThreshold();
-                }}
-                title={t('boardRecognition.sensitivityReset')}
-              >
-                ↺
-              </button>
-            </>
+            <SensitivitySlider
+              variant="desktop"
+              mokuThreshold={mokuThreshold}
+              handleMokuThresholdChange={handleMokuThresholdChange}
+              commitMokuThreshold={commitMokuThreshold}
+            />
           )}
         </div>
 
@@ -397,25 +289,7 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
 
         {loadError && <div className="brd-error">{loadError}</div>}
 
-        {/* Mobile tab bar */}
-        {isMobile && (
-          <div className="brd-mobile-tabs">
-            <button
-              className={`brd-mobile-tab${mobileTab === 'photo' ? ' active' : ''}`}
-              onClick={() => setMobileTab('photo')}
-            >
-              <span className="brd-mobile-tab-badge">1</span>
-              {t('boardRecognition.stepCorners')}
-            </button>
-            <button
-              className={`brd-mobile-tab${mobileTab === 'preview' ? ' active' : ''}`}
-              onClick={() => setMobileTab('preview')}
-            >
-              <span className="brd-mobile-tab-badge">2</span>
-              {t('boardRecognition.stepReview')}
-            </button>
-          </div>
-        )}
+        {isMobile && <MobileTabs mobileTab={mobileTab} setMobileTab={setMobileTab} />}
 
         <div className="brd-body">
           {/* Left / Tab 1: original image with draggable corners */}
@@ -439,179 +313,41 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
           />
 
           {/* Right / Tab 2: warped board preview */}
-          <div
-            className={`brd-panel brd-panel-preview${isMobile && mobileTab !== 'preview' ? ' brd-mobile-hidden' : ''}`}
-          >
-            {!isMobile && (
-              <div className="brd-panel-title brd-step-title">
-                <span className="brd-step-badge">2</span>
-                {t('boardRecognition.stepReview')}
-                {result && !analyzing && (
-                  <span className="brd-panel-stats">
-                    <span className="brd-stat black">
-                      ● {result.stones.filter(s => s.color === 'black').length}
-                    </span>
-                    <span className="brd-stat white">
-                      ○ {result.stones.filter(s => s.color === 'white').length}
-                    </span>
-                  </span>
-                )}
-              </div>
-            )}
-            {/* Mobile: stone counts + sensitivity above the goban */}
-            {isMobile && result && !analyzing && (
-              <div className="brd-mobile-preview-bar">
-                <span className="brd-mobile-counts">
-                  <span className="brd-stat black">
-                    ● {result.stones.filter(s => s.color === 'black').length}
-                  </span>
-                  <span className="brd-stat white">
-                    ○ {result.stones.filter(s => s.color === 'white').length}
-                  </span>
-                </span>
-                {mokuReady && (
-                  <span className="brd-mobile-sensitivity">
-                    <button
-                      className="brd-fine-btn-mobile"
-                      onClick={() => {
-                        const v = Math.max(0.5, mokuThreshold - 0.01);
-                        handleMokuThresholdChange(v);
-                        commitMokuThreshold();
-                      }}
-                      title={t('boardRecognition.sensitivityFewer')}
-                    >
-                      −
-                    </button>
-                    <input
-                      type="range"
-                      className="brd-threshold-slider-mobile"
-                      min={0.5}
-                      max={1}
-                      step={0.001}
-                      value={mokuThreshold}
-                      onChange={e => {
-                        handleMokuThresholdChange(Number(e.target.value));
-                        commitMokuThreshold();
-                      }}
-                    />
-                    <button
-                      className="brd-fine-btn-mobile"
-                      onClick={() => {
-                        const v = Math.min(1, mokuThreshold + 0.01);
-                        handleMokuThresholdChange(v);
-                        commitMokuThreshold();
-                      }}
-                      title={t('boardRecognition.sensitivityMore')}
-                    >
-                      +
-                    </button>
-                    <span className="brd-threshold-value-mobile">{mokuThreshold.toFixed(3)}</span>
-                    <button
-                      className="brd-fine-btn-mobile brd-fine-btn-mobile-reset"
-                      disabled={mokuThreshold === 1 - DEFAULT_THRESHOLD}
-                      onClick={() => {
-                        handleMokuThresholdChange(1 - DEFAULT_THRESHOLD);
-                        commitMokuThreshold();
-                      }}
-                      title={t('boardRecognition.sensitivityReset')}
-                    >
-                      ↺
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
-            <div className="brd-preview-wrap">
-              {analyzing && !result && (
-                <div className="brd-analyzing">
-                  <div className="brd-spinner" />
-                  <span>{t('boardRecognition.analyzing')}</span>
-                </div>
-              )}
-              {!analyzing && !result && mokuLoading && (
-                <div className="brd-analyzing">
-                  <div className="brd-spinner" />
-                  <span>{t('boardRecognition.loadingModel')}</span>
-                </div>
-              )}
-              {!analyzing && !boardSize && (
-                <div className="brd-placeholder">{t('boardRecognition.chooseSizeFirst')}</div>
-              )}
-              {((!analyzing && boardSize) || analyzing) && result && (
-                <>
-                  <BoardPreview
-                    result={result}
-                    objectURL={objectURL}
-                    corners={corners}
-                    hints={hints}
-                    calibrationMode={calibrationMode}
-                    onIntersectionClick={onPreviewClick}
-                    gridCorners={gridCorners}
-                    settingGrid={settingGrid}
-                    gridClicks={gridClicks}
-                    onGridClick={onGridClick}
-                    moveMarker={canAddAsMove ? deltaMove : undefined}
-                    delta={showDelta ? delta : undefined}
-                  />
-                  {analyzing && <div className="brd-moku-overlay-spinner" />}
-                </>
-              )}
-            </div>
-
-            {/* Delta toggle + summary */}
-            {delta.length > 0 && result && !analyzing && (
-              <div className="brd-delta-legend">
-                <button
-                  className={`brd-delta-toggle${showDelta ? ' active' : ''}`}
-                  onClick={() => setShowDelta(prev => !prev)}
-                  title={t('boardRecognition.showDelta')}
-                >
-                  {t('boardRecognition.showDelta')}
-                </button>
-                {showDelta && (
-                  <span className="brd-delta-summary">
-                    {delta.filter(d => d.type === 'added').length > 0 && (
-                      <span className="brd-delta-legend-item brd-delta-added">
-                        <span className="brd-delta-dot" />
-                        {t('boardRecognition.deltaAdded', {
-                          count: delta.filter(d => d.type === 'added').length,
-                        })}
-                      </span>
-                    )}
-                    {delta.filter(d => d.type === 'removed').length > 0 && (
-                      <span className="brd-delta-legend-item brd-delta-removed">
-                        <span className="brd-delta-dot" />
-                        {t('boardRecognition.deltaRemoved', {
-                          count: delta.filter(d => d.type === 'removed').length,
-                        })}
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Grid alignment + Calibration toolbar + stats */}
-            {result && !analyzing && (
-              <CalibrationToolbar
-                result={result}
-                calibrationMode={calibrationMode}
-                setCalibrationMode={setCalibrationMode}
-                settingGrid={settingGrid}
-                toggleGridMode={toggleGridMode}
-                resetGrid={resetGrid}
-                gridCorners={gridCorners}
-                gridClicks={gridClicks}
-                hints={hints}
-                onResetCalibration={() => {
-                  setHints([]);
-                  if (corners) doReclassifyNow(corners, gridCornersRef.current, []);
-                }}
-                setSettingGrid={setSettingGrid}
-                setGridClicks={setGridClicks}
-              />
-            )}
-          </div>
+          <PreviewPanel
+            isMobile={isMobile}
+            isVisible={mobileTab === 'preview'}
+            result={result}
+            analyzing={analyzing}
+            mokuLoading={mokuLoading}
+            boardSize={boardSize}
+            objectURL={objectURL}
+            corners={corners}
+            mokuReady={mokuReady}
+            mokuThreshold={mokuThreshold}
+            handleMokuThresholdChange={handleMokuThresholdChange}
+            commitMokuThreshold={commitMokuThreshold}
+            hints={hints}
+            calibrationMode={calibrationMode}
+            onPreviewClick={onPreviewClick}
+            gridCorners={gridCorners}
+            settingGrid={settingGrid}
+            gridClicks={gridClicks}
+            onGridClick={onGridClick}
+            canAddAsMove={canAddAsMove}
+            deltaMove={deltaMove}
+            delta={delta}
+            showDelta={showDelta}
+            setShowDelta={setShowDelta}
+            setCalibrationMode={setCalibrationMode}
+            toggleGridMode={toggleGridMode}
+            resetGrid={resetGrid}
+            onResetCalibration={() => {
+              setHints([]);
+              if (corners) doReclassifyNow(corners, gridCornersRef.current, []);
+            }}
+            setSettingGrid={setSettingGrid}
+            setGridClicks={setGridClicks}
+          />
         </div>
 
         {/* Footer */}
