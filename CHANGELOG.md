@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.6] - 2026-05-24
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(desktop)* Grant dialog:allow-ask/allow-confirm for updater prompt ([b3b551e](https://github.com/kaya-go/kaya/commit/b3b551eaeeea8b0b458d69b272fc3663717b876d)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.4.5] - 2026-05-24
 
 ### <!-- 1 -->🐛 Bug Fixes
@@ -26,11 +37,13 @@ All notable changes to this project will be documented in this file.
 
 - *(ci)* Bump actions/setup-node from 4 to 6 ([#109](https://github.com/kaya-go/kaya/issues/109)) by @dependabot[bot]
 
+- Release v0.4.5 ([26fb88b](https://github.com/kaya-go/kaya/commit/26fb88b80d6d96fc310aa3b0a15ad9c30ad31a54)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @dependabot[bot]
-- @github-actions[bot]
 
 ## [0.4.4] - 2026-05-05
 

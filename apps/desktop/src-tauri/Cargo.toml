@@ -1,6 +1,6 @@
 [package]
 name = "kaya"
-version = "0.4.6-dev"
+version = "0.4.6"
 description = "A beautiful Go game application with AI analysis powered by KataGo"
 authors = ["Kaya Team"]
 license = "AGPL-3.0"
