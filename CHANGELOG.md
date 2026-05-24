@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.5] - 2026-05-24
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(desktop)* Linux model download, glibc, F11 and audio diagnostics ([#106](https://github.com/kaya-go/kaya/issues/106)) by @hadim
+
+- *(ci)* Use Node.js/npx for rsbuild in Ubuntu .deb/.rpm build ([d5c3796](https://github.com/kaya-go/kaya/commit/d5c37965c1820f525ef5a0d6d88d2b98dc9d18eb)) by @hadim
+
+- *(ci)* Install libssl-dev for Linux .deb/.rpm build ([0224232](https://github.com/kaya-go/kaya/commit/0224232968cd62d13591f361a75468f36c3d96e1)) by @hadim
+
+- *(ci)* Bump linux .deb/.rpm container to ubuntu 24.04 ([a52bd88](https://github.com/kaya-go/kaya/commit/a52bd88e47ae8377568ad5cd96ad491cf946420f)) by @hadim
+
+- *(ci)* Add --force to tauri-cli install in .deb/.rpm build ([3ba8296](https://github.com/kaya-go/kaya/commit/3ba82962f0095675f0d64405ca231b8a1688cfdd)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ui)* Split BoardRecognitionDialog into per-section components ([#112](https://github.com/kaya-go/kaya/issues/112)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Repo-slim (phase 1 + phase 2 refactors) ([#107](https://github.com/kaya-go/kaya/issues/107)) by @hadim
+
+- *(ci)* Bump actions/setup-node from 4 to 6 ([#109](https://github.com/kaya-go/kaya/issues/109)) by @dependabot[bot]
+
+### 🙏 Contributors
+
+- @hadim
+- @dependabot[bot]
+- @github-actions[bot]
+
 ## [0.4.4] - 2026-05-05
 
 ### <!-- 0 -->🚀 Features
@@ -28,11 +58,13 @@ All notable changes to this project will be documented in this file.
 
 - *(ci)* Bump mozilla-actions/sccache-action from 0.0.9 to 0.0.10 ([#99](https://github.com/kaya-go/kaya/issues/99)) by @dependabot[bot]
 
+- Release v0.4.4 ([6b58d7e](https://github.com/kaya-go/kaya/commit/6b58d7e2412b72741548b32a152176066fe89f3f)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @dependabot[bot]
-- @github-actions[bot]
 
 ## [0.4.3] - 2026-04-25
 
