@@ -10,6 +10,12 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useGameTreeBoard, useGameTreeEdit } from '../../contexts/GameTreeContext';
+import {
+  COMMENT_FONT_SCALE_MAX,
+  COMMENT_FONT_SCALE_MIN,
+  COMMENT_FONT_SCALE_STEP,
+  clampCommentFontScale,
+} from '../../utils/commentFontScale';
 import './CommentEditor.css';
 
 // ============================================================================
@@ -26,6 +32,10 @@ interface CommentEditorContextValue {
   handleEdit: () => void;
   handleSave: () => void;
   handleCancel: () => void;
+  fontScale: number;
+  adjustFontScale: (delta: number) => void;
+  canIncreaseFont: boolean;
+  canDecreaseFont: boolean;
 }
 
 const CommentEditorContext = createContext<CommentEditorContextValue | null>(null);
@@ -35,11 +45,21 @@ const CommentEditorContext = createContext<CommentEditorContextValue | null>(nul
  * Wrap your app with this to share state between CommentHeaderActions and CommentEditor.
  */
 export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentNode, moveNumber } = useGameTreeBoard();
+  const { currentNode, moveNumber, gameSettings, setGameSettings } = useGameTreeBoard();
   const { setNodeComment: updateComment } = useGameTreeEdit();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const prevNodeIdRef = useRef<string | number | null>(null);
+
+  const fontScale = gameSettings.commentFontScale;
+  const adjustFontScale = useCallback(
+    (delta: number) => {
+      setGameSettings({ commentFontScale: clampCommentFontScale(fontScale + delta) });
+    },
+    [fontScale, setGameSettings]
+  );
+  const canIncreaseFont = fontScale < COMMENT_FONT_SCALE_MAX;
+  const canDecreaseFont = fontScale > COMMENT_FONT_SCALE_MIN;
 
   const currentComment = currentNode?.data.C?.[0] || '';
   const currentNodeId = currentNode?.id ?? null;
@@ -85,6 +105,10 @@ export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({
     handleEdit,
     handleSave,
     handleCancel,
+    fontScale,
+    adjustFontScale,
+    canIncreaseFont,
+    canDecreaseFont,
   };
 
   return <CommentEditorContext.Provider value={value}>{children}</CommentEditorContext.Provider>;
@@ -112,12 +136,45 @@ export const useCommentEditorState = (): CommentEditorContextValue => {
  */
 export const CommentHeaderActions: React.FC = () => {
   const { t } = useTranslation();
-  const { moveNumber, isEditing, handleEdit, handleSave, handleCancel } = useCommentEditorState();
+  const {
+    moveNumber,
+    isEditing,
+    handleEdit,
+    handleSave,
+    handleCancel,
+    adjustFontScale,
+    canIncreaseFont,
+    canDecreaseFont,
+  } = useCommentEditorState();
 
   return (
     <>
       {moveNumber > 0 && (
         <span className="move-number">{t('comment.move', { number: moveNumber })}</span>
+      )}
+      {!isEditing && (
+        <div className="comment-fontsize-controls">
+          <button
+            type="button"
+            onClick={() => adjustFontScale(-COMMENT_FONT_SCALE_STEP)}
+            disabled={!canDecreaseFont}
+            className="comment-fontsize-button"
+            title={t('comment.decreaseTextSize')}
+            aria-label={t('comment.decreaseTextSize')}
+          >
+            A&minus;
+          </button>
+          <button
+            type="button"
+            onClick={() => adjustFontScale(COMMENT_FONT_SCALE_STEP)}
+            disabled={!canIncreaseFont}
+            className="comment-fontsize-button"
+            title={t('comment.increaseTextSize')}
+            aria-label={t('comment.increaseTextSize')}
+          >
+            A+
+          </button>
+        </div>
       )}
       {!isEditing && (
         <button
@@ -181,9 +238,13 @@ export const CommentEditor: React.FC = () => {
     handleEdit,
     handleSave,
     handleCancel,
+    fontScale,
   } = useCommentEditorState();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Drive comment text size from the persisted scale via a CSS variable.
+  const fontScaleStyle = { '--comment-font-scale': fontScale } as React.CSSProperties;
 
   // Focus textarea when entering edit mode
   useEffect(() => {
@@ -226,7 +287,10 @@ export const CommentEditor: React.FC = () => {
   }
 
   return (
-    <div className={`comment-editor ${isEditing ? 'comment-editor--editing' : ''}`}>
+    <div
+      className={`comment-editor ${isEditing ? 'comment-editor--editing' : ''}`}
+      style={fontScaleStyle}
+    >
       {isEditing ? (
         <div className="comment-editor-container">
           <textarea

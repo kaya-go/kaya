@@ -399,6 +399,8 @@
     "enterHint": "Enter로 저장 • Shift+Enter로 줄 바꿈 • Esc로 취소",
     "hint": "힌트: 마크다운으로 서식 지정 가능. Ctrl/Cmd+S로 저장, Esc로 취소.",
     "editComment": "댓글 편집",
+    "increaseTextSize": "댓글 글자 크게",
+    "decreaseTextSize": "댓글 글자 작게",
     "save": "저장",
     "cancel": "취소",
     "saveShortcut": "저장 (Cmd/Ctrl+S)",

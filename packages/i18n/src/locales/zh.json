@@ -399,6 +399,8 @@
     "enterHint": "Enter 保存 • Shift+Enter 换行 • Esc 取消",
     "hint": "提示：使用 markdown 格式化。Ctrl/Cmd+S 保存，Esc 取消。",
     "editComment": "编辑评论",
+    "increaseTextSize": "增大评论文字",
+    "decreaseTextSize": "减小评论文字",
     "save": "保存",
     "cancel": "取消",
     "saveShortcut": "保存 (Cmd/Ctrl+S)",

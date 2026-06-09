@@ -48,6 +48,36 @@
   color: var(--accent-foreground);
 }
 
+.comment-fontsize-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.comment-fontsize-button {
+  padding: 0.2rem 0.4rem;
+  min-width: 1.6rem;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.comment-fontsize-button:hover:not(:disabled) {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.comment-fontsize-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .comment-save-button,
 .comment-cancel-button {
   padding: 0.35rem 0.75rem;
@@ -129,6 +159,8 @@
   -webkit-user-select: text;
   flex: 1;
   min-height: 0;
+  /* Scaled by the comment text-size control (A- / A+); headings use em so they scale too. */
+  font-size: calc(1rem * var(--comment-font-scale, 1));
 }
 
 .comment-markdown p {
@@ -155,15 +187,15 @@
 }
 
 .comment-markdown h1 {
-  font-size: 1.5rem;
+  font-size: 1.5em;
 }
 
 .comment-markdown h2 {
-  font-size: 1.3rem;
+  font-size: 1.3em;
 }
 
 .comment-markdown h3 {
-  font-size: 1.1rem;
+  font-size: 1.1em;
 }
 
 .comment-markdown p {
@@ -257,7 +289,7 @@
   background: var(--background);
   color: var(--text);
   font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 0.9rem;
+  font-size: calc(0.9rem * var(--comment-font-scale, 1));
   line-height: 1.6;
   resize: none;
   outline: none;

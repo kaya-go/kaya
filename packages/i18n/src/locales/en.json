@@ -399,6 +399,8 @@
     "enterHint": "Enter to save • Shift+Enter for new line • Esc to cancel",
     "hint": "Tip: Use markdown for formatting. Ctrl/Cmd+S to save, Esc to cancel.",
     "editComment": "Edit comment",
+    "increaseTextSize": "Increase comment text size",
+    "decreaseTextSize": "Decrease comment text size",
     "save": "Save",
     "cancel": "Cancel",
     "saveShortcut": "Save (Cmd/Ctrl+S)",

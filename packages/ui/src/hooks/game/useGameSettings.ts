@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { type GameSettings } from '../../types/game';
+import { COMMENT_FONT_SCALE_DEFAULT, clampCommentFontScale } from '../../utils/commentFontScale';
 
 const GAME_SETTINGS_STORAGE_KEY = 'kaya-game-settings';
 
@@ -10,6 +11,7 @@ const DEFAULT_GAME_SETTINGS: GameSettings = {
   fuzzyStonePlacement: true, // Enabled by default for natural stone appearance
   showCoordinates: true, // Show coordinates by default
   showBoardControls: true, // Show board controls by default
+  commentFontScale: COMMENT_FONT_SCALE_DEFAULT, // Default comment text size
   detectionModelSource: 'default', // Use built-in Moku model by default
 };
 
@@ -34,6 +36,10 @@ function loadGameSettings(): GameSettings {
           typeof parsed.showBoardControls === 'boolean'
             ? parsed.showBoardControls
             : DEFAULT_GAME_SETTINGS.showBoardControls,
+        commentFontScale:
+          typeof parsed.commentFontScale === 'number'
+            ? clampCommentFontScale(parsed.commentFontScale)
+            : DEFAULT_GAME_SETTINGS.commentFontScale,
         detectionModelSource:
           parsed.detectionModelSource === 'custom'
             ? 'custom'

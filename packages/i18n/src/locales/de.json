@@ -396,6 +396,8 @@
     "enterHint": "Enter zum Speichern • Shift+Enter für neue Zeile • Esc zum Abbrechen",
     "hint": "Tipp: Markdown zur Formatierung verwenden. Strg/Cmd+S zum Speichern, Esc zum Abbrechen.",
     "editComment": "Kommentar bearbeiten",
+    "increaseTextSize": "Kommentartext vergrößern",
+    "decreaseTextSize": "Kommentartext verkleinern",
     "save": "Speichern",
     "cancel": "Abbrechen",
     "saveShortcut": "Speichern (Cmd/Strg+S)",

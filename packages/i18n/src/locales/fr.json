@@ -396,6 +396,8 @@
     "enterHint": "Entrée pour sauvegarder • Maj+Entrée pour nouvelle ligne • Échap pour annuler",
     "hint": "Astuce : Utilisez le markdown. Ctrl/Cmd+S pour sauver, Échap pour annuler.",
     "editComment": "Éditer le commentaire",
+    "increaseTextSize": "Agrandir le texte du commentaire",
+    "decreaseTextSize": "Réduire le texte du commentaire",
     "save": "Sauver",
     "cancel": "Annuler",
     "saveShortcut": "Sauver (Cmd/Ctrl+S)",
