@@ -41,3 +41,4 @@ link forward to the replacement. Don't delete history.
 | 2026-05-23 | [Linux: model download fix and glibc compatibility](2026-05-23-linux-model-download-and-glibc.md)           | shipped   |
 | 2026-06-09 | [Skip the eager JS-heap model copy on the native desktop path](2026-06-09-lazy-model-buffer-native-path.md) | shipped   |
 | 2026-06-09 | [Problem mode — open SGFs at the start instead of the solution](2026-06-09-problem-mode-open-position.md)   | shipped   |
+| 2026-06-09 | [Request persistent storage on web](2026-06-09-web-persistent-storage.md)                                   | shipped   |

@@ -121,6 +121,7 @@ export { saveFile, isTauriApp, setTauriSaveAPI } from '@kaya/platform';
 export { setTauriClipboardAPI } from '@kaya/platform';
 export type { TauriSaveAPI } from '@kaya/platform';
 export { readClipboardText, writeClipboardText } from '@kaya/platform';
+export { requestPersistentStorage } from '@kaya/platform';
 
 // Hooks
 export { useGameSounds, setSoundInitErrorHandler } from './useGameSounds';

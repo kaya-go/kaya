@@ -16,8 +16,11 @@ desktop, a PWA in the browser. KataGo runs locally — through ONNX Runtime
 ## Design objectives
 
 - **Local-first.** Everything works offline once assets are downloaded.
-  No cloud calls in the hot path. Game files live on disk (desktop) or
-  IndexedDB (web).
+  No cloud calls in the hot path. Game files, settings, and AI models live
+  on disk (desktop) or in IndexedDB/localStorage (web). On web the app
+  requests [persistent storage](../specs/2026-06-09-web-persistent-storage.md)
+  at startup so the browser doesn't evict downloaded models and settings
+  between sessions.
 - **One frontend, two targets.** Web and desktop share a single React tree
   and component library. The differences are platform shims (file save,
   audio, AI engine), not parallel UIs.
