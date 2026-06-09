@@ -398,6 +398,8 @@
     "enterHint": "Enter para guardar • Shift+Enter para nueva línea • Esc para cancelar",
     "hint": "Consejo: Usa markdown para formatear. Ctrl/Cmd+S para guardar, Esc para cancelar.",
     "editComment": "Editar comentario",
+    "increaseTextSize": "Aumentar el tamaño del texto",
+    "decreaseTextSize": "Reducir el tamaño del texto",
     "save": "Guardar",
     "cancel": "Cancelar",
     "saveShortcut": "Guardar (Cmd/Ctrl+S)",

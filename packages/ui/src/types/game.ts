@@ -88,6 +88,11 @@ export interface GameSettings {
    * open at the first problem. See `determineStartNode`.
    */
   problemMode: boolean;
+  /**
+   * Text-size multiplier for the move comment panel (1 = default).
+   * Clamped to [COMMENT_FONT_SCALE_MIN, COMMENT_FONT_SCALE_MAX].
+   */
+  commentFontScale: number;
   /** Source of the Moku detection ONNX model: 'default' or 'custom' */
   detectionModelSource: 'default' | 'custom';
   /** Name of the uploaded custom detection model file (display only) */

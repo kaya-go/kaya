@@ -401,6 +401,8 @@
     "enterHint": "Enterで保存 • Shift+Enterで改行 • Escでキャンセル",
     "hint": "ヒント: markdownで書式設定可能。Ctrl/Cmd+Sで保存、Escでキャンセル。",
     "editComment": "コメントを編集",
+    "increaseTextSize": "コメントの文字を大きく",
+    "decreaseTextSize": "コメントの文字を小さく",
     "save": "保存",
     "cancel": "キャンセル",
     "saveShortcut": "保存 (Cmd/Ctrl+S)",

@@ -398,6 +398,8 @@
     "enterHint": "Invio per salvare • Shift+Invio per nuova riga • Esc per annullare",
     "hint": "Suggerimento: Usa markdown per formattare. Ctrl/Cmd+S per salvare, Esc per annullare.",
     "editComment": "Modifica commento",
+    "increaseTextSize": "Aumenta la dimensione del testo",
+    "decreaseTextSize": "Riduci la dimensione del testo",
     "save": "Salva",
     "cancel": "Annulla",
     "saveShortcut": "Salva (Cmd/Ctrl+S)",

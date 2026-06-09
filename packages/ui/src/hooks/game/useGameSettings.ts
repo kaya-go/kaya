@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { type GameSettings } from '../../types/game';
+import { COMMENT_FONT_SCALE_DEFAULT, clampCommentFontScale } from '../../utils/commentFontScale';
 
 const GAME_SETTINGS_STORAGE_KEY = 'kaya-game-settings';
 
@@ -11,6 +12,7 @@ const DEFAULT_GAME_SETTINGS: GameSettings = {
   showCoordinates: true, // Show coordinates by default
   showBoardControls: true, // Show board controls by default
   problemMode: false, // Off by default; opt-in for tsumego study
+  commentFontScale: COMMENT_FONT_SCALE_DEFAULT, // Default comment text size
   detectionModelSource: 'default', // Use built-in Moku model by default
 };
 
@@ -42,6 +44,10 @@ export function loadGameSettings(): GameSettings {
           typeof parsed.problemMode === 'boolean'
             ? parsed.problemMode
             : DEFAULT_GAME_SETTINGS.problemMode,
+        commentFontScale:
+          typeof parsed.commentFontScale === 'number'
+            ? clampCommentFontScale(parsed.commentFontScale)
+            : DEFAULT_GAME_SETTINGS.commentFontScale,
         detectionModelSource:
           parsed.detectionModelSource === 'custom'
             ? 'custom'
