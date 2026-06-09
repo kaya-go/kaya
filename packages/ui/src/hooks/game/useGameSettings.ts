@@ -11,14 +11,18 @@ const DEFAULT_GAME_SETTINGS: GameSettings = {
   fuzzyStonePlacement: true, // Enabled by default for natural stone appearance
   showCoordinates: true, // Show coordinates by default
   showBoardControls: true, // Show board controls by default
+  problemMode: false, // Off by default; opt-in for tsumego study
   commentFontScale: COMMENT_FONT_SCALE_DEFAULT, // Default comment text size
   detectionModelSource: 'default', // Use built-in Moku model by default
 };
 
 /**
- * Load game settings from localStorage
+ * Load game settings from localStorage.
+ *
+ * Exported so non-React load paths (e.g. the SGF loader in `useGameTreeState`)
+ * can read the current persisted value without re-rendering or prop-drilling.
  */
-function loadGameSettings(): GameSettings {
+export function loadGameSettings(): GameSettings {
   try {
     const stored = localStorage.getItem(GAME_SETTINGS_STORAGE_KEY);
     if (stored) {
@@ -36,6 +40,10 @@ function loadGameSettings(): GameSettings {
           typeof parsed.showBoardControls === 'boolean'
             ? parsed.showBoardControls
             : DEFAULT_GAME_SETTINGS.showBoardControls,
+        problemMode:
+          typeof parsed.problemMode === 'boolean'
+            ? parsed.problemMode
+            : DEFAULT_GAME_SETTINGS.problemMode,
         commentFontScale:
           typeof parsed.commentFontScale === 'number'
             ? clampCommentFontScale(parsed.commentFontScale)

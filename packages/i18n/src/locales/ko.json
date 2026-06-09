@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "바둑판 가장자리에 좌표(A-T, 1-19)를 표시합니다.",
     "fuzzyStonePlacement": "퍼지 착점",
     "fuzzyStonePlacementDescription": "돌의 위치에 약간의 무작위 오프셋을 추가하여 손으로 놓은 듯한 자연스러운 모습을 연출합니다.",
+    "problemMode": "문제 모드",
+    "problemModeDescription": "SGF 파일을 마지막 수가 아니라 시작 위치에서 엽니다. 사활 문제의 정답이 직접 둘 때까지 숨겨집니다.",
     "on": "켜짐",
     "off": "꺼짐",
     "themes": {

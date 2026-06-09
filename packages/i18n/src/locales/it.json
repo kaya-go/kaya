@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "Visualizza le coordinate della tavola (A-T, 1-19) lungo i bordi.",
     "fuzzyStonePlacement": "Posizionamento sfocato delle pietre",
     "fuzzyStonePlacementDescription": "Aggiunge leggeri spostamenti casuali alle posizioni delle pietre per un aspetto più naturale.",
+    "problemMode": "Modalità problema",
+    "problemModeDescription": "Apre i file SGF nella posizione iniziale anziché all'ultima mossa, così le soluzioni dei tsumego restano nascoste finché non le giochi.",
     "on": "Attivo",
     "off": "Disattivo",
     "themes": {

@@ -82,6 +82,13 @@ export interface GameSettings {
   /** Show the board controls section (captures, navigation buttons) */
   showBoardControls: boolean;
   /**
+   * Problem (tsumego) mode. When enabled, opening an SGF never auto-advances
+   * to the end of the main line — single-problem files open at the root so the
+   * solution stays hidden until the user steps through it. Collections still
+   * open at the first problem. See `determineStartNode`.
+   */
+  problemMode: boolean;
+  /**
    * Text-size multiplier for the move comment panel (1 = default).
    * Clamped to [COMMENT_FONT_SCALE_MIN, COMMENT_FONT_SCALE_MAX].
    */
