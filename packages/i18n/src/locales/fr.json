@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "Afficher les coordonnées (A-T, 1-19) autour du goban.",
     "fuzzyStonePlacement": "Placement flou des pierres",
     "fuzzyStonePlacementDescription": "Ajoute de légères variations aléatoires à la position des pierres pour un aspect plus naturel.",
+    "problemMode": "Mode problème",
+    "problemModeDescription": "Ouvre les fichiers SGF à la position de départ plutôt qu'au dernier coup, afin que les solutions de tsumego restent cachées jusqu'à ce que vous les jouiez.",
     "on": "Activé",
     "off": "Désactivé",
     "themes": {

@@ -81,6 +81,13 @@ export interface GameSettings {
   showCoordinates: boolean;
   /** Show the board controls section (captures, navigation buttons) */
   showBoardControls: boolean;
+  /**
+   * Problem (tsumego) mode. When enabled, opening an SGF never auto-advances
+   * to the end of the main line — single-problem files open at the root so the
+   * solution stays hidden until the user steps through it. Collections still
+   * open at the first problem. See `determineStartNode`.
+   */
+  problemMode: boolean;
   /** Source of the Moku detection ONNX model: 'default' or 'custom' */
   detectionModelSource: 'default' | 'custom';
   /** Name of the uploaded custom detection model file (display only) */

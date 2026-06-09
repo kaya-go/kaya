@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "碁盤の端に座標（A-T, 1-19）を表示します。",
     "fuzzyStonePlacement": "ファジー配置",
     "fuzzyStonePlacementDescription": "石の位置にわずかなランダムオフセットを加え、手で置いたような自然な見た目にします。",
+    "problemMode": "問題モード",
+    "problemModeDescription": "SGF ファイルを最終手ではなく開始局面で開きます。詰碁の解答は自分で並べるまで表示されません。",
     "on": "オン",
     "off": "オフ",
     "themes": {
