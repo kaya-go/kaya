@@ -2,16 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.7] - 2026-06-09
+
+### <!-- 0 -->🚀 Features
+
+- *(ui)* Add problem mode to open SGFs at the start ([#117](https://github.com/kaya-go/kaya/issues/117)) by @hadim
+
+- *(ui)* Add text-size controls to the comment panel ([#118](https://github.com/kaya-go/kaya/issues/118)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Avoid desktop white screen by skipping eager model copy ([#116](https://github.com/kaya-go/kaya/issues/116)) by @JasonWues
+
+- *(web)* Request persistent storage to avoid model/settings eviction ([#119](https://github.com/kaya-go/kaya/issues/119)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @JasonWues *(first contribution)* 🎉
+- @github-actions[bot]
+- @dependabot[bot]
+
 ## [0.4.6] - 2026-05-24
 
 ### <!-- 1 -->🐛 Bug Fixes
 
 - *(desktop)* Grant dialog:allow-ask/allow-confirm for updater prompt ([b3b551e](https://github.com/kaya-go/kaya/commit/b3b551eaeeea8b0b458d69b272fc3663717b876d)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.6 ([f947b96](https://github.com/kaya-go/kaya/commit/f947b967c6bc35765a4fe687c669fb6d2ae5a089)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.4.5] - 2026-05-24
 

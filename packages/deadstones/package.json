@@ -1,6 +1,6 @@
 {
   "name": "@kaya/deadstones",
-  "version": "0.4.7-dev",
+  "version": "0.4.7",
   "description": "Monte Carlo algorithm to determine dead stones on a Go board - Rust/WASM implementation",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
