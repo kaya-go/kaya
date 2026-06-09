@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "Zeigt Brettkoordinaten (A-T, 1-19) am Rand des Bretts an.",
     "fuzzyStonePlacement": "Unscharfe Steinplatzierung",
     "fuzzyStonePlacementDescription": "Fügt leichte zufällige Verschiebungen zu Steinpositionen hinzu für ein natürlicheres, handplatziertes Aussehen.",
+    "problemMode": "Aufgabenmodus",
+    "problemModeDescription": "Öffnet SGF-Dateien an der Ausgangsstellung statt am letzten Zug, sodass Tsumego-Lösungen verborgen bleiben, bis du sie selbst durchspielst.",
     "on": "Ein",
     "off": "Aus",
     "themes": {

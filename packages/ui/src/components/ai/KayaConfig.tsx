@@ -84,6 +84,31 @@ const GameTab: React.FC<GameTabProps> = ({ gameSettings, setGameSettings }) => {
             </button>
           </div>
         </div>
+
+        {/* Problem Mode Toggle */}
+        <div className="setting-item setting-item-toggle setting-item-full">
+          <div className="setting-info">
+            <label htmlFor="problem-mode-check" className="setting-label">
+              {t('kayaConfig.problemMode')}
+            </label>
+            <p className="setting-description">{t('kayaConfig.problemModeDescription')}</p>
+          </div>
+          <div className="toggle-with-label">
+            <span className={`toggle-status ${gameSettings.problemMode ? 'on' : 'off'}`}>
+              {gameSettings.problemMode ? t('kayaConfig.on') : t('kayaConfig.off')}
+            </span>
+            <button
+              id="problem-mode-check"
+              type="button"
+              role="switch"
+              aria-checked={gameSettings.problemMode}
+              className={`toggle-switch ${gameSettings.problemMode ? 'active' : ''}`}
+              onClick={() => setGameSettings({ problemMode: !gameSettings.problemMode })}
+            >
+              <span className="toggle-switch-handle" />
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   );

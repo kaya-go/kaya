@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "Display board coordinates (A-T, 1-19) around the edges of the board.",
     "fuzzyStonePlacement": "Fuzzy Stone Placement",
     "fuzzyStonePlacementDescription": "Add slight random offsets to stone positions for a more natural, hand-placed appearance.",
+    "problemMode": "Problem Mode",
+    "problemModeDescription": "Open SGF files at the starting position instead of the last move, so tsumego solutions stay hidden until you play them out.",
     "on": "On",
     "off": "Off",
     "themes": {

@@ -12,6 +12,8 @@ import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
 import { validateTreeIntegrity } from '../../utils/treeValidation';
 import { clearAllCaches } from '../../utils/gameCache';
+import { determineStartNodeId } from './determineStartNode';
+import { loadGameSettings } from './useGameSettings';
 
 export function useGameTreeState() {
   const [gameTree, setGameTree] = useState<GameTree<SGFProperty> | null>(null);
@@ -167,40 +169,10 @@ export function useGameTreeState() {
           cleanTreeRef.current = newTree; // Mark as clean after load
           setRootId(rootNode.id);
 
-          // Determine starting position based on SGF type
-          // Heuristic to detect different SGF types:
-          // 1. Tsumego/Problem collection: root has many children (each is a problem), root has no move
-          // 2. Joseki dictionary: root has markers or labels at root
-          // 3. Regular game: linear main line
-
-          const hasMarkersAtRoot =
-            rootNode.data.MA ||
-            rootNode.data.TR ||
-            rootNode.data.CR ||
-            rootNode.data.SQ ||
-            rootNode.data.LB;
-          const rootHasMove = rootNode.data.B || rootNode.data.W;
-          const hasManyVariations = rootNode.children.length > 3;
-
-          // Tsumego detection: many children at root, root has no move itself
-          // This means the root is just a container, and each child is a separate problem
-          const isTsumegoCollection = hasManyVariations && !rootHasMove && !hasMarkersAtRoot;
-
-          if (isTsumegoCollection && rootNode.children.length > 0) {
-            // Navigate to first child so user can see all the problem branches
-            // and use Up/Down to navigate between problems
-            setCurrentNodeId(rootNode.children[0].id);
-          } else if (hasMarkersAtRoot || hasManyVariations) {
-            // Stay at root for joseki dictionaries or files with markers
-            setCurrentNodeId(rootNode.id);
-          } else {
-            // Navigate to the end of the main line for regular games
-            let current = rootNode;
-            while (current.children.length > 0) {
-              current = current.children[0];
-            }
-            setCurrentNodeId(current.id);
-          }
+          // Determine starting position based on SGF type and the Problem mode setting.
+          setCurrentNodeId(
+            determineStartNodeId(rootNode, { problemMode: loadGameSettings().problemMode })
+          );
 
           setGameId(`game-${Date.now()}`);
           setLoadingProgress(1);
@@ -253,40 +225,10 @@ export function useGameTreeState() {
             cleanTreeRef.current = newTree; // Mark as clean after load
             setRootId(rootNode.id);
 
-            // Determine starting position based on SGF type
-            // Heuristic to detect different SGF types:
-            // 1. Tsumego/Problem collection: root has many children (each is a problem), root has no move
-            // 2. Joseki dictionary: root has markers or labels at root
-            // 3. Regular game: linear main line
-
-            const hasMarkersAtRoot =
-              rootNode.data.MA ||
-              rootNode.data.TR ||
-              rootNode.data.CR ||
-              rootNode.data.SQ ||
-              rootNode.data.LB;
-            const rootHasMove = rootNode.data.B || rootNode.data.W;
-            const hasManyVariations = rootNode.children.length > 3;
-
-            // Tsumego detection: many children at root, root has no move itself
-            // This means the root is just a container, and each child is a separate problem
-            const isTsumegoCollection = hasManyVariations && !rootHasMove && !hasMarkersAtRoot;
-
-            if (isTsumegoCollection && rootNode.children.length > 0) {
-              // Navigate to first child so user can see all the problem branches
-              // and use Up/Down to navigate between problems
-              setCurrentNodeId(rootNode.children[0].id);
-            } else if (hasMarkersAtRoot || hasManyVariations) {
-              // Stay at root for joseki dictionaries or files with markers
-              setCurrentNodeId(rootNode.id);
-            } else {
-              // Navigate to the end of the main line for regular games
-              let current = rootNode;
-              while (current.children.length > 0) {
-                current = current.children[0];
-              }
-              setCurrentNodeId(current.id);
-            }
+            // Determine starting position based on SGF type and the Problem mode setting.
+            setCurrentNodeId(
+              determineStartNodeId(rootNode, { problemMode: loadGameSettings().problemMode })
+            );
 
             setGameId(`game-${Date.now()}`);
             setLoadingProgress(1);

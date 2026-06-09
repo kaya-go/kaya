@@ -202,6 +202,8 @@
     "showCoordinatesDescription": "在棋盘边缘显示坐标（A-T, 1-19）。",
     "fuzzyStonePlacement": "模糊落子",
     "fuzzyStonePlacementDescription": "为棋子位置添加轻微随机偏移，呈现更自然的手工摆放效果。",
+    "problemMode": "习题模式",
+    "problemModeDescription": "打开 SGF 文件时停留在起始位置而非最后一手，让死活题的解答在你逐手摆出之前保持隐藏。",
     "on": "开",
     "off": "关",
     "themes": {
