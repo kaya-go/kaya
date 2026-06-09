@@ -8,3 +8,5 @@
 export { saveFile, isTauriApp, setTauriSaveAPI, type TauriSaveAPI } from './fileSave';
 
 export { readClipboardText, writeClipboardText, setTauriClipboardAPI } from './clipboard';
+
+export { requestPersistentStorage } from './storage';
