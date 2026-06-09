@@ -8,8 +8,20 @@ import { loadModelData } from '../../services/modelStorage';
 
 export type ModelDataSource = File | ArrayBuffer | string;
 
-function modelCacheIdFromStorageId(storageId: string): string {
+export function modelCacheIdFromStorageId(storageId: string): string {
   return storageId.replace(/[^a-zA-Z0-9-_]/g, '_');
+}
+
+export async function getTauriCachedModelPath(data: ModelDataSource): Promise<string | null> {
+  if (!isTauriApp() || typeof data !== 'string') return null;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    return await invoke<string | null>('onnx_get_cached_model', {
+      modelId: modelCacheIdFromStorageId(data),
+    });
+  } catch {
+    return null;
+  }
 }
 
 // On Tauri, downloaded models live on disk only; IndexedDB is the fallback

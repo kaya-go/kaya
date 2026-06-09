@@ -27,7 +27,9 @@ export interface ChainStepEvent {
 }
 
 export interface EngineChainConfig {
-  modelBuffer: ArrayBuffer;
+  modelBuffer?: ArrayBuffer;
+  /** Native desktop backends can initialize directly from disk. */
+  modelPath?: string;
   /** User-visible model name; used to detect static-batch / .webgpu. variants. */
   modelName: string;
   /** Stable ID for the model (Tauri caching key). */
@@ -107,6 +109,9 @@ async function initOneBackend(backend: BackendId, cfg: EngineChainConfig): Promi
       engineType = 'pytorch';
       break;
     case 'webgpu': {
+      if (!buffer) {
+        throw new Error('Model bytes are required for the WebGPU backend');
+      }
       executionProviders = ['webgpu'];
       const needsConversion = !cfg.isTauri && !isWebGPUOptimized(cfg.modelName);
       if (cfg.modelName.includes('.webgpu.') || needsConversion) {
@@ -126,6 +131,9 @@ async function initOneBackend(backend: BackendId, cfg: EngineChainConfig): Promi
       break;
     }
     case 'wasm':
+      if (!buffer) {
+        throw new Error('Model bytes are required for the WASM backend');
+      }
       executionProviders = ['wasm'];
       break;
   }
@@ -139,6 +147,7 @@ async function initOneBackend(backend: BackendId, cfg: EngineChainConfig): Promi
   return createEngine(
     {
       modelBuffer: buffer,
+      modelPath: cfg.modelPath,
       modelId: cfg.modelId,
       executionProvider: backend === 'native-cpu' ? 'cpu' : 'auto',
       engineType,
@@ -191,6 +200,9 @@ async function safeDispose(engine: Engine): Promise<void> {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function _initWebNN(cfg: EngineChainConfig): Promise<Engine> {
   let buffer = cfg.modelBuffer;
+  if (!buffer) {
+    throw new Error('Model bytes are required for the WebNN backend');
+  }
   let staticBatchSize = cfg.webgpuBatchSize || WEBGPU_BATCH_SIZE;
   if (!cfg.isTauri && !isWebNNOptimized(cfg.modelName)) {
     try {

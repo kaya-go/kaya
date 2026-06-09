@@ -25,10 +25,16 @@ import { useTranslation } from 'react-i18next';
 import { isTauriApp, writeClipboardText } from '@kaya/platform';
 import { useGameTree } from './GameTreeContext';
 import { useToast } from '../components/ui/Toast';
-import { parseModelId, getModelId } from '../hooks/game/useAIAnalysis';
+import { parseModelId } from '../hooks/game/useAIAnalysis';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 import type { AISettings } from '../types/game';
-import { loadModelBuffer, modelIdFromName, resolveWasmPath } from './ai/engineLoader';
+import {
+  getTauriCachedModelPath,
+  loadModelBuffer,
+  modelCacheIdFromStorageId,
+  modelIdFromName,
+  resolveWasmPath,
+} from './ai/engineLoader';
 import { tryEngineChain, type ChainStepEvent } from './ai/engineChain';
 import { idleStatus, isReady, type EngineStatus } from './ai/engineStatus';
 import {
@@ -204,6 +210,11 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const chain = resolveBackendChain(aiSettings, autoPick);
           const modelName = customAIModel?.name || '';
           const quant = quantFromModelName(modelName);
+          const modelData = customAIModel.data;
+          const modelId =
+            typeof modelData === 'string'
+              ? modelCacheIdFromStorageId(modelData)
+              : modelIdFromName(modelName);
 
           setStatus({
             phase: 'loading-model',
@@ -211,10 +222,14 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             quantization: quant,
           });
 
-          const buffer = await loadModelBuffer(customAIModel.data);
+          const modelPath = isTauri ? await getTauriCachedModelPath(modelData) : null;
+          const needsModelBuffer = chain.some(
+            backend => backend === 'webgpu' || backend === 'wasm'
+          );
+          const buffer =
+            !modelPath || needsModelBuffer ? await loadModelBuffer(modelData) : undefined;
 
           const wasmPath = resolveWasmPath(isTauri);
-          const modelId = modelIdFromName(modelName);
           const workerFactory = () =>
             new Worker(new URL('../workers/ai.worker.js', import.meta.url), { type: 'module' });
 
@@ -238,6 +253,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
           const result = await tryEngineChain(chain, {
             modelBuffer: buffer,
+            modelPath: modelPath ?? undefined,
             modelName,
             modelId,
             boardSize,
