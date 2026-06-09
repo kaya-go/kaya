@@ -78,7 +78,7 @@ The workflow files now use `env:` blocks for `${{ github.event.inputs.version }}
 
 ## Things explicitly not done
 
-- **Read the cached model bytes lazily**. `loadModelBuffer` still loads the full buffer eagerly in `AIEngineContext`, before the backend chain is picked. On the native path the buffer is never consumed; that ~280 MB of JS heap is wasted on Tauri. Worth a follow-up but out of scope here — the native engine still works, the waste is invisible at runtime.
+- **Read the cached model bytes lazily**. `loadModelBuffer` still loads the full buffer eagerly in `AIEngineContext`, before the backend chain is picked. On the native path the buffer is never consumed; that ~280 MB of JS heap is wasted on Tauri. Worth a follow-up but out of scope here — the native engine still works, the waste is invisible at runtime. _(Follow-up done [2026-06-09](2026-06-09-lazy-model-buffer-native-path.md) — the waste was **not** invisible: it white-screened the desktop app for large models.)_
 - **Cache user-uploaded models on disk at upload time**. Currently they only land on disk after the first engine init triggers `onnx_finish_upload`. Same trade-off as above — works correctly, just not optimal.
 - **Drop `@tauri-apps/plugin-fs` from `packages/ui`**. Still used by `useDropZoneEffects.ts` for SGF drops; removing the `readFile` call in `useModelLibrary.ts` is enough to fix the bug without touching the dependency.
 
