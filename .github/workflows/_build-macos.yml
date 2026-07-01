@@ -34,7 +34,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       short_sha: ${{ steps.version.outputs.short_sha }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Get version info
         id: version
