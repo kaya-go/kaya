@@ -28,7 +28,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/cache
@@ -46,7 +46,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache wasm-pack
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/bin/wasm-pack*
           key: ${{ runner.os }}-wasm-pack-0.15.0
@@ -96,7 +96,7 @@ jobs:
           bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache node_modules
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: |
             ~/.bun/install/cache
@@ -113,7 +113,7 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Cache wasm-pack
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         with:
           path: ~/.cargo/bin/wasm-pack*
           key: ${{ runner.os }}-wasm-pack-0.15.0
