@@ -66,7 +66,7 @@ jobs:
       # nodejs in the container is too old for @rsbuild/core 2.x, so pull
       # a modern Node from setup-node.
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
 
