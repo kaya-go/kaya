@@ -31,7 +31,8 @@ updates:
     # binary `download-binaries` fetches. Enabling `cuda` would pull the
     # multi-GB CUDA distribution, and no Linux distribution ships `migraphx`
     # at all, so the bump needs a deliberate migration rather than a lockfile
-    # update. Tracked separately -- drop this ignore once that lands.
+    # update. See specs/2026-08-02-ort-rc13-pinned.md -- drop this ignore once
+    # that migration lands.
     ignore:
       - dependency-name: 'ort'
     groups:
