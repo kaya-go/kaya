@@ -25,6 +25,15 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: 'chore(deps)'
+    # `ort` is pinned to 2.0.0-rc.12 on purpose. rc.13 renamed the execution
+    # provider types (CUDAExecutionProvider -> CUDA, ...) and put each one
+    # behind a cargo feature that also selects which prebuilt ONNX Runtime
+    # binary `download-binaries` fetches. Enabling `cuda` would pull the
+    # multi-GB CUDA distribution, and no Linux distribution ships `migraphx`
+    # at all, so the bump needs a deliberate migration rather than a lockfile
+    # update. Tracked separately -- drop this ignore once that lands.
+    ignore:
+      - dependency-name: 'ort'
     groups:
       rust-minor-patch:
         patterns:
