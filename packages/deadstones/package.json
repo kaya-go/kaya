@@ -30,7 +30,7 @@
   "author": "Kaya Team",
   "license": "AGPL-3.0",
   "devDependencies": {
-    "typescript": "^6.0.2"
+    "typescript": "^7.0.2"
   },
   "optionalDependencies": {
     "wasm-pack": "^0.15.0"
