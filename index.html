@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- Google tag (gtag.js) - Only load on production (not localhost) -->
+    <script>
+      (function () {
+        var isLocalhost =
+          location.hostname === 'localhost' ||
+          location.hostname === '127.0.0.1' ||
+          location.hostname === '[::1]' ||
+          location.hostname.startsWith('192.168.') ||
+          location.hostname.startsWith('10.');
+
+        if (!isLocalhost) {
+          var script = document.createElement('script');
+          script.async = true;
+          script.src = 'https://www.googletagmanager.com/gtag/js?id=G-FPJKKM5GG0';
+          document.head.appendChild(script);
+
+          window.dataLayer = window.dataLayer || [];
+          function gtag() {
+            dataLayer.push(arguments);
+          }
+          window.gtag = gtag;
+          gtag('js', new Date());
+          gtag('config', 'G-FPJKKM5GG0');
+        } else {
+          console.log('[Analytics] Disabled on localhost');
+        }
+      })();
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Preload critical LCP image (board texture) -->
+    <link
+      rel="preload"
+      as="image"
+      href="/static/image/board.98f617e1.png"
+      fetchpriority="high"
+    />
+    <script src="/coi-serviceworker.js"></script>
+
+    <!-- Primary Meta Tags -->
+    <title>Kaya — Play, Study & Analyze Go</title>
+    <meta name="title" content="Kaya — Play, Study & Analyze Go" />
+    <meta
+      name="description"
+      content="Free, open-source Go (Baduk/Weiqi) app with AI analysis (KataGo), board recognition from photos, SGF support, and game tree navigation. Desktop and web."
+    />
+    <meta
+      name="keywords"
+      content="go game, baduk, weiqi, sgf viewer, go game app, game tree, go board, katago, ai analysis, board recognition, sgf file viewer, go game with variations, baduk game tree navigator, cross-platform go game"
+    />
+    <meta name="author" content="Kaya" />
+    <meta name="theme-color" content="#2d5016" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://kayago.app/" />
+    <meta property="og:title" content="Kaya — Play, Study & Analyze Go" />
+    <meta
+      property="og:description"
+      content="Free, open-source Go (Baduk/Weiqi) app with AI analysis, board recognition from photos, and a modern interface. Desktop and web."
+    />
+    <meta property="og:image" content="https://kayago.app/og-image.png" />
+    <meta property="og:site_name" content="Kaya" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://kayago.app/" />
+    <meta name="twitter:title" content="Kaya — Play, Study & Analyze Go" />
+    <meta
+      name="twitter:description"
+      content="Free, open-source Go (Baduk/Weiqi) app with AI analysis, board recognition from photos, and a modern interface."
+    />
+    <meta name="twitter:image" content="https://kayago.app/og-image.png" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json" />
+    <!-- iOS PWA support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Kaya" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <!-- gamecontroller.js for unified gamepad support (deferred - not critical for initial render) -->
+    <script defer src="/vendor/gamecontroller.min.js"></script>
+  <link rel="icon" href="/favicon.png"><script defer src="/static/js/index.26d54bbd06.js"></script><link href="/static/css/index.045ac933c4.css" rel="stylesheet"></head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
