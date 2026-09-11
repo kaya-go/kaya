@@ -2,7 +2,7 @@
  * Tree node renderer and drag preview for the library panel.
  */
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { NodeRendererProps, DragPreviewProps } from 'react-arborist';
 import { LuFolder, LuFile, LuChevronRight, LuFolderOpen } from 'react-icons/lu';
 import { useLibrary } from '../../contexts/LibraryContext';
@@ -39,26 +39,65 @@ export const DragPreview: React.FC<DragPreviewProps> = ({ mouse, isDragging, dra
 
 export interface UseNodeRendererOptions {
   renamingId: LibraryItemId | null;
-  renameValue: string;
-  setRenameValue: (value: string) => void;
   setRenamingId: (id: LibraryItemId | null) => void;
-  renameInputInitialized: React.MutableRefObject<boolean>;
-  handleRename: () => void;
+  handleRename: (value: string) => void;
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
 }
 
+function RenameInput({
+  initialValue,
+  onCommit,
+  onCancel,
+}: {
+  initialValue: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const doneRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const commit = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onCommit(value);
+  };
+
+  const cancel = () => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    onCancel();
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      className="library-tree-node-input"
+      value={value}
+      onChange={e => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={e => {
+        e.stopPropagation();
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') cancel();
+      }}
+      onKeyUp={e => e.stopPropagation()}
+      onKeyPress={e => e.stopPropagation()}
+      onClick={e => e.stopPropagation()}
+    />
+  );
+}
+
 export function useNodeRenderer(options: UseNodeRendererOptions) {
-  const {
-    renamingId,
-    renameValue,
-    setRenameValue,
-    setRenamingId,
-    renameInputInitialized,
-    handleRename,
-    handleContextMenu,
-    loadedFileAncestorIds,
-  } = options;
+  const { renamingId, setRenamingId, handleRename, handleContextMenu, loadedFileAncestorIds } =
+    options;
 
   const { selectedIds, loadedFileId, selectItem, selectRange, toggleItemSelection, openFile } =
     useLibrary();
@@ -141,31 +180,10 @@ export function useNodeRenderer(options: UseNodeRendererOptions) {
             )}
           </span>
           {isRenaming ? (
-            <input
-              type="text"
-              className="library-tree-node-input"
-              value={renameValue}
-              onChange={e => setRenameValue(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={e => {
-                e.stopPropagation();
-                if (e.key === 'Enter') handleRename();
-                if (e.key === 'Escape') {
-                  setRenamingId(null);
-                  setRenameValue('');
-                }
-              }}
-              onKeyUp={e => e.stopPropagation()}
-              onKeyPress={e => e.stopPropagation()}
-              autoFocus
-              onClick={e => e.stopPropagation()}
-              ref={input => {
-                if (input && !renameInputInitialized.current) {
-                  renameInputInitialized.current = true;
-                  input.focus();
-                  input.select();
-                }
-              }}
+            <RenameInput
+              initialValue={item.name}
+              onCommit={handleRename}
+              onCancel={() => setRenamingId(null)}
             />
           ) : (
             <span className="library-tree-node-name">
@@ -186,7 +204,6 @@ export function useNodeRenderer(options: UseNodeRendererOptions) {
     [
       selectedIds,
       renamingId,
-      renameValue,
       loadedFileId,
       loadedFileAncestorIds,
       isDirty,
@@ -196,9 +213,7 @@ export function useNodeRenderer(options: UseNodeRendererOptions) {
       handleContextMenu,
       handleRename,
       openFile,
-      setRenameValue,
       setRenamingId,
-      renameInputInitialized,
     ]
   );
 

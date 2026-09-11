@@ -174,10 +174,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
 
   const NodeRenderer = useNodeRenderer({
     renamingId: actions.renamingId,
-    renameValue: actions.renameValue,
-    setRenameValue: actions.setRenameValue,
     setRenamingId: actions.setRenamingId,
-    renameInputInitialized: actions.renameInputInitialized,
     handleRename: actions.handleRename,
     handleContextMenu: actions.handleContextMenu,
     loadedFileAncestorIds,

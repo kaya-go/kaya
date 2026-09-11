@@ -41,7 +41,6 @@ export function useLibraryActions() {
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [renamingId, setRenamingId] = useState<LibraryItemId | null>(null);
-  const [renameValue, setRenameValue] = useState('');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [recognitionFile, setRecognitionFile] = useState<File | null>(null);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
@@ -50,7 +49,6 @@ export function useLibraryActions() {
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const renameInputInitialized = useRef(false);
   const newFolderInputInitialized = useRef(false);
 
   // Close context menu on outside clicks
@@ -201,19 +199,19 @@ export function useLibraryActions() {
   }, [newFolderName, newFolderParent, createFolder]);
 
   const startRename = useCallback((item: LibraryItem) => {
-    renameInputInitialized.current = false;
     setRenamingId(item.id);
-    setRenameValue(item.name);
     setContextMenu(null);
   }, []);
 
-  const handleRename = useCallback(async () => {
-    if (renamingId && renameValue.trim()) {
-      await renameItem(renamingId, renameValue.trim());
-    }
-    setRenamingId(null);
-    setRenameValue('');
-  }, [renamingId, renameValue, renameItem]);
+  const handleRename = useCallback(
+    async (value: string) => {
+      if (renamingId && value.trim()) {
+        await renameItem(renamingId, value.trim());
+      }
+      setRenamingId(null);
+    },
+    [renamingId, renameItem]
+  );
 
   const handleDelete = useCallback(
     (item: LibraryItem) => {
@@ -330,8 +328,6 @@ export function useLibraryActions() {
     setContextMenu,
     renamingId,
     setRenamingId,
-    renameValue,
-    setRenameValue,
     isDraggingOver,
     recognitionFile,
     setRecognitionFile,
@@ -344,7 +340,6 @@ export function useLibraryActions() {
 
     // Refs
     fileInputRef,
-    renameInputInitialized,
     newFolderInputInitialized,
 
     // Handlers
