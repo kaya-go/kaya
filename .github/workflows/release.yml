@@ -212,8 +212,9 @@ jobs:
       bun-version: '1.3.2'
     secrets: inherit
 
-  # Install the .deb/.rpm on real distro images before anything is published —
-  # a package that builds is not the same as a package that installs and runs.
+  # A bundle that builds is not a bundle that runs. Both of these launch or
+  # install the real artifacts on real distro images before anything is
+  # published, and block the release if they don't come up.
   verify-linux-appimage:
     name: Verify Linux AppImage
     needs: build-linux
