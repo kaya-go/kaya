@@ -235,25 +235,34 @@ export function useAutoSave({
     analysisCacheSize,
   ]);
 
-  // Auto-save on unmount or page refresh
+  // Auto-save on unmount or page refresh.
+  //
+  // The cleanup runs a full synchronous save (SGF serialization plus a
+  // localStorage write), so this effect must never re-run: with the game state
+  // in its dependency list the cleanup fired on every navigation step, which
+  // defeated the debounce above. The snapshot is kept fresh in a ref instead.
+  const saveOnExitRef = useRef<() => void>(() => {});
+
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (gameTree && rootId) {
-        const result = autoSaveCurrentGame(
-          gameTree,
-          rootId,
-          fileName,
-          currentNodeId,
-          analysisCache,
-          saveAnalysisToSgf,
-          boardSize,
-          komi
-        );
-        if (result === 'too-large' && onAutoSaveDisabled) {
-          onAutoSaveDisabled();
-        }
+    saveOnExitRef.current = () => {
+      const result = autoSaveCurrentGame(
+        gameTree,
+        rootId,
+        fileName,
+        currentNodeId,
+        analysisCache,
+        saveAnalysisToSgf,
+        boardSize,
+        komi
+      );
+      if (result === 'too-large' && onAutoSaveDisabled) {
+        onAutoSaveDisabled();
       }
     };
+  });
+
+  useEffect(() => {
+    const handleBeforeUnload = () => saveOnExitRef.current();
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
@@ -261,17 +270,7 @@ export function useAutoSave({
       // Also save on unmount (e.g. hot reload)
       handleBeforeUnload();
     };
-  }, [
-    gameTree,
-    rootId,
-    fileName,
-    currentNodeId,
-    onAutoSaveDisabled,
-    analysisCache,
-    saveAnalysisToSgf,
-    boardSize,
-    komi,
-  ]);
+  }, []);
 
   // Trigger immediate auto-save (useful after save/export/copy operations)
   const triggerAutoSave = useCallback(() => {

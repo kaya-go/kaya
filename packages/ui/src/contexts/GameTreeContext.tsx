@@ -475,6 +475,22 @@ export const GameTreeProvider: React.FC<{
       analysisMode, analysisResult, isAnalyzing, winRate, scoreLead, bestMove, engineState,
       filename, isDirty, moveName, moveUrl, patternMatchingEnabled, setPatternMatchingEnabled,
       lastSaveTime, triggerAutoSave, undo, redo, canUndo, canRedo, deleteOtherBranches,
+      // SGF loading progress: without these the loading overlay never updated, and the
+      // "skip the cache clear right after a load" guard in AIAnalysisContext never fired,
+      // which discarded analysis restored from a SGF KA property.
+      isLoadingSGF, loadingProgress, loadingMessage,
+      // Analysis overlays: toggling ownership or top moves with the analysis bar already
+      // open changes nothing else, so the toggles looked inert until the next navigation.
+      showOwnership, toggleOwnership, showTopMoves, toggleTopMoves,
+      showAnalysisBar, toggleShowAnalysisBar,
+      analysisCacheSize, updateAnalysisCacheSize,
+      gameId, territoryMap, totalMovesInBranch, loadSGFAsync, resign,
+      downloadModel, deleteModel, uploadModel,
+      // Setters are stable, but the array is exhaustive on purpose: this is what drifted.
+      setCurrentNodeId, setFilename, setIsDirty, setAnalysisMode, setAnalysisResult,
+      setAISettings, setCustomAIModel, setAIConfigOpen, setConfigInitialTab,
+      setShowAnalysisBar, setSelectedModelId, setGameSettings, setScoreMode,
+      setEditMode, setEditPlayMode, setEditTool, setStoneToolColor,
     ]
   );
 

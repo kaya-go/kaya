@@ -44,3 +44,4 @@ link forward to the replacement. Don't delete history.
 | 2026-06-09 | [Request persistent storage on web](2026-06-09-web-persistent-storage.md)                                   | shipped   |
 | 2026-08-02 | [ort pinned at 2.0.0-rc.12](2026-08-02-ort-rc13-pinned.md)                                                  | shipped   |
 | 2026-09-12 | [Library tree: a stable row renderer](2026-09-12-stable-tree-row-renderer.md)                               | shipped   |
+| 2026-09-12 | [Dependency-array drift in GameTreeContext and useAutoSave](2026-09-12-dependency-array-drift.md)           | shipped   |
