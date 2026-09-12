@@ -48,7 +48,7 @@ jobs:
             webkit2gtk-4.1 gtk3 libappindicator-gtk3 librsvg \
             alsa-lib \
             patchelf \
-            nodejs npm \
+            nodejs npm python \
             xorg-server-xvfb zsync
 
       - uses: actions/checkout@v7
@@ -209,6 +209,21 @@ jobs:
         run: |
           echo "Collecting Linux AppImage artifacts..."
           find apps/desktop/src-tauri/target/release/bundle -type f -name "*.AppImage*" -exec ls -lh {} \;
+
+      # Hard gate on the AppImage's one real promise: that it carries everything
+      # it needs. A DT_NEEDED that is not bundled works on the build machine and
+      # fails on a user's distro, which is the failure this bundle exists to
+      # prevent — and the AppDir is right here, before it gets squashed away.
+      - name: Check AppImage is self-contained
+        shell: bash
+        run: |
+          APPDIR=$(find apps/desktop/src-tauri/target/release/bundle/appimage \
+            -maxdepth 1 -name '*.AppDir' -type d | head -1)
+          if [ -z "$APPDIR" ]; then
+            echo "::error::no AppDir next to the AppImage"
+            exit 1
+          fi
+          python3 .github/scripts/check-appimage-closure.py "$APPDIR"
 
       # Only the AppImage and its sidecars. The bundle directory also holds the
       # uncompressed Kaya.AppDir the AppImage was squashed from — ~2.2 GB that

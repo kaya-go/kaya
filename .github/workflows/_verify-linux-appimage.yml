@@ -1,0 +1,75 @@
+name: Verify Linux AppImage
+
+# Runs the AppImage on distros we never build on.
+#
+# The AppImage is the bundle most Linux users download, and the only one that
+# claims to work everywhere: quick-sharun ships glibc, the loader, WebKit's
+# helper processes and every shared library inside it, so the host's own
+# libraries stop mattering. That claim was never tested — the build job produced
+# a file and CI called it a day.
+#
+# The matrix is deliberately weighted towards *old* distros, because those are
+# exactly the users the .deb/.rpm cannot serve and who are told to use this
+# instead. Ubuntu 22.04 (glibc 2.35), Debian 12 (2.36) and AlmaLinux 9 (2.34)
+# are all far below the build container's glibc; if the bundle is genuinely
+# self-contained they run anyway.
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: 'Artifact holding the .AppImage to verify'
+        type: string
+        required: true
+
+jobs:
+  smoke:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 22.04 (glibc 2.35)
+            image: ubuntu:22.04
+            family: debian
+          - name: Debian 12 (glibc 2.36)
+            image: debian:12
+            family: debian
+          - name: AlmaLinux 9 (glibc 2.34)
+            image: almalinux:9
+            family: rhel
+          - name: Fedora latest
+            image: fedora:latest
+            family: rhel
+    steps:
+      # Xvfb and procps are the whole host-side requirement — if the bundle
+      # needed anything else from the distro, it would not be self-contained.
+      - name: Install a virtual display
+        shell: sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eu
+          if [ "${{ matrix.family }}" = "debian" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends xvfb procps
+          else
+            dnf install -y xorg-x11-server-Xvfb procps-ng
+          fi
+
+      - uses: actions/checkout@v7
+
+      - name: Download AppImage
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: bundle
+
+      - name: Launch it
+        shell: bash
+        run: |
+          APPIMAGE=$(find bundle -name '*.AppImage' -type f | head -1)
+          .github/scripts/smoke-run-appimage.sh "$APPIMAGE"

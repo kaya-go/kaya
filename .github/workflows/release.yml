@@ -214,6 +214,13 @@ jobs:
 
   # Install the .deb/.rpm on real distro images before anything is published —
   # a package that builds is not the same as a package that installs and runs.
+  verify-linux-appimage:
+    name: Verify Linux AppImage
+    needs: build-linux
+    uses: ./.github/workflows/_verify-linux-appimage.yml
+    with:
+      artifact-name: desktop-linux
+
   verify-linux-packages:
     name: Verify Linux Packages
     needs: build-linux-deb
@@ -225,7 +232,15 @@ jobs:
   commit-and-release:
     name: Commit Version & Create Release
     needs:
-      [build-macos, build-windows, build-linux, build-linux-deb, verify-linux-packages, deploy-web]
+      [
+        build-macos,
+        build-windows,
+        build-linux,
+        build-linux-deb,
+        verify-linux-packages,
+        verify-linux-appimage,
+        deploy-web,
+      ]
     runs-on: ubuntu-latest
     permissions:
       contents: write

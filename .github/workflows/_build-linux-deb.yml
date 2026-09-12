@@ -148,6 +148,29 @@ jobs:
             Linux-ubuntu24-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
             Linux-ubuntu24-cargo-
 
+      # Stable tauri-cli is fine for .deb/.rpm — the truly-portable AppImage fork
+      # is only required for the AppImage bundle, which we don't produce here.
+      #
+      # Pinned rather than `^2.0` for the same reason the AppImage job pins its
+      # rev: an unpinned resolve is a build that can break on someone else's
+      # release. The version doubles as the cache key, so the ~5.5 min spent
+      # compiling the CLI happens on a bump, not on every run.
+      - name: Pin tauri-cli version
+        id: tauri_cli
+        shell: bash
+        run: echo "version=2.11.4" >> "$GITHUB_OUTPUT"
+
+      - name: Cache tauri-cli
+        id: tauri_cli_cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cargo/bin/cargo-tauri
+          key: Linux-ubuntu24-tauri-cli-${{ steps.tauri_cli.outputs.version }}
+
+      - name: Install tauri-cli
+        if: steps.tauri_cli_cache.outputs.cache-hit != 'true'
+        run: cargo install tauri-cli --version "${{ steps.tauri_cli.outputs.version }}" --locked --force
+
       - name: Install dependencies
         run: bun install
 
@@ -182,14 +205,9 @@ jobs:
           bun run build:packages
           cd apps/desktop && npx rsbuild build
 
-      # Uses the `@tauri-apps/cli` devDependency (a prebuilt native addon) rather
-      # than `cargo install tauri-cli`, which spent ~5.5 min recompiling the CLI on
-      # every run. Same bundler code; it just isn't rebuilt from source here. Run
-      # through Node for the same reason rsbuild is (SIGILL under Bun in this
-      # container), and call the binary directly so npx can never reach the network.
       - name: Build desktop app (.deb + .rpm)
         working-directory: apps/desktop
-        run: node_modules/.bin/tauri build --bundles deb,rpm --config '{"build":{"beforeBuildCommand":""}}'
+        run: cargo tauri build --bundles deb,rpm --config '{"build":{"beforeBuildCommand":""}}'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}

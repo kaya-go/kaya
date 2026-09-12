@@ -56,6 +56,13 @@ jobs:
       bun-version: '1.3.2'
     secrets: inherit
 
+  verify-linux-appimage:
+    name: Verify Linux AppImage
+    needs: build-linux
+    uses: ./.github/workflows/_verify-linux-appimage.yml
+    with:
+      artifact-name: nightly-linux
+
   verify-linux-packages:
     name: Verify Linux Packages
     needs: build-linux-deb
@@ -66,7 +73,15 @@ jobs:
   # Generate summary after all builds complete
   summary:
     name: Generate Summary
-    needs: [build-macos, build-windows, build-linux, build-linux-deb, verify-linux-packages]
+    needs:
+      [
+        build-macos,
+        build-windows,
+        build-linux,
+        build-linux-deb,
+        verify-linux-packages,
+        verify-linux-appimage,
+      ]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts
