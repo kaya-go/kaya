@@ -155,6 +155,8 @@ export type {
 export { useExternalLinks } from './hooks/useExternalLinks';
 
 // PWA install prompt
+export { useAutoPick } from './hooks/useAutoPick';
+
 export { usePwaInstall } from './hooks/usePwaInstall';
 export type { PwaInstallState } from './hooks/usePwaInstall';
 export { PwaInstallBanner } from './components/pwa/PwaInstallBanner';

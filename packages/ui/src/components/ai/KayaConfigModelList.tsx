@@ -20,6 +20,7 @@ type KayaConfigModelListProps = Pick<
   | 'hasAnyDownloaded'
   | 'isAnyDownloading'
   | 'recommendedModel'
+  | 'recommendedQuantization'
   | 'handleDownloadRecommended'
   | 'modelsByBase'
   | 'expandedModelIndex'
@@ -37,6 +38,7 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
   hasAnyDownloaded,
   isAnyDownloading,
   recommendedModel,
+  recommendedQuantization,
   handleDownloadRecommended,
   modelsByBase,
   expandedModelIndex,
@@ -152,7 +154,12 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                       >
                         <div className="model-variant-info">
                           <div className="model-variant-name">
-                            {quantOption.label}
+                            {t(quantOption.labelKey)}
+                            {quantOption.quantization === recommendedQuantization && (
+                              <span className="model-recommended-badge">
+                                {t('aiConfig.bestForYourSetup')}
+                              </span>
+                            )}
                             {selectedModelId === variant.id && (
                               <span className="model-active-badge">
                                 <LuCheck size={12} /> {t('aiConfig.active')}
@@ -160,7 +167,7 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                             )}
                           </div>
                           <div className="model-variant-meta">
-                            <span className="model-variant-desc">{quantOption.description}</span>
+                            <span className="model-variant-desc">{t(quantOption.descKey)}</span>
                             <span className="model-variant-size">{quantOption.size}</span>
                           </div>
                         </div>
