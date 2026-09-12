@@ -6,7 +6,7 @@
  * Architecture:
  * - Abstract Engine base class for all AI implementations
  * - OnnxEngine: KataGo neural network via ONNX Runtime Web (WASM/WebGPU)
- * - TauriEngine: Native ONNX Runtime via Tauri with GPU support (CoreML/DirectML/NNAPI)
+ * - TauriEngine: Native ONNX Runtime via Tauri with GPU support (DirectML/NNAPI)
  *   NOTE: TauriEngine must be imported separately from '@kaya/ai-engine/tauri-engine'
  *   to avoid loading Tauri dependencies in web workers
  * - Built-in position caching for performance

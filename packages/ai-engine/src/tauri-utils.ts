@@ -56,14 +56,16 @@ export interface TauriEngineConfig extends BaseEngineConfig {
   /**
    * Execution provider preference for native ONNX Runtime
    * - 'auto': Best available (GPU first, then CPU)
-   * - 'coreml': Apple CoreML (macOS)
+   * - 'coreml': Apple CoreML (macOS); needs the `coreml` cargo feature,
+   *   which the shipped build leaves off — falls back to CPU without it
    * - 'directml': Windows DirectML
    * - 'nnapi': Android NNAPI (Android Neural Networks API)
    * - 'cpu': CPU only
    *
    * Linux has no GPU entry: the ONNX Runtime build we ship there is CPU-only,
    * so 'auto' resolves to CPU and GPU inference goes through the PyTorch
-   * sidecar instead.
+   * sidecar instead. The backend reports the provider that actually
+   * registered, never the one that was requested.
    */
   executionProvider?: ExecutionProviderPreference;
 }

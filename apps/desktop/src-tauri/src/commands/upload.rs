@@ -186,6 +186,69 @@ pub async fn onnx_cache_downloaded_file(
     })
 }
 
+/// A model found in the on-disk cache.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CachedModel {
+    /// Sanitized model ID (the file stem), as passed to `onnx_get_cached_model`.
+    pub model_id: String,
+    pub size: u64,
+    /// Last-modified time, milliseconds since the Unix epoch (0 if unavailable).
+    pub modified: u64,
+}
+
+/// List every model cached in the app data directory.
+///
+/// On desktop the disk cache — not IndexedDB — is the source of truth for
+/// downloaded models (#103), so the frontend needs this to know what is
+/// already downloaded after a restart (#123).
+#[tauri::command]
+pub async fn onnx_list_cached_models(
+    app_handle: tauri::AppHandle,
+) -> Result<Vec<CachedModel>, String> {
+    let app_data = app_handle
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?;
+    let models_dir = app_data.join("models");
+
+    let entries = match std::fs::read_dir(&models_dir) {
+        Ok(entries) => entries,
+        // No directory yet means nothing has ever been downloaded.
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(vec![]),
+        Err(e) => return Err(format!("Failed to read models dir: {}", e)),
+    };
+
+    let mut models = Vec::new();
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("onnx") {
+            continue;
+        }
+        let Some(model_id) = path.file_stem().and_then(|s| s.to_str()) else {
+            continue;
+        };
+        let Ok(meta) = entry.metadata() else { continue };
+        if !meta.is_file() {
+            continue;
+        }
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis() as u64)
+            .unwrap_or(0);
+
+        models.push(CachedModel {
+            model_id: model_id.to_string(),
+            size: meta.len(),
+            modified,
+        });
+    }
+
+    Ok(models)
+}
+
 /// Read a cached model's bytes from disk. Native fs read — bypasses the JS
 /// `@tauri-apps/plugin-fs` scope that rejects `$APPDATA` paths on Linux (#103).
 #[tauri::command]

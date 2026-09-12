@@ -14,6 +14,18 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [features]
 default = []
 
+# Opt-in CoreML on macOS. Off by default: enabling it turns a CPU session into
+# a CoreML model compilation on first load, and that cost on Apple silicon is
+# unmeasured — the failure mode is a minutes-long freeze, not an error the
+# warm-up catches (specs/2026-09-12-ep-cargo-features.md). Measure first load
+# (cold and warm `ep_cache/coreml`) and throughput against CPU on an M-series
+# machine with `cargo run --features coreml`, then flip the default if it wins.
+#
+# macOS only: on Linux or Windows this adds `coreml` to the feature set that
+# `resolve_dist()` matches, no distribution there carries it, and the build
+# fails at link time (`cargo check` still passes — see the spec).
+coreml = ["ort/coreml"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -47,23 +59,35 @@ tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-window-state = "2.4.1"
 
-# ONNX Runtime. Since 2.0.0-rc.13 every execution provider is a cargo feature,
-# and for `download-binaries` those features also pick which prebuilt binary is
-# fetched — the requested set has to match a published distribution exactly, so
-# the EP features are declared per target rather than once for all desktops.
+# ONNX Runtime. An EP feature is what makes that provider's register() do
+# anything — without it ort returns RegisterError::MissingFeature and the
+# session silently runs on CPU (#145, specs/2026-09-12-ep-cargo-features.md).
+#
+# Since rc.13 those same features ALSO select which prebuilt binary
+# `download-binaries` fetches: `resolve_dist()` matches the requested set
+# against a table of published distributions, and a set nothing satisfies
+# fails at LINK time (not at `cargo check` time, which is all CI runs). So the
+# features are declared per target rather than once for all desktops, and each
+# set is one a published distribution actually carries.
 # See specs/2026-09-12-ort-rc13-migration.md.
 
-# Linux: the plain CPU distribution. No Linux build ships MIGraphX, and the CUDA
-# one is a multi-GB download that expects a CUDA runtime on the user's machine,
-# so GPU inference on Linux goes through the PyTorch sidecar instead.
+# Linux: the plain CPU distribution. No Linux build ships MIGraphX, the CUDA one
+# is a multi-GB download that expects a CUDA runtime on the user's machine, and
+# ORT_DYLIB_PATH is ignored unless ort is built with `load-dynamic`. The GPU
+# path on Linux is the PyTorch sidecar (specs/2026-02-28-pytorch-sidecar-rocm.md).
 [target.'cfg(target_os = "linux")'.dependencies]
 ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half"] }
 
-# macOS: the aarch64-apple-darwin distribution ships CoreML.
+# macOS: `coreml` is deliberately NOT enabled by default — see the [features]
+# section below. Leaving it off does not change the download: with an empty
+# feature set `resolve_dist()` still resolves the `coreml` distribution, the
+# only one published for aarch64-apple-darwin.
 [target.'cfg(target_os = "macos")'.dependencies]
-ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "coreml"] }
+ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half"] }
 
-# Windows: the x86_64-pc-windows-msvc distribution ships DirectML.
+# Windows: the x86_64-pc-windows-msvc distribution ships DirectML.dll and the
+# build script links the DX12 libraries, so `directml` only unlocks the
+# registration call.
 [target.'cfg(target_os = "windows")'.dependencies]
 ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "directml"] }
 

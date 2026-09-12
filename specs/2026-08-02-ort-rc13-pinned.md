@@ -74,9 +74,12 @@ each target, and CI only runs `cargo check`.
 
 ## Links
 
-- Superseded by: [ort 2.0.0-rc.13: execution providers become build-time](2026-09-12-ort-rc13-migration.md) — the migration landed, and it found that
-  the `ORT_DYLIB_PATH` rationale above was wrong: that variable is only read
-  under `load-dynamic`, which desktop Linux does not use.
+- Superseded by: [ort 2.0.0-rc.13: EP features start picking the binary](2026-09-12-ort-rc13-migration.md) — the migration landed.
+- Also corrected by [Execution providers never registered](2026-09-12-ep-cargo-features.md):
+  the reason nothing accelerated was the missing cargo features, not the
+  binaries; and the `ORT_DYLIB_PATH` rationale above was wrong regardless,
+  since that variable is only read under `load-dynamic`, which desktop Linux
+  does not use.
 - Tracking issue: kaya-go/kaya#139
 - Superseded PR: kaya-go/kaya#136 · replacement: kaya-go/kaya#138
 - `ignore` rule and rationale: [.github/dependabot.yml](../.github/dependabot.yml)

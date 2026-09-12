@@ -9,7 +9,7 @@
 export type BackendId =
   | 'webgpu' // Browser WebGPU via ORT-Web
   | 'wasm' // Browser WASM via ORT-Web
-  | 'native-gpu' // Tauri: native ORT with GPU EP (CoreML/DirectML/NNAPI)
+  | 'native-gpu' // Tauri: native ORT with GPU EP (DirectML/NNAPI, CoreML if built in)
   | 'native-cpu' // Tauri: native ORT, CPU EP
   | 'pytorch'; // Tauri: PyTorch GPU sidecar (Linux ROCm/CUDA)
 

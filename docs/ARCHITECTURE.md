@@ -165,21 +165,42 @@ command), zero IPC overhead per playout. Web: MCTS runs in the Web Worker
 that owns the ORT session, batching inference across playouts.
 
 The native ONNX engine keeps **one session per engine** with the model's
-natural dynamic axes — see [`specs/2026-05-03-onnx-engine-single-session.md`](../specs/2026-05-03-onnx-engine-single-session.md). On macOS, CoreML EP currently rejects the
-KataGo b28 model and runs on CPU — see [`specs/2026-05-03-coreml-ep-falls-back-to-cpu.md`](../specs/2026-05-03-coreml-ep-falls-back-to-cpu.md).
+natural dynamic axes — see [`specs/2026-05-03-onnx-engine-single-session.md`](../specs/2026-05-03-onnx-engine-single-session.md).
 WebGPU is unavailable in Tauri's webview on Mac/Linux — see
 [`specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md`](../specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md).
 
-**Execution providers are a build-time fact, not a runtime one.** Each EP is
-a cargo feature on `ort`, and for the desktop targets that feature also picks
-which prebuilt ONNX Runtime binary gets downloaded, so the feature set has to
-match a published distribution exactly: CoreML on macOS, DirectML on Windows,
-NNAPI on Android, nothing on Linux (the only Linux distribution without a
-multi-GB CUDA runtime is the plain CPU one). `ExecutionProviderPreference` in
-[`execution_providers.rs`](../apps/desktop/src-tauri/src/onnx_engine/execution_providers.rs)
-lists exactly those, and adding one means checking the distribution table
-first — see [`specs/2026-09-12-ort-rc13-migration.md`](../specs/2026-09-12-ort-rc13-migration.md).
-Linux GPU inference goes through the PyTorch sidecar instead.
+Which execution provider a native session gets is **observed, not assumed**:
+`configure_execution_providers` appends each candidate with ORT's
+`error_on_failure()` and reports back the one that registered, so
+`provider_name` is always concrete and the status pill cannot claim a GPU
+that never loaded. A provider is only reachable if its `ort` cargo feature
+is enabled — that is what the desktop builds currently ship:
+
+| Platform | Provider | Cargo feature        | Notes                                               |
+| -------- | -------- | -------------------- | --------------------------------------------------- |
+| Windows  | DirectML | `directml` ✅        | GPU path; the pyke ORT build always includes it     |
+| macOS    | CoreML   | `coreml` (opt-in) ❌ | Off by default — `cargo run --features coreml`      |
+| Linux    | —        | —                    | CPU distribution; GPU is the PyTorch sidecar        |
+| Android  | NNAPI    | `nnapi` ✅           | Nothing downloaded; `load-dynamic` supplies the .so |
+
+Since `ort` 2.0.0-rc.13 an EP feature does a **second** job: for the desktop
+targets it also picks which prebuilt ONNX Runtime binary `download-binaries`
+fetches, matching the requested set against a table of published
+distributions. A set nothing satisfies fails at **link** time, not at
+`cargo check` time — which is all CI runs — so the features are declared per
+target in `Cargo.toml` and each set is one a distribution actually carries.
+That is also why CUDA and MIGraphX are gone from the code entirely rather
+than sitting in the candidate chain: `cuda` would swap the download for the
+multi-GB CUDA distribution, and no published Linux distribution carries
+MIGraphX.
+
+`coreml` is a Kaya cargo feature (`coreml = ["ort/coreml"]`), off by default,
+so the whole CoreML path compiles out. See
+[`specs/2026-09-12-ep-cargo-features.md`](../specs/2026-09-12-ep-cargo-features.md)
+for why a missing feature silently downgrades to CPU and what to measure
+before enabling it, and
+[`specs/2026-09-12-ort-rc13-migration.md`](../specs/2026-09-12-ort-rc13-migration.md)
+for the distribution tables.
 
 ### 6. Native audio bypasses the webview on desktop
 

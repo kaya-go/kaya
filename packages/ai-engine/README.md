@@ -6,7 +6,7 @@ AI Engine for Go game analysis using KataGo with ONNX Runtime.
 
 - 🎯 **Unified API** - Abstract engine interface
 - 💾 **Smart Caching** - Built-in LRU cache for position analysis
-- 🚀 **Native ONNX** (Desktop) - TauriEngine with CoreML/DirectML/NNAPI
+- 🚀 **Native ONNX** (Desktop) - TauriEngine with DirectML/NNAPI (CoreML behind a build flag)
 - 🌐 **Web ONNX** - OnnxEngine via ONNX Runtime Web (WebGPU/WASM)
 - 📦 **Batch Analysis** - Analyze multiple positions efficiently
 - 🔍 **Capabilities API** - Query engine features at runtime
@@ -82,7 +82,7 @@ const engine = new TauriEngine({
 });
 ```
 
-- GPU acceleration: CoreML (macOS), DirectML (Windows), NNAPI (Android); Linux is CPU-only here
+- GPU acceleration: DirectML (Windows), NNAPI (Android); Linux is CPU-only here, and macOS until the `coreml` cargo feature is enabled
 - Model caching: First load uploads to Rust, subsequent loads from disk
 - Runs in Rust, no WASM overhead
 
