@@ -101,16 +101,13 @@ impl OnnxEngine {
         ensure_ort_initialized()?;
         
         let preference = get_execution_provider_preference();
-        let provider_name = preference_to_name(preference);
         let cache_dir = Self::get_cache_dir();
         let num_threads = Self::get_num_threads();
-        eprintln!("[OnnxEngine] Loading model from {:?} (provider={}, threads={})", model_path, provider_name, num_threads);
-        
-        let builder = Session::builder()
-            .map_err(|e| format!("Failed to create session builder: {}", e))?;
-        
-        let builder = configure_execution_providers(builder, preference, cache_dir.as_deref())?;
-        
+        eprintln!("[OnnxEngine] Loading model from {:?} (preference={}, threads={})",
+            model_path, preference_to_name(preference), num_threads);
+
+        let (builder, provider) = configure_execution_providers(preference, cache_dir.as_deref())?;
+
         let session_start = Instant::now();
         let mut session_builder = builder
             .with_optimization_level(GraphOptimizationLevel::Level3)
@@ -119,11 +116,15 @@ impl OnnxEngine {
             .map_err(|e| format!("Failed to set intra threads: {}", e))?
             .with_inter_threads(num_threads)
             .map_err(|e| format!("Failed to set inter threads: {}", e))?
-            .with_memory_pattern(true)
-            .map_err(|e| format!("Failed to enable memory pattern: {}", e))?;
+            // DirectML rejects sessions with ORT's memory-pattern optimizer on.
+            .with_memory_pattern(provider.allows_mem_pattern())
+            .map_err(|e| format!("Failed to configure memory pattern: {}", e))?;
 
-        // Save optimized model to cache so subsequent loads skip graph optimization
-        if let Some(ref dir) = cache_dir {
+        // Save optimized model to cache so subsequent loads skip graph optimization.
+        // CPU only: once an accelerated EP has claimed part of the graph, the
+        // serialized model contains EP-fused nodes that no other session can
+        // read back, and some EPs fail the serialization outright.
+        if let (Some(ref dir), false) = (&cache_dir, provider.is_accelerated()) {
             let opt_path = Self::get_optimized_model_path(dir, model_path.to_string_lossy().as_ref());
             session_builder = session_builder
                 .with_optimized_model_path(&opt_path)
@@ -140,12 +141,15 @@ impl OnnxEngine {
         let mut engine = Self {
             session,
             board_size: 19,
-            provider_name,
+            provider_name: provider.name.clone(),
             is_fp16,
         };
 
-        // Run a warm-up inference to catch GPU failures early
-        // (e.g. fp16 model on incompatible GPU, or missing GPU drivers)
+        // Run a warm-up inference to catch failures early: fp16 model on an
+        // incompatible GPU, missing drivers, or fp16 ops the CPU EP can't take
+        // after a fallback. Keyed on the preference, not the resolved
+        // provider — a session that asked for a GPU and landed on CPU is
+        // exactly the case worth validating.
         if preference != ExecutionProviderPreference::Cpu {
             let warmup_start = Instant::now();
             engine.validate_warmup()?;
@@ -164,17 +168,13 @@ impl OnnxEngine {
         ensure_ort_initialized()?;
         
         let preference = get_execution_provider_preference();
-        let provider_name = preference_to_name(preference);
         let cache_dir = Self::get_cache_dir();
         let num_threads = Self::get_num_threads();
-        eprintln!("[OnnxEngine] Loading model from bytes ({}MB, provider={}, threads={})",
-            model_bytes.len() / 1024 / 1024, provider_name, num_threads);
-        
-        let builder = Session::builder()
-            .map_err(|e| format!("Failed to create session builder: {}", e))?;
-        
-        let builder = configure_execution_providers(builder, preference, cache_dir.as_deref())?;
-        
+        eprintln!("[OnnxEngine] Loading model from bytes ({}MB, preference={}, threads={})",
+            model_bytes.len() / 1024 / 1024, preference_to_name(preference), num_threads);
+
+        let (builder, provider) = configure_execution_providers(preference, cache_dir.as_deref())?;
+
         let session_start = Instant::now();
         let mut session_builder = builder
             .with_optimization_level(GraphOptimizationLevel::Level3)
@@ -183,11 +183,13 @@ impl OnnxEngine {
             .map_err(|e| format!("Failed to set intra threads: {}", e))?
             .with_inter_threads(num_threads)
             .map_err(|e| format!("Failed to set inter threads: {}", e))?
-            .with_memory_pattern(true)
-            .map_err(|e| format!("Failed to enable memory pattern: {}", e))?;
+            // DirectML rejects sessions with ORT's memory-pattern optimizer on.
+            .with_memory_pattern(provider.allows_mem_pattern())
+            .map_err(|e| format!("Failed to configure memory pattern: {}", e))?;
 
         // Save optimized model to cache so subsequent loads skip graph optimization
-        if let Some(ref dir) = cache_dir {
+        // (CPU only — see the note in `OnnxEngine::new`).
+        if let (Some(ref dir), false) = (&cache_dir, provider.is_accelerated()) {
             let opt_path = Self::get_optimized_model_path(dir, &format!("bytes_{}", model_bytes.len()));
             session_builder = session_builder
                 .with_optimized_model_path(&opt_path)
@@ -204,12 +206,15 @@ impl OnnxEngine {
         let mut engine = Self {
             session,
             board_size: 19,
-            provider_name,
+            provider_name: provider.name.clone(),
             is_fp16,
         };
 
-        // Run a warm-up inference to catch GPU failures early
-        // (e.g. fp16 model on incompatible GPU, or missing GPU drivers)
+        // Run a warm-up inference to catch failures early: fp16 model on an
+        // incompatible GPU, missing drivers, or fp16 ops the CPU EP can't take
+        // after a fallback. Keyed on the preference, not the resolved
+        // provider — a session that asked for a GPU and landed on CPU is
+        // exactly the case worth validating.
         if preference != ExecutionProviderPreference::Cpu {
             let warmup_start = Instant::now();
             engine.validate_warmup()?;

@@ -39,8 +39,10 @@ half = "2.7"
 [target.'cfg(not(target_os = "android"))'.dependencies]
 rodio = { version = "0.22", default-features = false, features = ["playback", "lewton"] }
 
-# Linux desktop: static linking (same as macOS/Windows) for zero-dependency deployment.
-# Power users can override with ORT_DYLIB_PATH for MIGraphX/CUDA GPU support.
+# Linux desktop: static linking (same as macOS/Windows) for zero-dependency
+# deployment. The prebuilt Linux binary is CPU-only, and ORT_DYLIB_PATH is
+# ignored unless ort is built with `load-dynamic`, so the GPU path on Linux is
+# the PyTorch sidecar (see specs/2026-02-28-pytorch-sidecar-rocm.md).
 [target.'cfg(target_os = "linux")'.dependencies]
 ort = { version = "2.0.0-rc.12", features = ["download-binaries", "half"] }
 reqwest = { version = "0.13", features = ["stream"] }
@@ -49,9 +51,16 @@ tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-window-state = "2.4.1"
 
-# Non-Linux desktop (macOS, Windows): static linking with download-binaries
+# Non-Linux desktop (macOS, Windows): static linking with download-binaries.
+# `directml` is what makes DirectML::register() do anything — without it ort
+# returns RegisterError::MissingFeature and every session silently runs on CPU
+# (#145). In rc.12 the EP features are pure API gating: `resolve_dist()` only
+# looks at training/webgpu/cuda/tensorrt/nvrtx/rocm, so this does NOT change
+# which prebuilt binary is downloaded, and the pyke Windows build already ships
+# DirectML.dll + links the DX12 libraries. `coreml` is deliberately left off,
+# see specs/2026-09-12-ep-cargo-features.md.
 [target.'cfg(all(not(target_os = "android"), not(target_os = "linux")))'.dependencies]
-ort = { version = "2.0.0-rc.12", features = ["download-binaries", "half"] }
+ort = { version = "2.0.0-rc.12", features = ["download-binaries", "half", "directml"] }
 reqwest = { version = "0.13", features = ["stream"] }
 tauri-plugin-http = "2"
 tauri-plugin-process = "2"
