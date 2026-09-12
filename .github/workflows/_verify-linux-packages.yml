@@ -68,11 +68,25 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           set -eu
+          # Distro mirrors 404 on stale repodata for a while after a point release
+          # (AlmaLinux 9.8 did exactly that during this work). Retry rather than
+          # let somebody else's CDN decide whether our bundles get verified.
+          retry() {
+            n=0
+            until [ "$n" -ge 3 ]; do
+              "$@" && return 0
+              n=$((n + 1))
+              echo "retry $n/3: $*"
+              command -v dnf >/dev/null 2>&1 && dnf clean all >/dev/null 2>&1 || true
+              sleep 15
+            done
+            return 1
+          }
           if [ "${{ matrix.kind }}" = "deb" ]; then
-            apt-get update -qq
-            apt-get install -y --no-install-recommends git ca-certificates
+            retry apt-get update -qq
+            retry apt-get install -y --no-install-recommends git ca-certificates
           else
-            dnf install -y git
+            retry dnf install -y git
           fi
 
       - uses: actions/checkout@v7

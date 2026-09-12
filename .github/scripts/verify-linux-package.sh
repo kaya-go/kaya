@@ -55,7 +55,17 @@ if [ "$EXPECT" = "refuse" ]; then
     echo "::error::It would have installed cleanly and then failed at startup."
     exit 1
   fi
-  echo "correctly refused"
+  # A non-zero exit on its own proves nothing: a dead mirror or a DNS blip fails
+  # the same way, and would quietly pass this row forever. Require the refusal to
+  # actually name the glibc dependency we declared.
+  if ! grep -qE 'libc6|libc\.so\.6\(GLIBC_' /tmp/install.log; then
+    echo "::error::the install failed, but not because of the declared glibc floor —"
+    echo "::error::nothing in the output mentions libc. This row proves nothing as it"
+    echo "::error::stands; check whether the package manager could reach its mirrors."
+    exit 1
+  fi
+  echo "correctly refused, and for the right reason:"
+  grep -E 'libc6|libc\.so\.6\(GLIBC_' /tmp/install.log | head -3
   exit 0
 fi
 

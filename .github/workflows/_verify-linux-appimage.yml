@@ -60,11 +60,31 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           set -eu
+          # Distro mirrors 404 on stale repodata for a while after a point release
+          # (AlmaLinux 9.8 did exactly that during this work). Retry rather than
+          # let somebody else's CDN decide whether our bundles get verified.
+          retry() {
+            n=0
+            until [ "$n" -ge 3 ]; do
+              "$@" && return 0
+              n=$((n + 1))
+              echo "retry $n/3: $*"
+              command -v dnf >/dev/null 2>&1 && dnf clean all >/dev/null 2>&1 || true
+              sleep 15
+            done
+            return 1
+          }
+          # xauth is what xvfb-run actually needs to start a server; it rides in on
+          # Recommends, which --no-install-recommends drops, so Debian 12 failed
+          # with "xauth command not found" while the Ubuntu images happened to
+          # have it. Name it explicitly rather than depend on that.
           if [ "${{ matrix.family }}" = "debian" ]; then
-            apt-get update -qq
-            apt-get install -y --no-install-recommends xvfb procps git ca-certificates
+            retry apt-get update -qq
+            retry apt-get install -y --no-install-recommends \
+              xvfb xauth procps git ca-certificates
           else
-            dnf install -y xorg-x11-server-Xvfb procps-ng git ca-certificates
+            retry dnf install -y \
+              xorg-x11-server-Xvfb xorg-x11-xauth procps-ng git ca-certificates
           fi
 
       - uses: actions/checkout@v7
