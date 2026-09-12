@@ -723,3 +723,21 @@ describe('Edge Cases', () => {
     expect(board.get([4, 4])).toBe(1);
   });
 });
+
+describe('Handicap on small boards', () => {
+  test('returns no stones for a board with no distinct star points', () => {
+    // getHandicapStones(5, 9) used to return nine copies of the same vertex.
+    expect(getHandicapStones(5, 9)).toEqual([]);
+    expect(getHandicapStones(6, 4)).toEqual([]);
+  });
+
+  test('never returns the same vertex twice', () => {
+    for (const size of [7, 9, 13, 19]) {
+      for (let handicap = 2; handicap <= 9; handicap++) {
+        const stones = getHandicapStones(size, handicap);
+        const unique = new Set(stones.map(([x, y]) => `${x},${y}`));
+        expect(unique.size).toBe(stones.length);
+      }
+    }
+  });
+});

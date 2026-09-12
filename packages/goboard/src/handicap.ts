@@ -21,6 +21,11 @@ import type { Vertex } from './types';
 export function getHandicapStones(boardSize: number, handicap: number): Vertex[] {
   if (handicap < 2 || handicap > 9) return [];
 
+  // A board this small has no distinct star points: corner, middle and edge
+  // all collapse onto the same intersections, and the caller used to get the
+  // same vertex back nine times.
+  if (boardSize < 7) return [];
+
   // Calculate star point positions based on board size
   // corner: distance from edge for corner star points
   // middle: center line coordinate (same for x and y on square boards)
@@ -70,5 +75,16 @@ export function getHandicapStones(boardSize: number, handicap: number): Vertex[]
     9: [0, 1, 2, 3, 5, 6, 7, 8, 4],
   };
 
-  return handicapPatterns[handicap].map(idx => positions[idx]);
+  // Deduplicate defensively: on small odd boards the centre can coincide with
+  // an edge star point, and a repeated vertex would place stones on top of
+  // each other.
+  const seen = new Set<string>();
+  return handicapPatterns[handicap]
+    .map(idx => positions[idx])
+    .filter(([x, y]) => {
+      const key = `${x},${y}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 }

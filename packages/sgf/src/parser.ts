@@ -365,8 +365,11 @@ export function sgfNodeToGameTreeNode<T = SGFNodeData>(
       cleanedData[key] = values
         .map((val: any) => {
           if (typeof val === 'string') {
-            // Remove [object Object] patterns
-            const cleaned = val.replace(/\[object Object\\?\]/g, '').trim();
+            // Remove [object Object] patterns. Values that carry none are
+            // returned untouched: trimming every value ate the leading and
+            // trailing whitespace of every comment on each load/save cycle.
+            const stripped = val.replace(/\[object Object\\?\]/g, '');
+            const cleaned = stripped === val ? val : stripped.trim();
             // For move properties (B/W), preserve empty strings (pass moves)
             if ((key === 'B' || key === 'W') && cleaned === '' && val === '') {
               return '';
@@ -428,7 +431,7 @@ export function extractGameInfo(rootNode: { data: SGFNodeData } | null): GameInf
     eventName: data.EV?.[0],
     komi: data.KM?.[0] ? parseFloat(data.KM[0]) : undefined,
     handicap: data.HA?.[0] ? parseInt(data.HA[0], 10) : undefined,
-    boardSize: data.SZ?.[0] ? parseInt(data.SZ[0], 10) : 19,
+    ...parseBoardSize(data.SZ?.[0]),
     date: data.DT?.[0],
     result: data.RE?.[0],
     rules: data.RU?.[0],
@@ -442,6 +445,28 @@ export function extractGameInfo(rootNode: { data: SGFNodeData } | null): GameInf
 // ============================================================================
 
 /**
+ * Parse the SGF `SZ` property.
+ *
+ * SZ is either a single number or `width:height`. Reading it with parseInt
+ * alone turned "9:13" into 9, so a rectangular board was rebuilt square and
+ * every move outside the square was dropped without a word.
+ */
+function parseBoardSize(raw: string | undefined): { boardSize: number; boardHeight?: number } {
+  if (!raw) return { boardSize: 19 };
+
+  const [widthPart, heightPart] = raw.split(':');
+  const width = parseInt(widthPart, 10);
+  if (!Number.isFinite(width) || width <= 0) return { boardSize: 19 };
+
+  if (heightPart === undefined) return { boardSize: width };
+
+  const height = parseInt(heightPart, 10);
+  if (!Number.isFinite(height) || height <= 0 || height === width) return { boardSize: width };
+
+  return { boardSize: width, boardHeight: height };
+}
+
+/**
  * Convert SGF node tree to string
  */
 export function stringify(
@@ -449,39 +474,51 @@ export function stringify(
   options: StringifyOptions = {}
 ): string {
   const { linebreak = '\n', indent = '  ', level = 0 } = options;
+  const roots = Array.isArray(nodeOrNodes) ? nodeOrNodes : [nodeOrNodes];
+  const closingIndent = linebreak !== '' ? indent.repeat(level) : '';
 
-  // Handle array of root nodes
-  if (Array.isArray(nodeOrNodes)) {
-    return stringify({ data: {}, id: null, parentId: null, children: nodeOrNodes }, options);
-  }
+  // Every game tree gets its own parentheses. Passing a single node used to
+  // produce ";GM[1](;B[aa])", which is not valid SGF.
+  return roots
+    .map(
+      root =>
+        `(${linebreak}` +
+        stringifyNode(root, { linebreak, indent, level: level + 1 }) +
+        `${closingIndent})${linebreak}`
+    )
+    .join('');
+}
 
-  const node = nodeOrNodes;
+function stringifyNode(
+  node: SGFNode,
+  { linebreak, indent, level }: { linebreak: string; indent: string; level: number }
+): string {
   const output: string[] = [];
   const totalIndent = linebreak !== '' ? indent.repeat(level) : '';
 
-  // Write node data (properties)
-  if (node.data && Object.keys(node.data).length > 0) {
-    output.push(totalIndent, ';');
+  // Always write the node marker, even when the node carries no properties:
+  // an empty node is legal SGF and dropping it changed the tree shape on a
+  // parse -> stringify round trip.
+  output.push(totalIndent, ';');
 
-    for (const id in node.data) {
-      // Only uppercase properties
-      if (id.toUpperCase() !== id) continue;
+  for (const id in node.data) {
+    // Only uppercase properties
+    if (id.toUpperCase() !== id) continue;
 
-      output.push(id, '[', node.data[id].map(escapeString).join(']['), ']');
-    }
-
-    output.push(linebreak);
+    output.push(id, '[', node.data[id].map(escapeString).join(']['), ']');
   }
 
+  output.push(linebreak);
+
   // Write children
-  if (node.children.length > 1 || (node.children.length > 0 && level === 0)) {
+  if (node.children.length > 1) {
     output.push(totalIndent);
 
     for (const child of node.children) {
       output.push(
         '(',
         linebreak,
-        stringify(child, { linebreak, indent, level: level + 1 }),
+        stringifyNode(child, { linebreak, indent, level: level + 1 }),
         totalIndent,
         ')'
       );
@@ -489,7 +526,7 @@ export function stringify(
 
     output.push(linebreak);
   } else if (node.children.length === 1) {
-    output.push(stringify(node.children[0], { linebreak, indent, level }));
+    output.push(stringifyNode(node.children[0], { linebreak, indent, level }));
   }
 
   return output.join('');

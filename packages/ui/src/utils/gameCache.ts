@@ -70,14 +70,15 @@ export function getPathToNode(
 export function reconstructBoard(
   tree: GameTree<SGFProperty>,
   nodeId: number | string | null,
-  boardSize: number
+  boardSize: number,
+  boardHeight?: number
 ): GoBoard {
   if (nodeId === null || nodeId === undefined) {
-    return GoBoard.fromDimensions(boardSize);
+    return GoBoard.fromDimensions(boardSize, boardHeight);
   }
 
   // Check cache first (LRU behavior: move to end on hit)
-  const cacheKey = `${nodeId}-${boardSize}`;
+  const cacheKey = `${nodeId}-${boardSize}x${boardHeight ?? boardSize}`;
   const cached = boardCache.get(cacheKey);
   if (cached) {
     boardCache.delete(cacheKey);
@@ -87,12 +88,12 @@ export function reconstructBoard(
 
   // Get path from root to current node
   const sequence = getPathToNode(tree, nodeId);
-  let board = GoBoard.fromDimensions(boardSize);
+  let board = GoBoard.fromDimensions(boardSize, boardHeight);
 
   // Find closest cached ancestor (start from end, which is closest to target)
   let lastCachedIndex = -1;
   for (let i = sequence.length - 1; i >= 0; i--) {
-    const parentKey = `${sequence[i].id}-${boardSize}`;
+    const parentKey = `${sequence[i].id}-${boardSize}x${boardHeight ?? boardSize}`;
     const cachedParent = boardCache.get(parentKey);
     if (cachedParent) {
       board = cachedParent;

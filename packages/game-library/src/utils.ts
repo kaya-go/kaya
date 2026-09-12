@@ -50,7 +50,7 @@ export function extractSGFMetadata(content: string): SGFMetadata {
       result: data.RE?.[0],
       date: data.DT?.[0],
       event: data.EV?.[0],
-      boardSize: data.SZ?.[0] ? parseInt(data.SZ[0], 10) : 19,
+      boardSize: data.SZ?.[0] ? parseInt(data.SZ[0].split(':')[0], 10) : 19,
       komi: data.KM?.[0] ? parseFloat(data.KM[0]) : undefined,
       handicap: data.HA?.[0] ? parseInt(data.HA[0], 10) : undefined,
       moveCount,

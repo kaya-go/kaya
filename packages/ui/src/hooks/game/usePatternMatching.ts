@@ -86,7 +86,12 @@ export function usePatternMatching({
 
     // Reconstruct parent board to check pattern
     // We need the board BEFORE the move to check for patterns
-    const parentBoard = reconstructBoard(gameTree, parentId, gameInfo.boardSize);
+    const parentBoard = reconstructBoard(
+      gameTree,
+      parentId,
+      gameInfo.boardSize,
+      gameInfo.boardHeight
+    );
     const vertex = sgfToVertex(moveData);
     if (!vertex) return { moveName: null, moveUrl: null };
 

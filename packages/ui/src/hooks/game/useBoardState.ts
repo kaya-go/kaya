@@ -29,7 +29,7 @@ export function useBoardState({
   // But it's cached aggressively in reconstructBoard() so should be fast
   const currentBoard = useMemo(() => {
     const newBoard = gameTree
-      ? reconstructBoard(gameTree, currentNodeId, gameInfo.boardSize)
+      ? reconstructBoard(gameTree, currentNodeId, gameInfo.boardSize, gameInfo.boardHeight)
       : GoBoard.fromDimensions(19);
 
     // Reference stability: If content is identical, return the same object
@@ -40,7 +40,7 @@ export function useBoardState({
 
     lastBoardRef.current = newBoard;
     return newBoard;
-  }, [gameTree, currentNodeId, gameInfo.boardSize]);
+  }, [gameTree, currentNodeId, gameInfo.boardSize, gameInfo.boardHeight]);
 
   const currentNode = useMemo(
     () => (gameTree && currentNodeId !== null ? gameTree.get(currentNodeId) : null),

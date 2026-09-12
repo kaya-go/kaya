@@ -96,7 +96,10 @@ export interface GameInfo {
   eventName?: string;
   komi?: number;
   handicap?: number;
+  /** Board width. For a square board this is the whole story. */
   boardSize: number;
+  /** Set only for a rectangular board (SGF `SZ[width:height]`). */
+  boardHeight?: number;
   date?: string;
   result?: string;
   rules?: string;
