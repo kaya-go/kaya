@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import './SaveStatus.css';
 
 interface SaveStatusProps {
@@ -11,6 +12,7 @@ interface SaveStatusProps {
 }
 
 export const SaveStatus: React.FC<SaveStatusProps> = ({ isSaving = false, lastSaveTime }) => {
+  const { t } = useTranslation();
   const [showSaved, setShowSaved] = React.useState(false);
 
   React.useEffect(() => {
@@ -28,12 +30,12 @@ export const SaveStatus: React.FC<SaveStatusProps> = ({ isSaving = false, lastSa
       {isSaving ? (
         <>
           <span className="save-status-icon saving">●</span>
-          <span className="save-status-text">Saving...</span>
+          <span className="save-status-text">{t('saveStatus.saving')}</span>
         </>
       ) : (
         <>
           <span className="save-status-icon saved">✓</span>
-          <span className="save-status-text">Saved</span>
+          <span className="save-status-text">{t('saveStatus.saved')}</span>
         </>
       )}
     </div>

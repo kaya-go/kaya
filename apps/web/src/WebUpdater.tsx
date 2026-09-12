@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { VersionData } from '@kaya/ui';
 
 function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefined }) {
+  const { t } = useTranslation();
   const [hasUpdate, setHasUpdate] = useState(false);
 
   useEffect(() => {
@@ -71,9 +73,11 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
         <span style={{ fontSize: '20px' }}>✨</span>
         <div>
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>New version available</div>
+          <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+            {t('updater.newVersionAvailable')}
+          </div>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary, #666)', lineHeight: 1.4 }}>
-            A new version of Kaya is available. Refresh to get the latest features and improvements.
+            {t('updater.newVersionMessage')}
           </div>
         </div>
       </div>
@@ -91,7 +95,7 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
             fontWeight: 500,
           }}
         >
-          Dismiss
+          {t('updater.dismiss')}
         </button>
         <button
           onClick={handleUpdate}
@@ -106,7 +110,7 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
             fontWeight: 600,
           }}
         >
-          Update Now
+          {t('updater.updateNow')}
         </button>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LuLibrary, LuGitBranch, LuInfo, LuMessageSquare, LuBrain } from 'react-icons/lu';
 import { MobileTabBar, type MobileTab } from './MobileTabBar';
 
@@ -25,6 +26,8 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
   onTabChange,
   isLandscape,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className={`mobile-layout ${isLandscape ? 'mobile-landscape' : 'mobile-portrait'} `}>
       <div className="mobile-layout-content">
@@ -43,18 +46,18 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
         >
           <div className="mobile-panel-header">
             <LuInfo size={16} />
-            <span>Game Info</span>
+            <span>{t('panels.gameInfo')}</span>
           </div>
           <div className="mobile-panel-content mobile-info-content">
             <div className="mobile-info-section">
-              {gameInfoContent || <div className="placeholder">Game Info</div>}
+              {gameInfoContent || <div className="placeholder">{t('panels.gameInfo')}</div>}
             </div>
             <div className="mobile-comment-section">
               <div className="mobile-section-title">
                 <LuMessageSquare size={14} />
-                <span>Comments</span>
+                <span>{t('panels.comment')}</span>
               </div>
-              {commentContent || <div className="placeholder">Comments</div>}
+              {commentContent || <div className="placeholder">{t('panels.comment')}</div>}
             </div>
           </div>
         </div>
@@ -66,10 +69,10 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
         >
           <div className="mobile-panel-header">
             <LuGitBranch size={16} />
-            <span>Game Tree</span>
+            <span>{t('panels.gameTree')}</span>
           </div>
           <div className="mobile-panel-content">
-            {gameTreeContent || <div className="placeholder">Game Tree</div>}
+            {gameTreeContent || <div className="placeholder">{t('panels.gameTree')}</div>}
           </div>
         </div>
 
@@ -81,7 +84,7 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
           >
             <div className="mobile-panel-header">
               <LuBrain size={16} />
-              <span>Analysis</span>
+              <span>{t('panels.analysis')}</span>
             </div>
             <div className="mobile-panel-content">{analysisGraphContent}</div>
           </div>
@@ -94,10 +97,10 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
         >
           <div className="mobile-panel-header">
             <LuLibrary size={16} />
-            <span>Library</span>
+            <span>{t('panels.library')}</span>
           </div>
           <div className="mobile-panel-content">
-            {libraryContent || <div className="placeholder">Library</div>}
+            {libraryContent || <div className="placeholder">{t('panels.library')}</div>}
           </div>
         </div>
       </div>

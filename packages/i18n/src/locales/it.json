@@ -122,7 +122,7 @@
     "inferenceBackendDescription": "Scegli come eseguire il modello IA. Native è il più veloce, WebGPU usa la GPU, WASM usa la CPU (massima compatibilità).",
     "webgpuBatchSize": "Dimensione batch",
     "webgpuBatchSizeDescription": "Posizioni valutate per chiamata di inferenza. Più alto = analisi più veloce. WebGPU usa più memoria con valori alti; WebNN no.",
-    "nativeAuto": "Native - Automatico (GPU se disponibile)",
+    "nativeGpu": "Native - GPU",
     "nativeCpu": "Native - Solo CPU",
     "pytorch": "PyTorch GPU (ROCm/CUDA)",
     "pytorchUnavailable": "PyTorch GPU (non rilevato)",
@@ -256,7 +256,10 @@
     "analyzingProgress": "Analizzando: {{progress}}%",
     "stopAnalysisButton": "Ferma analisi",
     "analysisModeOn": "Modalità analisi attiva - Clicca per disattivare",
-    "analysisModeOff": "Modalità analisi disattiva - Clicca per attivare"
+    "analysisModeOff": "Modalità analisi disattiva - Clicca per attivare",
+    "moveNumber": "Mossa {{number}}",
+    "notAnalyzed": "Non analizzato",
+    "perspectiveNote": "Tasso di vittoria e punteggio dal punto di vista di Nero"
   },
   "analysisLegend": {
     "title": "Legenda analisi",
@@ -317,9 +320,12 @@
     "checkForUpdates": "Controlla aggiornamenti...",
     "updateAvailable": "Aggiornamento disponibile",
     "versionAvailable": "La versione {{version}} è disponibile.",
+    "newVersionAvailable": "Nuova versione disponibile",
+    "newVersionMessage": "È disponibile una nuova versione di Kaya. Ricarica la pagina per ottenere le ultime funzionalità e i miglioramenti.",
     "installing": "Installazione aggiornamento...Attendere.",
     "skipVersion": "Salta questa versione",
     "remindLater": "Ricorda più tardi",
+    "dismiss": "Ignora",
     "updateNow": "Aggiorna ora",
     "noUpdateAvailable": "Nessun aggiornamento disponibile",
     "youAreOnLatest": "Hai l'ultima versione.",
@@ -375,15 +381,22 @@
     "white": "Bianco",
     "blackRank": "Grado Nero",
     "whiteRank": "Grado Bianco",
+    "rankPlaceholder": "es. 5k, 3d",
     "komi": "Komi",
+    "komiPlaceholder": "6.5",
     "handicap": "Handicap",
+    "handicapPlaceholder": "0",
     "rules": "Regole",
     "rulesPlaceholder": "es. Giapponesi, Cinesi",
-    "timeControl": "Controllo tempo",
+    "time": "Tempo",
     "timePlaceholder": "es. 900 5x30 byo-yomi",
     "result": "Risultato",
     "resultPlaceholder": "es. N+0.5, B+R",
     "clickToAdd": "Clicca per aggiungere",
+    "clickToEdit": "Clicca per modificare",
+    "clickToEditName": "Clicca per modificare il nome",
+    "clickToEditRank": "Clicca per modificare il grado",
+    "rankFallback": "grado",
     "editHint": "Clicca su un campo per modificare. Invio per salvare, Esc per annullare.",
     "editAllFields": "Modifica tutti i campi",
     "exitEditMode": "Esci dalla modalità modifica"
@@ -558,8 +571,8 @@
       "inputLabel": "Profondità di ricerca personalizzata"
     },
     "bestMove": "Migliore",
-    "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di policy. Policy: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
-    "metric_policy": "Policy",
+    "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di strategia. Strategia: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
+    "metric_policy": "Strategia",
     "metric_winRate": "ΔVitt%",
     "metric_scoreLead": "ΔPunt."
   },
@@ -571,6 +584,16 @@
     "comment": "Commento",
     "showLibrary": "Mostra libreria (Ctrl+L)",
     "showSidebar": "Mostra barra laterale (Ctrl+B)"
+  },
+  "saveStatus": {
+    "saving": "Salvataggio...",
+    "saved": "Salvato"
+  },
+  "gamepad": {
+    "clickToEnable": "Clicca per attivare",
+    "clickToDisable": "Clicca per disattivare",
+    "ariaLabelActive": "Gamepad {{index}}: {{name}}. Attivo. Clicca per disattivare.",
+    "ariaLabelInactive": "Gamepad {{index}}: {{name}}. Inattivo. Clicca per attivare."
   },
   "shortcuts": {
     "title": "Scorciatoie da tastiera",
@@ -658,7 +681,7 @@
     "accuracy": "Precisione",
     "meanLoss": "Perdita media",
     "bestMovePercent": "% Mossa Migliore",
-    "top5Percent": "Top 5 %",
+    "top5Percent": "% Prime 5 Mosse",
     "points": "pt",
     "moveDistribution": "Distribuzione mosse",
     "aiMove": "Mossa IA",
@@ -674,7 +697,7 @@
       "title": "Capire il rapporto",
       "accuracyTitle": "Precisione",
       "accuracyDesc": "Punteggio ponderato (0-100%) che misura la qualità del gioco. Mossa IA 100%, Buona 80%, Imprecisione 50%, Errore 20%, Svista 0%.",
-      "top5Title": "Top 5 %",
+      "top5Title": "% Prime 5 Mosse",
       "top5Desc": "Percentuale di mosse tra le prime 5 suggerite dall'IA. Valori più alti indicano un gioco più coerente con le raccomandazioni.",
       "distributionTitle": "Distribuzione mosse",
       "distributionDesc": "Classificazione di ogni mossa in base al suo rango nei suggerimenti dell'IA e alla probabilità relativa rispetto alla mossa migliore:",

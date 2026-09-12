@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import './AnalysisChart.css';
 import { useAnalysisChartData, CHART_PADDING } from './useAnalysisChartData';
 import { WinRateAxis, ScoreLeadAxis, MoveNumberAxis } from './AnalysisChartAxes';
@@ -40,6 +41,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
   onToggleWinRate,
   onToggleScoreLead,
 }) => {
+  const { t } = useTranslation();
   const {
     svgRef,
     wrapperRef,
@@ -154,7 +156,9 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
 
       {/* Current position info */}
       <div className="analysis-chart-current-info">
-        <span className="current-move">Move {currentMoveNumber}</span>
+        <span className="current-move">
+          {t('analysis.moveNumber', { number: currentMoveNumber })}
+        </span>
         {currentData ? (
           <>
             <span className="current-winrate winrate-value">
@@ -169,13 +173,13 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
             </span>
           </>
         ) : (
-          <span className="current-no-data">Not analyzed</span>
+          <span className="current-no-data">{t('analysis.notAnalyzed')}</span>
         )}
       </div>
 
       {/* Perspective note */}
       <div className="analysis-chart-perspective-note">
-        <em>Win rate and score are from Black's perspective</em>
+        <em>{t('analysis.perspectiveNote')}</em>
       </div>
     </div>
   );

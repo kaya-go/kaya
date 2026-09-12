@@ -122,7 +122,7 @@
     "inferenceBackendDescription": "AIモデルの実行方法を選択。ネイティブが最速、WebGPUはGPU使用、WASMはCPU（最も互換性あり）。",
     "webgpuBatchSize": "バッチサイズ",
     "webgpuBatchSizeDescription": "推論呼び出しごとに評価する局面数。大きいほど分析が速くなります。WebGPUはサイズが大きいとメモリ使用量が増加しますが、WebNNは増加しません。",
-    "nativeAuto": "ネイティブ - 自動（GPU利用可能時）",
+    "nativeGpu": "ネイティブ - GPU",
     "nativeCpu": "ネイティブ - CPUのみ",
     "pytorch": "PyTorch GPU (ROCm/CUDA)",
     "pytorchUnavailable": "PyTorch GPU（未検出）",
@@ -256,7 +256,10 @@
     "analyzingProgress": "分析中: {{progress}}%",
     "stopAnalysisButton": "分析を停止",
     "analysisModeOn": "分析モードがオン - クリックで無効化",
-    "analysisModeOff": "分析モードがオフ - クリックで有効化"
+    "analysisModeOff": "分析モードがオフ - クリックで有効化",
+    "moveNumber": "第{{number}}手",
+    "notAnalyzed": "未分析",
+    "perspectiveNote": "勝率と目差は黒番視点です"
   },
   "analysisLegend": {
     "title": "分析の凡例",
@@ -317,9 +320,12 @@
     "checkForUpdates": "アップデートを確認...",
     "updateAvailable": "アップデート利用可能",
     "versionAvailable": "バージョン {{version}} が利用可能です。",
+    "newVersionAvailable": "新しいバージョンが利用可能",
+    "newVersionMessage": "Kaya の新しいバージョンが利用可能です。再読み込みすると最新の機能と改善が適用されます。",
     "installing": "アップデートをインストール中...お待ちください。",
     "skipVersion": "このバージョンをスキップ",
     "remindLater": "後で通知",
+    "dismiss": "閉じる",
     "updateNow": "今すぐアップデート",
     "noUpdateAvailable": "アップデートなし",
     "youAreOnLatest": "最新バージョンです。",
@@ -387,6 +393,10 @@
     "result": "結果",
     "resultPlaceholder": "例: 黒+0.5, 白中押し",
     "clickToAdd": "クリックして追加",
+    "clickToEdit": "クリックして編集",
+    "clickToEditName": "クリックして名前を編集",
+    "clickToEditRank": "クリックして段級位を編集",
+    "rankFallback": "段級位",
     "editHint": "フィールドをクリックして編集。Enterで保存、Escでキャンセル。",
     "editAllFields": "すべてのフィールドを編集",
     "exitEditMode": "編集モードを終了"
@@ -574,6 +584,16 @@
     "comment": "コメント",
     "showLibrary": "ライブラリを表示 (Ctrl+L)",
     "showSidebar": "サイドバーを表示 (Ctrl+B)"
+  },
+  "saveStatus": {
+    "saving": "保存中...",
+    "saved": "保存しました"
+  },
+  "gamepad": {
+    "clickToEnable": "クリックで有効化",
+    "clickToDisable": "クリックで無効化",
+    "ariaLabelActive": "ゲームパッド {{index}}：{{name}}。有効。クリックで無効化。",
+    "ariaLabelInactive": "ゲームパッド {{index}}：{{name}}。無効。クリックで有効化。"
   },
   "shortcuts": {
     "title": "キーボードショートカット",

@@ -7,12 +7,14 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { LuGamepad2 } from 'react-icons/lu';
 import { useGamepads, type GamepadInfo } from '../../useGamepads';
 import { useGameControllerManager } from './GameControllerManager';
 import './GamepadIndicator.css';
 
 export const GamepadIndicator: React.FC = () => {
+  const { t } = useTranslation();
   const { gamepads } = useGamepads();
   const { isControllerActive, toggleController } = useGameControllerManager();
 
@@ -29,8 +31,13 @@ export const GamepadIndicator: React.FC = () => {
             key={gamepad.index}
             className={`gamepad-icon ${isActive ? 'active' : 'inactive'}`}
             onClick={() => toggleController(gamepad.index)}
-            title={`${gamepad.id}\n${isActive ? 'Click to disable' : 'Click to enable'}`}
-            aria-label={`Gamepad ${gamepad.index + 1}: ${gamepad.id}. ${isActive ? 'Active' : 'Inactive'}. Click to ${isActive ? 'disable' : 'enable'}.`}
+            title={`${gamepad.id}\n${
+              isActive ? t('gamepad.clickToDisable') : t('gamepad.clickToEnable')
+            }`}
+            aria-label={t(isActive ? 'gamepad.ariaLabelActive' : 'gamepad.ariaLabelInactive', {
+              index: gamepad.index + 1,
+              name: gamepad.id,
+            })}
           >
             <LuGamepad2 size={18} />
           </button>

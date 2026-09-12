@@ -122,7 +122,7 @@
     "inferenceBackendDescription": "Wählen Sie, wie das KI-Modell ausgeführt wird. Native ist am schnellsten, WebGPU nutzt die GPU, WASM nutzt die CPU (höchste Kompatibilität).",
     "webgpuBatchSize": "Batchgröße",
     "webgpuBatchSizeDescription": "Positionen pro Inferenzaufruf. Höher = schnellere Analyse. WebGPU verbraucht bei größeren Werten mehr Speicher; WebNN nicht.",
-    "nativeAuto": "Native - Automatisch (GPU wenn verfügbar)",
+    "nativeGpu": "Native - GPU",
     "nativeCpu": "Native - Nur CPU",
     "pytorch": "PyTorch GPU (ROCm/CUDA)",
     "pytorchUnavailable": "PyTorch GPU (nicht erkannt)",
@@ -256,7 +256,10 @@
     "analyzingProgress": "Analysiere: {{progress}}%",
     "stopAnalysisButton": "Analyse stoppen",
     "analysisModeOn": "Analyse-Modus aktiv - Klicken zum Deaktivieren",
-    "analysisModeOff": "Analyse-Modus inaktiv - Klicken zum Aktivieren"
+    "analysisModeOff": "Analyse-Modus inaktiv - Klicken zum Aktivieren",
+    "moveNumber": "Zug {{number}}",
+    "notAnalyzed": "Nicht analysiert",
+    "perspectiveNote": "Gewinnrate und Punkte aus Sicht von Schwarz"
   },
   "analysisLegend": {
     "title": "Analyse-Legende",
@@ -317,9 +320,12 @@
     "checkForUpdates": "Nach Updates suchen...",
     "updateAvailable": "Update verfügbar",
     "versionAvailable": "Version {{version}} ist verfügbar.",
+    "newVersionAvailable": "Neue Version verfügbar",
+    "newVersionMessage": "Eine neue Version von Kaya ist verfügbar. Laden Sie die Seite neu, um die neuesten Funktionen und Verbesserungen zu erhalten.",
     "installing": "Update wird installiert...Bitte warten.",
     "skipVersion": "Diese Version überspringen",
     "remindLater": "Später erinnern",
+    "dismiss": "Ignorieren",
     "updateNow": "Jetzt aktualisieren",
     "noUpdateAvailable": "Kein Update verfügbar",
     "youAreOnLatest": "Sie haben die neueste Version.",
@@ -375,15 +381,22 @@
     "white": "Weiß",
     "blackRank": "Rang Schwarz",
     "whiteRank": "Rang Weiß",
+    "rankPlaceholder": "z.B. 5k, 3d",
     "komi": "Komi",
+    "komiPlaceholder": "6.5",
     "handicap": "Vorgabe",
+    "handicapPlaceholder": "0",
     "rules": "Regeln",
     "rulesPlaceholder": "z.B. Japanisch, Chinesisch",
-    "timeControl": "Zeitkontrolle",
+    "time": "Zeit",
     "timePlaceholder": "z.B. 900 5x30 Byo-yomi",
     "result": "Ergebnis",
     "resultPlaceholder": "z.B. S+0.5, W+R",
     "clickToAdd": "Klicken zum Hinzufügen",
+    "clickToEdit": "Klicken zum Bearbeiten",
+    "clickToEditName": "Klicken zum Bearbeiten des Namens",
+    "clickToEditRank": "Klicken zum Bearbeiten des Rangs",
+    "rankFallback": "Rang",
     "editHint": "Klicken Sie auf ein Feld zum Bearbeiten. Enter zum Speichern, Esc zum Abbrechen.",
     "editAllFields": "Alle Felder bearbeiten",
     "exitEditMode": "Bearbeitungsmodus beenden"
@@ -558,8 +571,8 @@
       "inputLabel": "Benutzerdefinierte Suchtiefe"
     },
     "bestMove": "Bester",
-    "metricTooltip": "Steintext-Metrik umschalten — Farben zeigen immer Policy-Wahrscheinlichkeit. Policy: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuell, ΔScore: Scoreänderung vs aktuell",
-    "metric_policy": "Policy",
+    "metricTooltip": "Steintext-Metrik umschalten — Farben zeigen immer Strategie-Wahrscheinlichkeit. Strategie: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuell, ΔScore: Scoreänderung vs aktuell",
+    "metric_policy": "Strategie",
     "metric_winRate": "ΔGew%",
     "metric_scoreLead": "ΔScore"
   },
@@ -571,6 +584,16 @@
     "comment": "Kommentar",
     "showLibrary": "Bibliothek anzeigen (Strg+L)",
     "showSidebar": "Seitenleiste anzeigen (Strg+B)"
+  },
+  "saveStatus": {
+    "saving": "Speichern...",
+    "saved": "Gespeichert"
+  },
+  "gamepad": {
+    "clickToEnable": "Klicken zum Aktivieren",
+    "clickToDisable": "Klicken zum Deaktivieren",
+    "ariaLabelActive": "Gamepad {{index}}: {{name}}. Aktiv. Klicken zum Deaktivieren.",
+    "ariaLabelInactive": "Gamepad {{index}}: {{name}}. Inaktiv. Klicken zum Aktivieren."
   },
   "shortcuts": {
     "title": "Tastenkürzel",
@@ -657,7 +680,7 @@
     "endGame": "Endspiel",
     "accuracy": "Genauigkeit",
     "bestMovePercent": "Beste Zug %",
-    "top5Percent": "Top 5 %",
+    "top5Percent": "Top-5-Züge %",
     "meanLoss": "Mittlerer Verlust",
     "points": "Pkt",
     "moveDistribution": "Zugverteilung",
@@ -674,7 +697,7 @@
       "title": "Bericht verstehen",
       "accuracyTitle": "Genauigkeit",
       "accuracyDesc": "Gewichteter Score (0-100%), der die Spielqualität misst. KI-Zug 100%, Gut 80%, Ungenauigkeit 50%, Fehler 20%, Patzer 0%.",
-      "top5Title": "Top 5 %",
+      "top5Title": "Top-5-Züge %",
       "top5Desc": "Prozentsatz der Züge unter den Top-5-Vorschlägen der KI. Höhere Werte bedeuten konsistenteres Spiel mit den KI-Empfehlungen.",
       "distributionTitle": "Zugverteilung",
       "distributionDesc": "Klassifizierung jedes Zuges basierend auf seinem Rang in den KI-Vorschlägen und der relativen Wahrscheinlichkeit zum besten Zug:",

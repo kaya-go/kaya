@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { EditableField, TranslatedFieldConfig } from './GameInfoEditorConfig';
 
 interface InlineEditInputProps {
@@ -74,6 +75,7 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
   onKeyDown,
   onFieldClick,
 }) => {
+  const { t } = useTranslation();
   const hasValue = value !== undefined && value !== '' && value !== 0;
 
   // In normal mode, hide empty fields (unless alwaysShow)
@@ -94,7 +96,8 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
     displayValue = value ?? 6.5;
   } else {
     displayValue =
-      value || (isEditMode ? <em className="empty-placeholder">Click to add</em> : null);
+      value ||
+      (isEditMode ? <em className="empty-placeholder">{t('gameInfo.clickToAdd')}</em> : null);
   }
 
   return (
@@ -117,7 +120,7 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
         <span
           className={`editable-field ${isEditMode ? 'edit-mode' : ''}`}
           onClick={() => onFieldClick(config.key)}
-          title="Click to edit"
+          title={t('gameInfo.clickToEdit')}
         >
           {displayValue}
         </span>
@@ -161,6 +164,7 @@ export const PlayerRow: React.FC<PlayerRowProps> = ({
   onKeyDown,
   onFieldClick,
 }) => {
+  const { t } = useTranslation();
   const isEditingPlayer = editingField === playerKey;
   const isEditingRank = editingField === rankKey;
 
@@ -180,9 +184,11 @@ export const PlayerRow: React.FC<PlayerRowProps> = ({
         <span
           className={`editable-field ${isEditMode ? 'edit-mode' : ''}`}
           onClick={() => onFieldClick(playerKey)}
-          title="Click to edit name"
+          title={t('gameInfo.clickToEditName')}
         >
-          {playerValue || <em>{playerKey === 'playerBlack' ? 'Black' : 'White'}</em>}
+          {playerValue || (
+            <em>{playerKey === 'playerBlack' ? t('gameInfo.black') : t('gameInfo.white')}</em>
+          )}
         </span>
       )}
       {(rankValue || isEditMode) && (
@@ -206,9 +212,9 @@ export const PlayerRow: React.FC<PlayerRowProps> = ({
             <span
               className={`editable-field editable-rank ${isEditMode ? 'edit-mode' : ''}`}
               onClick={() => onFieldClick(rankKey)}
-              title="Click to edit rank"
+              title={t('gameInfo.clickToEditRank')}
             >
-              ({rankValue || <em>rank</em>})
+              ({rankValue || <em>{t('gameInfo.rankFallback')}</em>})
             </span>
           )}
         </>

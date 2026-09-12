@@ -256,7 +256,10 @@
     "analyzingProgress": "Analyzing: {{progress}}%",
     "stopAnalysisButton": "Stop analysis",
     "analysisModeOn": "Analysis Mode On - Click to disable",
-    "analysisModeOff": "Analysis Mode Off - Click to enable"
+    "analysisModeOff": "Analysis Mode Off - Click to enable",
+    "moveNumber": "Move {{number}}",
+    "notAnalyzed": "Not analyzed",
+    "perspectiveNote": "Win rate and score are from Black's perspective"
   },
   "analysisLegend": {
     "title": "Analysis Legend",
@@ -317,9 +320,12 @@
     "checkForUpdates": "Check for Updates...",
     "updateAvailable": "Update Available",
     "versionAvailable": "Version {{version}} is available.",
+    "newVersionAvailable": "New version available",
+    "newVersionMessage": "A new version of Kaya is available. Refresh to get the latest features and improvements.",
     "installing": "Installing update... Please wait.",
     "skipVersion": "Skip this version",
     "remindLater": "Remind me later",
+    "dismiss": "Dismiss",
     "updateNow": "Update Now",
     "noUpdateAvailable": "No Update Available",
     "youAreOnLatest": "You are on the latest version.",
@@ -387,6 +393,10 @@
     "result": "Result",
     "resultPlaceholder": "e.g., B+0.5, W+R",
     "clickToAdd": "Click to add",
+    "clickToEdit": "Click to edit",
+    "clickToEditName": "Click to edit name",
+    "clickToEditRank": "Click to edit rank",
+    "rankFallback": "rank",
     "editHint": "Click any field to edit. Press Enter to save, Escape to cancel.",
     "editAllFields": "Edit all fields",
     "exitEditMode": "Exit edit mode"
@@ -574,6 +584,16 @@
     "comment": "Comment",
     "showLibrary": "Show Library (Ctrl+L)",
     "showSidebar": "Show Sidebar (Ctrl+B)"
+  },
+  "saveStatus": {
+    "saving": "Saving...",
+    "saved": "Saved"
+  },
+  "gamepad": {
+    "clickToEnable": "Click to enable",
+    "clickToDisable": "Click to disable",
+    "ariaLabelActive": "Gamepad {{index}}: {{name}}. Active. Click to disable.",
+    "ariaLabelInactive": "Gamepad {{index}}: {{name}}. Inactive. Click to enable."
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",

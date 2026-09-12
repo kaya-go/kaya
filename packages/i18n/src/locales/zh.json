@@ -122,7 +122,7 @@
     "inferenceBackendDescription": "选择 AI 模型的运行方式。原生速度最快，WebGPU 使用显卡，WASM 使用 CPU（兼容性最好）。",
     "webgpuBatchSize": "批量大小",
     "webgpuBatchSizeDescription": "每次推理调用评估的位置数。值越大分析越快。WebGPU 在较大值时占用更多内存，WebNN 则不会。",
-    "nativeAuto": "原生 - 自动（如有 GPU）",
+    "nativeGpu": "原生 - GPU",
     "nativeCpu": "原生 - 仅 CPU",
     "pytorch": "PyTorch GPU (ROCm/CUDA)",
     "pytorchUnavailable": "PyTorch GPU（未检测到）",
@@ -256,7 +256,10 @@
     "analyzingProgress": "分析中：{{progress}}%",
     "stopAnalysisButton": "停止分析",
     "analysisModeOn": "分析模式已开启 - 点击关闭",
-    "analysisModeOff": "分析模式已关闭 - 点击开启"
+    "analysisModeOff": "分析模式已关闭 - 点击开启",
+    "moveNumber": "第 {{number}} 手",
+    "notAnalyzed": "未分析",
+    "perspectiveNote": "胜率和目差均以黑方视角显示"
   },
   "analysisLegend": {
     "title": "分析图例",
@@ -317,9 +320,12 @@
     "checkForUpdates": "检查更新...",
     "updateAvailable": "有可用更新",
     "versionAvailable": "版本 {{version}} 可用。",
+    "newVersionAvailable": "有新版本可用",
+    "newVersionMessage": "Kaya 有新版本可用。刷新页面即可获取最新功能和改进。",
     "installing": "正在安装更新...请稍候。",
     "skipVersion": "跳过此版本",
     "remindLater": "稍后提醒",
+    "dismiss": "忽略",
     "updateNow": "立即更新",
     "noUpdateAvailable": "无可用更新",
     "youAreOnLatest": "您已是最新版本。",
@@ -387,6 +393,10 @@
     "result": "结果",
     "resultPlaceholder": "例如 黑+0.5、白中盘胜",
     "clickToAdd": "点击添加",
+    "clickToEdit": "点击编辑",
+    "clickToEditName": "点击编辑名称",
+    "clickToEditRank": "点击编辑段位",
+    "rankFallback": "段位",
     "editHint": "点击任意字段进行编辑。按 Enter 保存，Escape 取消。",
     "editAllFields": "编辑所有字段",
     "exitEditMode": "退出编辑模式"
@@ -574,6 +584,16 @@
     "comment": "评论",
     "showLibrary": "显示棋库 (Ctrl+L)",
     "showSidebar": "显示侧边栏 (Ctrl+B)"
+  },
+  "saveStatus": {
+    "saving": "保存中...",
+    "saved": "已保存"
+  },
+  "gamepad": {
+    "clickToEnable": "点击启用",
+    "clickToDisable": "点击禁用",
+    "ariaLabelActive": "手柄 {{index}}：{{name}}。已启用。点击禁用。",
+    "ariaLabelInactive": "手柄 {{index}}：{{name}}。已禁用。点击启用。"
   },
   "shortcuts": {
     "title": "键盘快捷键",

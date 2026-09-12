@@ -122,7 +122,7 @@
     "inferenceBackendDescription": "AI 모델 실행 방법을 선택합니다. 네이티브가 가장 빠르고, WebGPU는 GPU 사용, WASM은 CPU(가장 호환성 높음).",
     "webgpuBatchSize": "배치 크기",
     "webgpuBatchSizeDescription": "추론 호출당 평가하는 위치 수. 높을수록 분석이 빠릅니다. WebGPU는 값이 클수록 메모리를 더 사용하지만 WebNN은 그렇지 않습니다.",
-    "nativeAuto": "네이티브 - 자동 (GPU 사용 가능 시)",
+    "nativeGpu": "네이티브 - GPU",
     "nativeCpu": "네이티브 - CPU만",
     "pytorch": "PyTorch GPU (ROCm/CUDA)",
     "pytorchUnavailable": "PyTorch GPU (감지되지 않음)",
@@ -256,7 +256,10 @@
     "analyzingProgress": "분석 중: {{progress}}%",
     "stopAnalysisButton": "분석 중지",
     "analysisModeOn": "분석 모드 켜짐 - 클릭하여 끄기",
-    "analysisModeOff": "분석 모드 꺼짐 - 클릭하여 켜기"
+    "analysisModeOff": "분석 모드 꺼짐 - 클릭하여 켜기",
+    "moveNumber": "{{number}}번째 수",
+    "notAnalyzed": "미분석",
+    "perspectiveNote": "승률과 집수는 흑 기준입니다"
   },
   "analysisLegend": {
     "title": "분석 범례",
@@ -317,9 +320,12 @@
     "checkForUpdates": "업데이트 확인...",
     "updateAvailable": "업데이트 가능",
     "versionAvailable": "버전 {{version}}을(를) 사용할 수 있습니다.",
+    "newVersionAvailable": "새 버전 사용 가능",
+    "newVersionMessage": "Kaya의 새 버전을 사용할 수 있습니다. 새로 고침하여 최신 기능과 개선 사항을 받으세요.",
     "installing": "업데이트 설치 중...잠시 기다려 주세요.",
     "skipVersion": "이 버전 건너뛰기",
     "remindLater": "나중에 알림",
+    "dismiss": "무시",
     "updateNow": "지금 업데이트",
     "noUpdateAvailable": "업데이트 없음",
     "youAreOnLatest": "최신 버전을 사용 중입니다.",
@@ -387,6 +393,10 @@
     "result": "결과",
     "resultPlaceholder": "예: 흑+0.5, 백 불계승",
     "clickToAdd": "클릭하여 추가",
+    "clickToEdit": "클릭하여 편집",
+    "clickToEditName": "클릭하여 이름 편집",
+    "clickToEditRank": "클릭하여 급/단 편집",
+    "rankFallback": "급/단",
     "editHint": "필드를 클릭하여 편집. Enter로 저장, Esc로 취소.",
     "editAllFields": "모든 필드 편집",
     "exitEditMode": "편집 모드 종료"
@@ -574,6 +584,16 @@
     "comment": "댓글",
     "showLibrary": "라이브러리 표시 (Ctrl+L)",
     "showSidebar": "사이드바 표시 (Ctrl+B)"
+  },
+  "saveStatus": {
+    "saving": "저장 중...",
+    "saved": "저장됨"
+  },
+  "gamepad": {
+    "clickToEnable": "클릭하여 활성화",
+    "clickToDisable": "클릭하여 비활성화",
+    "ariaLabelActive": "게임패드 {{index}}: {{name}}. 활성화됨. 클릭하여 비활성화.",
+    "ariaLabelInactive": "게임패드 {{index}}: {{name}}. 비활성화됨. 클릭하여 활성화."
   },
   "shortcuts": {
     "title": "키보드 단축키",
