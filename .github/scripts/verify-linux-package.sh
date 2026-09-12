@@ -18,6 +18,10 @@ EXPECT="${EXPECT:?EXPECT must be install or refuse}"
 
 PKG=$(find "$DIR" -name "*.${KIND}" -type f | head -1)
 [ -n "$PKG" ] || { echo "::error::no .${KIND} found under $DIR"; exit 1; }
+# apt only treats an argument as a local file if it looks like a path; given a
+# bare relative one it reads "packages/deb/x.deb" as a package name and fails
+# with "Unable to locate package packages/deb".
+PKG=$(cd "$(dirname "$PKG")" && pwd)/$(basename "$PKG")
 
 echo "distro : $(. /etc/os-release && echo "${PRETTY_NAME:-unknown}")"
 echo "glibc  : $(ldd --version | head -1)"

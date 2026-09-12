@@ -22,13 +22,23 @@ echo "bundle : $AI ($(du -h "$AI" | cut -f1))"
 echo
 
 # Containers have no /dev/fuse, so mounting the embedded filesystem is out.
-# uruntime falls back to this on its own; asking for it explicitly keeps the
-# failure modes of the test separate from the failure modes of the app.
-export URUNTIME_EXTRACT=1
+# uruntime falls back to extraction on its own, but doing it as a separate step
+# keeps ~250 MB of DwarFS unpacking out of the readiness budget below — that is
+# what made Debian 12 look like a webview failure when it was just slower.
+echo "extracting..."
+rm -rf squashfs-root
+"$AI" --appimage-extract > /tmp/extract.log 2>&1 || {
+  tail -5 /tmp/extract.log
+  echo "::error::could not extract the AppImage"
+  exit 1
+}
+APPRUN=$(find . -maxdepth 3 -name AppRun -type f 2>/dev/null | head -1)
+[ -n "$APPRUN" ] || { echo "::error::no AppRun in the extracted AppDir"; exit 1; }
+echo "extracted: $APPRUN"
 
 # The app is not the thing under test here — its ability to find everything it
 # needs on a foreign distro is. Strip the container-specific graphics and
-# sandbox variables so a missing /dev/dri or a blocked user namespace can't be
+# sandbox variables so a missing /dev/dri or a blocked user namespace cannot be
 # mistaken for a broken bundle.
 export LIBGL_ALWAYS_SOFTWARE=1
 export WEBKIT_DISABLE_COMPOSITING_MODE=1
@@ -39,16 +49,15 @@ export HOME="${HOME:-/root}"
 
 LOG=/tmp/kaya-smoke.log
 echo "launching under Xvfb..."
-xvfb-run -a --server-args="-screen 0 1280x900x24" "$AI" > "$LOG" 2>&1 &
+xvfb-run -a --server-args="-screen 0 1280x900x24" "$APPRUN" > "$LOG" 2>&1 &
 WRAPPER=$!
 
-# Give the webview time to come up. A Tauri app that cannot resolve a library
-# or hits a glibc mismatch dies within the first second or two.
-for _ in $(seq 1 30); do
+# A Tauri app that cannot resolve a library or hits a glibc mismatch dies within
+# a second or two; a healthy one needs a few more to bring the webview up.
+for _ in $(seq 1 60); do
   sleep 1
-  if pgrep -f 'WebKitWebProcess' >/dev/null 2>&1; then
-    break
-  fi
+  pgrep -f WebKitWebProcess >/dev/null 2>&1 && break
+  kill -0 "$WRAPPER" 2>/dev/null || break
 done
 
 echo
@@ -69,7 +78,7 @@ fi
 # WebKitWebProcess is the webview itself. Its presence is the difference between
 # "the binary loaded" and "the app is actually usable" — it is a separate
 # executable from the bundle, resolved through the same bundled loader.
-if pgrep -f 'WebKitWebProcess' >/dev/null 2>&1; then
+if pgrep -f WebKitWebProcess >/dev/null 2>&1; then
   echo "WebKitWebProcess is up — the webview started"
 else
   echo "::error::WebKitWebProcess never started; the webview did not come up"
@@ -83,8 +92,14 @@ if grep -qE "error while loading shared libraries|GLIBC_[0-9.]+' not found|canno
   FAILED=1
 fi
 
-pkill -f 'Kaya.*AppImage' 2>/dev/null || true
+# The old cleanup was `pkill -f 'Kaya.*AppImage'`, which also matched this
+# script's own command line and killed the run right after it had reported
+# success. These patterns cannot match it: `-x kaya` is an exact process name,
+# and "WebKitWebProcess" appears nowhere in our argv. (`-x` is wrong for WebKit
+# itself — comm is capped at 15 chars, so it reads "WebKitWebProces".)
 kill "$WRAPPER" 2>/dev/null || true
+pkill -x kaya 2>/dev/null || true
+pkill -f WebKitWebProcess 2>/dev/null || true
 wait "$WRAPPER" 2>/dev/null || true
 
 [ "$FAILED" -eq 0 ] || exit 1
