@@ -50,6 +50,12 @@ newly plugged-in pad. The cleanup now calls `gameControl.off('connect')`.
 Issue #160 hoists both `pinned` arrays to module constants (plus a stable default for
 an omitted prop), adds `items` to `computeOverflow`'s deps, and bails out of
 `setHiddenIds` when the computed set has the same contents as the current one.
+Fixing `pinned` alone is not enough, because `items` was rebuilt every render
+too: `GameBoard` passed `onToggleNextMove` as an inline arrow, so the action
+bar's `items` memo was invalidated on every render. It is now a `useCallback`
+with a functional update. `HeaderFileControls`' items memo depends on
+`isDirty`, which changes when the game is edited rather than on every render,
+so it needs nothing.
 
 ## Learnings
 
@@ -58,15 +64,14 @@ an omitted prop), adds `items` to `computeOverflow`'s deps, and bails out of
   Whoever registers last owns it. `off('connect')` in the cleanup stops the
   handler outliving its effect, but it does not arbitrate that shared slot;
   a real fix needs one owner or a fan-out registry.
-- Fixing `pinned` is necessary but **not sufficient** for #160: `items` is also
-  rebuilt on every parent render at both call sites (e.g.
-  `onToggleNextMove={() => setShowNextMove(!showNextMove)}` is an inline arrow
-  in `GameBoard.tsx`, and `HeaderFileControls`' items memo depends on
-  `isDirty`). Instrumenting `scrollWidth` reads on `[data-overflow-id]` children
-  shows the measurement pass still runs per render after the fix; the
-  `setHiddenIds` bail-out removes the extra commit and its follow-up
-  `ResizeObserver` pass, but the forced layout stays until the call sites
-  stabilise their `items`.
+- Fixing `pinned` alone is not sufficient for #160, and the measurement is the
+  proof: instrumenting `scrollWidth` reads on `[data-overflow-id]` children
+  showed the measurement pass still running on every render afterwards, because
+  `items` was unstable as well. A memoized array whose dependency list contains
+  an inline arrow from the parent is not memoized at all — the arrow has to be
+  stabilised at the call site. Both were fixed; the instrumentation was not
+  re-run afterwards, so what is verified is that neither `pinned` nor `items`
+  still changes identity on an unrelated render, not a measured count.
 - `e2e/gamepad.e2e.ts` pins #154 by serving a counting stub in place of the
   vendored `gamecontroller.min.js` and asserting the `connect` registration
   count does not grow while moves are played. It fails on the old code

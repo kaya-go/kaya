@@ -142,6 +142,12 @@ export const GameBoard: React.FC = memo(() => {
     handleSuggestMove,
   });
 
+  // Stable identity: an inline arrow here rebuilt the action bar's `items`
+  // array on every render, which made OverflowMenu re-measure the bar.
+  const handleToggleNextMove = useCallback(() => {
+    setShowNextMove(current => !current);
+  }, [setShowNextMove]);
+
   const nextMove = useMemo(() => {
     if (!showNextMove || !nextMoveNode) return null;
     const moveData = nextMoveNode.data.B?.[0] || nextMoveNode.data.W?.[0];
@@ -256,7 +262,7 @@ export const GameBoard: React.FC = memo(() => {
         onToggleAnalysisBar={toggleShowAnalysisBar}
         onToggleNavigationMode={toggleNavigationMode}
         onToggleEditMode={handleToggleEditMode}
-        onToggleNextMove={() => setShowNextMove(!showNextMove)}
+        onToggleNextMove={handleToggleNextMove}
         onSuggestMove={handleSuggestMove}
         scoringMode={scoringMode}
         editMode={editMode}
