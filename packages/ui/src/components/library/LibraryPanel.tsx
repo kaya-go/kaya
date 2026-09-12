@@ -17,7 +17,12 @@ import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecogn
 import { LibraryContextMenu } from './LibraryContextMenu';
 import { NewFolderDialog, ConfirmDialog } from './LibraryDialogs';
 import { useLibraryActions } from './useLibraryActions';
-import { type TreeNode, DragPreview, useNodeRenderer } from './LibraryTreeNode';
+import {
+  type TreeNode,
+  DragPreview,
+  LibraryTreeNodeProvider,
+  LibraryTreeNodeRenderer,
+} from './LibraryTreeNode';
 import './LibraryPanel.css';
 import './LibraryPanelTree.css';
 import './LibraryPanelOverlays.css';
@@ -172,14 +177,6 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     return ancestors;
   }, [loadedFileId, items]);
 
-  const NodeRenderer = useNodeRenderer({
-    renamingId: actions.renamingId,
-    setRenamingId: actions.setRenamingId,
-    handleRename: actions.handleRename,
-    handleContextMenu: actions.handleContextMenu,
-    loadedFileAncestorIds,
-  });
-
   if (collapsed) {
     return null;
   }
@@ -241,27 +238,35 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
           </div>
         ) : (
           <div className="library-tree" onWheel={e => e.stopPropagation()}>
-            <Tree
-              data={treeData}
-              openByDefault={false}
-              width={treeWidth}
-              height={treeHeight}
-              indent={16}
-              rowHeight={32}
-              selection={selectedId || undefined}
-              onMove={handleTreeMove}
-              disableDrag={false}
-              disableDrop={args => {
-                if (!args.parentNode) return false;
-                const treeNode = args.parentNode.data;
-                if (!treeNode || !treeNode.data) return true;
-                return treeNode.data.type !== 'folder';
-              }}
-              dndRootElement={panelRef.current}
-              renderDragPreview={DragPreview}
+            <LibraryTreeNodeProvider
+              renamingId={actions.renamingId}
+              setRenamingId={actions.setRenamingId}
+              handleRename={actions.handleRename}
+              handleContextMenu={actions.handleContextMenu}
+              loadedFileAncestorIds={loadedFileAncestorIds}
             >
-              {NodeRenderer}
-            </Tree>
+              <Tree
+                data={treeData}
+                openByDefault={false}
+                width={treeWidth}
+                height={treeHeight}
+                indent={16}
+                rowHeight={32}
+                selection={selectedId || undefined}
+                onMove={handleTreeMove}
+                disableDrag={false}
+                disableDrop={args => {
+                  if (!args.parentNode) return false;
+                  const treeNode = args.parentNode.data;
+                  if (!treeNode || !treeNode.data) return true;
+                  return treeNode.data.type !== 'folder';
+                }}
+                dndRootElement={panelRef.current}
+                renderDragPreview={DragPreview}
+              >
+                {LibraryTreeNodeRenderer}
+              </Tree>
+            </LibraryTreeNodeProvider>
           </div>
         )}
       </div>

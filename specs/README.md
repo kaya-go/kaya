@@ -43,3 +43,4 @@ link forward to the replacement. Don't delete history.
 | 2026-06-09 | [Problem mode — open SGFs at the start instead of the solution](2026-06-09-problem-mode-open-position.md)   | shipped   |
 | 2026-06-09 | [Request persistent storage on web](2026-06-09-web-persistent-storage.md)                                   | shipped   |
 | 2026-08-02 | [ort pinned at 2.0.0-rc.12](2026-08-02-ort-rc13-pinned.md)                                                  | shipped   |
+| 2026-09-12 | [Library tree: a stable row renderer](2026-09-12-stable-tree-row-renderer.md)                               | shipped   |
