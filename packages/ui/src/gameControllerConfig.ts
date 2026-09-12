@@ -4,14 +4,37 @@
  * Extracted from useGameController.ts to keep the hook file focused.
  */
 
+/**
+ * The per-gamepad wrapper gamecontroller.js hands to `connect` handlers.
+ *
+ * `before`/`after` are single-slot per button, like `GameControl.on`, but only
+ * `useGameController` registers on them so they need no arbitration.
+ */
+export interface GameControlGamepad {
+  /** Index into `navigator.getGamepads()`. The bundle sets a number. */
+  id: number | string;
+  mapping?: string;
+  /** The native Gamepad, when the bundle kept a reference to it. */
+  gamepad?: Gamepad;
+  before: (event: string, callback: () => void) => GameControlGamepad;
+  after: (event: string, callback: () => void) => GameControlGamepad;
+}
+
+/**
+ * The `window.gameControl` singleton exposed by the gamecontroller.js UMD
+ * bundle. `on` is single-slot per event - subscribe through
+ * `gameControllerEvents` rather than calling it directly.
+ */
+export interface GameControl {
+  on: (event: string, callback: (arg?: unknown) => void) => GameControl;
+  off: (event: string) => GameControl;
+  getGamepads: () => Record<number, GameControlGamepad>;
+}
+
 // Declare global gameControl (from gamecontroller.js UMD bundle)
 declare global {
   interface Window {
-    gameControl?: {
-      on: (event: string, callback: (gamepad?: any) => void) => any;
-      off: (event: string) => any;
-      getGamepads: () => Record<number, any>;
-    };
+    gameControl?: GameControl;
   }
 }
 

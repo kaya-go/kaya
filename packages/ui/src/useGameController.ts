@@ -11,10 +11,12 @@
 import { useEffect, useRef } from 'react';
 import { useGameControllerManager } from './components/gamepad/GameControllerManager';
 import {
+  type GameControlGamepad,
   type GameControllerState,
   type UseGameControllerOptions,
   getControllerMapping,
 } from './gameControllerConfig';
+import { subscribeGamepadConnect, subscribeGamepadDisconnect } from './gameControllerEvents';
 
 export type { GameControllerState } from './gameControllerConfig';
 
@@ -36,14 +38,17 @@ export function useGameController(options: UseGameControllerOptions = {}) {
   const { onStateChange, enabled = true } = options;
   const { isControllerActive } = useGameControllerManager();
 
-  // Callers pass `onStateChange` as an inline arrow, so its identity changes on
-  // every render. Keep it in a ref so it is never an effect dependency: a re-run
-  // would tear down and recreate the 150ms stick polling intervals, which never
-  // get to fire while the consumer re-renders faster than that.
+  // Nothing below may be an effect dependency: a re-run tears down and recreates
+  // the 150ms stick polling intervals, which then never get to fire. Callers pass
+  // `onStateChange` as an inline arrow (new identity every render), and
+  // `isControllerActive` changes identity whenever a pad is toggled, connected or
+  // disconnected. Both are read through refs so the effect runs once per `enabled`.
   const onStateChangeRef = useRef(onStateChange);
+  const isControllerActiveRef = useRef(isControllerActive);
   useEffect(() => {
     onStateChangeRef.current = onStateChange;
-  }, [onStateChange]);
+    isControllerActiveRef.current = isControllerActive;
+  });
 
   useEffect(() => {
     if (!enabled) return;
@@ -53,14 +58,22 @@ export function useGameController(options: UseGameControllerOptions = {}) {
       return;
     }
 
+    // `gp.before`/`gp.after` handlers stay registered on the pad after this
+    // effect is torn down (gamecontroller.js only overwrites them on the next
+    // `setupGamepad`), so a flipped flag keeps stale ones from emitting.
+    let live = true;
+
     // Store state PER CONTROLLER to prevent conflicts
     const stateByController = new Map<number, GameControllerState>();
 
     // Store intervals per controller ID to prevent conflicts
-    const intervalsByController = new Map<
-      number,
-      { stick?: any; axis?: any; rightStick?: any; isUsingStick?: boolean }
-    >();
+    type ControllerIntervals = {
+      stick?: ReturnType<typeof setInterval>;
+      axis?: ReturnType<typeof setInterval>;
+      rightStick?: ReturnType<typeof setInterval>;
+      isUsingStick?: boolean;
+    };
+    const intervalsByController = new Map<number, ControllerIntervals>();
 
     // Helper to get or create state for a controller
     const getControllerState = (controllerId: number): GameControllerState => {
@@ -88,7 +101,8 @@ export function useGameController(options: UseGameControllerOptions = {}) {
 
     // Helper to notify state changes for a specific controller
     const notifyChange = (controllerId: number) => {
-      if (!isControllerActive(controllerId)) return; // Only notify for active controllers
+      if (!live) return;
+      if (!isControllerActiveRef.current(controllerId)) return; // Only notify for active controllers
       const handleStateChange = onStateChangeRef.current;
       if (handleStateChange) {
         const state = getControllerState(controllerId);
@@ -97,7 +111,7 @@ export function useGameController(options: UseGameControllerOptions = {}) {
     };
 
     // Helper to setup gamepad event handlers
-    const setupGamepad = (gp: any) => {
+    const setupGamepad = (gp: GameControlGamepad) => {
       const controllerId = Number(gp.id);
       const state = getControllerState(controllerId);
       state.connected = true;
@@ -115,12 +129,12 @@ export function useGameController(options: UseGameControllerOptions = {}) {
       // gamecontroller.js wraps the native gamepad object
       const nativeGamepad =
         gp.gamepad ||
-        (navigator.getGamepads ? navigator.getGamepads()[gp.id] : null) ||
-        (window as any).gamepads?.[gp.id];
+        (navigator.getGamepads ? navigator.getGamepads()[controllerId] : null) ||
+        (window as any).gamepads?.[controllerId];
 
       const gamepadId =
         (nativeGamepad && nativeGamepad.id) ||
-        (gp.id && typeof gp.id === 'string' ? gp.id : 'Unknown');
+        (typeof gp.id === 'string' && gp.id ? gp.id : 'Unknown');
 
       state.name = gamepadId;
       state.type = gp.mapping || 'standard';
@@ -130,7 +144,7 @@ export function useGameController(options: UseGameControllerOptions = {}) {
 
       // Helper to check if this controller is active (strict isolation)
       const isActive = () => {
-        return isControllerActive(controllerId);
+        return isControllerActiveRef.current(controllerId);
       };
 
       // Helper for button handling (per-controller)
@@ -381,31 +395,48 @@ export function useGameController(options: UseGameControllerOptions = {}) {
       notifyChange(controllerId);
     };
 
-    gameControl.on('connect', (gp: any) => {
-      setupGamepad(gp);
-    });
+    const clearControllerIntervals = (intervals: ControllerIntervals) => {
+      if (intervals.stick) clearInterval(intervals.stick);
+      if (intervals.axis) clearInterval(intervals.axis);
+      if (intervals.rightStick) clearInterval(intervals.rightStick);
+    };
+
+    // A pad that goes away keeps polling `navigator.getGamepads()` forever
+    // otherwise: the effect no longer re-runs to rebuild the interval map.
+    const teardownGamepad = (controllerId: number) => {
+      const intervals = intervalsByController.get(controllerId);
+      if (intervals) {
+        clearControllerIntervals(intervals);
+        intervalsByController.delete(controllerId);
+      }
+      stateByController.delete(controllerId);
+    };
+
+    // Subscribe through the fan-out registry: `gameControl.on` is single-slot,
+    // and `GameControllerManager` needs the same events.
+    const unsubscribeConnect = subscribeGamepadConnect(setupGamepad);
+    const unsubscribeDisconnect = subscribeGamepadDisconnect(teardownGamepad);
 
     // Check for already connected gamepads and set up ALL of them
     // (event isolation will filter based on activeControllerId)
     const gamepads = gameControl.getGamepads();
-    for (const i in gamepads) {
-      if (gamepads[i]) {
-        setupGamepad(gamepads[i]);
+    for (const gamepad of Object.values(gamepads)) {
+      if (gamepad) {
+        setupGamepad(gamepad);
       }
     }
 
     return () => {
-      // `gameControl.on` is single-slot: drop our handler so it cannot outlive
-      // this effect (and keep the slot free for the next registration).
-      gameControl.off('connect');
+      live = false;
+      unsubscribeConnect();
+      unsubscribeDisconnect();
 
       // Cleanup all intervals for all controllers
       for (const intervals of intervalsByController.values()) {
-        if (intervals.stick) clearInterval(intervals.stick);
-        if (intervals.axis) clearInterval(intervals.axis);
-        if (intervals.rightStick) clearInterval(intervals.rightStick);
+        clearControllerIntervals(intervals);
       }
       intervalsByController.clear();
+      stateByController.clear();
     };
-  }, [enabled, isControllerActive]);
+  }, [enabled]);
 }

@@ -240,3 +240,23 @@ same assumption. Analysis on a rectangular board is not supported. If you add
 a code path that builds a board from `GameInfo`, pass `boardHeight` through;
 if you add one that feeds a model, a square board is a precondition to check,
 not an assumption to inherit.
+
+### 10. `gameControl` events have exactly one owner
+
+`gamecontroller.js` exposes a single-slot event API — `gameControl.on('connect', fn)`
+assigns `this.onConnect = fn`, so the last caller silently unregisters every
+earlier one. Kaya has two consumers of those events:
+[`GameControllerManager`](../packages/ui/src/components/gamepad/GameControllerManager.tsx)
+(which pads exist, which are enabled) and
+[`useGameController`](../packages/ui/src/useGameController.ts) (buttons, sticks).
+
+[`gameControllerEvents.ts`](../packages/ui/src/gameControllerEvents.ts) owns the
+slot: it registers one handler per event and fans it out. Subscribe through
+`subscribeGamepadConnect` / `subscribeGamepadDisconnect` and never call
+`gameControl.on` or `gameControl.off` anywhere else.
+
+`useGameController`'s effect must also stay out of the render path: it owns
+150 ms `setInterval`s for the analog sticks, so anything that re-runs it more
+often than that stops the sticks from ever reporting. `onStateChange` and
+`isControllerActive` are read through refs for that reason — its only
+dependency is `enabled`.

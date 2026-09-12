@@ -8,6 +8,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import { subscribeGamepadConnect, subscribeGamepadDisconnect } from '../../gameControllerEvents';
 
 interface GameControllerManagerContextType {
   activeControllerIds: Set<number>;
@@ -91,13 +92,17 @@ export const GameControllerManagerProvider: React.FC<{
     // Initial check
     updateControllers();
 
-    // Listen for connect
-    gameControl.on('connect', updateControllers);
+    // Listen for hot-plug through the fan-out registry: `gameControl.on` is
+    // single-slot, and `useGameController` subscribes to the same events.
+    const unsubscribeConnect = subscribeGamepadConnect(updateControllers);
+    const unsubscribeDisconnect = subscribeGamepadDisconnect(updateControllers);
 
     // Poll for changes (some controllers don't fire events properly)
     const interval = setInterval(updateControllers, 1000);
 
     return () => {
+      unsubscribeConnect();
+      unsubscribeDisconnect();
       clearInterval(interval);
     };
   }, []); // No dependencies - only run once on mount

@@ -63,7 +63,9 @@ so it needs nothing.
   — and both `useGameController` and `GameControllerManager` register on it.
   Whoever registers last owns it. `off('connect')` in the cleanup stops the
   handler outliving its effect, but it does not arbitrate that shared slot;
-  a real fix needs one owner or a fan-out registry.
+  a real fix needs one owner or a fan-out registry. Shipped separately as
+  [one owner for the gamecontroller.js event slots](2026-09-12-gamepad-event-fan-out.md),
+  which also removes `isControllerActive` from the effect's dependencies.
 - Fixing `pinned` alone is not sufficient for #160, and the measurement is the
   proof: instrumenting `scrollWidth` reads on `[data-overflow-id]` children
   showed the measurement pass still running on every render afterwards, because
