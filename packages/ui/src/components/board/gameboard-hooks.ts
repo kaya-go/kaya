@@ -131,6 +131,10 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   useEffect(() => {
     analysisResultRef.current = analysisResult;
   }, [analysisResult]);
+  const currentNodeRef = useRef(currentNode);
+  useEffect(() => {
+    currentNodeRef.current = currentNode;
+  }, [currentNode]);
 
   const executeGenerateMove = useCallback(
     async (currentPlayer: Sign) => {
@@ -141,13 +145,16 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
       try {
         let moveStr: string;
 
-        const nodeBefore = currentNode;
+        // Read through the ref: the render-scope `currentNode` is a constant for
+        // this closure, so comparing it after the await could never detect that
+        // the user navigated away while the analysis was still running.
+        const nodeBefore = currentNodeRef.current;
 
         if (isAnalyzingRef.current) {
           await waitForCurrentAnalysis();
         }
 
-        if (currentNode !== nodeBefore) {
+        if (currentNodeRef.current !== nodeBefore) {
           return;
         }
 

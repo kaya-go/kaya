@@ -37,11 +37,22 @@ interface OverflowMenuProps {
   moreLabel?: string;
 }
 
+/** Stable default so an omitted `pinned` prop doesn't change identity each render */
+const NO_PINNED: string[] = [];
+
+const sameIds = (a: Set<string>, b: Set<string>) => {
+  if (a.size !== b.size) return false;
+  for (const id of a) {
+    if (!b.has(id)) return false;
+  }
+  return true;
+};
+
 export const OverflowMenu: React.FC<OverflowMenuProps> = ({
   items,
   className = '',
   renderItem,
-  pinned = [],
+  pinned = NO_PINNED,
   trailing,
   moreLabel = 'More',
 }) => {
@@ -107,8 +118,10 @@ export const OverflowMenu: React.FC<OverflowMenuProps> = ({
       child.style.display = newHidden.has(id) ? 'none' : '';
     }
 
-    setHiddenIds(newHidden);
-  }, [pinned]);
+    // Bail out when nothing changed, otherwise every measurement commits a
+    // render, which in turn re-runs the measurement.
+    setHiddenIds(prev => (sameIds(prev, newHidden) ? prev : newHidden));
+  }, [items, pinned]);
 
   useLayoutEffect(() => {
     computeOverflow();

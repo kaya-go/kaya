@@ -46,3 +46,4 @@ link forward to the replacement. Don't delete history.
 | 2026-09-12 | [Library tree: a stable row renderer](2026-09-12-stable-tree-row-renderer.md)                               | shipped   |
 | 2026-09-12 | [Dependency-array drift in GameTreeContext and useAutoSave](2026-09-12-dependency-array-drift.md)           | shipped   |
 | 2026-09-12 | [Library: name handling and write safety](2026-09-12-library-name-and-write-safety.md)                      | shipped   |
+| 2026-09-12 | [Three hook-wiring bugs: stale guard, effect churn, layout thrash](2026-09-12-ui-hook-wiring-fixes.md)      | shipped   |

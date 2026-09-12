@@ -25,6 +25,9 @@ import {
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { OverflowMenu, type OverflowItem } from '../ui/OverflowMenu';
 
+/** Module constant: a fresh array here would re-measure the menu on every render */
+const PINNED_ITEMS = ['pass', 'resign', 'score', 'analysis'];
+
 interface GameBoardActionBarProps {
   onPass: () => void;
   onResign: () => void;
@@ -168,7 +171,7 @@ export const GameBoardActionBar: React.FC<GameBoardActionBarProps> = ({
     <OverflowMenu
       items={items}
       className="gameboard-actions-bar"
-      pinned={['pass', 'resign', 'score', 'analysis']}
+      pinned={PINNED_ITEMS}
       moreLabel={t('moreActions')}
       renderItem={item => {
         // Build title with keyboard shortcut if applicable

@@ -9,6 +9,7 @@ declare global {
   interface Window {
     gameControl?: {
       on: (event: string, callback: (gamepad?: any) => void) => any;
+      off: (event: string) => any;
       getGamepads: () => Record<number, any>;
     };
   }

@@ -8,7 +8,7 @@
  * - Strict isolation: only active controller sends events
  */
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useGameControllerManager } from './components/gamepad/GameControllerManager';
 import {
   type GameControllerState,
@@ -35,6 +35,15 @@ export type { GameControllerState } from './gameControllerConfig';
 export function useGameController(options: UseGameControllerOptions = {}) {
   const { onStateChange, enabled = true } = options;
   const { isControllerActive } = useGameControllerManager();
+
+  // Callers pass `onStateChange` as an inline arrow, so its identity changes on
+  // every render. Keep it in a ref so it is never an effect dependency: a re-run
+  // would tear down and recreate the 150ms stick polling intervals, which never
+  // get to fire while the consumer re-renders faster than that.
+  const onStateChangeRef = useRef(onStateChange);
+  useEffect(() => {
+    onStateChangeRef.current = onStateChange;
+  }, [onStateChange]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -80,9 +89,10 @@ export function useGameController(options: UseGameControllerOptions = {}) {
     // Helper to notify state changes for a specific controller
     const notifyChange = (controllerId: number) => {
       if (!isControllerActive(controllerId)) return; // Only notify for active controllers
-      if (onStateChange) {
+      const handleStateChange = onStateChangeRef.current;
+      if (handleStateChange) {
         const state = getControllerState(controllerId);
-        onStateChange({ ...state });
+        handleStateChange({ ...state });
       }
     };
 
@@ -385,6 +395,10 @@ export function useGameController(options: UseGameControllerOptions = {}) {
     }
 
     return () => {
+      // `gameControl.on` is single-slot: drop our handler so it cannot outlive
+      // this effect (and keep the slot free for the next registration).
+      gameControl.off('connect');
+
       // Cleanup all intervals for all controllers
       for (const intervals of intervalsByController.values()) {
         if (intervals.stick) clearInterval(intervals.stick);
@@ -393,5 +407,5 @@ export function useGameController(options: UseGameControllerOptions = {}) {
       }
       intervalsByController.clear();
     };
-  }, [enabled, onStateChange, isControllerActive]);
+  }, [enabled, isControllerActive]);
 }

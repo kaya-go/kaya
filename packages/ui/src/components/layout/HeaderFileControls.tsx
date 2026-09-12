@@ -15,6 +15,9 @@ import { useTranslation } from 'react-i18next';
 import { OverflowMenu, type OverflowItem } from '../ui/OverflowMenu';
 import type { ShortcutId, KeyBinding } from '../../contexts/KeyboardShortcutsContext';
 
+/** Module constant: a fresh array here would re-measure the menu on every render */
+const PINNED_ITEMS = ['quick-new', 'new', 'open'];
+
 interface HeaderFileControlsProps {
   filenameInputRef: React.RefObject<HTMLInputElement | null>;
   currentBoardWidth: number;
@@ -181,7 +184,7 @@ export const HeaderFileControls: React.FC<HeaderFileControlsProps> = ({
       <OverflowMenu
         items={items}
         className="header-overflow-menu header-desktop-only"
-        pinned={['quick-new', 'new', 'open']}
+        pinned={PINNED_ITEMS}
         trailing={filenameElement}
         moreLabel={t('moreActions')}
         renderItem={item => (
