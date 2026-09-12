@@ -571,8 +571,8 @@
       "inputLabel": "Profondità di ricerca personalizzata"
     },
     "bestMove": "Migliore",
-    "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità di strategia. Strategia: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
-    "metric_policy": "Strategia",
+    "metricTooltip": "Cambia testo sulle pietre — i colori mostrano sempre la probabilità della politica. Politica: probabilità, ΔVitt%: variazione tasso vittoria vs attuale, ΔPunt.: variazione punteggio vs attuale",
+    "metric_policy": "Politica",
     "metric_winRate": "ΔVitt%",
     "metric_scoreLead": "ΔPunt."
   },
@@ -681,7 +681,7 @@
     "accuracy": "Precisione",
     "meanLoss": "Perdita media",
     "bestMovePercent": "% Mossa Migliore",
-    "top5Percent": "% Prime 5 Mosse",
+    "top5Percent": "% prime 5 mosse",
     "points": "pt",
     "moveDistribution": "Distribuzione mosse",
     "aiMove": "Mossa IA",
@@ -697,7 +697,7 @@
       "title": "Capire il rapporto",
       "accuracyTitle": "Precisione",
       "accuracyDesc": "Punteggio ponderato (0-100%) che misura la qualità del gioco. Mossa IA 100%, Buona 80%, Imprecisione 50%, Errore 20%, Svista 0%.",
-      "top5Title": "% Prime 5 Mosse",
+      "top5Title": "% prime 5 mosse",
       "top5Desc": "Percentuale di mosse tra le prime 5 suggerite dall'IA. Valori più alti indicano un gioco più coerente con le raccomandazioni.",
       "distributionTitle": "Distribuzione mosse",
       "distributionDesc": "Classificazione di ogni mossa in base al suo rango nei suggerimenti dell'IA e alla probabilità relativa rispetto alla mossa migliore:",
