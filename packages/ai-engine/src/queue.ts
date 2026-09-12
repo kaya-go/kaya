@@ -389,6 +389,16 @@ export class AnalysisQueue {
         batch.resolvers[idx](r);
       }
     } catch (err) {
+      // A preempted batch can still hand back the positions it finished before
+      // stopping. Keeping them means the re-queued copy picks them up from the
+      // cache instead of running the whole game through the model again.
+      const partial = (err as { partialResults?: (AnalysisResult | null)[] })?.partialResults;
+      if (partial) {
+        for (let k = 0; k < stillPending.length; k++) {
+          const result = partial[k];
+          if (result) this.cacheStore(batch.requests[stillPending[k]], result);
+        }
+      }
       if (batch.preempted) return;
       for (const idx of stillPending) batch.rejecters[idx](err);
     }

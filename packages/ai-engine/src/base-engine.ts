@@ -114,6 +114,8 @@ export abstract class Engine {
   protected config: BaseEngineConfig;
   protected cache: Map<string, AnalysisResult>;
   protected initialized: boolean = false;
+  // ECMAScript private: a subclass may well have its own `initPromise`.
+  #initPromise: Promise<void> | null = null;
 
   constructor(config: BaseEngineConfig = {}) {
     this.config = {
@@ -193,11 +195,7 @@ export abstract class Engine {
    * @returns Analysis result (from cache or fresh analysis)
    */
   async analyze(signMap: SignMap, options: EngineAnalysisOptions = {}): Promise<AnalysisResult> {
-    // Ensure engine is initialized
-    if (!this.initialized) {
-      await this.initialize();
-      this.initialized = true;
-    }
+    await this.ensureInitialized();
 
     // Validate board size
     const capabilities = this.getCapabilities();
@@ -304,6 +302,27 @@ export abstract class Engine {
       size: this.cache.size,
       maxSize: this.config.maxCacheSize ?? 1000,
     };
+  }
+
+  /**
+   * Initialize once, even when several analyses start at the same time.
+   *
+   * Subclasses flip `initialized` only after their setup resolves, so two
+   * concurrent callers would each build a session and the first would be
+   * overwritten without being released.
+   */
+  protected ensureInitialized(): Promise<void> {
+    if (this.initialized) return Promise.resolve();
+    if (!this.#initPromise) {
+      this.#initPromise = this.initialize()
+        .then(() => {
+          this.initialized = true;
+        })
+        .finally(() => {
+          this.#initPromise = null;
+        });
+    }
+    return this.#initPromise;
   }
 
   /**

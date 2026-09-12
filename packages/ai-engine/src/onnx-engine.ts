@@ -347,7 +347,10 @@ export class OnnxEngine extends Engine {
       nextPla: Sign;
     }[] = [];
 
-    const useCache = this.config.enableCache;
+    // The queue sets skipCache when it keeps the results in its own cache;
+    // honouring it stops every analysed position from being stored twice.
+    const signal = inputs[0]?.options?.signal;
+    const useCache = this.config.enableCache && !inputs.some(i => i.options?.skipCache);
     for (let i = 0; i < inputs.length; i++) {
       const { signMap, options = {} } = inputs[i];
       if (useCache) {
@@ -396,6 +399,23 @@ export class OnnxEngine extends Engine {
     const allBatchResults: AnalysisResult[] = [];
     let totalInferenceTime = 0;
 
+    const collectFinishedPositions = () => {
+      for (let b = 0; b < allBatchResults.length; b++) {
+        const { originalIndex, signMap, options, board, nextPla } = uncachedInputs[b];
+        const result = filterKoMoves(allBatchResults[b], board, nextPla, size);
+        results[originalIndex] = result;
+
+        if (useCache) {
+          const cacheKey = this.getCacheKey(signMap, options);
+          this.cache.set(cacheKey, result);
+          if (this.cache.size > (this.config.maxCacheSize ?? 1000)) {
+            const firstKey = this.cache.keys().next().value;
+            if (firstKey) this.cache.delete(firstKey);
+          }
+        }
+      }
+    };
+
     for (let chunkStart = 0; chunkStart < actualBatchSize; chunkStart += chunkSize) {
       const chunkEnd = Math.min(chunkStart + chunkSize, actualBatchSize);
       const thisBatch = chunkEnd - chunkStart;
@@ -417,23 +437,23 @@ export class OnnxEngine extends Engine {
       totalInferenceTime += performance.now() - inferenceStart;
 
       allBatchResults.push(...chunkResults);
+
+      // A live request preempted us: stop here instead of running the rest of
+      // the game through the model. What is already computed rides along on
+      // the error so the caller can keep it.
+      if (signal?.aborted) {
+        collectFinishedPositions();
+        const aborted = new Error('Batch analysis aborted') as Error & {
+          partialResults?: (AnalysisResult | null)[];
+        };
+        aborted.name = 'AbortError';
+        aborted.partialResults = results;
+        throw aborted;
+      }
     }
 
     // Store in cache; filter ko moves
-    for (let b = 0; b < actualBatchSize; b++) {
-      const { originalIndex, signMap, options, board, nextPla } = uncachedInputs[b];
-      const result = filterKoMoves(allBatchResults[b], board, nextPla, size);
-      results[originalIndex] = result;
-
-      if (useCache) {
-        const cacheKey = this.getCacheKey(signMap, options);
-        this.cache.set(cacheKey, result);
-        if (this.cache.size > (this.config.maxCacheSize ?? 1000)) {
-          const firstKey = this.cache.keys().next().value;
-          if (firstKey) this.cache.delete(firstKey);
-        }
-      }
-    }
+    collectFinishedPositions();
 
     const totalTime = performance.now() - batchStart;
     this.debugLog('Batch analysis complete', {

@@ -256,7 +256,8 @@ export class PyTorchTauriEngine extends Engine {
     // Check cache first
     const results: (AnalysisResult | null)[] = new Array(inputs.length).fill(null);
     const uncachedInputs: { index: number; input: TauriBatchInput }[] = [];
-    const useCache = this.config.enableCache;
+    // Honour skipCache: the queue caches batch results itself.
+    const useCache = this.config.enableCache && !inputs.some(i => i.options?.skipCache);
 
     for (let i = 0; i < inputs.length; i++) {
       const { signMap, options = {} } = inputs[i];

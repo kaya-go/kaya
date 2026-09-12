@@ -318,9 +318,7 @@ export class TauriEngine extends Engine {
   async analyzeBatch(
     inputs: { signMap: SignMap; options?: EngineAnalysisOptions }[]
   ): Promise<AnalysisResult[]> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
+    await this.ensureInitialized();
 
     if (inputs.length === 0) return [];
 
@@ -347,7 +345,9 @@ export class TauriEngine extends Engine {
     const results: (AnalysisResult | null)[] = new Array(inputs.length).fill(null);
     const uncachedInputs: { index: number; input: TauriBatchInput }[] = [];
 
-    const useCache = this.config.enableCache;
+    // The queue keeps batch results in its own cache and sets skipCache; storing
+    // them here as well just fills two caches with the same positions.
+    const useCache = this.config.enableCache && !inputs.some(i => i.options?.skipCache);
     for (let i = 0; i < inputs.length; i++) {
       const { signMap, options = {} } = inputs[i];
       if (useCache) {
@@ -382,6 +382,15 @@ export class TauriEngine extends Engine {
       total: inputs.length,
       uncached: uncachedInputs.length,
     });
+
+    // The native command runs the whole batch in one call, so this is the last
+    // point where a preemption can still save the work.
+    const signal = inputs[0]?.options?.signal;
+    if (signal?.aborted) {
+      const aborted = new Error('Batch analysis aborted');
+      aborted.name = 'AbortError';
+      throw aborted;
+    }
 
     const inferenceStart = performance.now();
     const batchInputs = uncachedInputs.map(u => u.input);
