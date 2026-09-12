@@ -94,6 +94,13 @@ check` — which is all CI runs for the desktop and Android jobs — goes
   years while every op runs on CPU. `ExecutionProviderDispatch` has
   `error_on_failure()` for exactly this; worth considering if a GPU EP is
   ever added back.
+- **The bump swaps the ONNX Runtime binary, and nothing in CI exercises it.**
+  rc.12 ships ONNX Runtime 1.24.2 on desktop, rc.13 ships 1.28.0; the Android
+  AAR we bundle ourselves stays at 1.24.3, so desktop and Android diverge for
+  the first time (harmless, but worth knowing). Since both CI jobs stop at
+  `cargo check`, no inference runs anywhere in the pipeline. The outstanding
+  validation is a real analysis on macOS and Windows: load an SGF, run the
+  engine, check the winrates are sane and the session does not crash.
 - The CoreML options (`ModelFormat`, `SpecializationStrategy`,
   `ComputeUnits`, `with_model_cache_dir`) are unchanged in rc.13. Whether
   ONNX Runtime 1.28 improves the op coverage recorded in
