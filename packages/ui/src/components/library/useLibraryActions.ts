@@ -205,10 +205,15 @@ export function useLibraryActions() {
 
   const handleRename = useCallback(
     async (value: string) => {
-      if (renamingId && value.trim()) {
-        await renameItem(renamingId, value.trim());
+      try {
+        if (renamingId && value.trim()) {
+          await renameItem(renamingId, value.trim());
+        }
+      } catch (error) {
+        console.error('Failed to rename library item:', error);
+      } finally {
+        setRenamingId(null);
       }
-      setRenamingId(null);
     },
     [renamingId, renameItem]
   );
