@@ -77,6 +77,7 @@ export {
   type Quantization,
   type ModelId,
   type Probe,
+  type HostOS,
   type AutoPick,
 } from './auto-config';
 

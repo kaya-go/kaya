@@ -32,14 +32,26 @@ export interface BaseModelDefinition {
   isDefault?: boolean;
 }
 
+/**
+ * Display name for a precision. Technical rather than a quality tier, and
+ * deliberately not translated: "FP16" reads the same in every locale, and a
+ * tier name like "Balanced" implies a speed/accuracy dial that does not
+ * exist — which variant is fastest depends on the backend, not the variant.
+ */
+export const QUANT_DISPLAY_NAMES: Record<ModelQuantization, string> = {
+  fp32: 'FP32',
+  fp16: 'FP16',
+  uint8: 'INT8',
+};
+
 // Quantization variant type - exported for UI components
 export interface QuantizationVariant {
   /** Quantization type */
   quantization: ModelQuantization;
-  /** User-friendly label */
-  label: string;
-  /** Description of this quantization level */
-  description: string;
+  /** i18n key for the user-friendly label */
+  labelKey: string;
+  /** i18n key for the description of this variant */
+  descKey: string;
   /** Approximate file size */
   size: string;
 }
@@ -60,24 +72,32 @@ export const BASE_MODELS: BaseModelDefinition[] = [
   },
 ];
 
-// Quantization variants - exported for UI components
+// Quantization variants - exported for UI components.
+//
+// Framed as footprint, not as a quality tier. fp16 and uint8 are lossy
+// transforms of the same weights, so they can only lose accuracy relative to
+// fp32 — and which one is *fastest* depends entirely on the backend, not on
+// the variant (on CoreML fp32 beats fp16; on a WebGPU adapter with
+// shader-f16 the reverse holds). Speed is therefore auto-config's job, and
+// the only thing left for the user to weigh is download, disk and memory
+// cost. See specs/2026-09-12-precision-follows-the-backend.md.
 export const QUANTIZATION_OPTIONS: QuantizationVariant[] = [
   {
     quantization: 'fp32',
-    label: 'Full Quality',
-    description: 'Best accuracy, largest download',
+    labelKey: 'aiConfig.quantLabel.fp32',
+    descKey: 'aiConfig.quantDesc.fp32',
     size: '~280 MB',
   },
   {
     quantization: 'fp16',
-    label: 'Balanced',
-    description: 'Good accuracy, smaller download',
+    labelKey: 'aiConfig.quantLabel.fp16',
+    descKey: 'aiConfig.quantDesc.fp16',
     size: '~140 MB',
   },
   {
     quantization: 'uint8',
-    label: 'Compact',
-    description: 'Smallest download, slightly lower accuracy',
+    labelKey: 'aiConfig.quantLabel.uint8',
+    descKey: 'aiConfig.quantDesc.uint8',
     size: '~75 MB',
   },
 ];
@@ -120,20 +140,24 @@ export const PREDEFINED_MODELS: Array<{
   recommended?: boolean;
   isDefault?: boolean;
 }> = BASE_MODELS.flatMap((model, modelIndex) =>
-  QUANTIZATION_OPTIONS.map((variant, variantIndex) => {
+  QUANTIZATION_OPTIONS.map(variant => {
     const id = getModelId(modelIndex, variant.quantization);
     return {
       id,
-      name: `${model.displayName}${variant.quantization === 'fp32' ? '' : ` (${variant.label})`}`,
-      description: `${model.description}${variant.quantization === 'fp32' ? '' : ` - ${variant.description.toLowerCase()}`}`,
+      name: `${model.displayName}${
+        variant.quantization === 'fp32' ? '' : ` (${QUANT_DISPLAY_NAMES[variant.quantization]})`
+      }`,
+      description: model.description,
       url: getModelUrl(model.name, variant.quantization),
       size: variant.size,
       predefinedId: id,
       baseModelIndex: modelIndex,
       quantization: variant.quantization,
-      // Apply recommended/isDefault to fp16 variant (best balance of quality and GPU memory)
-      ...(variantIndex === 1 && model.recommended ? { recommended: true } : {}),
-      ...(variantIndex === 1 && model.isDefault ? { isDefault: true } : {}),
+      // No per-variant recommended/isDefault flag. Which precision to prefer
+      // is a property of the host, not of the variant, so it is decided at
+      // runtime from the probe (see `useAutoPick` / `pickQuantization`). The
+      // static flag this used to carry hardcoded fp16 and, like the value
+      // `pickQuantization` returned, was read by nobody.
     };
   })
 );

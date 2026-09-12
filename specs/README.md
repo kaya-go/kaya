@@ -52,3 +52,4 @@ link forward to the replacement. Don't delete history.
 | 2026-09-12 | [Desktop model library reads the disk cache](2026-09-12-desktop-model-cache-source-of-truth.md)             | shipped    |
 | 2026-09-12 | [ort 2.0.0-rc.13: EP features start picking the binary](2026-09-12-ort-rc13-migration.md)                   | shipped    |
 | 2026-09-12 | [CoreML on by default on macOS: 4.2x, measured](2026-09-12-coreml-on-by-default-macos.md)                   | shipped    |
+| 2026-09-12 | [Precision follows the backend, and the trade-off is size](2026-09-12-precision-follows-the-backend.md)     | shipped    |

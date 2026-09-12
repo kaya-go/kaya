@@ -106,7 +106,7 @@
   "aiConfig": {
     "title": "分析配置",
     "modelLibrary": "模型库",
-    "modelLibraryDescription": "选择用于 AI 分析的模型。展开以选择质量版本。",
+    "modelLibraryDescription": "选择用于 AI 分析的模型。展开以选择下载体积 — Kaya 会为你的硬件挑选最快的变体。",
     "active": "当前使用",
     "recommended": "推荐",
     "default": "默认",
@@ -185,7 +185,18 @@
       "pytorch": "未检测到 ROCm/CUDA",
       "webnn": "需要支持 WebNN 的 Chrome 浏览器"
     },
-    "backendRecommended": "推荐"
+    "backendRecommended": "推荐",
+    "bestForYourSetup": "最适合你的配置",
+    "quantLabel": {
+      "fp32": "完整精度",
+      "fp16": "半精度",
+      "uint8": "量化（8 位）"
+    },
+    "quantDesc": {
+      "fp32": "无精度损失。下载体积和内存占用最大。",
+      "fp16": "下载和内存减半，精度略有损失。",
+      "uint8": "下载和内存最小，精度损失最大。"
+    }
   },
   "kayaConfig": {
     "title": "设置",

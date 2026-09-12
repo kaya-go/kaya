@@ -10,6 +10,17 @@ Benchmark log for KataGo b18c384 inference across CPU/WASM/WebGPU/MIGraphX/
 PyTorch ROCm on a single Linux dev machine. Frozen-in-time data point — the
 hardware and ORT versions will move on, so treat as historical.
 
+> **⚠ Do not generalise these numbers (added 2026-09-12).** They were taken
+> on one Linux/AMD machine, through **Python ORT**, on **b18c384** — not the
+> b28c512 model that ships, and not our stack. Three conclusions below were
+> lifted into `pickQuantization` as global rules and all three are false on
+> macOS: fp16 does not crash the CPU EP (3% slower), uint8 is not 1.7x slower
+> than fp32 on CPU (19% _faster_ at batch 1), and fp16 is not the fast path on
+> a GPU EP (8% slower than fp32 on CoreML). The "CoreML blocked by EP op
+> coverage" line below is also wrong — that was a never-registered provider.
+> See [2026-09-12-precision-follows-the-backend.md](2026-09-12-precision-follows-the-backend.md)
+> and [2026-09-12-coreml-on-by-default-macos.md](2026-09-12-coreml-on-by-default-macos.md).
+
 ## Context
 
 Looking for a working GPU inference path on Linux + AMD. Numbers below are
@@ -134,5 +145,7 @@ At 13 GFLOPs/inference, theoretical max ≈ 1138 inf/s. Realistic at
 - WebGPU is viable in the browser **only** with op-decomposed models.
 - MIGraphX EP is blocked on RDNA 4 by an AMD bug.
 - PyTorch ROCm sidecar is the current GPU path on Linux.
-- CoreML on macOS is blocked by EP op coverage —
-  see [2026-05-03-coreml-ep-falls-back-to-cpu.md](2026-05-03-coreml-ep-falls-back-to-cpu.md).
+- ~~CoreML on macOS is blocked by EP op coverage.~~ **Wrong**: the CoreML EP
+  was never registered (missing cargo feature). With it on, CoreML runs 4.2x
+  the CPU EP on an M3 Max — see
+  [2026-09-12-coreml-on-by-default-macos.md](2026-09-12-coreml-on-by-default-macos.md).

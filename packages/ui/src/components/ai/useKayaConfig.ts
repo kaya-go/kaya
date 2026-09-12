@@ -6,6 +6,7 @@ import { useBoardTheme } from '@kaya/themes';
 import { useToast } from '../ui/Toast';
 import { isTauriApp } from '@kaya/platform';
 import { BASE_MODELS, parseModelId, getModelId } from '../../hooks/game/useAIAnalysis';
+import { useAutoPick } from '../../hooks/useAutoPick';
 
 export type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts' | 'detection';
 
@@ -58,6 +59,10 @@ export function useKayaConfig() {
     isTauriApp() &&
     typeof navigator !== 'undefined' &&
     /linux/i.test(navigator.userAgent ?? navigator.platform);
+
+  // What auto-config would choose on this host — drives which variant the
+  // model library marks as the best fit.
+  const autoPick = useAutoPick();
 
   // Check if PyTorch GPU engine is available (Linux with ROCm/CUDA only)
   const [pytorchAvailable, setPytorchAvailable] = useState(false);
@@ -173,14 +178,20 @@ export function useKayaConfig() {
   const isAnyDownloading = modelLibrary.some(m => m.isDownloading);
   const hasAnyDownloaded = modelLibrary.some(m => m.isDownloaded);
 
-  // Get the recommended model's default variant ID (fp16 for best GPU memory efficiency)
+  // Which precision the engine will actually be fastest on, from the same
+  // probe the backend chain comes from. Hardcoding fp16 here (as this did)
+  // recommended the slower of the two sane variants on every macOS machine.
+  // Until the probe resolves there is no recommendation, so fall back to the
+  // always-works precision rather than to a guess.
+  const recommendedQuantization = autoPick?.quantization ?? 'fp32';
+
   const recommendedModelId = useMemo(() => {
     const recommendedBase = BASE_MODELS.findIndex(m => m.recommended);
     if (recommendedBase >= 0) {
-      return getModelId(recommendedBase, 'fp16');
+      return getModelId(recommendedBase, recommendedQuantization);
     }
     return null;
-  }, []);
+  }, [recommendedQuantization]);
 
   const recommendedModel = useMemo(() => {
     if (!recommendedModelId) return null;
@@ -210,6 +221,7 @@ export function useKayaConfig() {
     isAnyDownloading,
     hasAnyDownloaded,
     recommendedModel,
+    recommendedQuantization,
     handleDownloadRecommended,
     fileInputRef,
     handleFileSelect,

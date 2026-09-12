@@ -16,6 +16,7 @@ type KayaConfigAnalysisTabProps = Pick<
   | 'hasAnyDownloaded'
   | 'isAnyDownloading'
   | 'recommendedModel'
+  | 'recommendedQuantization'
   | 'handleDownloadRecommended'
   | 'modelsByBase'
   | 'expandedModelIndex'
@@ -38,6 +39,7 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
   hasAnyDownloaded,
   isAnyDownloading,
   recommendedModel,
+  recommendedQuantization,
   handleDownloadRecommended,
   modelsByBase,
   expandedModelIndex,
@@ -69,6 +71,7 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
         hasAnyDownloaded={hasAnyDownloaded}
         isAnyDownloading={isAnyDownloading}
         recommendedModel={recommendedModel}
+        recommendedQuantization={recommendedQuantization}
         handleDownloadRecommended={handleDownloadRecommended}
         modelsByBase={modelsByBase}
         expandedModelIndex={expandedModelIndex}

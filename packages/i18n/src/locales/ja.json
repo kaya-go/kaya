@@ -106,7 +106,7 @@
   "aiConfig": {
     "title": "分析設定",
     "modelLibrary": "モデルライブラリ",
-    "modelLibraryDescription": "AI分析に使用するモデルを選択。展開して品質バリエーションを選択。",
+    "modelLibraryDescription": "AI 解析に使うモデルを選択します。展開してダウンロードサイズを選んでください — 最速のバリアントは Kaya がハードウェアに応じて選びます。",
     "active": "使用中",
     "recommended": "推奨",
     "default": "デフォルト",
@@ -185,7 +185,18 @@
       "pytorch": "このシステムでは ROCm/CUDA が検出されませんでした",
       "webnn": "WebNN 対応の Chrome が必要です"
     },
-    "backendRecommended": "おすすめ"
+    "backendRecommended": "おすすめ",
+    "bestForYourSetup": "この環境に最適",
+    "quantLabel": {
+      "fp32": "完全精度",
+      "fp16": "半精度",
+      "uint8": "量子化（8ビット）"
+    },
+    "quantDesc": {
+      "fp32": "精度の低下なし。ダウンロード量とメモリ使用量は最大です。",
+      "fp16": "ダウンロードとメモリが半分になり、精度はわずかに低下します。",
+      "uint8": "ダウンロードとメモリが最小になり、精度の低下は最大です。"
+    }
   },
   "kayaConfig": {
     "title": "設定",

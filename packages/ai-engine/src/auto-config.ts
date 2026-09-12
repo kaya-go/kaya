@@ -19,9 +19,13 @@ export type ModelId = 'kata1-b28-latest';
 
 export const CANONICAL_MODEL: ModelId = 'kata1-b28-latest';
 
+/** Host operating system, as far as the renderer can tell. */
+export type HostOS = 'macos' | 'windows' | 'linux' | 'android' | 'ios' | 'unknown';
+
 /** What we observed about the host. */
 export interface Probe {
   isTauri: boolean;
+  os: HostOS;
   hasWebGPU: boolean;
   hasShaderF16: boolean;
   threads: number;
@@ -47,6 +51,7 @@ export async function probeEnvironment(opts?: {
   pyTorchSidecarAvailable?: boolean;
 }): Promise<Probe> {
   const isTauri = detectTauri();
+  const os = detectOS();
   const { hasWebGPU, hasShaderF16 } = await detectWebGPU();
 
   const threads =
@@ -61,6 +66,7 @@ export async function probeEnvironment(opts?: {
 
   return {
     isTauri,
+    os,
     hasWebGPU,
     hasShaderF16,
     threads,
@@ -77,7 +83,7 @@ export function pickConfig(probe: Probe): AutoPick {
   const backendChain = pickBackendChain(probe);
   const preferred = backendChain[0];
   const quantization = pickQuantization(preferred, probe);
-  const reasoning = explainPick(preferred, quantization, probe);
+  const reasoning = explainPick(preferred, probe);
 
   return {
     modelId: CANONICAL_MODEL,
@@ -99,6 +105,24 @@ function detectTauri(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Best-effort OS detection from the user agent. Only ever used to pick a
+ * default, never to gate a capability — anything that can be tested at
+ * runtime (WebGPU, `shader-f16`, EP registration) is tested instead.
+ */
+function detectOS(): HostOS {
+  if (typeof navigator === 'undefined') return 'unknown';
+  const ua = `${navigator.userAgent ?? ''} ${navigator.platform ?? ''}`.toLowerCase();
+  if (/android/.test(ua)) return 'android';
+  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+  if (/win/.test(ua)) return 'windows';
+  // Order matters: macOS user agents contain "like Mac OS X" on iOS too,
+  // which the iOS branch above has already claimed.
+  if (/mac/.test(ua)) return 'macos';
+  if (/linux|x11/.test(ua)) return 'linux';
+  return 'unknown';
 }
 
 async function detectWebGPU(): Promise<{ hasWebGPU: boolean; hasShaderF16: boolean }> {
@@ -129,40 +153,78 @@ function pickBackendChain(probe: Probe): BackendId[] {
   return probe.hasWebGPU ? ['webgpu', 'wasm'] : ['wasm'];
 }
 
+/**
+ * Pick the precision that is fastest on the backend we expect to land on.
+ *
+ * fp16 and uint8 are lossy transforms of the same weights, so neither can be
+ * *more* accurate than fp32: where fp32 is also the fastest, it strictly
+ * dominates and there is no trade-off to offer the user. The only axis the
+ * app cannot infer is download / disk / memory footprint (280 / 140 / 72 MB),
+ * which is why the variant list stays available as a manual override.
+ *
+ * Every cell below is tagged with how it is known. The previous version of
+ * this function generalised one Linux/AMD machine's numbers — measured with
+ * Python ORT, on a different model (b18c384, not the shipped b28c512) — into
+ * global rules, and all three of its claims turned out to be false on macOS:
+ * fp16 does not crash the CPU EP there (3% slower), uint8 is not 1.7x slower
+ * than fp32 on CPU (19% *faster* at batch 1), and fp16 is not the fast path
+ * on a GPU EP (8% slower than fp32 on CoreML at batch 16).
+ * See specs/2026-09-12-precision-follows-the-backend.md.
+ *
+ * Rule for editing this function: change a cell only with a measurement on
+ * that platform, with the shipped model, through our own stack.
+ * `apps/desktop/src-tauri/examples/ep_bench.rs` is the tool for the native
+ * backends.
+ */
 function pickQuantization(preferred: BackendId, probe: Probe): Quantization {
-  // fp16 on real GPU paths; fp32 elsewhere.
-  // Rationale per specs/2026-02-24-ai-inference-benchmarks-amd:
-  //  - fp16 crashes on CPU EP (native-cpu) and on WASM
-  //  - fp16 emulates as fp32 on WebGPU adapters without shader-f16 (slow)
-  //  - uint8 is 1.7x slower than fp32 on CPU — never auto-pick
   switch (preferred) {
-    case 'pytorch':
     case 'native-gpu':
+      // MEASURED (macOS / CoreML, M3 Max, b28c512): fp32 beats fp16 at every
+      // batch size, and uint8 is catastrophic (6.6x slower than fp32).
+      // UNTESTED (Windows / DirectML): no measurement exists on any Windows
+      // GPU. fp16 is kept there because it is what the app has always shipped
+      // — switching to a 280 MB download on a guess would repeat exactly the
+      // mistake this comment documents.
+      return probe.os === 'macos' ? 'fp32' : 'fp16';
+    case 'pytorch':
+      // DATED (Linux / ROCm, Python ORT, b18c384): fp16 roughly 1.7x fp32 at
+      // batch 16. Different stack, hardware and model from what ships today,
+      // so this is plausible rather than established.
       return 'fp16';
     case 'webgpu':
+      // RUNTIME-CHECKED: without the `shader-f16` adapter feature, fp16 is
+      // emulated as fp32 and is strictly slower. This is the one cell that
+      // tests a capability instead of assuming one.
       return probe.hasShaderF16 ? 'fp16' : 'fp32';
     case 'wasm':
     case 'native-cpu':
+      // fp32 is the always-works baseline and the precision the native chain
+      // falls back onto, so it is what a download must be safe for.
       return 'fp32';
   }
 }
 
-function explainPick(backend: BackendId, quant: Quantization, probe: Probe): string {
-  const quantTag = quant.toUpperCase();
+/**
+ * One line for the status pill. Deliberately says nothing about precision:
+ * this describes the *recommended* config, while the pill renders it next to
+ * the backend and precision actually loaded, and the user is free to run a
+ * variant we did not recommend.
+ */
+function explainPick(backend: BackendId, probe: Probe): string {
   switch (backend) {
     case 'pytorch':
-      return `Linux GPU detected — running on PyTorch sidecar (${quantTag} model)`;
+      return 'Linux GPU detected — running on PyTorch sidecar';
     case 'native-gpu':
-      return `Native GPU detected — running on ONNX Runtime (${quantTag} model)`;
+      return 'Native GPU detected — running on ONNX Runtime';
     case 'native-cpu':
-      return `Running on CPU via native ONNX Runtime (${quantTag} model)`;
+      return 'Running on CPU via native ONNX Runtime';
     case 'webgpu':
       return probe.hasShaderF16
-        ? `Browser GPU detected — running on WebGPU (${quantTag} model)`
-        : `Browser GPU detected without shader-f16 — running on WebGPU (${quantTag} model)`;
+        ? 'Browser GPU detected — running on WebGPU'
+        : 'Browser GPU detected without shader-f16 — running on WebGPU';
     case 'wasm':
       return probe.isTauri
-        ? `Running on WASM (native backend unavailable)`
-        : `Browser GPU not available — running on WASM (${quantTag} model)`;
+        ? 'Running on WASM (native backend unavailable)'
+        : 'Browser GPU not available — running on WASM';
   }
 }

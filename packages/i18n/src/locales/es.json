@@ -106,7 +106,7 @@
   "aiConfig": {
     "title": "Configuración de análisis",
     "modelLibrary": "Biblioteca de modelos",
-    "modelLibraryDescription": "Selecciona un modelo para el análisis de IA. Expande para elegir una variante de calidad.",
+    "modelLibraryDescription": "Selecciona un modelo para el análisis con IA. Expande para elegir un tamaño de descarga: Kaya elige la variante más rápida para tu hardware.",
     "active": "Activo",
     "recommended": "Recomendado",
     "default": "Predeterminado",
@@ -185,7 +185,18 @@
       "pytorch": "ROCm/CUDA no detectado en este sistema",
       "webnn": "Requiere Chrome con soporte WebNN"
     },
-    "backendRecommended": "Recomendado"
+    "backendRecommended": "Recomendado",
+    "bestForYourSetup": "Ideal para tu configuración",
+    "quantLabel": {
+      "fp32": "Precisión completa",
+      "fp16": "Media precisión",
+      "uint8": "Cuantizado (8 bits)"
+    },
+    "quantDesc": {
+      "fp32": "Sin pérdida de precisión. Mayor descarga y uso de memoria.",
+      "fp16": "La mitad de descarga y memoria, con una pequeña pérdida de precisión.",
+      "uint8": "Mínima descarga y memoria, con la mayor pérdida de precisión."
+    }
   },
   "kayaConfig": {
     "title": "Configuración",

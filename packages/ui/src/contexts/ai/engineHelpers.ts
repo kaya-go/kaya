@@ -24,11 +24,11 @@ export function backendDisplayName(backend: string): string {
   }
 }
 
-export const QUANT_LABELS: Record<ModelQuantization, string> = {
-  fp32: 'Full Quality',
-  fp16: 'Balanced',
-  uint8: 'Compact',
-};
+/**
+ * Precision names for the mismatch toast — interpolated into an already
+ * translated sentence, so it must be locale-neutral.
+ */
+export { QUANT_DISPLAY_NAMES as QUANT_LABELS } from '../../hooks/game/ai-analysis-types';
 
 /**
  * Decide which backend chain to use:
