@@ -47,7 +47,8 @@ jobs:
     steps:
       # Xvfb and procps are the whole host-side requirement for the app — if the
       # bundle needed anything else from the distro, it would not be
-      # self-contained.
+      # self-contained. ca-certificates only quiets the bundle's CA-lookup hook,
+      # which warns on a bare container the way no real desktop would.
       #
       # git is for the checkout, not the app: without it, actions/checkout falls
       # back to the REST API tarball, and this repo's .gitattributes marks
@@ -63,7 +64,7 @@ jobs:
             apt-get update -qq
             apt-get install -y --no-install-recommends xvfb procps git ca-certificates
           else
-            dnf install -y xorg-x11-server-Xvfb procps-ng git
+            dnf install -y xorg-x11-server-Xvfb procps-ng git ca-certificates
           fi
 
       - uses: actions/checkout@v7
