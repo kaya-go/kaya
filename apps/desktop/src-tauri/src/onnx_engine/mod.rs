@@ -1,7 +1,9 @@
 //! Native ONNX Runtime engine for KataGo inference
 //!
-//! This module provides AI analysis using native ONNX Runtime
-//! with GPU acceleration via MIGraphX (AMD), CUDA, CoreML, DirectML, or NNAPI (Android).
+//! This module provides AI analysis using native ONNX Runtime with GPU
+//! acceleration via CoreML (macOS), DirectML (Windows) or NNAPI (Android).
+//! Linux ships the CPU-only ONNX Runtime distribution; GPU inference there
+//! goes through the PyTorch sidecar.
 
 mod execution_providers;
 mod featurization;
@@ -12,7 +14,7 @@ mod types;
 
 pub use execution_providers::{
     ExecutionProviderInfo, ExecutionProviderPreference,
-    get_available_providers, get_execution_provider_preference,
+    get_available_providers, get_execution_provider_preference, preference_to_name,
     set_execution_provider_preference,
 };
 #[cfg(target_os = "linux")]
@@ -23,9 +25,7 @@ pub use featurization::determine_next_player;
 pub use result_processing::process_raw_outputs;
 pub use types::{AnalysisOptions, AnalysisResult, HistoryMove};
 
-use execution_providers::{
-    configure_execution_providers, ensure_ort_initialized, preference_to_name,
-};
+use execution_providers::{configure_execution_providers, ensure_ort_initialized};
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use std::path::Path;

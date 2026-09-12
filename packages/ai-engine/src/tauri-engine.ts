@@ -2,7 +2,8 @@
  * Tauri Native ONNX Engine
  *
  * This engine uses Tauri's native Rust ONNX Runtime for AI analysis
- * in the desktop app with GPU acceleration via CUDA, CoreML, or DirectML.
+ * in the desktop app with GPU acceleration via CoreML (macOS) or DirectML
+ * (Windows). Linux runs on CPU here; its GPU path is the PyTorch sidecar.
  *
  * IMPORTANT: This module uses ONLY the global window.__TAURI__ object
  * and does NOT use any dynamic imports to avoid bundler issues with workers.

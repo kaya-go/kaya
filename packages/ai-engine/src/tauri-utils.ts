@@ -21,7 +21,7 @@ export interface UploadProgress {
 /**
  * Execution provider preference for native ONNX Runtime
  */
-export type ExecutionProviderPreference = 'auto' | 'cuda' | 'coreml' | 'directml' | 'nnapi' | 'cpu';
+export type ExecutionProviderPreference = 'auto' | 'coreml' | 'directml' | 'nnapi' | 'cpu';
 
 /**
  * Information about an execution provider
@@ -56,11 +56,14 @@ export interface TauriEngineConfig extends BaseEngineConfig {
   /**
    * Execution provider preference for native ONNX Runtime
    * - 'auto': Best available (GPU first, then CPU)
-   * - 'cuda': NVIDIA CUDA (requires CUDA toolkit)
-   * - 'coreml': Apple CoreML (macOS/iOS)
+   * - 'coreml': Apple CoreML (macOS)
    * - 'directml': Windows DirectML
    * - 'nnapi': Android NNAPI (Android Neural Networks API)
    * - 'cpu': CPU only
+   *
+   * Linux has no GPU entry: the ONNX Runtime build we ship there is CPU-only,
+   * so 'auto' resolves to CPU and GPU inference goes through the PyTorch
+   * sidecar instead.
    */
   executionProvider?: ExecutionProviderPreference;
 }

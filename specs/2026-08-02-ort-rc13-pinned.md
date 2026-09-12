@@ -1,6 +1,6 @@
 ---
 date: 2026-08-02
-status: shipped
+status: superseded
 scope: ai/onnx
 ---
 
@@ -74,6 +74,9 @@ each target, and CI only runs `cargo check`.
 
 ## Links
 
+- Superseded by: [ort 2.0.0-rc.13: execution providers become build-time](2026-09-12-ort-rc13-migration.md) — the migration landed, and it found that
+  the `ORT_DYLIB_PATH` rationale above was wrong: that variable is only read
+  under `load-dynamic`, which desktop Linux does not use.
 - Tracking issue: kaya-go/kaya#139
 - Superseded PR: kaya-go/kaya#136 · replacement: kaya-go/kaya#138
 - `ignore` rule and rationale: [.github/dependabot.yml](../.github/dependabot.yml)

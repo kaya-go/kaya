@@ -1,31 +1,33 @@
 //! Execution provider configuration and ONNX Runtime initialization
 
-use ort::execution_providers::{CUDAExecutionProvider, DirectMLExecutionProvider};
 #[cfg(target_os = "macos")]
-use ort::execution_providers::CoreMLExecutionProvider;
+use ort::ep::CoreML;
 #[cfg(target_os = "macos")]
 use ort::ep::coreml::{ComputeUnits, ModelFormat, SpecializationStrategy};
-use ort::session::builder::SessionBuilder;
+#[cfg(target_os = "windows")]
+use ort::ep::DirectML;
 #[cfg(target_os = "android")]
-use ort::execution_providers::NNAPIExecutionProvider;
-#[cfg(target_os = "linux")]
-use ort::execution_providers::MIGraphXExecutionProvider;
+use ort::ep::NNAPI;
+use ort::session::builder::SessionBuilder;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 #[cfg(target_os = "android")]
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Execution provider preference for ONNX Runtime
+///
+/// Only providers that are actually compiled into the ONNX Runtime binaries we
+/// ship are listed. CUDA and MIGraphX are deliberately absent: no published
+/// distribution carries MIGraphX, and the CUDA one is a multi-GB download that
+/// needs a matching CUDA runtime, so neither has ever been present in a Kaya
+/// build. On Linux, GPU inference goes through the PyTorch sidecar instead.
+/// See specs/2026-09-12-ort-rc13-migration.md.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum ExecutionProviderPreference {
     /// Automatically select the best available provider (GPU first, then CPU)
     #[default]
     Auto,
-    /// Force CUDA (NVIDIA GPU)
-    Cuda,
-    /// Force MIGraphX (AMD GPU via ROCm)
-    MiGraphX,
     /// Force CoreML (Apple Silicon/Neural Engine)
     CoreMl,
     /// Force DirectML (Windows GPU)
@@ -67,8 +69,6 @@ pub fn set_execution_provider_preference(pref: ExecutionProviderPreference) {
 pub fn preference_to_name(pref: ExecutionProviderPreference) -> String {
     match pref {
         ExecutionProviderPreference::Auto => "auto".to_string(),
-        ExecutionProviderPreference::Cuda => "cuda".to_string(),
-        ExecutionProviderPreference::MiGraphX => "migraphx".to_string(),
         ExecutionProviderPreference::CoreMl => "coreml".to_string(),
         ExecutionProviderPreference::DirectMl => "directml".to_string(),
         ExecutionProviderPreference::Nnapi => "nnapi".to_string(),
@@ -179,10 +179,12 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
 /// previous code set it to `true`, which made things strictly worse for
 /// other models without unblocking KataGo. Once a newer ort release ships
 /// better op coverage, this EP should start picking up nodes again with no
-/// further changes here.
+/// further changes here. The rc.13 bump left every option used here unchanged,
+/// and whether ONNX Runtime 1.28 improved the coverage is still untested — it
+/// needs a run on real Apple Silicon, which no CI job covers.
 #[cfg(target_os = "macos")]
-fn build_coreml_provider(cache_dir: Option<&str>) -> ort::execution_providers::ExecutionProviderDispatch {
-    let mut ep = CoreMLExecutionProvider::default()
+fn build_coreml_provider(cache_dir: Option<&str>) -> ort::ep::ExecutionProviderDispatch {
+    let mut ep = CoreML::default()
         .with_model_format(ModelFormat::MLProgram)
         .with_specialization_strategy(SpecializationStrategy::FastPrediction)
         .with_compute_units(ComputeUnits::All);
@@ -210,7 +212,7 @@ pub fn configure_execution_providers(
             #[cfg(target_os = "android")]
             {
                 builder
-                    .with_execution_providers([NNAPIExecutionProvider::default().build()])
+                    .with_execution_providers([NNAPI::default().build()])
                     .map_err(|e| format!("Failed to set NNAPI execution provider: {}", e))
             }
             #[cfg(target_os = "macos")]
@@ -222,66 +224,15 @@ pub fn configure_execution_providers(
             #[cfg(target_os = "windows")]
             {
                 builder
-                    .with_execution_providers([
-                        DirectMLExecutionProvider::default().build(),
-                        CUDAExecutionProvider::default().build(),
-                    ])
-                    .map_err(|e| format!("Failed to set execution providers: {}", e))
+                    .with_execution_providers([DirectML::default().build()])
+                    .map_err(|e| format!("Failed to set DirectML execution provider: {}", e))
             }
-            #[cfg(target_os = "linux")]
-            {
-                // On Linux: try MIGraphX (AMD GPU) first, then CUDA, then CPU fallback
-                let mut ep = MIGraphXExecutionProvider::default()
-                    .with_fp16(true);
-                if let Some(cache_dir) = _model_cache_dir {
-                    let save_path = format!("{}/migraphx_compiled.mxr", cache_dir);
-                    let load_path = save_path.clone();
-                    if std::path::Path::new(&load_path).exists() {
-                        eprintln!("[OnnxEngine] Loading cached MIGraphX compiled model from: {}", load_path);
-                        ep = ep.with_load_model(&load_path);
-                    } else {
-                        eprintln!("[OnnxEngine] Will save MIGraphX compiled model to: {}", save_path);
-                        ep = ep.with_save_model(&save_path);
-                    }
-                }
-                builder
-                    .with_execution_providers([
-                        ep.build(),
-                        CUDAExecutionProvider::default().build(),
-                    ])
-                    .map_err(|e| format!("Failed to set execution providers: {}", e))
-            }
-            #[cfg(not(any(target_os = "android", target_os = "macos", target_os = "windows", target_os = "linux")))]
+            // Linux (and anything else): the ONNX Runtime distribution we ship
+            // is the plain CPU build, so there is no GPU provider to register.
+            #[cfg(not(any(target_os = "android", target_os = "macos", target_os = "windows")))]
             {
                 Ok(builder)
             }
-        }
-        ExecutionProviderPreference::Cuda => {
-            builder
-                .with_execution_providers([CUDAExecutionProvider::default().build()])
-                .map_err(|e| format!("Failed to set CUDA execution provider: {}", e))
-        }
-        #[cfg(target_os = "linux")]
-        ExecutionProviderPreference::MiGraphX => {
-            let mut ep = MIGraphXExecutionProvider::default()
-                .with_fp16(true);
-            if let Some(cache_dir) = _model_cache_dir {
-                let save_path = format!("{}/migraphx_compiled.mxr", cache_dir);
-                let load_path = save_path.clone();
-                if std::path::Path::new(&load_path).exists() {
-                    ep = ep.with_load_model(&load_path);
-                } else {
-                    ep = ep.with_save_model(&save_path);
-                }
-            }
-            builder
-                .with_execution_providers([ep.build()])
-                .map_err(|e| format!("Failed to set MIGraphX execution provider: {}", e))
-        }
-        #[cfg(not(target_os = "linux"))]
-        ExecutionProviderPreference::MiGraphX => {
-            eprintln!("[OnnxEngine] MIGraphX is only available on Linux with AMD GPU, using CPU");
-            Ok(builder)
         }
         #[cfg(target_os = "macos")]
         ExecutionProviderPreference::CoreMl => {
@@ -294,15 +245,21 @@ pub fn configure_execution_providers(
             eprintln!("[OnnxEngine] CoreML is only available on macOS, using CPU");
             Ok(builder)
         }
+        #[cfg(target_os = "windows")]
         ExecutionProviderPreference::DirectMl => {
             builder
-                .with_execution_providers([DirectMLExecutionProvider::default().build()])
+                .with_execution_providers([DirectML::default().build()])
                 .map_err(|e| format!("Failed to set DirectML execution provider: {}", e))
+        }
+        #[cfg(not(target_os = "windows"))]
+        ExecutionProviderPreference::DirectMl => {
+            eprintln!("[OnnxEngine] DirectML is only available on Windows, using CPU");
+            Ok(builder)
         }
         #[cfg(target_os = "android")]
         ExecutionProviderPreference::Nnapi => {
             builder
-                .with_execution_providers([NNAPIExecutionProvider::default().build()])
+                .with_execution_providers([NNAPI::default().build()])
                 .map_err(|e| format!("Failed to set NNAPI execution provider: {}", e))
         }
         #[cfg(not(target_os = "android"))]
@@ -320,8 +277,6 @@ pub fn configure_execution_providers(
 /// Get information about the current execution provider by name
 pub fn provider_info_from_name(name: &str) -> (bool, &'static str) {
     match name {
-        "cuda" => (true, "NVIDIA CUDA GPU acceleration"),
-        "migraphx" => (true, "AMD MIGraphX GPU acceleration (ROCm)"),
         "coreml" => (true, "Apple CoreML (Metal/Neural Engine)"),
         "directml" => (true, "Windows DirectML GPU acceleration"),
         "nnapi" => (true, "Android NNAPI (Neural Networks API)"),
@@ -331,12 +286,10 @@ pub fn provider_info_from_name(name: &str) -> (bool, &'static str) {
             #[cfg(target_os = "macos")]
             { (true, "Apple CoreML (Metal/Neural Engine)") }
             #[cfg(target_os = "windows")]
-            { (true, "Windows DirectML / CUDA GPU acceleration") }
-            #[cfg(target_os = "linux")]
-            { (true, "AMD MIGraphX / NVIDIA CUDA GPU acceleration") }
+            { (true, "Windows DirectML GPU acceleration") }
             #[cfg(target_os = "android")]
             { (true, "Android NNAPI (Neural Networks API)") }
-            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux", target_os = "android")))]
+            #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "android")))]
             { (false, "CPU (multi-threaded)") }
         }
         _ => (false, "Unknown execution provider"),
@@ -350,7 +303,7 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     // Auto is always available
     providers.push(ExecutionProviderInfo {
         name: "auto".to_string(),
-        is_gpu: true,
+        is_gpu: cfg!(any(target_os = "macos", target_os = "windows", target_os = "android")),
         is_fp16: false,
         description: "Auto-select best available (recommended)".to_string(),
     });
@@ -373,36 +326,14 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     });
     
     #[cfg(target_os = "windows")]
-    {
-        providers.push(ExecutionProviderInfo {
-            name: "directml".to_string(),
-            is_gpu: true,
-            is_fp16: false,
-            description: "DirectML (Windows GPU)".to_string(),
-        });
-        providers.push(ExecutionProviderInfo {
-            name: "cuda".to_string(),
-            is_gpu: true,
-            is_fp16: false,
-            description: "NVIDIA CUDA (requires CUDA toolkit)".to_string(),
-        });
-    }
+    providers.push(ExecutionProviderInfo {
+        name: "directml".to_string(),
+        is_gpu: true,
+        is_fp16: false,
+        description: "DirectML (Windows GPU)".to_string(),
+    });
     
-    #[cfg(target_os = "linux")]
-    {
-        providers.push(ExecutionProviderInfo {
-            name: "migraphx".to_string(),
-            is_gpu: true,
-            is_fp16: false,
-            description: "AMD MIGraphX (ROCm GPU, requires ROCm + MIGraphX)".to_string(),
-        });
-        providers.push(ExecutionProviderInfo {
-            name: "cuda".to_string(),
-            is_gpu: true,
-            is_fp16: false,
-            description: "NVIDIA CUDA (requires CUDA toolkit)".to_string(),
-        });
-    }
+    // Linux has no GPU entry: the distribution we ship is the plain CPU build.
     
     // CPU is always available
     providers.push(ExecutionProviderInfo {

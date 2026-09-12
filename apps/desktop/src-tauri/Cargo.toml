@@ -36,33 +36,44 @@ half = "2.7"
 # Audio playback — bypasses WebKitGTK/GStreamer entirely (which is broken in AppImage)
 # Uses ALSA/PulseAudio on Linux, CoreAudio on macOS, WASAPI on Windows
 # Not needed on Android (audio is handled via WebView)
+#
+# reqwest and the updater/window-state plugins are desktop-only too: Android
+# would drag in OpenSSL/ring, and HTTP there goes through the WebView instead.
 [target.'cfg(not(target_os = "android"))'.dependencies]
 rodio = { version = "0.22", default-features = false, features = ["playback", "lewton"] }
+reqwest = { version = "0.13", features = ["stream"] }
+tauri-plugin-http = "2"
+tauri-plugin-process = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-window-state = "2.4.1"
 
-# Linux desktop: static linking (same as macOS/Windows) for zero-dependency deployment.
-# Power users can override with ORT_DYLIB_PATH for MIGraphX/CUDA GPU support.
+# ONNX Runtime. Since 2.0.0-rc.13 every execution provider is a cargo feature,
+# and for `download-binaries` those features also pick which prebuilt binary is
+# fetched — the requested set has to match a published distribution exactly, so
+# the EP features are declared per target rather than once for all desktops.
+# See specs/2026-09-12-ort-rc13-migration.md.
+
+# Linux: the plain CPU distribution. No Linux build ships MIGraphX, and the CUDA
+# one is a multi-GB download that expects a CUDA runtime on the user's machine,
+# so GPU inference on Linux goes through the PyTorch sidecar instead.
 [target.'cfg(target_os = "linux")'.dependencies]
-ort = { version = "2.0.0-rc.12", features = ["download-binaries", "half"] }
-reqwest = { version = "0.13", features = ["stream"] }
-tauri-plugin-http = "2"
-tauri-plugin-process = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-window-state = "2.4.1"
+ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half"] }
 
-# Non-Linux desktop (macOS, Windows): static linking with download-binaries
-[target.'cfg(all(not(target_os = "android"), not(target_os = "linux")))'.dependencies]
-ort = { version = "2.0.0-rc.12", features = ["download-binaries", "half"] }
-reqwest = { version = "0.13", features = ["stream"] }
-tauri-plugin-http = "2"
-tauri-plugin-process = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-window-state = "2.4.1"
+# macOS: the aarch64-apple-darwin distribution ships CoreML.
+[target.'cfg(target_os = "macos")'.dependencies]
+ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "coreml"] }
 
-# Android: dynamic loading at runtime (we bundle libonnxruntime.so in the APK)
+# Windows: the x86_64-pc-windows-msvc distribution ships DirectML.
+[target.'cfg(target_os = "windows")'.dependencies]
+ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "directml"] }
+
+# Android: dynamic loading at runtime (we bundle libonnxruntime.so in the APK).
+# default-features = false disables download-binaries, which doesn't work for
+# Android — nothing is fetched, so `nnapi` here is pure API gating.
+# api-24 matches the ONNX Runtime 1.24.3 AAR pulled by
+# scripts/download-onnxruntime-android.sh.
 [target.'cfg(target_os = "android")'.dependencies]
-# default-features = false to disable download-binaries which doesn't work for Android
-# api-24 is required so ort-sys generates full API bindings (VitisAI EP etc.)
-ort = { version = "2.0.0-rc.12", default-features = false, features = ["load-dynamic", "ndarray", "half", "api-24"] }
+ort = { version = "2.0.0-rc.13", default-features = false, features = ["load-dynamic", "ndarray", "half", "api-24", "nnapi"] }
 # Note: reqwest is NOT included for Android to avoid OpenSSL/ring compilation issues
 # HTTP requests on Android should be done via the frontend/WebView
 

@@ -124,8 +124,6 @@ pub fn onnx_get_available_providers() -> Vec<ExecutionProviderInfo> {
 pub fn onnx_set_provider_preference(preference: String) -> Result<(), String> {
     let pref = match preference.as_str() {
         "auto" => ExecutionProviderPreference::Auto,
-        "cuda" => ExecutionProviderPreference::Cuda,
-        "migraphx" => ExecutionProviderPreference::MiGraphX,
         "coreml" => ExecutionProviderPreference::CoreMl,
         "directml" => ExecutionProviderPreference::DirectMl,
         "nnapi" => ExecutionProviderPreference::Nnapi,
@@ -139,13 +137,5 @@ pub fn onnx_set_provider_preference(preference: String) -> Result<(), String> {
 /// Get the current execution provider preference
 #[tauri::command]
 pub fn onnx_get_provider_preference() -> String {
-    match onnx_engine::get_execution_provider_preference() {
-        ExecutionProviderPreference::Auto => "auto",
-        ExecutionProviderPreference::Cuda => "cuda",
-        ExecutionProviderPreference::MiGraphX => "migraphx",
-        ExecutionProviderPreference::CoreMl => "coreml",
-        ExecutionProviderPreference::DirectMl => "directml",
-        ExecutionProviderPreference::Nnapi => "nnapi",
-        ExecutionProviderPreference::Cpu => "cpu",
-    }.to_string()
+    onnx_engine::preference_to_name(onnx_engine::get_execution_provider_preference())
 }

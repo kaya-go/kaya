@@ -170,6 +170,17 @@ KataGo b28 model and runs on CPU — see [`specs/2026-05-03-coreml-ep-falls-back
 WebGPU is unavailable in Tauri's webview on Mac/Linux — see
 [`specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md`](../specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md).
 
+**Execution providers are a build-time fact, not a runtime one.** Each EP is
+a cargo feature on `ort`, and for the desktop targets that feature also picks
+which prebuilt ONNX Runtime binary gets downloaded, so the feature set has to
+match a published distribution exactly: CoreML on macOS, DirectML on Windows,
+NNAPI on Android, nothing on Linux (the only Linux distribution without a
+multi-GB CUDA runtime is the plain CPU one). `ExecutionProviderPreference` in
+[`execution_providers.rs`](../apps/desktop/src-tauri/src/onnx_engine/execution_providers.rs)
+lists exactly those, and adding one means checking the distribution table
+first — see [`specs/2026-09-12-ort-rc13-migration.md`](../specs/2026-09-12-ort-rc13-migration.md).
+Linux GPU inference goes through the PyTorch sidecar instead.
+
 ### 6. Native audio bypasses the webview on desktop
 
 Desktop uses **rodio** (with the `lewton` Vorbis decoder feature) directly
