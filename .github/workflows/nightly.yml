@@ -56,10 +56,17 @@ jobs:
       bun-version: '1.3.2'
     secrets: inherit
 
+  verify-linux-packages:
+    name: Verify Linux Packages
+    needs: build-linux-deb
+    uses: ./.github/workflows/_verify-linux-packages.yml
+    with:
+      artifact-name: nightly-linux-deb
+
   # Generate summary after all builds complete
   summary:
     name: Generate Summary
-    needs: [build-macos, build-windows, build-linux, build-linux-deb]
+    needs: [build-macos, build-windows, build-linux, build-linux-deb, verify-linux-packages]
     runs-on: ubuntu-latest
     steps:
       - name: Download all artifacts

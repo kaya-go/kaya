@@ -37,6 +37,14 @@
       "../public/assets/pass.ogg": "sounds/pass.ogg",
       "../public/assets/newgame.ogg": "sounds/newgame.ogg"
     },
+    "linux": {
+      "deb": {
+        "depends": ["libc6 (>= 2.39)"]
+      },
+      "rpm": {
+        "depends": ["libc.so.6(GLIBC_2.39)(64bit)"]
+      }
+    },
     "macOS": {
       "entitlements": "Entitlements.plist",
       "infoPlist": "Info.plist"

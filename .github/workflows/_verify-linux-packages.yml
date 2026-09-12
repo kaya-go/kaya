@@ -1,0 +1,74 @@
+name: Verify Linux Packages
+
+# Installs the freshly built .deb and .rpm on real distro images and resolves the
+# binary's dynamic dependencies there.
+#
+# Every Linux packaging bug this project has shipped (#103 and its follow-ups)
+# looked fine in the build job and only failed on a user's machine: a glibc newer
+# than the distro's, or a shared library that was never declared. Nothing in CI
+# ever installed the artifacts, so a green build job meant very little.
+#
+# Each matrix row says whether the install is expected to succeed. The "must
+# refuse" rows matter as much as the others: they prove the declared glibc floor
+# actually stops the package from landing on a distro it cannot run on, instead
+# of letting it install and then die at startup.
+
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: 'Artifact holding the .deb and .rpm to verify'
+        type: string
+        required: true
+
+jobs:
+  verify:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Expected to install: at or above the declared glibc floor.
+          - name: Ubuntu 24.04 (.deb)
+            image: ubuntu:24.04
+            kind: deb
+            expect: install
+          - name: Debian 13 (.deb)
+            image: debian:13
+            kind: deb
+            expect: install
+          # `latest` rather than a pinned release: the question is whether the
+          # package installs on current Fedora, and a pinned one goes EOL and
+          # takes its repo mirrors with it.
+          - name: Fedora latest (.rpm)
+            image: fedora:latest
+            kind: rpm
+            expect: install
+          # Expected to be refused: glibc 2.36 and 2.34, below the floor.
+          - name: Debian 12 (.deb, must refuse)
+            image: debian:12
+            kind: deb
+            expect: refuse
+          - name: AlmaLinux 9 (.rpm, must refuse)
+            image: almalinux:9
+            kind: rpm
+            expect: refuse
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Download packages
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: packages
+
+      - name: Verify package
+        shell: bash
+        env:
+          KIND: ${{ matrix.kind }}
+          EXPECT: ${{ matrix.expect }}
+          DEBIAN_FRONTEND: noninteractive
+        run: .github/scripts/verify-linux-package.sh packages

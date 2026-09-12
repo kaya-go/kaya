@@ -4,9 +4,14 @@ name: Build Desktop (Linux AppImage)
 # the new Tauri AppImage format (quick-sharun) requires Arch Linux.
 # See: https://github.com/tauri-apps/tauri/pull/12491
 #
-# The .deb and .rpm packages are built separately on Ubuntu 22.04 in
+# The .deb and .rpm packages are built separately on Ubuntu 24.04 in
 # `_build-linux-deb.yml` to link against an older glibc (Arch's rolling
 # glibc 2.43+ otherwise breaks Debian/Ubuntu/Mint users). See #103.
+#
+# This bundle is the fallback for distros below that .deb/.rpm glibc floor:
+# quick-sharun ships glibc and the loader inside the AppImage, so it runs
+# on Debian 12, Ubuntu 22.04 and RHEL 9 where the packages correctly refuse
+# to install.
 
 on:
   workflow_call:
@@ -130,8 +135,32 @@ jobs:
       # Uses the feat/truly-portable-appimage branch which uses quick-sharun
       # See: https://github.com/tauri-apps/tauri/pull/12491
       # TODO: Remove once this is merged into stable tauri-cli release
+      #
+      # Pinned to an exact rev with --locked rather than tracking the branch tip.
+      # Following the tip broke the 2026-08-31 nightly: the unlocked resolve picked
+      # up a log/value-bag combination that no longer compiled, so an upstream
+      # branch we don't control could fail a release mid-flight. The rev doubles as
+      # the cache key, so bumping it rebuilds and every other run reuses the binary
+      # instead of spending ~5.5 min recompiling the CLI.
+      - name: Pin tauri-cli revision
+        id: tauri_cli
+        shell: bash
+        run: echo "rev=3b69f584e3a32a8607e0c2aa6543a88511085bfb" >> "$GITHUB_OUTPUT"
+
+      - name: Cache tauri-cli
+        id: tauri_cli_cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cargo/bin/cargo-tauri
+          key: Linux-arch-tauri-cli-${{ steps.tauri_cli.outputs.rev }}
+
       - name: Install tauri-cli with new AppImage format
-        run: cargo install tauri-cli --git https://github.com/tauri-apps/tauri --branch feat/truly-portable-appimage --force
+        if: steps.tauri_cli_cache.outputs.cache-hit != 'true'
+        run: |
+          cargo install tauri-cli \
+            --git https://github.com/tauri-apps/tauri \
+            --rev "${{ steps.tauri_cli.outputs.rev }}" \
+            --locked --force
 
       - name: Install dependencies
         run: bun install
@@ -181,12 +210,18 @@ jobs:
           echo "Collecting Linux AppImage artifacts..."
           find apps/desktop/src-tauri/target/release/bundle -type f -name "*.AppImage*" -exec ls -lh {} \;
 
+      # Only the AppImage and its sidecars. The bundle directory also holds the
+      # uncompressed Kaya.AppDir the AppImage was squashed from — ~2.2 GB that
+      # nothing downstream reads, and that dominated both upload and the release
+      # job's download-all step.
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
           path: |
-            apps/desktop/src-tauri/target/release/bundle/appimage/
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.sig
+            apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage.zsync
           retention-days: ${{ inputs.artifact-retention-days }}
 
       # Save caches only when they were not found

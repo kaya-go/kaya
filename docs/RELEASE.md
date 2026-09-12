@@ -16,9 +16,45 @@ Two web deployments + native installers per release:
 Both web deployments use `keep_files: true` so they don't overwrite each
 other on Pages.
 
-Desktop builds: `.deb` + `.AppImage` (Ubuntu), `.dmg` (macOS Universal),
-`.exe` (Windows NSIS). All signed for the auto-updater — see
+Desktop builds: `.AppImage` (Arch container), `.deb` + `.rpm` (Ubuntu 24.04
+container), `.dmg` + `.app.tar.gz` (macOS, aarch64), `.exe` (Windows NSIS).
+All signed for the auto-updater — see
 [`specs/2025-12-13-tauri-updater-setup.md`](../specs/2025-12-13-tauri-updater-setup.md).
+
+## Linux packaging
+
+The `.deb`/`.rpm` and the `.AppImage` cover different distros on purpose.
+
+| Bundle      | Built on       | Runs on                                           |
+| ----------- | -------------- | ------------------------------------------------- |
+| `.deb`      | `ubuntu:24.04` | glibc ≥ 2.39: Ubuntu 24.04+, Debian 13+, Mint 22+ |
+| `.rpm`      | `ubuntu:24.04` | glibc ≥ 2.39: Fedora 40+, openSUSE Leap 16+       |
+| `.AppImage` | `archlinux`    | anything — it bundles glibc and the loader        |
+
+The glibc floor is not a choice: `ort`'s prebuilt ONNX Runtime references
+C23 libc symbols (`__isoc23_strtoull` and friends) added in glibc 2.38, so
+the build container cannot go older than Ubuntu 24.04. Lowering it would
+mean building ONNX Runtime from source.
+
+What matters is that the floor is **declared** rather than discovered at
+runtime. `bundle.linux.{deb,rpm}.depends` in
+[`tauri.conf.json`](../apps/desktop/src-tauri/tauri.conf.json) carries a hard
+`libc6 (>= 2.39)` / `libc.so.6(GLIBC_2.39)(64bit)` dependency, so `apt` and
+`dnf` refuse the install on an older distro instead of installing an app
+that dies at startup with `version 'GLIBC_2.39' not found`. Users below the
+floor get the AppImage.
+
+Two CI gates keep that honest, because none of this reproduces on macOS:
+
+- `check-glibc-floor.sh` compares the declared floor against the
+  `.gnu.version_r` entries in the binary just built, and fails the build if
+  a container bump raised the real requirement.
+- `_verify-linux-packages.yml` installs the artifacts on Ubuntu 24.04,
+  Debian 13 and Fedora, and resolves the binary's libraries with `ldd`. It
+  also asserts the install is **refused** on Debian 12 and AlmaLinux 9.
+
+If you raise the floor, change both `depends` entries and the download
+table in `release.yml` — the floor check enforces the first, not the second.
 
 ## Cutting a release
 
@@ -27,7 +63,9 @@ Desktop builds: `.deb` + `.AppImage` (Ubuntu), `.dmg` (macOS Universal),
 2. The workflow:
    - Verifies (format, type-check, tests). Fast-fails if anything
      doesn't pass.
-   - Builds in parallel for Ubuntu, macOS, Windows.
+   - Builds in parallel for Linux (AppImage and .deb/.rpm), macOS, Windows.
+   - Installs the .deb/.rpm on real distro images and fails the release if
+     they don't install and resolve there.
    - Creates and pushes the `v0.4.5` tag.
    - Generates the changelog from conventional commits since the last
      tag, updates `CHANGELOG.md`.

@@ -186,12 +186,17 @@ jobs:
           echo "Collecting macOS artifacts..."
           find apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle -type f \( -name "*.dmg" -o -name "*.app.tar.gz" \) -exec ls -lh {} \;
 
+      # The shipped installers and the updater sidecars only. The bundle
+      # directory also carries the uncompressed Kaya.app that the .dmg and the
+      # .app.tar.gz were both built from — ~139 MB nothing downstream reads.
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
           path: |
-            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/
+            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+            apps/desktop/src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
           retention-days: ${{ inputs.artifact-retention-days }}
 
       # Save caches only when they were not found

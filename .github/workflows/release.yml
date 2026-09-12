@@ -212,10 +212,20 @@ jobs:
       bun-version: '1.3.2'
     secrets: inherit
 
+  # Install the .deb/.rpm on real distro images before anything is published —
+  # a package that builds is not the same as a package that installs and runs.
+  verify-linux-packages:
+    name: Verify Linux Packages
+    needs: build-linux-deb
+    uses: ./.github/workflows/_verify-linux-packages.yml
+    with:
+      artifact-name: desktop-linux-deb
+
   # Commit version bump and create release ONLY after successful builds
   commit-and-release:
     name: Commit Version & Create Release
-    needs: [build-macos, build-windows, build-linux, build-linux-deb, deploy-web]
+    needs:
+      [build-macos, build-windows, build-linux, build-linux-deb, verify-linux-packages, deploy-web]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -326,6 +336,12 @@ jobs:
             | **Linux** (AppImage) | [.AppImage](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage.sig) |
             | **Linux** (Debian/Ubuntu) | [.deb](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya_${{ github.event.inputs.version }}_amd64.deb) | - |
             | **Linux** (Fedora/RHEL) | [.rpm](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya-${{ github.event.inputs.version }}-1.x86_64.rpm) | - |
+
+            The `.deb` and `.rpm` need **glibc 2.39 or newer** — Ubuntu 24.04+,
+            Debian 13+, Linux Mint 22+, Fedora 40+. On older distros (Ubuntu 22.04,
+            Debian 12, RHEL/Rocky/Alma 9) your package manager will refuse the
+            install; use the **AppImage**, which bundles its own runtime and works
+            everywhere.
 
   bump-dev-version:
     name: Bump to Next Dev Version

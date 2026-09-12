@@ -7,6 +7,11 @@ name: Build Desktop (Linux .deb/.rpm)
 # on 22.04 (glibc 2.35) fails at link time with mold "undefined symbol"
 # errors. 24.04 covers Ubuntu 24.04+, Debian 13+, Mint 22+, Fedora 40+.
 #
+# That 2.39 floor is declared in `bundle.linux.{deb,rpm}.depends` so package
+# managers refuse the install on older distros instead of letting users install
+# an app that dies at startup. `check-glibc-floor.sh` keeps the two in sync, and
+# `_verify-linux-packages.yml` installs the results on real distro images.
+#
 # The Arch-based AppImage build (`_build-linux.yml`) inherits Arch's
 # bleeding-edge glibc (currently 2.43) which is even newer; AppImage
 # bundles its own libs and stays portable. AppImage stays on Arch
@@ -143,11 +148,6 @@ jobs:
             Linux-ubuntu24-cargo-${{ steps.rust_keys.outputs.rustc_hash }}-
             Linux-ubuntu24-cargo-
 
-      # Stable tauri-cli is fine for .deb/.rpm — the truly-portable AppImage
-      # fork is only required for the AppImage bundle, which we don't produce here.
-      - name: Install tauri-cli
-        run: cargo install tauri-cli --version "^2.0" --locked --force
-
       - name: Install dependencies
         run: bun install
 
@@ -182,9 +182,14 @@ jobs:
           bun run build:packages
           cd apps/desktop && npx rsbuild build
 
+      # Uses the `@tauri-apps/cli` devDependency (a prebuilt native addon) rather
+      # than `cargo install tauri-cli`, which spent ~5.5 min recompiling the CLI on
+      # every run. Same bundler code; it just isn't rebuilt from source here. Run
+      # through Node for the same reason rsbuild is (SIGILL under Bun in this
+      # container), and call the binary directly so npx can never reach the network.
       - name: Build desktop app (.deb + .rpm)
         working-directory: apps/desktop
-        run: cargo tauri build --bundles deb,rpm --config '{"build":{"beforeBuildCommand":""}}'
+        run: node_modules/.bin/tauri build --bundles deb,rpm --config '{"build":{"beforeBuildCommand":""}}'
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
@@ -194,21 +199,28 @@ jobs:
         run: |
           echo "Collecting Linux .deb/.rpm artifacts..."
           find apps/desktop/src-tauri/target/release/bundle -type f \( -name "*.deb" -o -name "*.rpm" \) -exec ls -lh {} \;
-          echo ""
-          echo "Verifying glibc compatibility of the binary..."
-          BIN=$(find apps/desktop/src-tauri/target/release -maxdepth 1 -type f -executable | head -1)
-          if [ -n "$BIN" ]; then
-            echo "Binary: $BIN"
-            objdump -T "$BIN" 2>/dev/null | grep -oE 'GLIBC_[0-9.]+' | sort -V -u | tail -5 || true
-          fi
 
+      # Hard gate: the packages promise a glibc floor, so a container bump that
+      # raises the real one must fail here rather than at the user's launch.
+      - name: Check declared glibc floor
+        shell: bash
+        run: |
+          .github/scripts/check-glibc-floor.sh \
+            apps/desktop/src-tauri/target/release/kaya \
+            apps/desktop/src-tauri/tauri.conf.json
+
+      # Only the packages themselves — the bundle directories also hold the
+      # unpacked staging trees (another ~260 MB of files already inside the
+      # .deb/.rpm) which nothing downstream reads.
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
           path: |
-            apps/desktop/src-tauri/target/release/bundle/deb/
-            apps/desktop/src-tauri/target/release/bundle/rpm/
+            apps/desktop/src-tauri/target/release/bundle/deb/*.deb
+            apps/desktop/src-tauri/target/release/bundle/deb/*.deb.sig
+            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm
+            apps/desktop/src-tauri/target/release/bundle/rpm/*.rpm.sig
           retention-days: ${{ inputs.artifact-retention-days }}
 
       - name: Save Cargo registry/git cache (if miss)
