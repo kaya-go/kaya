@@ -14,18 +14,6 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 [features]
 default = []
 
-# Opt-in CoreML on macOS. Off by default: enabling it turns a CPU session into
-# a CoreML model compilation on first load, and that cost on Apple silicon is
-# unmeasured — the failure mode is a minutes-long freeze, not an error the
-# warm-up catches (specs/2026-09-12-ep-cargo-features.md). Measure first load
-# (cold and warm `ep_cache/coreml`) and throughput against CPU on an M-series
-# machine with `cargo run --features coreml`, then flip the default if it wins.
-#
-# macOS only: on Linux or Windows this adds `coreml` to the feature set that
-# `resolve_dist()` matches, no distribution there carries it, and the build
-# fails at link time (`cargo check` still passes — see the spec).
-coreml = ["ort/coreml"]
-
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
@@ -78,12 +66,14 @@ tauri-plugin-window-state = "2.4.1"
 [target.'cfg(target_os = "linux")'.dependencies]
 ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half"] }
 
-# macOS: `coreml` is deliberately NOT enabled by default — see the [features]
-# section below. Leaving it off does not change the download: with an empty
-# feature set `resolve_dist()` still resolves the `coreml` distribution, the
-# only one published for aarch64-apple-darwin.
+# macOS: `coreml` does not change the download — with an empty feature set
+# `resolve_dist()` already resolves the `coreml` distribution, the only one
+# published for aarch64-apple-darwin. It only unlocks the registration call,
+# exactly like `directml` on Windows. Measured on an M3 Max against the CPU EP
+# (specs/2026-09-12-coreml-on-by-default-macos.md): 4.2x throughput at the
+# batch size MCTS uses, for ~8s of one-off model compilation on a cold cache.
 [target.'cfg(target_os = "macos")'.dependencies]
-ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half"] }
+ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "coreml"] }
 
 # Windows: the x86_64-pc-windows-msvc distribution ships DirectML.dll and the
 # build script links the DX12 libraries, so `directml` only unlocks the

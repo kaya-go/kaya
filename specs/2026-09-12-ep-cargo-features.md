@@ -82,12 +82,9 @@ rc.12 and gone in rc.13.
 
 ## Not done
 
-- **`coreml` is left off.** Enabling it is the same one-word change, but it
-  turns a CPU session into a CoreML model compilation on first load, whose
-  cost on Apple silicon we have not measured — the failure mode is a
-  minutes-long freeze, not an error the warm-up can catch. Measure first
-  load (cold and warm `ep_cache/coreml`) and inference throughput against
-  CPU on an M-series machine before flipping it.
+- ~~**`coreml` is left off.**~~ Done the same day: measured on an M3 Max at
+  4.2x the CPU EP for an 8.8s cold first load, and enabled. See
+  [CoreML on by default on macOS](2026-09-12-coreml-on-by-default-macos.md).
 - **`cuda` stays off deliberately.** It is in `resolve_dist()`'s feature
   set, so enabling it swaps the download for the multi-GB
   `cu13,tensorrt,nvrtx,directml` distribution and expects a CUDA runtime on
@@ -126,4 +123,6 @@ rc.12 and gone in rc.13.
 - [ort pinned at 2.0.0-rc.12](2026-08-02-ort-rc13-pinned.md) — the rc.13
   feature/distribution table, and why the bump is deferred
 - [CoreML EP rejects the KataGo b28 model](2026-05-03-coreml-ep-falls-back-to-cpu.md) — superseded by this
+- [CoreML on by default on macOS](2026-09-12-coreml-on-by-default-macos.md) — the
+  measurement this spec deferred, and the macOS half of the fix
 - [PyTorch sidecar for Linux GPU](2026-02-28-pytorch-sidecar-rocm.md)

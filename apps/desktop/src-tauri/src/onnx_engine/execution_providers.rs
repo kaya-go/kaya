@@ -1,9 +1,9 @@
 //! Execution provider configuration and ONNX Runtime initialization
 
 use ort::ep::ExecutionProviderDispatch;
-#[cfg(all(target_os = "macos", feature = "coreml"))]
+#[cfg(target_os = "macos")]
 use ort::ep::CoreML;
-#[cfg(all(target_os = "macos", feature = "coreml"))]
+#[cfg(target_os = "macos")]
 use ort::ep::coreml::{ComputeUnits, ModelFormat, SpecializationStrategy};
 #[cfg(target_os = "windows")]
 use ort::ep::DirectML;
@@ -31,7 +31,7 @@ pub enum ExecutionProviderPreference {
     /// Automatically select the best available provider (GPU first, then CPU)
     #[default]
     Auto,
-    /// Force CoreML (Apple Silicon/Neural Engine); requires the `coreml` feature
+    /// Force CoreML (Apple Silicon/Neural Engine)
     CoreMl,
     /// Force DirectML (Windows GPU)
     DirectMl,
@@ -173,18 +173,17 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
 /// - Model caching: avoids recompiling CoreML model on every session load
 /// - ComputeUnits::All: lets CoreML pick CPU / GPU / Neural Engine per op
 ///
-/// NOTE: this whole path is compiled out unless the `coreml` cargo feature is
-/// on, and it is OFF by default — which is why macOS reports `cpu`. Under
-/// rc.13 `ort::ep::CoreML` itself lives behind `ort/coreml`, so the feature is
-/// no longer just a registration switch: without it the type does not exist.
 /// The 2026-05 "CoreML rejects all 2214 nodes" finding was the missing
-/// registration, not op coverage. Measure before flipping the default — see
-/// `specs/2026-09-12-ep-cargo-features.md` and the `coreml` feature in
-/// `Cargo.toml`.
+/// registration, not op coverage: with `ort/coreml` on, CoreML claims most of
+/// the graph and runs 4.2x faster than the CPU EP at the MCTS batch size
+/// (specs/2026-09-12-coreml-on-by-default-macos.md).
+///
 /// `static_input_shapes` is deliberately left at its default (false) — the
 /// previous code set it to `true`, which made things strictly worse for
-/// other models without unblocking KataGo.
-#[cfg(all(target_os = "macos", feature = "coreml"))]
+/// other models without unblocking KataGo. It is worth re-measuring: the
+/// remaining CPU-side nodes are the `gpool` reshapes CoreML rejects for
+/// having an unbounded batch dimension.
+#[cfg(target_os = "macos")]
 fn build_coreml_provider(cache_dir: Option<&str>) -> ExecutionProviderDispatch {
     let mut ep = CoreML::default()
         .with_model_format(ModelFormat::MLProgram)
@@ -244,13 +243,9 @@ fn candidate_providers(
             {
                 vec![("nnapi", NNAPI::default().build())]
             }
-            #[cfg(all(target_os = "macos", feature = "coreml"))]
+            #[cfg(target_os = "macos")]
             {
                 vec![("coreml", build_coreml_provider(_model_cache_dir))]
-            }
-            #[cfg(all(target_os = "macos", not(feature = "coreml")))]
-            {
-                vec![]
             }
             #[cfg(target_os = "windows")]
             {
@@ -267,14 +262,9 @@ fn candidate_providers(
             }
         }
         ExecutionProviderPreference::CoreMl => {
-            #[cfg(all(target_os = "macos", feature = "coreml"))]
+            #[cfg(target_os = "macos")]
             {
                 vec![("coreml", build_coreml_provider(_model_cache_dir))]
-            }
-            #[cfg(all(target_os = "macos", not(feature = "coreml")))]
-            {
-                eprintln!("[OnnxEngine] CoreML needs the `coreml` cargo feature; this build has it off");
-                vec![]
             }
             #[cfg(not(target_os = "macos"))]
             {
@@ -358,12 +348,11 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     let mut providers = vec![];
     
     // Auto is always available. is_gpu reflects whether this build actually has
-    // a GPU provider to fall back from — on Linux, and on macOS without the
-    // `coreml` feature, "auto" resolves to CPU.
+    // a GPU provider to fall back from — on Linux, "auto" resolves to CPU.
     providers.push(ExecutionProviderInfo {
         name: "auto".to_string(),
         is_gpu: cfg!(any(
-            all(target_os = "macos", feature = "coreml"),
+            target_os = "macos",
             target_os = "windows",
             target_os = "android"
         )),
@@ -380,7 +369,7 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
         description: "Android NNAPI (Neural Networks API)".to_string(),
     });
     
-    #[cfg(all(target_os = "macos", feature = "coreml"))]
+    #[cfg(target_os = "macos")]
     providers.push(ExecutionProviderInfo {
         name: "coreml".to_string(),
         is_gpu: true,
@@ -396,9 +385,8 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
         description: "DirectML (Windows GPU)".to_string(),
     });
     
-    // Linux has no GPU entry, and neither does macOS without the `coreml`
-    // feature: listing a provider this build cannot register is the lie #145
-    // was about.
+    // Linux has no GPU entry: listing a provider this build cannot register is
+    // the lie #145 was about.
     
     // CPU is always available
     providers.push(ExecutionProviderInfo {
@@ -409,4 +397,60 @@ pub fn get_available_providers() -> Vec<ExecutionProviderInfo> {
     });
     
     providers
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The regression #145 was: an EP that never registered, reported as a GPU.
+    /// Assert the platform's GPU provider actually registers, rather than
+    /// trusting that a cargo feature somewhere is still switched on.
+    #[test]
+    fn auto_registers_the_platform_gpu_provider() {
+        let (_builder, provider) =
+            configure_execution_providers(ExecutionProviderPreference::Auto, None)
+                .expect("configuring execution providers should not fail");
+
+        let expected = if cfg!(target_os = "macos") {
+            "coreml"
+        } else if cfg!(target_os = "windows") {
+            "directml"
+        } else if cfg!(target_os = "android") {
+            "nnapi"
+        } else {
+            // Linux ships the CPU-only distribution; GPU is the PyTorch sidecar.
+            "cpu"
+        };
+
+        assert_eq!(
+            provider.name, expected,
+            "'auto' resolved to '{}' — the GPU execution provider did not register",
+            provider.name
+        );
+    }
+
+    /// `get_available_providers` must not advertise a provider this build
+    /// cannot reach: that mismatch is what made the status pill lie.
+    #[test]
+    fn advertised_gpu_providers_can_register() {
+        for info in get_available_providers().into_iter().filter(|p| p.is_gpu) {
+            if info.name == "auto" {
+                continue;
+            }
+            let pref = match info.name.as_str() {
+                "coreml" => ExecutionProviderPreference::CoreMl,
+                "directml" => ExecutionProviderPreference::DirectMl,
+                "nnapi" => ExecutionProviderPreference::Nnapi,
+                other => panic!("unadvertised provider name: {}", other),
+            };
+            let (_builder, provider) = configure_execution_providers(pref, None)
+                .expect("configuring execution providers should not fail");
+            assert_eq!(
+                provider.name, info.name,
+                "'{}' is advertised as a GPU provider but resolved to '{}'",
+                info.name, provider.name
+            );
+        }
+    }
 }

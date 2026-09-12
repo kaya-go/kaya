@@ -10,8 +10,9 @@ export function backendDisplayName(backend: string): string {
     case 'webgpu-gc':
       return 'GPU';
     case 'native':
+      return 'Native GPU';
     case 'native-cpu':
-      return 'Native';
+      return 'Native CPU';
     case 'pytorch':
       return 'PyTorch GPU';
     case 'wasm':

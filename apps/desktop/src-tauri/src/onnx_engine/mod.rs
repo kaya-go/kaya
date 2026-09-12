@@ -1,9 +1,9 @@
 //! Native ONNX Runtime engine for KataGo inference
 //!
 //! This module provides AI analysis using native ONNX Runtime, with GPU
-//! acceleration via DirectML (Windows), NNAPI (Android), or CoreML on macOS
-//! behind the opt-in `coreml` cargo feature. Linux ships the CPU-only ONNX
-//! Runtime distribution; GPU inference there goes through the PyTorch sidecar.
+//! acceleration via DirectML (Windows), NNAPI (Android) or CoreML (macOS).
+//! Linux ships the CPU-only ONNX Runtime distribution; GPU inference there
+//! goes through the PyTorch sidecar.
 
 mod execution_providers;
 mod featurization;

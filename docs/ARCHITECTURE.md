@@ -176,12 +176,12 @@ Which execution provider a native session gets is **observed, not assumed**:
 that never loaded. A provider is only reachable if its `ort` cargo feature
 is enabled — that is what the desktop builds currently ship:
 
-| Platform | Provider | Cargo feature        | Notes                                               |
-| -------- | -------- | -------------------- | --------------------------------------------------- |
-| Windows  | DirectML | `directml` ✅        | GPU path; the pyke ORT build always includes it     |
-| macOS    | CoreML   | `coreml` (opt-in) ❌ | Off by default — `cargo run --features coreml`      |
-| Linux    | —        | —                    | CPU distribution; GPU is the PyTorch sidecar        |
-| Android  | NNAPI    | `nnapi` ✅           | Nothing downloaded; `load-dynamic` supplies the .so |
+| Platform | Provider | Cargo feature | Notes                                               |
+| -------- | -------- | ------------- | --------------------------------------------------- |
+| Windows  | DirectML | `directml` ✅ | GPU path; the pyke ORT build always includes it     |
+| macOS    | CoreML   | `coreml` ✅   | 4.2x over the CPU EP at the MCTS batch size         |
+| Linux    | —        | —             | CPU distribution; GPU is the PyTorch sidecar        |
+| Android  | NNAPI    | `nnapi` ✅    | Nothing downloaded; `load-dynamic` supplies the .so |
 
 Since `ort` 2.0.0-rc.13 an EP feature does a **second** job: for the desktop
 targets it also picks which prebuilt ONNX Runtime binary `download-binaries`
@@ -194,13 +194,19 @@ than sitting in the candidate chain: `cuda` would swap the download for the
 multi-GB CUDA distribution, and no published Linux distribution carries
 MIGraphX.
 
-`coreml` is a Kaya cargo feature (`coreml = ["ort/coreml"]`), off by default,
-so the whole CoreML path compiles out. See
+Every EP feature is declared on its platform's dependency line, never as a
+Kaya cargo feature: a feature nobody passes is a provider nobody gets, and
+the resulting CPU session is indistinguishable from a deliberate one. See
 [`specs/2026-09-12-ep-cargo-features.md`](../specs/2026-09-12-ep-cargo-features.md)
-for why a missing feature silently downgrades to CPU and what to measure
-before enabling it, and
+for why a missing feature silently downgrades to CPU,
+[`specs/2026-09-12-coreml-on-by-default-macos.md`](../specs/2026-09-12-coreml-on-by-default-macos.md)
+for the macOS measurements and the first-load cost, and
 [`specs/2026-09-12-ort-rc13-migration.md`](../specs/2026-09-12-ort-rc13-migration.md)
 for the distribution tables.
+
+`apps/desktop/src-tauri/examples/ep_bench.rs` reproduces those numbers: it
+mirrors `OnnxEngine::new` exactly and takes `--provider coreml|cpu`,
+`--batch`, and `--cold` (wipes the compiled-model cache).
 
 ### 6. Native audio bypasses the webview on desktop
 
