@@ -12,6 +12,8 @@ import {
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
 import { isTauriApp } from '@kaya/platform';
+import { modelCacheIdFromStorageId } from '../../contexts/ai/engineLoader';
+import { listDiskCachedModels, type DiskCachedModel } from '../../services/modelDiskCache';
 import { PREDEFINED_MODELS } from './ai-analysis-types';
 
 export function useModelLibrary() {
@@ -32,6 +34,17 @@ export function useModelLibrary() {
         const storedMetadata = await loadModelLibrary();
         const storedIds = await getStoredModelIds();
         const savedSelectedId = await loadSelectedModelId();
+        const diskModels = await listDiskCachedModels();
+
+        // Disk entries claimed by a known model; whatever is left over is a
+        // model whose IndexedDB metadata is gone but whose bytes are still here.
+        const claimedDiskIds = new Set<string>();
+        const onDisk = (id: string): DiskCachedModel | undefined => {
+          const cacheId = modelCacheIdFromStorageId(id);
+          const entry = diskModels.get(cacheId);
+          if (entry) claimedDiskIds.add(cacheId);
+          return entry;
+        };
 
         // Build library from predefined models + stored user models
         const library: AIModelEntry[] = [];
@@ -39,7 +52,8 @@ export function useModelLibrary() {
         // Add predefined models
         for (const preset of PREDEFINED_MODELS) {
           const storedMeta = storedMetadata.find(m => m.id === preset.id);
-          const isDownloaded = storedIds.includes(preset.id);
+          const disk = onDisk(preset.id);
+          const isDownloaded = storedIds.includes(preset.id) || disk !== undefined;
 
           library.push({
             id: preset.id,
@@ -52,26 +66,42 @@ export function useModelLibrary() {
             baseModelIndex: preset.baseModelIndex,
             quantization: preset.quantization,
             isDownloaded,
-            size: storedMeta?.size,
-            date: storedMeta?.date,
+            size: storedMeta?.size ?? disk?.size,
+            date: storedMeta?.date ?? disk?.modified,
           });
         }
 
         // Add user-uploaded models
         const userModels = storedMetadata.filter(m => m.isUserModel);
         for (const userModel of userModels) {
-          const isDownloaded = storedIds.includes(userModel.id);
+          const disk = onDisk(userModel.id);
+          const isDownloaded = storedIds.includes(userModel.id) || disk !== undefined;
           if (isDownloaded) {
             library.push({
               id: userModel.id,
               name: userModel.name,
               description: userModel.description,
-              size: userModel.size,
-              date: userModel.date,
+              size: userModel.size ?? disk?.size,
+              date: userModel.date ?? disk?.modified,
               isDownloaded: true,
               isUserModel: true,
             });
           }
+        }
+
+        // Recover models that only exist on disk. Their cache ID is all we
+        // have left of the original name, so it doubles as the display name.
+        for (const [cacheId, disk] of diskModels) {
+          if (claimedDiskIds.has(cacheId)) continue;
+          library.push({
+            id: cacheId,
+            name: cacheId,
+            description: '',
+            size: disk.size,
+            date: disk.modified,
+            isDownloaded: true,
+            isUserModel: true,
+          });
         }
 
         setModelLibrary(library);
@@ -168,7 +198,7 @@ export function useModelLibrary() {
 
             // Disk cache is the source of truth on Tauri — skip the IndexedDB
             // mirror (would re-read $APPDATA via plugin-fs, rejected on Linux, #103).
-            const modelCacheId = id.replace(/[^a-zA-Z0-9-_]/g, '_');
+            const modelCacheId = modelCacheIdFromStorageId(id);
             const cacheResult = await invoke<{ path: string; size: number }>(
               'onnx_cache_downloaded_file',
               { tempPath, modelId: modelCacheId }
@@ -296,7 +326,9 @@ export function useModelLibrary() {
             const invoke = w.__TAURI__?.core?.invoke || w.__TAURI_INTERNALS__?.invoke;
 
             if (typeof invoke === 'function') {
-              await invoke('onnx_delete_cached_model', { modelId: id });
+              await invoke('onnx_delete_cached_model', {
+                modelId: modelCacheIdFromStorageId(id),
+              });
             }
           } catch (tauriErr) {
             console.warn('[AI:Download] Failed to delete model from Tauri cache:', tauriErr);
