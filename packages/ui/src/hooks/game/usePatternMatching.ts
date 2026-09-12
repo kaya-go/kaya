@@ -118,6 +118,7 @@ export function usePatternMatching({
     currentNode,
     gameTree,
     gameInfo.boardSize,
+    gameInfo.boardHeight,
     patternMatchingEnabled,
   ]);
 

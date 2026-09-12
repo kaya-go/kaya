@@ -44,3 +44,6 @@ CHANGELOG.md
 
 # CLA signatures (auto-generated, not subject to formatting)
 .github/cla-signatures.json
+
+# Claude Code worktrees
+.claude/
