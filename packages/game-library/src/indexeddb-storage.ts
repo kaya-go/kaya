@@ -118,6 +118,29 @@ export class IndexedDBStorage implements LibraryStorage {
     return getStore(this.db, mode);
   }
 
+  /**
+   * Read an item, transform it and write it back inside ONE transaction.
+   *
+   * Reading through one transaction and writing through another leaves a
+   * window for a concurrent writer: the second write is built on a record
+   * read before the first landed, so it silently reverts it. An autosave
+   * racing a rename did exactly that, restoring the pre-save game content.
+   */
+  private async mutateItem<T extends LibraryItem>(
+    id: LibraryItemId,
+    transform: (current: LibraryItem) => T
+  ): Promise<T> {
+    const store = this.getStoreFromDb('readwrite');
+    const current = await idbRequest<LibraryItem | null>(store.get(id));
+    if (!current) {
+      throw new Error('Item not found');
+    }
+    const updated = transform(current);
+    // Same `store`, so the put rides the transaction the get was issued on.
+    await idbRequest(store.put(updated));
+    return updated;
+  }
+
   async getItems(parentId: LibraryItemId | null = null): Promise<LibraryItem[]> {
     await this.ensureInitialized();
     const store = this.getStoreFromDb();
@@ -236,18 +259,14 @@ export class IndexedDBStorage implements LibraryStorage {
     }
 
     const metadata = extractSGFMetadata(content);
-    const updatedFile: LibraryFile = {
-      ...item,
+
+    return this.mutateItem<LibraryFile>(id, current => ({
+      ...(current as LibraryFile),
       content,
       metadata,
       size: new Blob([content]).size,
       updatedAt: now(),
-    };
-
-    const store = this.getStoreFromDb('readwrite');
-    await idbRequest(store.put(updatedFile));
-
-    return updatedFile;
+    }));
   }
 
   async renameItem(options: RenameItemOptions): Promise<LibraryItem> {
@@ -264,16 +283,11 @@ export class IndexedDBStorage implements LibraryStorage {
     const sanitizedName = sanitizeFilename(newName);
     const uniqueName = makeUniqueName(sanitizedName, siblings, itemId);
 
-    const updatedItem: LibraryItem = {
-      ...item,
+    return this.mutateItem(itemId, current => ({
+      ...current,
       name: uniqueName,
       updatedAt: now(),
-    };
-
-    const store = this.getStoreFromDb('readwrite');
-    await idbRequest(store.put(updatedItem));
-
-    return updatedItem;
+    }));
   }
 
   async moveItem(options: MoveItemOptions): Promise<LibraryItem> {
@@ -299,15 +313,12 @@ export class IndexedDBStorage implements LibraryStorage {
     const newSiblings = await this.getItems(newParentId);
     const uniqueName = makeUniqueName(item.name, newSiblings, itemId);
 
-    const updatedItem: LibraryItem = {
-      ...item,
+    const updatedItem = await this.mutateItem(itemId, current => ({
+      ...current,
       name: uniqueName,
       parentId: newParentId,
       updatedAt: now(),
-    };
-
-    const store = this.getStoreFromDb('readwrite');
-    await idbRequest(store.put(updatedItem));
+    }));
 
     // Update folder counts
     if (oldParentId) {
@@ -390,14 +401,11 @@ export class IndexedDBStorage implements LibraryStorage {
 
     const children = await this.getItems(folderId);
 
-    const updatedFolder: LibraryFolder = {
-      ...folder,
+    await this.mutateItem<LibraryFolder>(folderId, current => ({
+      ...(current as LibraryFolder),
       itemCount: children.length,
       updatedAt: now(),
-    };
-
-    const store = this.getStoreFromDb('readwrite');
-    await idbRequest(store.put(updatedFolder));
+    }));
   }
 
   private async isDescendant(

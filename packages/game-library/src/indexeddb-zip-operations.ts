@@ -16,7 +16,7 @@ import type {
   ImportResult,
   ExportResult,
 } from './types';
-import { ensureSGFExtension } from './utils';
+import { normalizeImportedSGFName } from './utils';
 
 /**
  * Interface for storage operations needed by ZIP import/export.
@@ -81,8 +81,12 @@ export async function importZipToStorage(
 
     // Second pass: create files
     const files: Array<{ path: string; file: JSZipType.JSZipObject }> = [];
+    // Also match "game.sgf (1)": archives exported by older versions numbered
+    // duplicates after the extension, and matching on ".sgf" alone skipped
+    // those entries without reporting anything.
+    const SGF_ENTRY = /\.sgf(\s*\(\d+\))?$/i;
     zip.forEach((relativePath: string, file: JSZipType.JSZipObject) => {
-      if (!file.dir && relativePath.toLowerCase().endsWith('.sgf')) {
+      if (!file.dir && SGF_ENTRY.test(relativePath)) {
         files.push({ path: relativePath, file });
       }
     });
@@ -96,7 +100,7 @@ export async function importZipToStorage(
         const parentId = parentPath ? folderMap.get(parentPath) || null : null;
 
         await storage.createFile({
-          name: ensureSGFExtension(fileName),
+          name: normalizeImportedSGFName(fileName),
           content,
           parentId,
         });

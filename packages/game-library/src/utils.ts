@@ -91,13 +91,43 @@ export function removeExtension(filename: string): string {
   return lastDot >= 0 ? filename.substring(0, lastDot) : filename;
 }
 
+/**
+ * Does the tail after the last dot look like a file extension?
+ *
+ * "game.txt" does, "Lee Sedol vs. AlphaGo" and "2024.03.15 game" do not: a
+ * real extension is short and has no spaces. Without this check, replacing
+ * "the extension" truncates any name that merely contains a dot.
+ */
+function hasFileExtension(filename: string): boolean {
+  const ext = getExtension(filename);
+  return ext.length > 1 && /^\.[A-Za-z0-9]{1,8}$/.test(ext);
+}
+
 /** Ensure .sgf extension */
 export function ensureSGFExtension(filename: string): string {
-  const ext = getExtension(filename).toLowerCase();
-  if (ext === '.sgf') {
+  if (getExtension(filename).toLowerCase() === '.sgf') {
     return filename;
   }
-  return `${removeExtension(filename)}.sgf`;
+  if (hasFileExtension(filename)) {
+    return `${removeExtension(filename)}.sgf`;
+  }
+  return `${filename}.sgf`;
+}
+
+/**
+ * Repair a file name coming from a ZIP archive.
+ *
+ * Kaya used to disambiguate duplicates after the extension, writing
+ * "game.sgf (1)" into the archive. Such an entry no longer ends in ".sgf", so
+ * a plain import would skip it and silently drop the file. Move the counter
+ * back where it belongs.
+ */
+export function normalizeImportedSGFName(filename: string): string {
+  const legacyDuplicate = /^(.*)\.sgf\s*\((\d+)\)$/i.exec(filename);
+  if (legacyDuplicate) {
+    return `${legacyDuplicate[1]} (${legacyDuplicate[2]}).sgf`;
+  }
+  return ensureSGFExtension(filename);
 }
 
 /** Format file size for display */
@@ -163,12 +193,18 @@ export function makeUniqueName(
     return baseName;
   }
 
+  // Number before the extension: "game (1).sgf", never "game.sgf (1)", which
+  // would stop the file from being recognised as SGF once it leaves the
+  // library (ZIP export then import used to drop those silently).
+  const extension = getExtension(baseName).toLowerCase() === '.sgf' ? getExtension(baseName) : '';
+  const stem = extension ? baseName.slice(0, -extension.length) : baseName;
+
   let counter = 1;
-  let newName = `${baseName} (${counter})`;
+  let newName = `${stem} (${counter})${extension}`;
 
   while (isNameTaken(newName, items, excludeId)) {
     counter++;
-    newName = `${baseName} (${counter})`;
+    newName = `${stem} (${counter})${extension}`;
   }
 
   return newName;
