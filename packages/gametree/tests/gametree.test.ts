@@ -190,3 +190,57 @@ describe('Serialization', () => {
     expect(newTree.get(1)).not.toBe(null);
   });
 });
+
+// ============================================================================
+// Immutability of the base tree
+// ============================================================================
+
+describe('Draft isolation', () => {
+  test('removeNode makes the whole removed subtree unresolvable', () => {
+    const tree = createSimpleTree();
+
+    const next = tree.mutate(draft => {
+      // Warm the cache for a descendant before its ancestor goes away.
+      draft.get(2);
+      draft.removeNode(1);
+    });
+
+    expect(next.get(1)).toBeNull();
+    expect(next.get(2)).toBeNull();
+    expect(next.get(3)).toBeNull();
+    // The untouched branch is still there.
+    expect(next.get(4)?.data.B).toEqual(['dp']);
+  });
+
+  test('the source tree keeps resolving a removed subtree', () => {
+    const tree = createSimpleTree();
+    tree.mutate(draft => draft.removeNode(1));
+
+    expect(tree.get(1)?.data.B).toEqual(['dd']);
+    expect(tree.get(2)?.data.W).toEqual(['pp']);
+  });
+
+  test('a merge in a draft does not alias ids on the source tree', () => {
+    let nextId = 10;
+    const tree = new GameTree<SGFData>({
+      getId: () => nextId++,
+      // Merge anything into the first child, the way a real merger would when
+      // the same move is played twice.
+      merger: (node, data) => ({ ...node.data, ...data }),
+      root: {
+        id: 0,
+        data: { C: ['root'] },
+        parentId: null,
+        children: [{ id: 1, data: { B: ['dd'] }, parentId: 0, children: [] }],
+      },
+    });
+
+    const next = tree.mutate(draft => {
+      draft.UNSAFE_appendNodeWithId(0, 99, { B: ['dd'] });
+    });
+
+    // 99 never existed in the source tree and must not start resolving there.
+    expect(tree.get(99)).toBeNull();
+    expect(next.get(99)?.id).toBe(1);
+  });
+});

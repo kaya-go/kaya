@@ -21,7 +21,10 @@ export class Draft<T = Record<string, Primitive[]>> {
     this.root = base.root;
     this._passOnNodeCache = true;
     this._nodeCache = {};
-    this._idAliases = base._idAliases;
+    // Copied, not shared: mutating a draft must never reach back into the tree
+    // it was derived from. A merger adding an alias here used to make the base
+    // tree resolve an id that never existed in it.
+    this._idAliases = { ...base._idAliases };
     this._heightCache = base._heightCache;
     this._structureHashCache = base._structureHashCache;
   }
@@ -150,7 +153,16 @@ export class Draft<T = Record<string, Primitive[]>> {
     if (index >= 0) parent.children.splice(index, 1);
     else return false;
 
-    this._nodeCache[id] = null;
+    // Invalidate the whole subtree, not just the removed node: a descendant
+    // left in the cache stays resolvable by id on the resulting tree even
+    // though it is no longer part of it.
+    const stack: GameTreeNode<T>[] = [node];
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+      this._nodeCache[current.id] = null;
+      stack.push(...current.children);
+    }
+
     this._structureHashCache = null;
     this._heightCache = null;
 
