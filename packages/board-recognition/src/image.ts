@@ -171,30 +171,3 @@ export function boardMask(
 
   return mask;
 }
-
-/**
- * Erode a binary mask by the given radius (square kernel).
- */
-export function erodeMask(
-  mask: Uint8Array,
-  width: number,
-  height: number,
-  radius: number
-): Uint8Array {
-  const out = new Uint8Array(width * height);
-  for (let y = radius; y < height - radius; y++) {
-    for (let x = radius; x < width - radius; x++) {
-      let allSet = true;
-      outer: for (let dy = -radius; dy <= radius; dy++) {
-        for (let dx = -radius; dx <= radius; dx++) {
-          if (!mask[(y + dy) * width + (x + dx)]) {
-            allSet = false;
-            break outer;
-          }
-        }
-      }
-      out[y * width + x] = allSet ? 1 : 0;
-    }
-  }
-  return out;
-}

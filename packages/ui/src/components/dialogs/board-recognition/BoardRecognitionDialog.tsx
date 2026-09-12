@@ -26,6 +26,7 @@ import { useLayoutMode } from '../../../hooks/useMediaQuery';
 import { useGameTree } from '../../../contexts/GameTreeContext';
 import { computeDeltaStones, type DeltaStone } from './utils/deltaStones';
 import './styles/BoardRecognitionDialog.css';
+import './styles/BoardRecognitionDialogMobile.css';
 import './styles/BoardRecognitionDialogControls.css';
 import './styles/BoardRecognitionDialogCanvas.css';
 

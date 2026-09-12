@@ -1,0 +1,87 @@
+/* =============================
+ * ScoreEstimator - Responsive overrides
+ * ============================= */
+
+/* =============================
+ * Mobile compact (< 768px)
+ * ============================= */
+
+@media (max-width: 767px) {
+  .score-estimator {
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .score-result-banner {
+    padding: 8px 10px;
+  }
+
+  .score-result-text {
+    font-size: 14px;
+  }
+
+  .score-totals-row {
+    padding: 4px 2px;
+  }
+
+  .score-total-name {
+    font-size: 12px;
+    max-width: 60px;
+  }
+
+  .score-total-value {
+    font-size: 15px;
+  }
+
+  .score-action-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    height: 34px;
+  }
+
+  .score-help {
+    font-size: 10px;
+  }
+}
+
+/* =============================
+ * Landscape / short screens (< 500px height)
+ * ============================= */
+
+@media (max-height: 500px) {
+  .score-estimator {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .score-result-banner {
+    padding: 4px 8px;
+    border-width: 1px;
+  }
+
+  .score-result-text {
+    font-size: 13px;
+  }
+
+  .score-totals-row {
+    padding: 2px;
+  }
+
+  .score-details-section {
+    display: none;
+  }
+
+  .score-actions {
+    padding-top: 2px;
+  }
+
+  .score-action-btn {
+    height: 30px;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .score-help {
+    display: none;
+  }
+}

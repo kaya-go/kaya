@@ -12,6 +12,7 @@ import { LuCalculator, LuLoader, LuX, LuChevronDown, LuChevronUp, LuTrophy } fro
 import { useLayoutMode } from '../../hooks/useMediaQuery';
 import { type ScoreData } from '../../types/game';
 import './ScoreEstimator.css';
+import './ScoreEstimator.responsive.css';
 
 interface ScoreEstimatorProps {
   scoreData: ScoreData;

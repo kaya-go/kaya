@@ -1,22 +1,6 @@
 import type { GoBoard, Sign } from '@kaya/goboard';
 
 /**
- * Featurize a single board position into the input tensors.
- */
-export function featurize(
-  board: GoBoard,
-  pla: Sign,
-  komi: number,
-  history: { color: Sign; x: number; y: number }[],
-  size: number
-) {
-  const bin_input = new Float32Array(22 * size * size);
-  const global_input = new Float32Array(19);
-  featurizeToBuffer(board, pla, komi, history, bin_input, global_input, 0, size);
-  return { bin_input, global_input };
-}
-
-/**
  * Featurize a board position into pre-allocated buffers at a given batch index.
  */
 export function featurizeToBuffer(
