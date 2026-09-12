@@ -165,10 +165,29 @@ command), zero IPC overhead per playout. Web: MCTS runs in the Web Worker
 that owns the ORT session, batching inference across playouts.
 
 The native ONNX engine keeps **one session per engine** with the model's
-natural dynamic axes — see [`specs/2026-05-03-onnx-engine-single-session.md`](../specs/2026-05-03-onnx-engine-single-session.md). On macOS, CoreML EP currently rejects the
-KataGo b28 model and runs on CPU — see [`specs/2026-05-03-coreml-ep-falls-back-to-cpu.md`](../specs/2026-05-03-coreml-ep-falls-back-to-cpu.md).
+natural dynamic axes — see [`specs/2026-05-03-onnx-engine-single-session.md`](../specs/2026-05-03-onnx-engine-single-session.md).
 WebGPU is unavailable in Tauri's webview on Mac/Linux — see
 [`specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md`](../specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md).
+
+Which execution provider a native session gets is **observed, not assumed**:
+`configure_execution_providers` appends each candidate with ORT's
+`error_on_failure()` and reports back the one that registered, so
+`provider_name` is always concrete and the status pill cannot claim a GPU
+that never loaded. A provider is only reachable if its `ort` cargo feature
+is enabled — that is what the desktop builds currently ship:
+
+| Platform | Provider | Cargo feature     | Notes                                           |
+| -------- | -------- | ----------------- | ----------------------------------------------- |
+| Windows  | DirectML | `directml` ✅     | GPU path; the pyke ORT build always includes it |
+| Windows  | CUDA     | `cuda` ❌         | Needs the multi-GB CUDA distribution            |
+| macOS    | CoreML   | `coreml` ❌       | Falls back to CPU until measured on device      |
+| Linux    | MIGraphX | `migraphx` ❌     | No published Linux build ships it               |
+| Linux    | —        | —                 | GPU goes through the PyTorch sidecar            |
+| Android  | NNAPI    | `load-dynamic` ✅ | Registration comes from dynamic loading         |
+
+See [`specs/2026-09-12-ep-cargo-features.md`](../specs/2026-09-12-ep-cargo-features.md)
+for why a missing feature silently downgrades to CPU, and what to measure
+before enabling `coreml`.
 
 ### 6. Native audio bypasses the webview on desktop
 

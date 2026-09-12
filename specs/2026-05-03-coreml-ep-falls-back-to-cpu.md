@@ -1,10 +1,19 @@
 ---
 date: 2026-05-03
-status: reference
+status: superseded
 scope: ai/coreml
 ---
 
 # CoreML EP rejects the KataGo b28 model on macOS
+
+> **Superseded by [Execution providers never registered](2026-09-12-ep-cargo-features.md).**
+> The CoreML EP was never registered at all: `ort` gates
+> `CoreML::register()` behind the `coreml` cargo feature, which this build
+> did not enable, so `register()` returned `MissingFeature` and the session
+> was built with the CPU provider only. Both observations below — all 2214
+> nodes on CPU, and a silent `coreml` log stream — are what that looks like.
+> Op coverage was never actually established. The conclusions kept: the
+> defensive CoreML config is harmless, and macOS does run on CPU today.
 
 ORT 2.0.0-rc.12's CoreML execution provider takes **0 of 2214 nodes**
 from the KataGo `kata1-b28c512nbt-s11165M` ONNX model. Every op falls
