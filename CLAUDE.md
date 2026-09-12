@@ -9,6 +9,9 @@
 ## Behavior Rules
 
 1. **Compilation testing** — Use `bun run type-check` or `bun run build:packages` to verify changes.
+   `type-check` is not a superset: apps and `@kaya/ui` resolve the other packages through their
+   built `dist` types, so a change to a package's public types only shows up under
+   `build:packages`. Run both when you touch a type that crosses a package boundary.
 2. **Git commits** — **Never** commit automatically unless explicitly asked. When asked to commit, the request applies **only to the work completed so far**, not to any future tasks in the conversation.
 3. **Responsive design** — All new UI components, layouts, and UX patterns **must** be adapted for:
    - Desktop screens
@@ -48,6 +51,7 @@ bun run build:packages # Rebuild all packages
 
 # Quality
 bun run format         # Prettier + markdownlint
+bun run lint           # oxlint (React hooks rules)
 bun run type-check     # All packages + apps
 bun run clean          # Remove build artifacts
 

@@ -143,6 +143,13 @@ new live also drops in-flight live), centralizes cancellation
 cache that's shared with `GameTreeContext.analysisCache` so SGF `KA`
 persistence Just Works against the same Map.
 
+Preemption reaches into the engine: `analyzeBatch` checks the abort signal
+between inference chunks and throws an `AbortError` carrying the positions it
+already finished, which the queue caches. So a live request cuts in front of a
+full-game analysis without that analysis losing its progress. The desktop path
+hands a whole batch to one native call, so there it can only abort before
+dispatching.
+
 `useLiveAnalysis` and `useFullGameAnalysis` are thin submitters — they
 no longer carry their own coordination state. They use independent
 visit-count settings (`numVisits` and `fullGameNumVisits`): live
@@ -163,7 +170,7 @@ KataGo b28 model and runs on CPU — see [`specs/2026-05-03-coreml-ep-falls-back
 WebGPU is unavailable in Tauri's webview on Mac/Linux — see
 [`specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md`](../specs/2026-05-03-webgpu-unavailable-in-tauri-webview.md).
 
-### 5. Native audio bypasses the webview on desktop
+### 6. Native audio bypasses the webview on desktop
 
 Desktop uses **rodio** (with the `lewton` Vorbis decoder feature) directly
 instead of HTML `<audio>` — WebKitGTK + GStreamer is broken in AppImage
@@ -171,14 +178,14 @@ builds. Tauri commands: `audio_init`, `audio_play_sound`, `audio_check`.
 Code in [`apps/desktop/src-tauri/src/audio.rs`](../apps/desktop/src-tauri/src/audio.rs).
 Android stubs in `audio_stub.rs`.
 
-### 6. Tauri v2 imports
+### 7. Tauri v2 imports
 
 ```ts
 import { invoke } from '@tauri-apps/api/core'; // ✅
 // not @tauri-apps/api/tauri (that's v1)
 ```
 
-### 7. Keyboard shortcuts are centralized and customizable
+### 8. Keyboard shortcuts are centralized and customizable
 
 [`packages/ui/src/hooks/useKeyboardShortcuts.ts`](../packages/ui/src/hooks/useKeyboardShortcuts.ts).
 Add new IDs to the `ShortcutId` union and `DEFAULT_SHORTCUTS`, and add
@@ -219,3 +226,17 @@ const move = node.data.B?.[0] ?? node.data.W?.[0];
 - **SGF properties are arrays** — `node.data.C?.[0]`, not `node.data.C`.
 - **Workspace deps** — always `workspace:*` in `package.json`.
 - **Cache invalidation** — `clearAllCaches()` on every game load.
+
+### 9. `boardSize` is a width, and rectangular boards only go so far
+
+SGF's `SZ` is either a number or `width:height`. `GameInfo.boardSize` is the
+width; `GameInfo.boardHeight` is set **only** when the board is rectangular.
+Board reconstruction honours both, so a `SZ[9:13]` game loads, displays and
+plays correctly, and the LRU cache key includes the height.
+
+Everything downstream of analysis still assumes a square board — the ONNX
+featurizer is `size * size`, and scoring and dead-stone estimation follow the
+same assumption. Analysis on a rectangular board is not supported. If you add
+a code path that builds a board from `GameInfo`, pass `boardHeight` through;
+if you add one that feeds a model, a square board is a precondition to check,
+not an assumption to inherit.
