@@ -57,6 +57,24 @@ jobs:
             kind: rpm
             expect: refuse
     steps:
+      # git matters more than it looks: without it, actions/checkout falls back to
+      # the REST API tarball, and this repo's .gitattributes marks `.github` and
+      # `scripts` as export-ignore — so the fallback silently produces a checkout
+      # with no scripts in it. The build jobs only work because they install git
+      # for other reasons.
+      - name: Install git for the checkout
+        shell: sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eu
+          if [ "${{ matrix.kind }}" = "deb" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends git ca-certificates
+          else
+            dnf install -y git
+          fi
+
       - uses: actions/checkout@v7
 
       - name: Download packages

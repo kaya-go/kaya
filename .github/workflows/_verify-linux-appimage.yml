@@ -45,8 +45,14 @@ jobs:
             image: fedora:latest
             family: rhel
     steps:
-      # Xvfb and procps are the whole host-side requirement — if the bundle
-      # needed anything else from the distro, it would not be self-contained.
+      # Xvfb and procps are the whole host-side requirement for the app — if the
+      # bundle needed anything else from the distro, it would not be
+      # self-contained.
+      #
+      # git is for the checkout, not the app: without it, actions/checkout falls
+      # back to the REST API tarball, and this repo's .gitattributes marks
+      # `.github` and `scripts` as export-ignore — so the fallback silently
+      # produces a checkout with no scripts in it.
       - name: Install a virtual display
         shell: sh
         env:
@@ -55,9 +61,9 @@ jobs:
           set -eu
           if [ "${{ matrix.family }}" = "debian" ]; then
             apt-get update -qq
-            apt-get install -y --no-install-recommends xvfb procps
+            apt-get install -y --no-install-recommends xvfb procps git ca-certificates
           else
-            dnf install -y xorg-x11-server-Xvfb procps-ng
+            dnf install -y xorg-x11-server-Xvfb procps-ng git
           fi
 
       - uses: actions/checkout@v7

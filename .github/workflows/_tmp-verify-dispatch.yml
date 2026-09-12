@@ -1,0 +1,128 @@
+name: TEMP Verify Dispatch
+
+# TEMPORARY — delete before merging.
+# Runs the Linux verification matrices against artifacts from an existing run so
+# the gates can be iterated on in ~3 min instead of rebuilding for ~22.
+
+on:
+  workflow_dispatch:
+    inputs:
+      source-run-id:
+        description: 'Run ID whose artifacts to verify'
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  appimage:
+    name: AppImage - ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 22.04
+            image: ubuntu:22.04
+            family: debian
+          - name: Debian 12
+            image: debian:12
+            family: debian
+          - name: AlmaLinux 9
+            image: almalinux:9
+            family: rhel
+          - name: Fedora latest
+            image: fedora:latest
+            family: rhel
+    steps:
+      - name: Install a virtual display
+        shell: sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eu
+          if [ "${{ matrix.family }}" = "debian" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends xvfb procps git ca-certificates
+          else
+            dnf install -y xorg-x11-server-Xvfb procps-ng git
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: nightly-linux
+          path: bundle
+          run-id: ${{ inputs.source-run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Launch it
+        shell: bash
+        run: |
+          APPIMAGE=$(find bundle -name '*.AppImage' -type f | head -1)
+          .github/scripts/smoke-run-appimage.sh "$APPIMAGE"
+
+  packages:
+    name: Package - ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Ubuntu 24.04 (.deb)
+            image: ubuntu:24.04
+            kind: deb
+            expect: install
+          - name: Debian 13 (.deb)
+            image: debian:13
+            kind: deb
+            expect: install
+          - name: Fedora latest (.rpm)
+            image: fedora:latest
+            kind: rpm
+            expect: install
+          - name: Debian 12 (.deb, must refuse)
+            image: debian:12
+            kind: deb
+            expect: refuse
+          - name: AlmaLinux 9 (.rpm, must refuse)
+            image: almalinux:9
+            kind: rpm
+            expect: refuse
+    steps:
+      - name: Install git for the checkout
+        shell: sh
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          set -eu
+          if [ "${{ matrix.kind }}" = "deb" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends git ca-certificates
+          else
+            dnf install -y git
+          fi
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: nightly-linux-deb
+          path: packages
+          run-id: ${{ inputs.source-run-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify package
+        shell: bash
+        env:
+          KIND: ${{ matrix.kind }}
+          EXPECT: ${{ matrix.expect }}
+          DEBIAN_FRONTEND: noninteractive
+        run: .github/scripts/verify-linux-package.sh packages
