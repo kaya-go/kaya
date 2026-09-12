@@ -48,14 +48,9 @@ async function folder(id: string): Promise<LibraryFolder> {
   return item as LibraryFolder;
 }
 
-/**
- * Assert an id is no longer stored.
- *
- * `getItem` is typed `LibraryItem | null` but hands back IndexedDB's raw
- * `undefined` for a missing key, so normalise before comparing.
- */
+/** Assert an id is no longer stored. */
 async function expectGone(id: string): Promise<void> {
-  expect((await storage.getItem(id)) ?? null).toBe(null);
+  expect(await storage.getItem(id)).toBe(null);
 }
 
 /**
@@ -112,16 +107,25 @@ describe('files', () => {
     expect(await file(created.id)).toEqual(created);
   });
 
-  test('rejects content the SGF parser cannot make a game out of', async () => {
-    // `isValidSGF` only rules out content that parses to no node at all, so
-    // empty and whitespace-only are what actually gets refused here.
-    await expect(storage.createFile({ name: 'junk', content: '' })).rejects.toThrow(
-      'Invalid SGF content'
-    );
-    await expect(storage.createFile({ name: 'junk', content: '   ' })).rejects.toThrow(
-      'Invalid SGF content'
-    );
+  test('rejects content that is not a game tree', async () => {
+    // The parser is lenient enough to turn prose into a node, so validation
+    // also requires the content to open with "(;" — otherwise a truncated or
+    // garbled autosave would be accepted over a good game.
+    for (const content of ['', '   ', 'hello', 'this is not SGF', ';B[aa])', '(FF[4])']) {
+      await expect(storage.createFile({ name: 'junk', content })).rejects.toThrow(
+        'Invalid SGF content'
+      );
+    }
     expect(await storage.getItems(null)).toEqual([]);
+  });
+
+  test('accepts a game tree that opens with whitespace', async () => {
+    const created = await storage.createFile({ name: 'game.sgf', content: `\n  ${sgf()}` });
+    expect((await file(created.id)).name).toBe('game.sgf');
+  });
+
+  test('reports a missing item as null, not undefined', async () => {
+    expect(await storage.getItem('does-not-exist')).toBe(null);
   });
 
   test('updates content, size and metadata while keeping id and name', async () => {
@@ -629,5 +633,74 @@ describe('.sgf extension migration', () => {
     expect((await reopened.getItem(created.id))!.name).toBe('game.sgf');
     // Folders have no extension and must be left alone.
     expect((await reopened.getItem(dir.id))!.name).toBe('Joseki');
+  });
+});
+
+// ============================================================================
+// Concurrent creates (names have to stay unique, or export loses games)
+// ============================================================================
+
+describe('concurrent creates', () => {
+  test('three files created at once get three distinct names', async () => {
+    // Picking the name in one transaction and adding the record in another let
+    // all three settle on "game.sgf".
+    const created = await Promise.all([
+      storage.createFile({ name: 'game.sgf', content: sgf(['B[aa]']) }),
+      storage.createFile({ name: 'game.sgf', content: sgf(['B[bb]']) }),
+      storage.createFile({ name: 'game.sgf', content: sgf(['B[cc]']) }),
+    ]);
+
+    const names = created.map(item => item.name).sort();
+    expect(new Set(names).size).toBe(3);
+    expect(await namesIn(null)).toEqual(names);
+    // And the stored records agree with what the calls returned.
+    for (const item of created) {
+      expect((await file(item.id)).name).toBe(item.name);
+    }
+  });
+
+  test('folders created at once also stay distinct', async () => {
+    const created = await Promise.all([
+      storage.createFolder({ name: 'Joseki' }),
+      storage.createFolder({ name: 'Joseki' }),
+    ]);
+
+    expect(new Set(created.map(item => item.name)).size).toBe(2);
+  });
+
+  test('files created at once all survive a ZIP round trip', async () => {
+    // The names above are what ends up as ZIP entry paths: duplicates meant
+    // JSZip kept the last one and import silently restored a single game.
+    await Promise.all([
+      storage.createFile({ name: 'game.sgf', content: sgf(['B[aa]']) }),
+      storage.createFile({ name: 'game.sgf', content: sgf(['B[bb]']) }),
+      storage.createFile({ name: 'game.sgf', content: sgf(['B[cc]']) }),
+    ]);
+
+    const exported = await storage.exportZip();
+    expect(exported.success).toBe(true);
+    const archive = await exported.data!.arrayBuffer();
+    await storage.clear();
+
+    const result = await storage.importZip(archive);
+    expect(result.imported).toBe(3);
+    expect(result.failed).toBe(0);
+    expect(await storage.getItems(null)).toHaveLength(3);
+  });
+});
+
+describe('ZIP export of folders', () => {
+  test('keeps a folder that holds no files', async () => {
+    const empty = await storage.createFolder({ name: 'EmptyDir' });
+    const used = await storage.createFolder({ name: 'HasFile' });
+    await storage.createFile({ name: 'a.sgf', content: sgf(), parentId: used.id });
+    expect(empty.id).toBeTruthy();
+
+    const exported = await storage.exportZip();
+    const archive = await exported.data!.arrayBuffer();
+    await storage.clear();
+    await storage.importZip(archive);
+
+    expect(await namesIn(null)).toEqual(['EmptyDir', 'HasFile']);
   });
 });

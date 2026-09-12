@@ -119,6 +119,36 @@ export class IndexedDBStorage implements LibraryStorage {
   }
 
   /**
+   * Pick a free name and store the new item inside ONE transaction.
+   *
+   * Choosing the name in one transaction and adding the record in another let
+   * two concurrent creates settle on the same name: IndexedDB serializes
+   * readwrite transactions on a store, so doing both in one means the second
+   * create sees the first. Duplicate names are not cosmetic - ZIP export
+   * writes one entry per name, so the duplicates were dropped on the way out.
+   */
+  private async addWithUniqueName<T extends LibraryItem>(
+    parentId: LibraryItemId | null,
+    desiredName: string,
+    build: (uniqueName: string) => T
+  ): Promise<T> {
+    const store = this.getStoreFromDb('readwrite');
+
+    let siblings: LibraryItem[];
+    if (parentId === null) {
+      const all = await idbRequest<LibraryItem[]>(store.getAll());
+      siblings = all.filter(item => item.parentId === null);
+    } else {
+      siblings = await idbRequest<LibraryItem[]>(store.index('parentId').getAll(parentId));
+    }
+
+    const item = build(makeUniqueName(desiredName, siblings));
+    // Same `store`, so the add rides the transaction the read was issued on.
+    await idbRequest(store.add(item));
+    return item;
+  }
+
+  /**
    * Read an item, transform it and write it back inside ONE transaction.
    *
    * Reading through one transaction and writing through another leaves a
@@ -173,7 +203,8 @@ export class IndexedDBStorage implements LibraryStorage {
   async getItem(id: LibraryItemId): Promise<LibraryItem | null> {
     await this.ensureInitialized();
     const store = this.getStoreFromDb();
-    return idbRequest<LibraryItem | null>(store.get(id));
+    // IndexedDB yields `undefined` for a missing key; the signature promises null.
+    return (await idbRequest<LibraryItem | undefined>(store.get(id))) ?? null;
   }
 
   async createFile(options: CreateFileOptions): Promise<LibraryFile> {
@@ -184,28 +215,24 @@ export class IndexedDBStorage implements LibraryStorage {
       throw new Error('Invalid SGF content');
     }
 
-    // Get existing items in the parent folder for uniqueness check
-    const siblings = await this.getItems(parentId);
-    const baseName = ensureSGFExtension(sanitizeFilename(name));
-    const uniqueName = makeUniqueName(baseName, siblings);
-
     const metadata = extractSGFMetadata(content);
     const timestamp = now();
 
-    const file: LibraryFile = {
-      id: generateId(),
-      name: uniqueName,
-      type: 'file',
+    const file = await this.addWithUniqueName<LibraryFile>(
       parentId,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      content,
-      metadata,
-      size: new Blob([content]).size,
-    };
-
-    const store = this.getStoreFromDb('readwrite');
-    await idbRequest(store.add(file));
+      ensureSGFExtension(sanitizeFilename(name)),
+      uniqueName => ({
+        id: generateId(),
+        name: uniqueName,
+        type: 'file',
+        parentId,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        content,
+        metadata,
+        size: new Blob([content]).size,
+      })
+    );
 
     // Update parent folder's item count
     if (parentId) {
@@ -220,24 +247,21 @@ export class IndexedDBStorage implements LibraryStorage {
     const { name, parentId = null } = options;
 
     // Get existing items in the parent folder for uniqueness check
-    const siblings = await this.getItems(parentId);
-    const sanitizedName = sanitizeFilename(name);
-    const uniqueName = makeUniqueName(sanitizedName, siblings);
-
     const timestamp = now();
 
-    const folder: LibraryFolder = {
-      id: generateId(),
-      name: uniqueName,
-      type: 'folder',
+    const folder = await this.addWithUniqueName<LibraryFolder>(
       parentId,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      itemCount: 0,
-    };
-
-    const store = this.getStoreFromDb('readwrite');
-    await idbRequest(store.add(folder));
+      sanitizeFilename(name),
+      uniqueName => ({
+        id: generateId(),
+        name: uniqueName,
+        type: 'folder',
+        parentId,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        itemCount: 0,
+      })
+    );
 
     // Update parent folder's item count
     if (parentId) {

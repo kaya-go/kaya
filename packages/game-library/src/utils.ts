@@ -61,8 +61,16 @@ export function extractSGFMetadata(content: string): SGFMetadata {
   }
 }
 
-/** Validate SGF content */
+/**
+ * Validate SGF content.
+ *
+ * The parser is lenient enough to turn arbitrary prose into a node, so parsing
+ * alone is not a real check: a truncated or garbled autosave would sail through
+ * and overwrite a good game. A game tree has to start with "(;".
+ */
 export function isValidSGF(content: string): boolean {
+  if (!/^\s*\(\s*;/.test(content)) return false;
+
   try {
     const nodes = parse(content);
     return nodes && nodes.length > 0;

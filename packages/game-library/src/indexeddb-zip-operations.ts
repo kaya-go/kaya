@@ -158,6 +158,10 @@ export async function exportStorageToZip(storage: ZipStorageOperations): Promise
       if (item.type === 'file') {
         // File names already include .sgf extension
         zip.file(path, item.content);
+      } else {
+        // Folders need their own entry, otherwise an empty one has nothing to
+        // carry it into the archive and does not come back on import.
+        zip.folder(path);
       }
     }
 
