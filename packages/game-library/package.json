@@ -16,6 +16,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
+    "fake-indexeddb": "^6.2.5",
     "typescript": "^7.0.2"
   }
 }
