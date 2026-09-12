@@ -44,17 +44,43 @@ runtime. `bundle.linux.{deb,rpm}.depends` in
 that dies at startup with `version 'GLIBC_2.39' not found`. Users below the
 floor get the AppImage.
 
-Two CI gates keep that honest, because none of this reproduces on macOS:
+### The AppImage is the one most people download
 
-- `check-glibc-floor.sh` compares the declared floor against the
-  `.gnu.version_r` entries in the binary just built, and fails the build if
-  a container bump raised the real requirement.
-- `_verify-linux-packages.yml` installs the artifacts on Ubuntu 24.04,
-  Debian 13 and Fedora, and resolves the binary's libraries with `ldd`. It
-  also asserts the install is **refused** on Debian 12 and AlmaLinux 9.
+It is also the one that has to work on distros nobody builds on, and it
+manages that by shipping **its own glibc** (2.44 at the time of writing), the
+dynamic loader, the NSS modules, gconv, the `dri`/`gbm` drivers and WebKit's
+helper processes. The host's glibc never enters into it. The runtime is
+`uruntime` + DwarFS, statically linked, so there is no `libfuse.so.2`
+dependency either — the usual reason an AppImage refuses to start elsewhere.
+
+So the AppImage is a real answer for users below the package floor, not a
+consolation prize. It is verified as such: see the gates below.
+
+### CI gates
+
+None of this reproduces on macOS, so four gates run on every nightly and
+block every release:
+
+| Gate                         | What it proves                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `check-glibc-floor.sh`       | The declared floor still matches the binary's `.gnu.version_r`                                                  |
+| `check-appimage-closure.py`  | Every `DT_NEEDED` in the AppDir resolves inside the bundle                                                      |
+| `_verify-linux-packages.yml` | The `.deb`/`.rpm` install on Ubuntu 24.04, Debian 13, Fedora — and are **refused** on Debian 12 and AlmaLinux 9 |
+| `_verify-linux-appimage.yml` | The AppImage actually launches, webview included, on Ubuntu 22.04, Debian 12, AlmaLinux 9 and Fedora            |
+
+The "must refuse" rows matter as much as the rest: they test that the
+declaration does its job, which is the part that was missing before.
 
 If you raise the floor, change both `depends` entries and the download
 table in `release.yml` — the floor check enforces the first, not the second.
+
+### Gotcha: container jobs need git
+
+`.gitattributes` marks `.github`, `docs` and `scripts` as `export-ignore`.
+Without `git` installed, `actions/checkout` falls back to the GitHub REST
+API tarball, which honours that — so a container job gets a green checkout
+with those directories silently missing. Install `git` in any container job
+that needs them.
 
 ## Cutting a release
 
