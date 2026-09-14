@@ -7,8 +7,9 @@
 
 import React, { useState, useCallback, useEffect, useContext, createContext, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import ReactMarkdown, { type Components } from 'react-markdown';
+import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { externalLinkComponents } from '../markdown/externalLinkComponents';
 import { useGameTreeBoard, useGameTreeEdit } from '../../contexts/GameTreeContext';
 import {
   COMMENT_FONT_SCALE_MAX,
@@ -223,21 +224,6 @@ export const CommentHeaderActions: React.FC = () => {
 // Comment Editor Component
 // ============================================================================
 
-/** Open markdown links in a new tab so they don't navigate the Kaya app away. */
-const commentMarkdownComponents: Components = {
-  a: ({ node: _node, ...props }) => (
-    <a
-      {...props}
-      target="_blank"
-      rel="noopener noreferrer"
-      onClick={event => {
-        event.stopPropagation();
-        props.onClick?.(event);
-      }}
-    />
-  ),
-};
-
 /**
  * Main comment editor component.
  * Displays markdown-rendered comments or an editable textarea.
@@ -322,7 +308,7 @@ export const CommentEditor: React.FC = () => {
         <div className="comment-display" onClick={handleEdit}>
           {currentComment ? (
             <div className="comment-markdown">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={commentMarkdownComponents}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={externalLinkComponents}>
                 {currentComment}
               </ReactMarkdown>
             </div>

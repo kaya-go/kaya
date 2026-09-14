@@ -153,6 +153,8 @@ export type {
 
 // External links (opens URLs in default browser in Tauri)
 export { useExternalLinks } from './hooks/useExternalLinks';
+export { isExternalLinkTarget } from './hooks/useExternalLinks';
+export { externalLinkComponents } from './components/markdown/externalLinkComponents';
 
 // PWA install prompt
 export { useAutoPick } from './hooks/useAutoPick';

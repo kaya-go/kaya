@@ -3,7 +3,7 @@ import { check, Update } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { ask, message } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
-import { useTranslation } from '@kaya/ui';
+import { useTranslation, externalLinkComponents } from '@kaya/ui';
 import { checkInstallLocation, errorText, offerManualDownload } from './updateInstall';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -209,7 +209,10 @@ export function Updater() {
         </p>
         {update.body && (
           <div className="updater-release-notes">
-            <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+              components={externalLinkComponents}
+            >
               {stripHtmlComments(update.body)}
             </ReactMarkdown>
           </div>

@@ -1,12 +1,37 @@
 import { useEffect } from 'react';
 
 /**
- * Hook that intercepts clicks on external links (http/https with target="_blank")
+ * Protocols handed to the OS rather than followed inside the webview.
+ *
+ * Kept in sync with the default scope of the Tauri `shell:allow-open`
+ * permission, which validates `https?://`, `mailto:` and `tel:` URLs.
+ */
+const EXTERNAL_PROTOCOLS = ['http://', 'https://', 'mailto:', 'tel:'] as const;
+
+/**
+ * Whether a clicked anchor should be opened outside the app.
+ *
+ * Only anchors explicitly marked `target="_blank"` qualify, so in-app
+ * navigation keeps working untouched.
+ */
+export function isExternalLinkTarget(
+  href: string | null | undefined,
+  target: string | null | undefined
+): href is string {
+  if (!href || target !== '_blank') return false;
+
+  const protocol = href.trim().toLowerCase();
+  return EXTERNAL_PROTOCOLS.some(prefix => protocol.startsWith(prefix));
+}
+
+/**
+ * Hook that intercepts clicks on external links (see `isExternalLinkTarget`)
  * and opens them using Tauri's shell.open() API in desktop mode,
  * or falls back to window.open() in web mode.
  *
  * This is necessary because Tauri's webview doesn't automatically open
- * external links in the default browser.
+ * external links in the default browser — without this it would navigate the
+ * app itself to the target URL.
  */
 export function useExternalLinks(): void {
   useEffect(() => {
@@ -18,15 +43,8 @@ export function useExternalLinks(): void {
       if (!anchor) return;
 
       const href = anchor.getAttribute('href');
-      const targetAttr = anchor.getAttribute('target');
 
-      // Only handle external links (http/https)
-      if (!href || (!href.startsWith('http://') && !href.startsWith('https://'))) {
-        return;
-      }
-
-      // Check if this is meant to be an external link
-      if (targetAttr !== '_blank') {
+      if (!isExternalLinkTarget(href, anchor.getAttribute('target'))) {
         return;
       }
 
