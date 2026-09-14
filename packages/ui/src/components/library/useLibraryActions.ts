@@ -28,6 +28,7 @@ export function useLibraryActions() {
     deleteItems,
     renameItem,
     moveItem,
+    moveItems,
     openFile,
     importZip,
     downloadFile,
@@ -51,17 +52,30 @@ export function useLibraryActions() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const newFolderInputInitialized = useRef(false);
 
-  // Close context menu on outside clicks or when a library drag begins
-  // (HTML5 DnD from react-arborist does not fire a click, so the menu would stick otherwise)
+  // Close the context menu on a pointer press or wheel outside it, or on Escape.
+  // pointerdown precedes any drag, so react-arborist's HTML5 DnD (which fires no
+  // click) closes it too; wheel keeps the fixed-position menu from floating over
+  // another row once the tree scrolls.
+  const isContextMenuOpen = contextMenu !== null;
   useEffect(() => {
-    const close = () => setContextMenu(null);
-    document.addEventListener('click', close);
-    document.addEventListener('dragstart', close);
-    return () => {
-      document.removeEventListener('click', close);
-      document.removeEventListener('dragstart', close);
+    if (!isContextMenuOpen) return;
+    const closeIfOutside = (e: Event) => {
+      if (e.target instanceof Element && e.target.closest('.library-context-menu')) return;
+      setContextMenu(null);
     };
-  }, []);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setContextMenu(null);
+    };
+    // Capture phase, so handlers that stop propagation (e.g. the tree's onWheel) can't swallow it
+    document.addEventListener('pointerdown', closeIfOutside, true);
+    document.addEventListener('wheel', closeIfOutside, { capture: true, passive: true });
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', closeIfOutside, true);
+      document.removeEventListener('wheel', closeIfOutside, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isContextMenuOpen]);
 
   const handleDrop = useCallback(
     async (e: DragEvent<HTMLDivElement>) => {
@@ -71,6 +85,8 @@ export function useLibraryActions() {
       e.preventDefault();
       e.stopPropagation();
       setIsDraggingOver(false);
+      // An external file drop fires no click or dragstart in the page
+      setContextMenu(null);
 
       let targetFolderId: string | null = null;
       if (selectedId) {
@@ -324,13 +340,18 @@ export function useLibraryActions() {
 
   const handleTreeMove = useCallback(
     async (args: { dragIds: string[]; parentId: string | null; index: number }) => {
-      setContextMenu(null);
       const { dragIds, parentId } = args;
-      for (const id of dragIds) {
-        await moveItem(id, parentId);
+      // Dropping among its own siblings changes nothing: the tree sorts by type, then name
+      const ids = dragIds.filter(id => items.find(i => i.id === id)?.parentId !== parentId);
+      if (ids.length === 0) return;
+      // react-arborist does not await onMove, so a rejection here would go unhandled
+      try {
+        await moveItems(ids, parentId);
+      } catch (error) {
+        console.error('Failed to move library items:', error);
       }
     },
-    [moveItem]
+    [items, moveItems]
   );
 
   return {

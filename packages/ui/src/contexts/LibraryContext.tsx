@@ -171,16 +171,27 @@ export function LibraryProvider({
     [refresh]
   );
 
-  const moveItem = useCallback(
-    async (id: LibraryItemId, newParentId: LibraryItemId | null) => {
+  const moveItems = useCallback(
+    async (ids: LibraryItemId[], newParentId: LibraryItemId | null) => {
       const storage = getLibraryStorage();
-      await storage.moveItem({ itemId: id, newParentId });
-      await refresh();
-      if (newParentId) {
-        expandFolder(newParentId);
+      try {
+        for (const id of ids) {
+          await storage.moveItem({ itemId: id, newParentId });
+        }
+      } finally {
+        // Refresh once, even after a partial failure, so the tree matches storage
+        await refresh();
+        if (newParentId) {
+          expandFolder(newParentId);
+        }
       }
     },
     [refresh, expandFolder]
+  );
+
+  const moveItem = useCallback(
+    (id: LibraryItemId, newParentId: LibraryItemId | null) => moveItems([id], newParentId),
+    [moveItems]
   );
 
   const deleteItem = useCallback(
@@ -375,6 +386,7 @@ export function LibraryProvider({
       createFile,
       renameItem,
       moveItem,
+      moveItems,
       deleteItem,
       deleteItems,
       openFile,
@@ -414,6 +426,7 @@ export function LibraryProvider({
       createFile,
       renameItem,
       moveItem,
+      moveItems,
       deleteItem,
       deleteItems,
       openFile,

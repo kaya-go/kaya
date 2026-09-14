@@ -57,6 +57,8 @@ export interface LibraryContextValue {
   renameItem: (id: LibraryItemId, newName: string) => Promise<void>;
   /** Move an item */
   moveItem: (id: LibraryItemId, newParentId: LibraryItemId | null) => Promise<void>;
+  /** Move multiple items into the same parent, refreshing the library once */
+  moveItems: (ids: LibraryItemId[], newParentId: LibraryItemId | null) => Promise<void>;
   /** Delete an item */
   deleteItem: (id: LibraryItemId) => Promise<void>;
   /** Delete multiple items */
