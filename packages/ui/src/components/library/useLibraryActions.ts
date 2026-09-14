@@ -51,11 +51,16 @@ export function useLibraryActions() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const newFolderInputInitialized = useRef(false);
 
-  // Close context menu on outside clicks
+  // Close context menu on outside clicks or when a library drag begins
+  // (HTML5 DnD from react-arborist does not fire a click, so the menu would stick otherwise)
   useEffect(() => {
-    const handleClickOutside = () => setContextMenu(null);
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    const close = () => setContextMenu(null);
+    document.addEventListener('click', close);
+    document.addEventListener('dragstart', close);
+    return () => {
+      document.removeEventListener('click', close);
+      document.removeEventListener('dragstart', close);
+    };
   }, []);
 
   const handleDrop = useCallback(
@@ -319,6 +324,7 @@ export function useLibraryActions() {
 
   const handleTreeMove = useCallback(
     async (args: { dragIds: string[]; parentId: string | null; index: number }) => {
+      setContextMenu(null);
       const { dragIds, parentId } = args;
       for (const id of dragIds) {
         await moveItem(id, parentId);
