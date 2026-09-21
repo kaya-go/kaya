@@ -39,6 +39,34 @@ export const CHART_HEIGHT = 150;
 export const CHART_PADDING = { top: 12, right: 36, bottom: 28, left: 40 };
 const WIN_RATE_PADDING = 0.05;
 
+/** Integer move-number ticks, at most ~5 labels. Step is never < 1. */
+export function generateMoveNumberTicks(maxMove: number): number[] {
+  if (maxMove === 0) return [];
+
+  const maxTicks = 5;
+  const rawStep = maxMove / maxTicks;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const normalized = rawStep / magnitude;
+  let niceStep: number;
+  if (normalized <= 1) niceStep = magnitude;
+  else if (normalized <= 2) niceStep = 2 * magnitude;
+  else if (normalized <= 5) niceStep = 5 * magnitude;
+  else niceStep = 10 * magnitude;
+
+  // Hands are integers. A 1-move game otherwise picks step 0.2, and
+  // 0.2+0.2+0.2 === 0.6000000000000001 in IEEE-754.
+  if (niceStep < 1) niceStep = 1;
+
+  const ticks: number[] = [0];
+  for (let tick = niceStep; tick < maxMove; tick += niceStep) {
+    ticks.push(tick);
+  }
+  if (ticks[ticks.length - 1] !== maxMove) {
+    ticks.push(maxMove);
+  }
+  return ticks;
+}
+
 function useContainerWidth(wrapperRef: RefObject<HTMLDivElement | null>): number {
   const [containerWidth, setContainerWidth] = useState(400);
 
@@ -223,37 +251,7 @@ export function useAnalysisChartData({
     }
   }, [hoverInfo, onNavigate, onNavigateToMove]);
 
-  // Generate axis ticks - limit to 5-6 ticks max to avoid overlapping
-  const xTicks = useMemo(() => {
-    if (chartConfig.maxMove === 0) return [];
-
-    // Target 5-6 ticks max for readability
-    const maxTicks = 5;
-
-    // Calculate a nice round step size
-    const rawStep = chartConfig.maxMove / maxTicks;
-    // Round to nice values: 1, 2, 5, 10, 20, 50, 100, etc.
-    const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
-    const normalized = rawStep / magnitude;
-    let niceStep: number;
-    if (normalized <= 1) niceStep = magnitude;
-    else if (normalized <= 2) niceStep = 2 * magnitude;
-    else if (normalized <= 5) niceStep = 5 * magnitude;
-    else niceStep = 10 * magnitude;
-
-    // Generate ticks at nice intervals
-    const ticks: number[] = [0];
-    let tick = niceStep;
-    while (tick < chartConfig.maxMove) {
-      ticks.push(tick);
-      tick += niceStep;
-    }
-    // Always include the last move
-    if (ticks[ticks.length - 1] !== chartConfig.maxMove) {
-      ticks.push(chartConfig.maxMove);
-    }
-    return ticks;
-  }, [chartConfig.maxMove]);
+  const xTicks = useMemo(() => generateMoveNumberTicks(chartConfig.maxMove), [chartConfig.maxMove]);
 
   // Format score for display (always from Black's perspective)
   const formatScore = useCallback((score: number): string => {
