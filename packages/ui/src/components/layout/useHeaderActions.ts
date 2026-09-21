@@ -210,14 +210,11 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     if (defaultSaveFileName && defaultSaveFileName !== 'game.sgf') {
       const savedFile = await saveCurrentGame(defaultSaveFileName, null);
       if (savedFile) {
-        const finalName = defaultSaveFileName.endsWith('.sgf')
-          ? defaultSaveFileName
-          : `${defaultSaveFileName}.sgf`;
-        setFileName(finalName);
-        showToast(`Saved "${defaultSaveFileName}" to library`, 'success');
+        setFileName(savedFile.name);
+        showToast(t('toast.savedFileToLibrary', { filename: savedFile.name }), 'success');
         triggerAutoSave();
       } else {
-        showToast('Failed to save to library', 'error');
+        showToast(t('toast.failedToSave'), 'error');
       }
     } else {
       setIsSaveToLibraryDialogOpen(true);
@@ -230,6 +227,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     setFileName,
     showToast,
     triggerAutoSave,
+    t,
   ]);
 
   const handleSaveAsClick = useCallback(() => {
@@ -244,14 +242,14 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     async (name: string, folderId: string | null) => {
       const savedFile = await saveCurrentGame(name, folderId);
       if (savedFile) {
-        setFileName(name.endsWith('.sgf') ? name : `${name}.sgf`);
-        showToast(`Saved "${name}" to library`, 'success');
+        setFileName(savedFile.name);
+        showToast(t('toast.savedFileToLibrary', { filename: savedFile.name }), 'success');
         triggerAutoSave();
       } else {
-        showToast('Failed to save to library', 'error');
+        showToast(t('toast.failedToSave'), 'error');
       }
     },
-    [saveCurrentGame, setFileName, showToast, triggerAutoSave]
+    [saveCurrentGame, setFileName, showToast, triggerAutoSave, t]
   );
 
   const handleNewGame = useCallback(() => {
