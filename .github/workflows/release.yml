@@ -364,11 +364,15 @@ jobs:
 
             | Platform | Installer | Signature |
             | -------- | --------- | --------- |
-            | **macOS** (Apple Silicon) | [.dmg](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.dmg) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.dmg.sig) |
+            | **macOS** (Apple Silicon) | [.dmg](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_aarch64.dmg) | - |
             | **Windows** (x64) | [.exe](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_x64-setup.exe) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_x64-setup.exe.sig) |
             | **Linux** (AppImage) | [.AppImage](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage) | [.sig](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/Kaya_${{ github.event.inputs.version }}_amd64.AppImage.sig) |
             | **Linux** (Debian/Ubuntu) | [.deb](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya_${{ github.event.inputs.version }}_amd64.deb) | - |
             | **Linux** (Fedora/RHEL) | [.rpm](https://github.com/kaya-go/kaya/releases/download/v${{ github.event.inputs.version }}/kaya-${{ github.event.inputs.version }}-1.x86_64.rpm) | - |
+
+            The updater signature covers the artifact each platform updates
+            through, so macOS has none against the `.dmg` — its signed bundle is
+            `Kaya.app.tar.gz`, which only the in-app updater consumes.
 
             The `.deb` and `.rpm` need **glibc 2.39 or newer** — Ubuntu 24.04+,
             Debian 13+, Linux Mint 22+, Fedora 40+. On older distros (Ubuntu 22.04,
