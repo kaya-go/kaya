@@ -188,21 +188,21 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       const savedFileName = await saveFile(sgfContent, finalFileName);
       if (savedFileName) {
         setFileName(savedFileName);
-        showToast(`Exported "${finalFileName}"`, 'success');
+        showToast(t('toast.exportedFile', { filename: finalFileName }), 'success');
         triggerAutoSave();
       }
     },
-    [exportSGF, setFileName, showToast, triggerAutoSave]
+    [exportSGF, setFileName, showToast, triggerAutoSave, t]
   );
 
   const handleSaveClick = useCallback(async () => {
     if (loadedFileId) {
       const success = await updateLoadedFile();
       if (success) {
-        showToast('Saved to library', 'success');
+        showToast(t('toast.savedToLibrary'), 'success');
         triggerAutoSave();
       } else {
-        showToast('Library file not found, saving as new...', 'info');
+        showToast(t('toast.libraryFileNotFound'), 'info');
         setIsSaveToLibraryDialogOpen(true);
       }
       return;
@@ -296,18 +296,18 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     try {
       const sgfContent = exportSGF();
       await writeClipboardText(sgfContent);
-      showToast('SGF copied to clipboard!', 'success');
+      showToast(t('toast.sgfCopied'), 'success');
       triggerAutoSave();
     } catch (error) {
-      showToast(`Failed to copy: ${error}`, 'error');
+      showToast(t('toast.failedToCopy', { error: String(error) }), 'error');
     }
-  }, [exportSGF, showToast, triggerAutoSave]);
+  }, [exportSGF, showToast, triggerAutoSave, t]);
 
   const handlePasteClick = useCallback(async () => {
     try {
       const content = await readClipboardText();
       if (!content.trim()) {
-        showToast('Clipboard is empty', 'error');
+        showToast(t('toast.clipboardEmpty'), 'error');
         return;
       }
       const canProceed = await checkUnsavedChanges();
@@ -319,9 +319,9 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       clearLoadedFile();
     } catch (error) {
       console.error('Failed to paste:', error);
-      showToast(`Failed to paste: ${error}`, 'error');
+      showToast(t('toast.failedToPaste', { error: String(error) }), 'error');
     }
-  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast]);
+  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast, t]);
 
   useHeaderKeyboardShortcuts({
     handleSaveClick,
