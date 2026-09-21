@@ -6,17 +6,19 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { EditableField, TranslatedFieldConfig } from './GameInfoEditorConfig';
 
+type EditElement = HTMLInputElement | HTMLTextAreaElement;
+
 interface InlineEditInputProps {
-  inputRef?: React.RefObject<HTMLInputElement | null>;
-  type?: 'text' | 'number';
+  inputRef?: React.RefObject<EditElement | null>;
+  type?: 'text' | 'number' | 'textarea';
   step?: string;
   min?: string;
   max?: string;
   className?: string;
   value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onChange: (e: React.ChangeEvent<EditElement>) => void;
   onBlur: () => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<EditElement>) => void;
   placeholder?: string;
 }
 
@@ -32,23 +34,39 @@ const InlineEditInput: React.FC<InlineEditInputProps> = ({
   onBlur,
   onKeyDown,
   placeholder,
-}) => (
-  <input
-    ref={inputRef}
-    type={type}
-    step={step}
-    min={min}
-    max={max}
-    className={className}
-    value={value}
-    onChange={onChange}
-    onBlur={onBlur}
-    onKeyDown={onKeyDown}
-    onKeyUp={e => e.stopPropagation()}
-    onKeyPress={e => e.stopPropagation()}
-    placeholder={placeholder}
-  />
-);
+}) => {
+  const shared = {
+    value,
+    onChange,
+    onBlur,
+    onKeyDown,
+    onKeyUp: (e: React.KeyboardEvent<EditElement>) => e.stopPropagation(),
+    placeholder,
+  };
+
+  if (type === 'textarea') {
+    return (
+      <textarea
+        ref={inputRef as React.RefObject<HTMLTextAreaElement | null>}
+        className={`${className} inline-edit-textarea`}
+        rows={3}
+        {...shared}
+      />
+    );
+  }
+
+  return (
+    <input
+      ref={inputRef as React.RefObject<HTMLInputElement | null>}
+      type={type}
+      step={step}
+      min={min}
+      max={max}
+      className={className}
+      {...shared}
+    />
+  );
+};
 
 interface GameInfoFieldProps {
   config: TranslatedFieldConfig;
@@ -56,10 +74,10 @@ interface GameInfoFieldProps {
   isEditMode: boolean;
   isEditing: boolean;
   editValue: string;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<EditElement | null>;
   onEditValueChange: (value: string) => void;
   onBlur: () => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<EditElement>) => void;
   onFieldClick: (field: EditableField) => void;
 }
 
@@ -95,13 +113,30 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
   } else if (config.key === 'komi') {
     displayValue = value ?? 6.5;
   } else {
-    displayValue =
-      value ||
-      (isEditMode ? <em className="empty-placeholder">{t('gameInfo.clickToAdd')}</em> : null);
+    displayValue = value || null;
   }
 
+  if ((displayValue == null || displayValue === '') && isEditMode && config.key !== 'komi') {
+    displayValue = <em className="empty-placeholder">{t('gameInfo.clickToAdd')}</em>;
+  }
+
+  const rowClass = [
+    'game-info-row',
+    'game-info-row-clickable',
+    config.dividerBefore ? 'divider-before' : '',
+    config.type === 'textarea' ? 'game-info-row-multiline' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const startEdit = (e: React.MouseEvent) => {
+    if (isEditing) return;
+    if ((e.target as HTMLElement).closest('a')) return;
+    onFieldClick(config.key);
+  };
+
   return (
-    <div className="game-info-row">
+    <div className={rowClass} onClick={startEdit}>
       <strong>{config.label}:</strong>{' '}
       {isEditing ? (
         <InlineEditInput
@@ -110,6 +145,11 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
           step={config.step}
           min={config.min}
           max={config.max}
+          className={
+            config.type === 'number'
+              ? 'inline-edit-input'
+              : 'inline-edit-input inline-edit-input-grow'
+          }
           value={editValue}
           onChange={e => onEditValueChange(e.target.value)}
           onBlur={onBlur}
@@ -118,8 +158,9 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
         />
       ) : (
         <span
-          className={`editable-field ${isEditMode ? 'edit-mode' : ''}`}
-          onClick={() => onFieldClick(config.key)}
+          className={`editable-field ${isEditMode ? 'edit-mode' : ''} ${
+            config.type === 'textarea' ? 'editable-field-multiline' : ''
+          }`}
           title={t('gameInfo.clickToEdit')}
         >
           {displayValue}
@@ -140,10 +181,10 @@ interface PlayerRowProps {
   isEditMode: boolean;
   editingField: EditableField | null;
   editValue: string;
-  inputRef: React.RefObject<HTMLInputElement | null>;
+  inputRef: React.RefObject<EditElement | null>;
   onEditValueChange: (value: string) => void;
   onBlur: () => void;
-  onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown: (e: React.KeyboardEvent<EditElement>) => void;
   onFieldClick: (field: EditableField) => void;
 }
 
@@ -174,6 +215,7 @@ export const PlayerRow: React.FC<PlayerRowProps> = ({
       {isEditingPlayer ? (
         <InlineEditInput
           inputRef={inputRef}
+          className="inline-edit-input inline-edit-input-grow"
           value={editValue}
           onChange={e => onEditValueChange(e.target.value)}
           onBlur={onBlur}

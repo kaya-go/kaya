@@ -1,7 +1,7 @@
 import { GameTree, GameTreeNode } from '@kaya/gametree';
 import { GoBoard, Vertex, Sign } from '@kaya/goboard';
 import { Marker } from '@kaya/shudan';
-import { GameInfo as SGFGameInfo } from '@kaya/sgf';
+import { GameInfo as SGFGameInfo, type GameInfoPatch } from '@kaya/sgf';
 import { AnalysisResult } from '@kaya/ai-engine';
 
 import type { ConfigTab } from '../components/ai/useKayaConfig';
@@ -11,6 +11,7 @@ export interface SGFProperty {
 }
 
 export type GameInfo = SGFGameInfo;
+export type { GameInfoPatch };
 
 export interface NewGameConfig {
   boardSize: number;
@@ -233,7 +234,7 @@ export interface GameTreeContextValue {
   createNewGame: (config?: NewGameConfig) => void;
   loadSGF: (sgfContent: string) => void;
   saveSGF: () => string;
-  updateGameInfo: (info: Partial<GameInfo>) => void;
+  updateGameInfo: (info: GameInfoPatch) => void;
 
   // Editing
   editMode: boolean;

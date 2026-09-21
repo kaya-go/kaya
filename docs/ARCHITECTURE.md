@@ -290,6 +290,11 @@ a code path that builds a board from `GameInfo`, pass `boardHeight` through;
 if you add one that feeds a model, a square board is a precondition to check,
 not an assumption to inherit.
 
+The Game Info sidebar is the FF[4] game-info set plus Go's `HA`/`KM`. `SZ` is
+not editable there. Writes go through `gameInfoToPropertyWrites`: a missing
+key leaves the tree alone; empty/null (and handicap `0`) deletes the SGF
+property. `TM` and `OT` are separate fields (`timeControl` / `overtime`).
+
 ### 10. `gameControl` events have exactly one owner
 
 `gamecontroller.js` exposes a single-slot event API — `gameControl.on('connect', fn)`

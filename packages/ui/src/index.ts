@@ -26,6 +26,7 @@ export { GameTreeProvider, useGameTree } from './contexts/GameTreeContext';
 export type {
   GameTreeContextValue,
   GameInfo,
+  GameInfoPatch,
   SGFProperty,
   NewGameConfig,
 } from './contexts/GameTreeContext';

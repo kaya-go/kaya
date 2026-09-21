@@ -4,8 +4,10 @@
   display: flex;
   flex-direction: column;
   background: var(--background);
-  flex: 1;
-  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .info-edit-button {
@@ -65,13 +67,13 @@
 }
 
 .game-info-display {
-  padding: 0.5rem;
+  padding: 0.35rem 0.5rem;
   user-select: text;
   -webkit-user-select: text;
 }
 
 .game-info-row {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.3rem;
   font-size: 0.9rem;
   display: flex;
   flex-wrap: wrap;
@@ -79,10 +81,33 @@
   gap: 0.25rem;
 }
 
+.game-info-row-clickable {
+  cursor: pointer;
+}
+
+.game-info-row-clickable:has(.inline-edit-input) {
+  cursor: text;
+}
+
+.game-info-row.divider-before {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border, var(--border-color, #444));
+}
+
+.game-info-row-multiline {
+  align-items: flex-start;
+}
+
+.game-info-row-multiline strong {
+  padding-top: 0.15rem;
+}
+
 .game-info-row strong {
   color: var(--foreground);
   margin-right: 0.25rem;
   flex-shrink: 0;
+  user-select: none;
 }
 
 .game-info-row em {
@@ -92,9 +117,16 @@
 /* Editable field styles */
 .editable-field {
   cursor: pointer;
-  padding: 0.1rem 0.25rem;
+  padding: 0.05rem 0.2rem;
   border-radius: 3px;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    outline-color 0.15s ease;
+  display: inline;
+  line-height: 1.4;
+  font-size: 0.9rem;
+  outline: 1px dashed transparent;
+  outline-offset: -1px;
 }
 
 .editable-field:hover {
@@ -103,17 +135,44 @@
 
 .editable-field.edit-mode {
   background-color: var(--bg-hover, rgba(0, 0, 0, 0.03));
-  border: 1px dashed var(--border);
-  padding: 0.05rem 0.2rem;
+  outline: 1px dashed var(--border);
 }
 
 .editable-field.edit-mode:hover {
   background-color: var(--accent-light, rgba(74, 144, 226, 0.1));
-  border-color: var(--accent);
+  outline-color: var(--accent);
 }
 
 .editable-rank {
   font-size: 0.85em;
+  padding: 0.05rem 0.15rem;
+  display: inline;
+  line-height: 1.4;
+  outline: 1px dashed transparent;
+  outline-offset: -1px;
+  border-radius: 3px;
+}
+
+.inline-edit-input-small {
+  min-width: 50px;
+  max-width: 80px;
+  font-size: 0.85em;
+  padding: 0.05rem 0.15rem;
+}
+
+.editable-field-multiline {
+  white-space: pre-wrap;
+  word-break: break-word;
+  flex: 1 1 100%;
+  min-width: 8rem;
+  min-height: 4.5rem;
+  display: block;
+  width: 100%;
+  line-height: 1.4;
+  padding: 0.25rem 0.35rem;
+  border-radius: 3px;
+  outline: 1px dashed transparent;
+  outline-offset: -1px;
 }
 
 .empty-placeholder {
@@ -124,7 +183,7 @@
 /* Inline edit input */
 .inline-edit-input {
   font-size: 0.9rem;
-  padding: 0.15rem 0.35rem;
+  padding: 0.05rem 0.2rem;
   border: 1px solid var(--accent);
   border-radius: 3px;
   background: var(--bg-secondary, var(--background));
@@ -132,21 +191,37 @@
   outline: none;
   min-width: 80px;
   max-width: 150px;
+  box-sizing: border-box;
+  line-height: 1.4;
+  font-family: inherit;
+}
+
+.inline-edit-input-grow {
+  flex: 1 1 160px;
+  min-width: 120px;
+  max-width: 100%;
 }
 
 .inline-edit-input:focus {
   box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
 }
 
-.inline-edit-input-small {
-  min-width: 50px;
-  max-width: 80px;
-}
-
 /* Number inputs */
 .inline-edit-input[type='number'] {
   min-width: 60px;
   max-width: 80px;
+}
+
+.inline-edit-textarea {
+  flex: 1 1 100%;
+  width: 100%;
+  min-height: 4.5rem;
+  max-width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.4;
+  padding: 0.25rem 0.35rem;
+  box-sizing: border-box;
 }
 
 .game-info-form {
@@ -259,7 +334,34 @@
   background: var(--button-secondary-hover, #555);
 }
 
-/* Clickable links in game info */
+@media (max-width: 768px) {
+  .editable-field {
+    min-height: var(--touch-target-min, 44px);
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .inline-edit-input {
+    min-height: var(--touch-target-min, 44px);
+  }
+
+  .editable-field-multiline {
+    display: block;
+    min-height: var(--touch-target-min, 44px);
+    padding: 0.5rem 0.25rem;
+  }
+
+  .inline-edit-textarea {
+    min-height: var(--touch-target-min, 44px);
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+.mobile-info-content .game-info-editor {
+  overflow: visible;
+  flex: none;
+  overscroll-behavior: auto;
+}
 .game-info-link {
   color: var(--accent, #4a9eff);
   text-decoration: none;

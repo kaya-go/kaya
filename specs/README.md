@@ -57,3 +57,4 @@ link forward to the replacement. Don't delete history.
 | 2026-09-12 | [The macOS in-app update failure path](2026-09-12-macos-updater-failure-path.md)                            | shipped    |
 | 2026-09-12 | [A 429 shipped a .deb with a feature missing](2026-09-12-silent-asset-download-failure.md)                  | shipped    |
 | 2026-09-22 | [Stop writing the runtime backend label into the setting](2026-09-22-webgpu-gc-backend-label.md)            | shipped    |
+| 2026-09-22 | [Game Info round-trips the SGF game-info properties](2026-09-22-game-info-sgf-roundtrip.md)                 | shipped    |

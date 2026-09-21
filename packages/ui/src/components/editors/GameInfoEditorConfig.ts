@@ -29,42 +29,62 @@ export const renderTextWithLinks = (text: string): React.ReactNode[] => {
 
 export type EditableField =
   | 'gameName'
+  | 'eventName'
+  | 'round'
   | 'date'
   | 'place'
   | 'playerBlack'
   | 'rankBlack'
+  | 'teamBlack'
   | 'playerWhite'
   | 'rankWhite'
+  | 'teamWhite'
   | 'komi'
   | 'handicap'
   | 'rules'
   | 'timeControl'
-  | 'result';
+  | 'overtime'
+  | 'result'
+  | 'opening'
+  | 'annotator'
+  | 'source'
+  | 'user'
+  | 'copyright'
+  | 'gameComment';
 
 export interface FieldConfig {
   key: EditableField;
   labelKey: string;
   placeholderKey: string;
-  type?: 'text' | 'number';
+  type?: 'text' | 'number' | 'textarea';
   step?: string;
   min?: string;
   max?: string;
   alwaysShow?: boolean;
   fallbackKey?: string;
   hasLinkRender?: boolean;
+  dividerBefore?: boolean;
 }
 
 export interface TranslatedFieldConfig {
   key: EditableField;
   label: string;
   placeholder: string;
-  type?: 'text' | 'number';
+  type?: 'text' | 'number' | 'textarea';
   step?: string;
   min?: string;
   max?: string;
   alwaysShow?: boolean;
+  dividerBefore?: boolean;
   renderValue?: (value: string | number | undefined) => React.ReactNode;
 }
+
+export const PLAYER_ROW_KEYS = new Set<EditableField>([
+  'playerBlack',
+  'rankBlack',
+  'playerWhite',
+  'rankWhite',
+]);
 
 export const FIELD_CONFIG_KEYS: FieldConfig[] = [
   {
@@ -74,6 +94,8 @@ export const FIELD_CONFIG_KEYS: FieldConfig[] = [
     alwaysShow: true,
     fallbackKey: 'gameInfo.untitled',
   },
+  { key: 'eventName', labelKey: 'gameInfo.event', placeholderKey: 'gameInfo.eventPlaceholder' },
+  { key: 'round', labelKey: 'gameInfo.round', placeholderKey: 'gameInfo.roundPlaceholder' },
   { key: 'date', labelKey: 'gameInfo.date', placeholderKey: 'gameInfo.datePlaceholder' },
   {
     key: 'place',
@@ -90,6 +112,11 @@ export const FIELD_CONFIG_KEYS: FieldConfig[] = [
   },
   { key: 'rankBlack', labelKey: 'gameInfo.blackRank', placeholderKey: 'gameInfo.rankPlaceholder' },
   {
+    key: 'teamBlack',
+    labelKey: 'gameInfo.blackTeam',
+    placeholderKey: 'gameInfo.teamPlaceholder',
+  },
+  {
     key: 'playerWhite',
     labelKey: 'gameInfo.white',
     placeholderKey: 'gameInfo.white',
@@ -97,6 +124,11 @@ export const FIELD_CONFIG_KEYS: FieldConfig[] = [
     fallbackKey: 'gameInfo.white',
   },
   { key: 'rankWhite', labelKey: 'gameInfo.whiteRank', placeholderKey: 'gameInfo.rankPlaceholder' },
+  {
+    key: 'teamWhite',
+    labelKey: 'gameInfo.whiteTeam',
+    placeholderKey: 'gameInfo.teamPlaceholder',
+  },
   {
     key: 'komi',
     labelKey: 'gameInfo.komi',
@@ -115,5 +147,37 @@ export const FIELD_CONFIG_KEYS: FieldConfig[] = [
   },
   { key: 'rules', labelKey: 'gameInfo.rules', placeholderKey: 'gameInfo.rulesPlaceholder' },
   { key: 'timeControl', labelKey: 'gameInfo.time', placeholderKey: 'gameInfo.timePlaceholder' },
+  {
+    key: 'overtime',
+    labelKey: 'gameInfo.overtime',
+    placeholderKey: 'gameInfo.overtimePlaceholder',
+  },
   { key: 'result', labelKey: 'gameInfo.result', placeholderKey: 'gameInfo.resultPlaceholder' },
+  { key: 'opening', labelKey: 'gameInfo.opening', placeholderKey: 'gameInfo.openingPlaceholder' },
+  {
+    key: 'annotator',
+    labelKey: 'gameInfo.annotator',
+    placeholderKey: 'gameInfo.annotatorPlaceholder',
+    dividerBefore: true,
+  },
+  {
+    key: 'source',
+    labelKey: 'gameInfo.source',
+    placeholderKey: 'gameInfo.sourcePlaceholder',
+    hasLinkRender: true,
+  },
+  { key: 'user', labelKey: 'gameInfo.user', placeholderKey: 'gameInfo.userPlaceholder' },
+  {
+    key: 'copyright',
+    labelKey: 'gameInfo.copyright',
+    placeholderKey: 'gameInfo.copyrightPlaceholder',
+    hasLinkRender: true,
+  },
+  {
+    key: 'gameComment',
+    labelKey: 'gameInfo.gameComment',
+    placeholderKey: 'gameInfo.gameCommentPlaceholder',
+    type: 'textarea',
+    hasLinkRender: true,
+  },
 ];

@@ -15,6 +15,9 @@ export type {
   Vertex,
   GameTreeNodeRecursive,
   GameInfo,
+  GameInfoMutable,
+  GameInfoPatch,
+  SGFPropertyWrite,
   SGFMarker,
 } from './types';
 
@@ -37,6 +40,7 @@ export {
   parseTokens,
   parse,
   sgfNodeToGameTreeNode,
-  extractGameInfo,
   stringify,
 } from './parser';
+
+export { extractGameInfo, gameInfoToPropertyWrites, parseBoardSize } from './gameInfo';

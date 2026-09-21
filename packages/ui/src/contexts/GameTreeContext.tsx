@@ -8,6 +8,7 @@ import React, { createContext, useContext, useMemo, useCallback } from 'react';
 import {
   SGFProperty,
   GameInfo,
+  GameInfoPatch,
   NewGameConfig,
   AISettings,
   AIModel,
@@ -29,7 +30,15 @@ import { useGameTreeUndoRedo } from './useGameTreeUndoRedo';
 import { useGameTreeSGFOperations } from './useGameTreeSGFOperations';
 
 // Re-export types for consumers
-export type { NewGameConfig, AISettings, AIModel, SGFProperty, GameInfo, GameTreeContextValue };
+export type {
+  NewGameConfig,
+  AISettings,
+  AIModel,
+  SGFProperty,
+  GameInfo,
+  GameInfoPatch,
+  GameTreeContextValue,
+};
 
 // Re-export optimized selectors for granular subscriptions
 export {

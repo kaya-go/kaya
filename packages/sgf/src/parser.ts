@@ -3,7 +3,6 @@
  */
 
 import type {
-  GameInfo,
   GameTreeNodeRecursive,
   ParseOptions,
   RequiredParseOptions,
@@ -398,73 +397,11 @@ export function sgfNodeToGameTreeNode<T = SGFNodeData>(
   };
 }
 
-// ============================================================================
-// Game Info Extraction
-// ============================================================================
-
-/**
- * Extract game metadata from SGF root node
- */
-export function extractGameInfo(rootNode: { data: SGFNodeData } | null): GameInfo {
-  const defaultInfo: GameInfo = { boardSize: 19 };
-  if (!rootNode) return defaultInfo;
-
-  const { data } = rootNode;
-
-  // Combine TM and OT for time control display
-  let timeControl: string | undefined;
-  if (data.TM?.[0]) {
-    timeControl = data.TM[0];
-    if (data.OT?.[0]) {
-      timeControl += ` ${data.OT[0]}`;
-    }
-  } else if (data.OT?.[0]) {
-    timeControl = data.OT[0];
-  }
-
-  return {
-    playerBlack: data.PB?.[0],
-    playerWhite: data.PW?.[0],
-    rankBlack: data.BR?.[0],
-    rankWhite: data.WR?.[0],
-    gameName: data.GN?.[0],
-    eventName: data.EV?.[0],
-    komi: data.KM?.[0] ? parseFloat(data.KM[0]) : undefined,
-    handicap: data.HA?.[0] ? parseInt(data.HA[0], 10) : undefined,
-    ...parseBoardSize(data.SZ?.[0]),
-    date: data.DT?.[0],
-    result: data.RE?.[0],
-    rules: data.RU?.[0],
-    timeControl,
-    place: data.PC?.[0],
-  };
-}
+export { extractGameInfo } from './gameInfo';
 
 // ============================================================================
 // Stringifier
 // ============================================================================
-
-/**
- * Parse the SGF `SZ` property.
- *
- * SZ is either a single number or `width:height`. Reading it with parseInt
- * alone turned "9:13" into 9, so a rectangular board was rebuilt square and
- * every move outside the square was dropped without a word.
- */
-function parseBoardSize(raw: string | undefined): { boardSize: number; boardHeight?: number } {
-  if (!raw) return { boardSize: 19 };
-
-  const [widthPart, heightPart] = raw.split(':');
-  const width = parseInt(widthPart, 10);
-  if (!Number.isFinite(width) || width <= 0) return { boardSize: 19 };
-
-  if (heightPart === undefined) return { boardSize: width };
-
-  const height = parseInt(heightPart, 10);
-  if (!Number.isFinite(height) || height <= 0 || height === width) return { boardSize: width };
-
-  return { boardSize: width, boardHeight: height };
-}
 
 /**
  * Convert SGF node tree to string

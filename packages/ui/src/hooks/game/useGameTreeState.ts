@@ -5,8 +5,9 @@ import {
   stringify as stringifySGF,
   sgfNodeToGameTreeNode,
   extractGameInfo as extractGameInfoFromSGF,
+  gameInfoToPropertyWrites,
   vertexToSGF,
-  type GameInfo,
+  type GameInfoPatch,
 } from '@kaya/sgf';
 import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
@@ -304,28 +305,18 @@ export function useGameTreeState() {
   }, [gameTree, rootId]);
 
   const updateGameInfo = useCallback(
-    (info: Partial<Omit<GameInfo, 'boardSize'>>) => {
+    (info: GameInfoPatch) => {
       if (!gameTree || rootId === null) return;
 
       setGameTree(prevTree => {
         if (!prevTree) return null;
 
         return prevTree.mutate(draft => {
-          const root = draft.get(rootId);
-          if (!root) return;
+          if (!draft.get(rootId)) return;
 
-          if (info.playerBlack !== undefined)
-            draft.updateProperty(rootId, 'PB', [info.playerBlack]);
-          if (info.playerWhite !== undefined)
-            draft.updateProperty(rootId, 'PW', [info.playerWhite]);
-          if (info.rankBlack !== undefined) draft.updateProperty(rootId, 'BR', [info.rankBlack]);
-          if (info.rankWhite !== undefined) draft.updateProperty(rootId, 'WR', [info.rankWhite]);
-          if (info.komi !== undefined) draft.updateProperty(rootId, 'KM', [String(info.komi)]);
-          if (info.gameName !== undefined) draft.updateProperty(rootId, 'GN', [info.gameName]);
-          if ((info as any).eventName !== undefined)
-            draft.updateProperty(rootId, 'EV', [(info as any).eventName]);
-          if (info.date !== undefined) draft.updateProperty(rootId, 'DT', [info.date]);
-          if (info.result !== undefined) draft.updateProperty(rootId, 'RE', [info.result]);
+          for (const { ident, values } of gameInfoToPropertyWrites(info)) {
+            draft.updateProperty(rootId, ident, values);
+          }
         });
       });
     },

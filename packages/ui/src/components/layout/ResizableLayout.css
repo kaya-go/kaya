@@ -182,6 +182,13 @@
   overscroll-behavior: contain;
 }
 
+/* Game Info fills the panel so the editor is the scrollport. */
+.sidebar-section-content:has(.game-info-editor) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .sidebar-section h3 {
   font-size: 0.75rem;
   font-weight: 600;

@@ -13,6 +13,7 @@ import {
   sgfNodeToGameTreeNode,
   tokenize,
   extractGameInfo,
+  gameInfoToPropertyWrites,
   parseVertex,
   stringifyVertex,
   escapeString,
@@ -153,8 +154,74 @@ describe('extractGameInfo', () => {
     expect(info.playerWhite).toBe('AlphaGo');
     expect(info.rankBlack).toBe('9p');
     expect(info.komi).toBe(7.5);
+    expect(info.handicap).toBe(0);
     expect(info.date).toBe('2016-03-09');
     expect(info.result).toBe('W+R');
+  });
+
+  test('reads the rest of the FF[4] game-info set and keeps TM/OT separate', () => {
+    const info = extractGameInfo(
+      parse(
+        '(;GM[1]SZ[19]EV[Honinbo]RO[Final]GN[Title]PC[Tokyo]BT[Japan]WT[Korea]RU[Japanese]TM[600]OT[3x30 byo-yomi]AN[Alpha]SO[https://example.com]CP[c]US[Beta]ON[Kobayashi]GC[note]HA[2])'
+      )[0]
+    );
+
+    expect(info.eventName).toBe('Honinbo');
+    expect(info.round).toBe('Final');
+    expect(info.gameName).toBe('Title');
+    expect(info.place).toBe('Tokyo');
+    expect(info.teamBlack).toBe('Japan');
+    expect(info.teamWhite).toBe('Korea');
+    expect(info.rules).toBe('Japanese');
+    expect(info.timeControl).toBe('600');
+    expect(info.overtime).toBe('3x30 byo-yomi');
+    expect(info.annotator).toBe('Alpha');
+    expect(info.source).toBe('https://example.com');
+    expect(info.copyright).toBe('c');
+    expect(info.user).toBe('Beta');
+    expect(info.opening).toBe('Kobayashi');
+    expect(info.gameComment).toBe('note');
+    expect(info.handicap).toBe(2);
+  });
+});
+
+describe('gameInfoToPropertyWrites', () => {
+  test('writes present string and numeric fields, including place/rules/time/handicap', () => {
+    const writes = gameInfoToPropertyWrites({
+      place: 'OGS',
+      rules: 'Chinese',
+      timeControl: '900',
+      overtime: '5x30 byo-yomi',
+      handicap: 2,
+      komi: 6.5,
+      eventName: 'Kisei',
+    });
+
+    const byIdent = Object.fromEntries(writes.map(w => [w.ident, w.values]));
+    expect(byIdent.PC).toEqual(['OGS']);
+    expect(byIdent.RU).toEqual(['Chinese']);
+    expect(byIdent.TM).toEqual(['900']);
+    expect(byIdent.OT).toEqual(['5x30 byo-yomi']);
+    expect(byIdent.HA).toEqual(['2']);
+    expect(byIdent.KM).toEqual(['6.5']);
+    expect(byIdent.EV).toEqual(['Kisei']);
+    expect(writes.some(w => w.ident === 'PB')).toBe(false);
+  });
+
+  test('treats an empty or null value as a delete, and handicap 0 removes HA', () => {
+    const writes = gameInfoToPropertyWrites({
+      place: '',
+      result: null,
+      handicap: 0,
+      playerBlack: undefined,
+    });
+
+    expect(writes).toEqual([
+      { ident: 'PB', values: null },
+      { ident: 'RE', values: null },
+      { ident: 'PC', values: null },
+      { ident: 'HA', values: null },
+    ]);
   });
 });
 

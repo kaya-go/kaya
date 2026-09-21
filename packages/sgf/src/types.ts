@@ -85,15 +85,22 @@ export interface GameTreeNodeRecursive<T> {
 }
 
 /**
- * Game metadata extracted from SGF root node
+ * Game metadata extracted from SGF root node.
+ *
+ * Covers the FF[4] game-info properties plus Go's `HA` / `KM`.
+ * `boardSize` / `boardHeight` come from root `SZ` and are not editable
+ * through a GameInfo patch (`SZ` changes the board, not the info panel).
  */
 export interface GameInfo {
   playerBlack?: string;
   playerWhite?: string;
   rankBlack?: string;
   rankWhite?: string;
+  teamBlack?: string;
+  teamWhite?: string;
   gameName?: string;
   eventName?: string;
+  round?: string;
   komi?: number;
   handicap?: number;
   /** Board width. For a square board this is the whole story. */
@@ -103,8 +110,36 @@ export interface GameInfo {
   date?: string;
   result?: string;
   rules?: string;
+  /** Main time limit in seconds (SGF `TM`). Overtime lives in `overtime`. */
   timeControl?: string;
+  overtime?: string;
   place?: string;
+  annotator?: string;
+  source?: string;
+  copyright?: string;
+  user?: string;
+  opening?: string;
+  gameComment?: string;
+}
+
+/** Fields `updateGameInfo` may change. Absent key = leave unchanged. */
+export type GameInfoMutable = Omit<GameInfo, 'boardSize' | 'boardHeight'>;
+
+/**
+ * A partial GameInfo write. Key present means "set this property".
+ * `null` or `''` (and handicap `0`) removes the SGF property.
+ * A missing key is left as-is — do not use `undefined` to mean "clear"
+ * unless the key is actually present on the object (`'place' in patch`).
+ */
+export type GameInfoPatch = {
+  [K in keyof GameInfoMutable]?: GameInfoMutable[K] | null;
+};
+
+/** One SGF property mutation produced by `gameInfoToPropertyWrites`. */
+export interface SGFPropertyWrite {
+  ident: string;
+  /** `null` deletes the property. */
+  values: string[] | null;
 }
 
 /**

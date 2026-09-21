@@ -4,7 +4,7 @@
  * Features:
  * - Click-to-edit inline editing for visible fields
  * - Edit mode toggle to show and edit all fields (including empty ones)
- * - Escape cancels current edit, Enter saves
+ * - Escape cancels current edit, Enter saves (Ctrl/Cmd+Enter in comments)
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
@@ -12,10 +12,13 @@ import { useTranslation } from 'react-i18next';
 import { LuPencil } from 'react-icons/lu';
 import { useGameTreeBoard } from '../../contexts/GameTreeContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
+import type { GameInfoPatch } from '../../types/game';
 import type { EditableField, TranslatedFieldConfig } from './GameInfoEditorConfig';
-import { FIELD_CONFIG_KEYS, renderTextWithLinks } from './GameInfoEditorConfig';
+import { FIELD_CONFIG_KEYS, PLAYER_ROW_KEYS, renderTextWithLinks } from './GameInfoEditorConfig';
 import { GameInfoField, PlayerRow } from './GameInfoFields';
 import './GameInfoEditor.css';
+
+type EditElement = HTMLInputElement | HTMLTextAreaElement;
 
 // Hook to get game info editor state for external header actions
 export const useGameInfoEditMode = () => {
@@ -74,6 +77,7 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
       min: config.min,
       max: config.max,
       alwaysShow: config.alwaysShow,
+      dividerBefore: config.dividerBefore,
       renderValue: config.fallbackKey
         ? (v: string | number | undefined) => v || <em>{t(config.fallbackKey!)}</em>
         : config.hasLinkRender
@@ -92,7 +96,7 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   // Currently editing field (for inline editing)
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<EditElement>(null);
 
   // Suppress unused variable warning - clearAnalysisCache is available for future use
   void clearAnalysisCache;
@@ -113,36 +117,7 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   }, [editingField]);
 
   const getFieldValue = useCallback(
-    (field: EditableField): string | number | undefined => {
-      switch (field) {
-        case 'gameName':
-          return gameInfo.gameName;
-        case 'date':
-          return gameInfo.date;
-        case 'place':
-          return gameInfo.place;
-        case 'playerBlack':
-          return gameInfo.playerBlack;
-        case 'rankBlack':
-          return gameInfo.rankBlack;
-        case 'playerWhite':
-          return gameInfo.playerWhite;
-        case 'rankWhite':
-          return gameInfo.rankWhite;
-        case 'komi':
-          return gameInfo.komi;
-        case 'handicap':
-          return gameInfo.handicap;
-        case 'rules':
-          return gameInfo.rules;
-        case 'timeControl':
-          return gameInfo.timeControl;
-        case 'result':
-          return gameInfo.result;
-        default:
-          return undefined;
-      }
-    },
+    (field: EditableField): string | number | undefined => gameInfo[field],
     [gameInfo]
   );
 
@@ -158,16 +133,16 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   const saveField = useCallback(
     (field: EditableField, value: string) => {
       const trimmed = value.trim();
-
-      // Build update object with only the changed field
-      const update: Record<string, string | number | undefined> = {};
+      const update: GameInfoPatch = {};
 
       if (field === 'komi') {
-        update.komi = trimmed ? parseFloat(trimmed) : 6.5;
+        const n = trimmed ? parseFloat(trimmed) : 6.5;
+        update.komi = Number.isFinite(n) ? n : 6.5;
       } else if (field === 'handicap') {
-        update.handicap = trimmed ? parseInt(trimmed, 10) : 0;
+        const n = trimmed ? parseInt(trimmed, 10) : 0;
+        update.handicap = Number.isFinite(n) ? n : 0;
       } else {
-        update[field] = trimmed || undefined;
+        Object.assign(update, { [field]: trimmed });
       }
 
       updateGameInfo(update);
@@ -184,9 +159,11 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   }, [editingField, editValue, saveField]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: React.KeyboardEvent<EditElement>) => {
       e.stopPropagation();
       if (e.key === 'Enter') {
+        const isMultiline = e.currentTarget.tagName === 'TEXTAREA';
+        if (isMultiline && !e.metaKey && !e.ctrlKey) return;
         e.preventDefault();
         if (editingField) {
           saveField(editingField, editValue);
@@ -198,14 +175,6 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
     },
     [editingField, editValue, saveField]
   );
-
-  const toggleEditMode = useCallback(() => {
-    const newValue = !isEditMode;
-    setIsEditMode(newValue);
-    // Close any inline editing when toggling edit mode
-    setEditingField(null);
-    setEditValue('');
-  }, [isEditMode, setIsEditMode]);
 
   const renderField = (config: TranslatedFieldConfig) => (
     <GameInfoField
@@ -251,37 +220,17 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   return (
     <div className="game-info-editor">
       <div className="game-info-display">
-        {/* Game Name */}
-        {renderField(fieldConfigs.find(c => c.key === 'gameName')!)}
+        {fieldConfigs.map(config => {
+          if (config.key === 'playerBlack') {
+            return renderPlayerRow('playerBlack', 'rankBlack', t('gameInfo.black'));
+          }
+          if (config.key === 'playerWhite') {
+            return renderPlayerRow('playerWhite', 'rankWhite', t('gameInfo.white'));
+          }
+          if (PLAYER_ROW_KEYS.has(config.key)) return null;
+          return renderField(config);
+        })}
 
-        {/* Date */}
-        {renderField(fieldConfigs.find(c => c.key === 'date')!)}
-
-        {/* Place */}
-        {renderField(fieldConfigs.find(c => c.key === 'place')!)}
-
-        {/* Black Player with Rank */}
-        {renderPlayerRow('playerBlack', 'rankBlack', t('gameInfo.black'))}
-
-        {/* White Player with Rank */}
-        {renderPlayerRow('playerWhite', 'rankWhite', t('gameInfo.white'))}
-
-        {/* Komi */}
-        {renderField(fieldConfigs.find(c => c.key === 'komi')!)}
-
-        {/* Handicap */}
-        {renderField(fieldConfigs.find(c => c.key === 'handicap')!)}
-
-        {/* Rules */}
-        {renderField(fieldConfigs.find(c => c.key === 'rules')!)}
-
-        {/* Time Control */}
-        {renderField(fieldConfigs.find(c => c.key === 'timeControl')!)}
-
-        {/* Result */}
-        {renderField(fieldConfigs.find(c => c.key === 'result')!)}
-
-        {/* Edit mode hint */}
         {isEditMode && <div className="info-hint">{t('gameInfo.editHint')}</div>}
       </div>
     </div>
