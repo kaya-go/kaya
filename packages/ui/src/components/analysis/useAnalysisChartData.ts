@@ -39,9 +39,12 @@ export const CHART_HEIGHT = 150;
 export const CHART_PADDING = { top: 12, right: 36, bottom: 28, left: 40 };
 const WIN_RATE_PADDING = 0.05;
 
-/** Integer move-number ticks, at most ~5 labels. Step is never < 1. */
+/**
+ * Integer move-number ticks for the x axis: 0, then a nice round step, and
+ * always the last move — 7 labels at most. The step is never below 1.
+ */
 export function generateMoveNumberTicks(maxMove: number): number[] {
-  if (maxMove === 0) return [];
+  if (maxMove <= 0) return [];
 
   const maxTicks = 5;
   const rawStep = maxMove / maxTicks;
@@ -53,8 +56,8 @@ export function generateMoveNumberTicks(maxMove: number): number[] {
   else if (normalized <= 5) niceStep = 5 * magnitude;
   else niceStep = 10 * magnitude;
 
-  // Hands are integers. A 1-move game otherwise picks step 0.2, and
-  // 0.2+0.2+0.2 === 0.6000000000000001 in IEEE-754.
+  // Move numbers are integers. A 1-move game otherwise picks step 0.2, and
+  // 0.2 + 0.2 + 0.2 === 0.6000000000000001 in IEEE-754.
   if (niceStep < 1) niceStep = 1;
 
   const ticks: number[] = [0];
