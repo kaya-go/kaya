@@ -12,7 +12,13 @@ permissions:
 
 jobs:
   welcome:
-    if: github.event.sender.type != 'Bot'
+    # first-interaction v3 posts on a PR whenever its author has never opened
+    # an *issue*, whatever their PR history (actions/first-interaction#369),
+    # so PRs are gated on GitHub's own verdict instead. Issues are fine as is.
+    if: >-
+      github.event.sender.type != 'Bot' &&
+      (github.event_name == 'issues' ||
+       contains(fromJSON('["FIRST_TIME_CONTRIBUTOR", "FIRST_TIMER"]'), github.event.pull_request.author_association))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/first-interaction@v3
