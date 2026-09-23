@@ -148,8 +148,10 @@ export function Updater() {
       await update.downloadAndInstall(event => {
         current = applyDownloadEvent(current, event);
         if (event.event === 'Finished') {
-          // Signature check and bundle swap: a couple of seconds, no progress
-          setStatus('installing');
+          // Signature check and bundle swap: a couple of seconds, no progress.
+          // Channel events and the command's result travel separately, so a
+          // late Finished must not pull an already installed dialog back.
+          setStatus(s => (s === 'downloading' ? 'installing' : s));
         } else if (progressKey(current) !== shown) {
           shown = progressKey(current);
           setProgress(current);
