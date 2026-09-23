@@ -213,15 +213,28 @@ describe('gameInfoToPropertyWrites', () => {
       place: '',
       result: null,
       handicap: 0,
-      playerBlack: undefined,
     });
 
     expect(writes).toEqual([
-      { ident: 'PB', values: null },
       { ident: 'RE', values: null },
       { ident: 'PC', values: null },
       { ident: 'HA', values: null },
     ]);
+  });
+
+  test('leaves a property alone when its value is undefined', () => {
+    // A spread or an optional variable yields a present-but-undefined key.
+    expect(gameInfoToPropertyWrites({ playerBlack: undefined, komi: undefined })).toEqual([]);
+  });
+
+  test('drops writes that would leave the current root as it is', () => {
+    const root = parse('(;GM[1]PB[Lee]PC[Seoul]KM[6.5])')[0];
+    const writes = gameInfoToPropertyWrites(
+      { playerBlack: 'Lee', place: 'Busan', komi: 6.5, result: '', round: null },
+      root.data
+    );
+
+    expect(writes).toEqual([{ ident: 'PC', values: ['Busan'] }]);
   });
 });
 

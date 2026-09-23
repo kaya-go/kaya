@@ -311,10 +311,16 @@ export function useGameTreeState() {
       setGameTree(prevTree => {
         if (!prevTree) return null;
 
-        return prevTree.mutate(draft => {
-          if (!draft.get(rootId)) return;
+        const root = prevTree.get(rootId);
+        if (!root) return prevTree;
 
-          for (const { ident, values } of gameInfoToPropertyWrites(info)) {
+        // Any write to the root yields a new tree, and isDirty compares tree
+        // identity, so a field saved unchanged must not write at all.
+        const writes = gameInfoToPropertyWrites(info, root.data);
+        if (writes.length === 0) return prevTree;
+
+        return prevTree.mutate(draft => {
+          for (const { ident, values } of writes) {
             draft.updateProperty(rootId, ident, values);
           }
         });

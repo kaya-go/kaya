@@ -110,41 +110,54 @@ export function extractGameInfo(rootNode: { data: SGFNodeData } | null): GameInf
 }
 
 function shouldRemove(value: unknown): boolean {
-  return value == null || value === '';
+  return value === null || value === '';
+}
+
+function isUnchanged(current: string[] | undefined, values: string[] | null): boolean {
+  if (!current) return values === null;
+  if (!values) return false;
+  return current.length === values.length && current.every((v, i) => v === values[i]);
 }
 
 /**
  * Turn a GameInfo patch into SGF property writes.
  *
- * - Key absent from `info`: no write (leave the tree alone).
- * - Key present with `null` / `''`: delete that property.
+ * - `undefined` (or a missing key): no write (leave the tree alone).
+ * - `null` / `''`: delete that property.
  * - `handicap` of `0` (or non-finite): delete `HA`.
  * - `komi` non-finite or null: delete `KM`.
+ *
+ * Pass the root's current `data` to drop writes that would leave a property
+ * as it is, so saving a field unchanged does not touch the tree.
  */
-export function gameInfoToPropertyWrites(info: GameInfoPatch): SGFPropertyWrite[] {
+export function gameInfoToPropertyWrites(
+  info: GameInfoPatch,
+  current?: SGFNodeData
+): SGFPropertyWrite[] {
   const writes: SGFPropertyWrite[] = [];
 
   for (const [key, ident] of STRING_PROPS) {
-    if (!(key in info)) continue;
     const value = info[key];
+    if (value === undefined) continue;
     if (shouldRemove(value)) writes.push({ ident, values: null });
     else writes.push({ ident, values: [String(value)] });
   }
 
-  if ('komi' in info) {
+  if (info.komi !== undefined) {
     const komi = info.komi;
-    if (komi == null || !Number.isFinite(komi)) writes.push({ ident: 'KM', values: null });
+    if (komi === null || !Number.isFinite(komi)) writes.push({ ident: 'KM', values: null });
     else writes.push({ ident: 'KM', values: [String(komi)] });
   }
 
-  if ('handicap' in info) {
+  if (info.handicap !== undefined) {
     const handicap = info.handicap;
-    if (handicap == null || !Number.isFinite(handicap) || handicap === 0) {
+    if (handicap === null || !Number.isFinite(handicap) || handicap === 0) {
       writes.push({ ident: 'HA', values: null });
     } else {
       writes.push({ ident: 'HA', values: [String(handicap)] });
     }
   }
 
-  return writes;
+  if (!current) return writes;
+  return writes.filter(({ ident, values }) => !isUnchanged(current[ident], values));
 }

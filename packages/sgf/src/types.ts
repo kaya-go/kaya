@@ -126,10 +126,8 @@ export interface GameInfo {
 export type GameInfoMutable = Omit<GameInfo, 'boardSize' | 'boardHeight'>;
 
 /**
- * A partial GameInfo write. Key present means "set this property".
- * `null` or `''` (and handicap `0`) removes the SGF property.
- * A missing key is left as-is — do not use `undefined` to mean "clear"
- * unless the key is actually present on the object (`'place' in patch`).
+ * A partial GameInfo write. `undefined` (or a missing key) leaves the SGF
+ * property as-is; `null` or `''` (and handicap `0`) removes it.
  */
 export type GameInfoPatch = {
   [K in keyof GameInfoMutable]?: GameInfoMutable[K] | null;

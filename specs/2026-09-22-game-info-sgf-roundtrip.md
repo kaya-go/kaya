@@ -29,15 +29,29 @@ Three gaps stacked:
 - `extractGameInfo` and `gameInfoToPropertyWrites` live in
   [`packages/sgf/src/gameInfo.ts`](../packages/sgf/src/gameInfo.ts). `TM` and
   `OT` stay separate (`timeControl` / `overtime`) so an edit round-trips.
-- A patch is keyed by presence: missing key → leave the tree alone; `''` /
-  `null` → delete the property; handicap `0` → delete `HA`.
+- A patch value of `undefined` (or a missing key) leaves the property alone;
+  `''` / `null` deletes it; handicap `0` deletes `HA`.
+- `updateGameInfo` passes the root's data to the writer, which drops writes
+  that match the current value. With nothing left, no `mutate` runs.
 - The editor lists the extra fields. Empty ones stay hidden until the pencil
-  ("edit all fields"). Game comment is a textarea; Ctrl/Cmd+Enter saves.
+  ("edit all fields"). Game comment is a textarea; Ctrl/Cmd+Enter saves, and
+  the caret starts at the end rather than selecting the whole comment.
+
+## Alternatives considered
+
+- **Key the patch by presence** (`'place' in patch`): the first cut. It makes
+  `{ place: undefined }` a delete, which a spread or an optional variable
+  produces by accident. `null` already says "clear", so `undefined` only
+  ever means "leave alone".
 
 ## Learnings
 
-`Partial<T>` cannot mean both "unchanged" and "clear". The writer keys off
-`'place' in patch`, not `patch.place !== undefined`.
+`Partial<T>` cannot mean both "unchanged" and "clear", hence the `| null` in
+`GameInfoPatch`.
+
+`isDirty` compares tree identity, and any write to the root yields a new
+tree. Before the unchanged-write filter, clicking into a field and out again
+(the whole row is now a click target) marked the game unsaved.
 
 ## Links
 

@@ -108,12 +108,14 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
     setEditValue('');
   }, [gameId, setIsEditMode]);
 
-  // Focus input when editing starts
+  // Focus input when editing starts. The comment textarea gets the caret at
+  // the end instead of a full selection, so one stray key can't replace it.
   useEffect(() => {
-    if (editingField && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
+    const el = inputRef.current;
+    if (!editingField || !el) return;
+    el.focus();
+    if (el instanceof HTMLTextAreaElement) el.setSelectionRange(el.value.length, el.value.length);
+    else el.select();
   }, [editingField]);
 
   const getFieldValue = useCallback(

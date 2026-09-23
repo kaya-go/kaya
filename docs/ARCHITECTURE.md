@@ -290,11 +290,6 @@ a code path that builds a board from `GameInfo`, pass `boardHeight` through;
 if you add one that feeds a model, a square board is a precondition to check,
 not an assumption to inherit.
 
-The Game Info sidebar is the FF[4] game-info set plus Go's `HA`/`KM`. `SZ` is
-not editable there. Writes go through `gameInfoToPropertyWrites`: a missing
-key leaves the tree alone; empty/null (and handicap `0`) deletes the SGF
-property. `TM` and `OT` are separate fields (`timeControl` / `overtime`).
-
 ### 10. `gameControl` events have exactly one owner
 
 `gamecontroller.js` exposes a single-slot event API — `gameControl.on('connect', fn)`
@@ -314,3 +309,15 @@ slot: it registers one handler per event and fans it out. Subscribe through
 often than that stops the sticks from ever reporting. `onStateChange` and
 `isControllerActive` are read through refs for that reason — its only
 dependency is `enabled`.
+
+### 11. Game Info edits go through `gameInfoToPropertyWrites`
+
+The Game Info sidebar is the FF[4] game-info set plus Go's `HA`/`KM`; `SZ` is
+not editable there. `TM` and `OT` are separate fields (`timeControl` /
+`overtime`). Every edit becomes SGF writes through
+[`gameInfoToPropertyWrites`](../packages/sgf/src/gameInfo.ts): `undefined`
+leaves a property alone, `null` or `''` (and handicap `0`) deletes it, and a
+write that matches the root's current value is dropped. That last rule
+matters because any write to the root yields a new tree, and `isDirty`
+compares tree identity — without it, clicking into a field and out again
+marks the game unsaved.

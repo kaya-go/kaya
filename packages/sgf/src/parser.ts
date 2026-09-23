@@ -397,8 +397,6 @@ export function sgfNodeToGameTreeNode<T = SGFNodeData>(
   };
 }
 
-export { extractGameInfo } from './gameInfo';
-
 // ============================================================================
 // Stringifier
 // ============================================================================
