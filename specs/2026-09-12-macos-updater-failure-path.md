@@ -89,3 +89,5 @@ command itself lets the update proceed as before.
 ## Links
 
 - [2025-12-13 Tauri auto-updater setup](2025-12-13-tauri-updater-setup.md)
+- [2026-09-23 The update installed, and the dialog never said so](2026-09-23-updater-restart-prompt.md) —
+  the `ask()` dialogs this spec relies on never showed in a release until then

@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
-import { check, Update } from '@tauri-apps/plugin-updater';
+import { check, Update, type DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { ask, message } from '@tauri-apps/plugin-dialog';
+import { message } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import { useTranslation, externalLinkComponents } from '@kaya/ui';
 import { checkInstallLocation, errorText, offerManualDownload } from './updateInstall';
+import { applyDownloadEvent, NO_PROGRESS, progressKey } from './updateProgress';
+import { UpdaterFooter, type UpdaterStatus } from './UpdaterFooter';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -33,16 +35,25 @@ const DEV_MOCK_UPDATE = {
 
 ### 📝 Notes
 This is a **mock update** for testing the updater UI in development mode.`,
-  downloadAndInstall: async () => {
-    // Simulate download progress
-    await new Promise(resolve => setTimeout(resolve, 2000));
+  downloadAndInstall: async (onEvent?: (event: DownloadEvent) => void) => {
+    // Simulate a 50 MB download over ~2 s, then a short install
+    const total = 50_000_000;
+    onEvent?.({ event: 'Started', data: { contentLength: total } });
+    for (let i = 0; i < 50; i++) {
+      await new Promise(resolve => setTimeout(resolve, 40));
+      onEvent?.({ event: 'Progress', data: { chunkLength: total / 50 } });
+    }
+    onEvent?.({ event: 'Finished' });
+    await new Promise(resolve => setTimeout(resolve, 500));
   },
 } as unknown as Update;
 
 export function Updater() {
   const { t } = useTranslation();
   const [update, setUpdate] = useState<Update | null>(null);
-  const [status, setStatus] = useState<'idle' | 'available' | 'installing'>('idle');
+  const [status, setStatus] = useState<'idle' | UpdaterStatus>('idle');
+  const [progress, setProgress] = useState(NO_PROGRESS);
+  const [restartFailed, setRestartFailed] = useState(false);
   const [devModeTriggered, setDevModeTriggered] = useState(false);
 
   const checkForUpdates = useCallback(
@@ -129,42 +140,29 @@ export function Updater() {
       }
     }
 
-    setStatus('installing');
+    setProgress(NO_PROGRESS);
+    setStatus('downloading');
     try {
-      await update.downloadAndInstall();
-
-      // In DEV mode, just show a message instead of actually restarting
-      if (devModeTriggered) {
-        await message(
-          'DEV MODE: Update "installed" successfully!\n\nIn production, this would prompt for restart.',
-          {
-            title: 'DEV: Update Complete',
-            kind: 'info',
-          }
-        );
-        setStatus('idle');
-        setUpdate(null);
-        setDevModeTriggered(false);
-        return;
-      }
-
-      // Ask user to restart
-      const restart = await ask(t('updater.restartPrompt'), {
-        title: t('updater.updateInstalled'),
-        kind: 'info',
-        okLabel: t('updater.restart'),
-        cancelLabel: t('updater.later'),
+      let current = NO_PROGRESS;
+      let shown = '';
+      await update.downloadAndInstall(event => {
+        current = applyDownloadEvent(current, event);
+        if (event.event === 'Finished') {
+          // Signature check and bundle swap: a couple of seconds, no progress
+          setStatus('installing');
+        } else if (progressKey(current) !== shown) {
+          shown = progressKey(current);
+          setProgress(current);
+        }
       });
 
-      if (restart) {
-        await relaunch();
-      }
-
-      // Close dialog regardless of restart choice (if they chose Later)
-      setStatus('idle');
-      setUpdate(null);
+      // Not reached on Windows: the NSIS installer takes over and exits the app.
+      // The restart prompt lives in this dialog rather than in a native one, so
+      // a dialog failure can no longer leave the spinner up after a good install.
+      setStatus('installed');
     } catch (err) {
       console.error('Failed to install update:', err);
+      setStatus('available'); // Re-enable buttons before anything else can fail
       await offerManualDownload({
         title: t('updater.updateFailed'),
         message: `${t('updater.updateFailedMessage')}\n\n${errorText(err)}`,
@@ -172,7 +170,27 @@ export function Updater() {
         okLabel: t('updater.openDownloads'),
         cancelLabel: t('updater.dismiss'),
       });
-      setStatus('available'); // Re-enable buttons
+    }
+  };
+
+  const close = () => {
+    setStatus('idle');
+    setUpdate(null);
+    setRestartFailed(false);
+    setDevModeTriggered(false);
+  };
+
+  const handleRestart = async () => {
+    // DEV mode: nothing was installed, so there is nothing to restart into
+    if (devModeTriggered) {
+      close();
+      return;
+    }
+    try {
+      await relaunch();
+    } catch (err) {
+      console.error('Failed to relaunch after update:', err);
+      setRestartFailed(true);
     }
   };
 
@@ -182,16 +200,8 @@ export function Updater() {
       if (!devModeTriggered) {
         localStorage.setItem('kaya-skipped-version', update.version);
       }
-      setStatus('idle');
-      setUpdate(null);
-      setDevModeTriggered(false);
+      close();
     }
-  };
-
-  const handleLater = () => {
-    setStatus('idle');
-    setUpdate(null);
-    setDevModeTriggered(false);
   };
 
   // Don't render if no update or idle
@@ -201,12 +211,16 @@ export function Updater() {
     <div className="updater-overlay">
       <div className="updater-dialog">
         <div className="updater-header">
-          <h2>{t('updater.updateAvailable')}</h2>
+          <h2>
+            {t(status === 'installed' ? 'updater.updateInstalled' : 'updater.updateAvailable')}
+          </h2>
           {devModeTriggered && <span className="updater-dev-badge">DEV</span>}
         </div>
-        <p className="updater-version">
-          {t('updater.versionAvailable', { version: update.version })}
-        </p>
+        {status !== 'installed' && (
+          <p className="updater-version">
+            {t('updater.versionAvailable', { version: update.version })}
+          </p>
+        )}
         {update.body && (
           <div className="updater-release-notes">
             <ReactMarkdown
@@ -219,24 +233,15 @@ export function Updater() {
         )}
 
         <div className="updater-footer">
-          {status === 'installing' ? (
-            <div className="updater-status">
-              <div className="updater-spinner" />
-              <p>{t('updater.installing')}</p>
-            </div>
-          ) : (
-            <div className="updater-actions">
-              <button className="updater-btn secondary" onClick={handleSkip}>
-                {t('updater.skipVersion')}
-              </button>
-              <button className="updater-btn secondary" onClick={handleLater}>
-                {t('updater.remindLater')}
-              </button>
-              <button className="updater-btn primary" onClick={handleUpdate}>
-                {t('updater.updateNow')}
-              </button>
-            </div>
-          )}
+          <UpdaterFooter
+            status={status}
+            progress={progress}
+            restartFailed={restartFailed}
+            onSkip={handleSkip}
+            onLater={close}
+            onUpdate={handleUpdate}
+            onRestart={handleRestart}
+          />
         </div>
       </div>
     </div>

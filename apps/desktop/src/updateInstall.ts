@@ -37,6 +37,9 @@ export function errorText(error: unknown): string {
 /**
  * A dead end with a way out. Native dialogs render a URL as plain text, so
  * offer to open it rather than leaving the user to retype it.
+ *
+ * Never rejects: it runs from error handlers, and a dialog that throws there
+ * used to leave the updater stuck on its spinner.
  */
 export async function offerManualDownload(dialog: {
   title: string;
@@ -45,12 +48,18 @@ export async function offerManualDownload(dialog: {
   okLabel: string;
   cancelLabel: string;
 }): Promise<void> {
-  const openPage = await ask(`${dialog.message}\n\n${dialog.hint} ${RELEASES_URL}`, {
-    title: dialog.title,
-    kind: 'error',
-    okLabel: dialog.okLabel,
-    cancelLabel: dialog.cancelLabel,
-  });
+  let openPage: boolean;
+  try {
+    openPage = await ask(`${dialog.message}\n\n${dialog.hint} ${RELEASES_URL}`, {
+      title: dialog.title,
+      kind: 'error',
+      okLabel: dialog.okLabel,
+      cancelLabel: dialog.cancelLabel,
+    });
+  } catch (error) {
+    console.error('Failed to show the update error dialog:', error);
+    return;
+  }
 
   if (openPage) {
     try {

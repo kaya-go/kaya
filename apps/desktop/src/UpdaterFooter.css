@@ -1,0 +1,84 @@
+.updater-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+}
+
+.updater-progress-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+.updater-progress-track {
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--bg-secondary, #eee);
+  overflow: hidden;
+}
+
+.updater-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background-color: var(--accent-color, #007bff);
+  transition: width 0.2s ease;
+}
+
+/* No Content-Length: show activity rather than a fake percentage. */
+.updater-progress-fill.indeterminate {
+  width: 30%;
+  animation: updater-progress-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes updater-progress-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(340%);
+  }
+}
+
+.updater-progress-detail {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #666);
+  font-variant-numeric: tabular-nums;
+}
+
+.updater-installed {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.updater-installed p {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .updater-progress-fill {
+    transition: none;
+  }
+
+  .updater-progress-fill.indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .updater-progress-label,
+  .updater-progress-detail {
+    color: #aaa;
+  }
+
+  .updater-progress-track {
+    background-color: #333;
+  }
+}

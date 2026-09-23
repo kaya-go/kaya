@@ -234,6 +234,13 @@ import { invoke } from '@tauri-apps/api/core'; // ✅
 // not @tauri-apps/api/tauri (that's v1)
 ```
 
+Each plugin is a Rust crate and a JS package that call each other by command
+name, and a minor release can rename commands (`tauri-plugin-dialog` 2.7 folded
+`ask` into `message`). Keep every `@tauri-apps/plugin-*` and `@tauri-apps/api`
+on the same major.minor as its crate; `apps/desktop/tests/tauriVersions.test.ts`
+fails otherwise. See
+[`specs/2026-09-23-updater-restart-prompt.md`](../specs/2026-09-23-updater-restart-prompt.md).
+
 ### 8. Keyboard shortcuts are centralized and customizable
 
 [`packages/ui/src/hooks/useKeyboardShortcuts.ts`](../packages/ui/src/hooks/useKeyboardShortcuts.ts).

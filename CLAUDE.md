@@ -208,6 +208,7 @@ Keep files small for readability and maintainability. Maximum line counts per fi
 2. **SGF Properties Are Arrays**: `node.data.C?.[0]` not `node.data.C`
 3. **Workspace Dependencies**: Always use `workspace:*` in package.json
 4. **Cache Invalidation**: Call `clearAllCaches()` when loading new game
+5. **Tauri Plugin Versions**: Bump `@tauri-apps/plugin-*` together with its `tauri-plugin-*` crate (same major.minor) — `tauriVersions.test.ts` enforces it
 
 ## Commit Message Format
 
