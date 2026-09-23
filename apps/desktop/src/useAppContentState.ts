@@ -197,8 +197,11 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     return true;
   });
 
-  const { isEditMode: gameInfoEditMode, toggleEditMode: toggleGameInfoEditMode } =
-    useGameInfoEditMode();
+  const {
+    isEditMode: gameInfoEditMode,
+    setIsEditMode: setGameInfoEditMode,
+    toggleEditMode: toggleGameInfoEditMode,
+  } = useGameInfoEditMode();
   const { matchesShortcut, getBinding, bindingToDisplayString } = useKeyboardShortcuts();
 
   useEffect(() => {
@@ -258,6 +261,7 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     showSidebar,
     setShowSidebar,
     gameInfoEditMode,
+    setGameInfoEditMode,
     toggleGameInfoEditMode,
     getBinding,
     bindingToDisplayString,

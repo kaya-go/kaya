@@ -101,8 +101,13 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   // Suppress unused variable warning - clearAnalysisCache is available for future use
   void clearAnalysisCache;
 
-  // Reset edit mode when game changes (loading or creating a new game)
+  // Reset edit mode when game changes (loading or creating a new game). Not on
+  // mount: switching between the desktop and mobile layouts remounts the
+  // editor, and a controlled edit mode should survive that.
+  const lastGameIdRef = useRef(gameId);
   useEffect(() => {
+    if (lastGameIdRef.current === gameId) return;
+    lastGameIdRef.current = gameId;
     setIsEditMode(false);
     setEditingField(null);
     setEditValue('');

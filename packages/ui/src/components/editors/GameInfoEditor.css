@@ -334,27 +334,27 @@
   background: var(--button-secondary-hover, #555);
 }
 
-@media (max-width: 768px) {
-  .editable-field {
-    min-height: var(--touch-target-min, 44px);
-    display: inline-flex;
-    align-items: center;
-  }
+/* Touch targets follow the layout, not the width: the stacked mobile layout
+   also serves tablets and landscape phones wider than 768px. */
+.mobile-info-content .editable-field {
+  min-height: var(--touch-target-min, 44px);
+  display: inline-flex;
+  align-items: center;
+}
 
-  .inline-edit-input {
-    min-height: var(--touch-target-min, 44px);
-  }
+.mobile-info-content .inline-edit-input {
+  min-height: var(--touch-target-min, 44px);
+}
 
-  .editable-field-multiline {
-    display: block;
-    min-height: var(--touch-target-min, 44px);
-    padding: 0.5rem 0.25rem;
-  }
+.mobile-info-content .editable-field-multiline {
+  display: block;
+  min-height: var(--touch-target-min, 44px);
+  padding: 0.5rem 0.25rem;
+}
 
-  .inline-edit-textarea {
-    min-height: var(--touch-target-min, 44px);
-    padding: 0.5rem 0.25rem;
-  }
+.mobile-info-content .inline-edit-textarea {
+  min-height: var(--touch-target-min, 44px);
+  padding: 0.5rem 0.25rem;
 }
 
 .mobile-info-content .game-info-editor {
@@ -362,6 +362,7 @@
   flex: none;
   overscroll-behavior: auto;
 }
+
 .game-info-link {
   color: var(--accent, #4a9eff);
   text-decoration: none;

@@ -7,6 +7,7 @@ interface ResizableLayoutMobileProps {
   boardContent?: React.ReactNode;
   gameTreeContent?: React.ReactNode;
   gameInfoContent?: React.ReactNode;
+  gameInfoHeaderActions?: React.ReactNode;
   commentContent?: React.ReactNode;
   libraryContent?: React.ReactNode;
   analysisGraphContent?: React.ReactNode;
@@ -19,6 +20,7 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
   boardContent,
   gameTreeContent,
   gameInfoContent,
+  gameInfoHeaderActions,
   commentContent,
   libraryContent,
   analysisGraphContent,
@@ -47,6 +49,9 @@ export const ResizableLayoutMobile: React.FC<ResizableLayoutMobileProps> = ({
           <div className="mobile-panel-header">
             <LuInfo size={16} />
             <span>{t('panels.gameInfo')}</span>
+            {gameInfoHeaderActions && (
+              <div className="mobile-panel-header-actions">{gameInfoHeaderActions}</div>
+            )}
           </div>
           <div className="mobile-panel-content mobile-info-content">
             <div className="mobile-info-section">

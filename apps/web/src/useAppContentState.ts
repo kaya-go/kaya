@@ -74,8 +74,11 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
   });
 
   // Game info editor state for header actions
-  const { isEditMode: gameInfoEditMode, toggleEditMode: toggleGameInfoEditMode } =
-    useGameInfoEditMode();
+  const {
+    isEditMode: gameInfoEditMode,
+    setIsEditMode: setGameInfoEditMode,
+    toggleEditMode: toggleGameInfoEditMode,
+  } = useGameInfoEditMode();
   const { matchesShortcut, getBinding, bindingToDisplayString } = useKeyboardShortcuts();
 
   // PWA install prompt
@@ -241,6 +244,7 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     showSidebar,
     setShowSidebar,
     gameInfoEditMode,
+    setGameInfoEditMode,
     toggleGameInfoEditMode,
     getBinding,
     bindingToDisplayString,

@@ -48,6 +48,19 @@
   flex-shrink: 0;
 }
 
+/* Right-aligned header buttons (Game Info's "edit all fields"). The negative
+   block margin lets a full touch target sit in the header's padding. */
+.mobile-panel-header-actions {
+  display: flex;
+  margin-left: auto;
+  margin-block: -12px;
+}
+
+.mobile-panel-header-actions .info-edit-button {
+  min-width: var(--touch-target-min, 44px);
+  min-height: var(--touch-target-min, 44px);
+}
+
 .mobile-panel-content {
   flex: 1;
   display: flex;
@@ -151,5 +164,9 @@
   .mobile-panel-header {
     padding: 8px 16px;
     font-size: 13px;
+  }
+
+  .mobile-panel-header-actions {
+    margin-block: -8px;
   }
 }

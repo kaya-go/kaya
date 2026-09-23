@@ -58,6 +58,7 @@ export function AppContent({
     showSidebar,
     setShowSidebar,
     gameInfoEditMode,
+    setGameInfoEditMode,
     toggleGameInfoEditMode,
     getBinding,
     bindingToDisplayString,
@@ -164,7 +165,7 @@ export function AppContent({
             gameInfoContent={
               <GameInfoEditor
                 isEditMode={gameInfoEditMode}
-                onEditModeChange={toggleGameInfoEditMode}
+                onEditModeChange={setGameInfoEditMode}
               />
             }
             commentContent={<CommentEditor />}
