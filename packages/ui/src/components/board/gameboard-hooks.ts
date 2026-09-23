@@ -23,6 +23,7 @@ import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { parseGTPCoordinate } from '../../utils/gtpUtils';
 import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 // =========================
 // Current Player & Ghost Logic
@@ -165,7 +166,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
           const signMap = currentBoard.signMap;
           const nextToPlay = currentPlayer === 1 ? 'B' : 'W';
           moveStr = await aiEngine.generateMove(signMap, {
-            komi: gameInfo.komi ?? 7.5,
+            komi: gameInfo.komi ?? DEFAULT_KOMI,
             nextToPlay,
             numVisits: aiSettings.numVisits ?? 1,
           });

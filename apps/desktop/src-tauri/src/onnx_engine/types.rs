@@ -54,6 +54,7 @@ pub struct AnalysisOptions {
     pub history: Vec<HistoryMove>,
 }
 
+/// Mirrors `DEFAULT_KOMI` in `@kaya/ai-engine`.
 fn default_komi() -> f32 {
     7.5
 }
@@ -61,7 +62,7 @@ fn default_komi() -> f32 {
 impl Default for AnalysisOptions {
     fn default() -> Self {
         Self {
-            komi: 7.5,
+            komi: default_komi(),
             next_to_play: None,
             history: vec![],
         }

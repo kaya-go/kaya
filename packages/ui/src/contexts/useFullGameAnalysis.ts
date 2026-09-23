@@ -22,6 +22,7 @@ import {
   generateAnalysisCacheKey,
 } from '../utils/aiAnalysis';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 const TAG = 'full-game';
 
@@ -119,7 +120,7 @@ export function useFullGameAnalysis({
       setFullGameTotalMoves(fullSequence.length);
 
       const boardSize = currentBoard.signMap.length;
-      const komi = gameInfo?.komi ?? 7.5;
+      const komi = gameInfo?.komi ?? DEFAULT_KOMI;
       // Full-game uses its own visit setting (default 10) so deep live
       // search doesn't accidentally make a whole-game pass take hours.
       const numVisits = aiSettings.fullGameNumVisits ?? aiSettings.numVisits ?? 1;

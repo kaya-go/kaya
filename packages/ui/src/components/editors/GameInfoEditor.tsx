@@ -138,8 +138,9 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
       const update: GameInfoPatch = {};
 
       if (field === 'komi') {
-        const n = trimmed ? parseFloat(trimmed) : 6.5;
-        update.komi = Number.isFinite(n) ? n : 6.5;
+        // Empty clears KM (back to the default); unparseable leaves it alone.
+        const n = parseFloat(trimmed);
+        update.komi = trimmed === '' ? null : Number.isFinite(n) ? n : undefined;
       } else if (field === 'handicap') {
         const n = trimmed ? parseInt(trimmed, 10) : 0;
         update.handicap = Number.isFinite(n) ? n : 0;

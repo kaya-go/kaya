@@ -8,6 +8,7 @@ import {
   DEAD_STONE_THRESHOLD,
 } from '../../services/scoring';
 import { type GameInfo, type ScoreData } from '../../types/game';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface UseScoringProps {
   currentBoard: GoBoard | null;
@@ -61,7 +62,7 @@ export function useScoring({ currentBoard, gameInfo }: UseScoringProps) {
   const [estimationMode, setEstimationMode] = useState(true);
   const [probabilityMap, setProbabilityMap] = useState<number[][] | null>(null);
 
-  const komi = useMemo(() => parseFloat(String(gameInfo.komi || 0)), [gameInfo.komi]);
+  const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
   // Derive territory map and score data from deadStones (always in sync)
   const { territoryMap, scoreData } = useMemo(() => {

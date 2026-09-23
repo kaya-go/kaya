@@ -23,6 +23,7 @@ import {
 } from '../utils/aiAnalysis';
 import { vertexToGTP } from '../utils/gtpUtils';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface UseLiveAnalysisParams {
   queue: AnalysisQueue | null;
@@ -79,7 +80,7 @@ export function useLiveAnalysis({
   const lookupCachedResult = useCallback((): boolean => {
     if (!queue || !gameTree || currentNodeId === null || currentNodeId === undefined) return false;
     const boardSize = currentBoard.signMap.length;
-    const komi = gameInfo?.komi ?? 7.5;
+    const komi = gameInfo?.komi ?? DEFAULT_KOMI;
     const sequence = getPathToNode(gameTree, currentNodeId);
     const currentIndex = sequence.length - 1;
 
@@ -156,7 +157,7 @@ export function useLiveAnalysis({
     setError(null);
 
     const boardSize = currentBoard.signMap.length;
-    const komi = gameInfo?.komi ?? 7.5;
+    const komi = gameInfo?.komi ?? DEFAULT_KOMI;
 
     type Pos = {
       signMap: SignMap;

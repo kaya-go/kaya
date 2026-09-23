@@ -20,6 +20,7 @@ import {
 } from '../../utils/aiAnalysis';
 import { getPathToNode } from '../../utils/gameCache';
 import type { TFunction } from 'i18next';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface GameInfoInput {
   boardSize?: number;
@@ -62,7 +63,7 @@ export function buildPerformanceReport(
   t: TFunction
 ): GamePerformanceReport | null {
   const boardSize = gameInfo.boardSize ?? 19;
-  const komi = gameInfo.komi ?? 7.5;
+  const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
   // Step 1: Get path from root to current node
   const pathToCurrentNode = getPathToNode(gameTree, currentNodeId ?? rootId);

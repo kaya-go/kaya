@@ -7,7 +7,7 @@ import {
   type EngineCapabilities,
   type EngineRuntimeInfo,
 } from './base-engine';
-import type { AnalysisResult } from './types';
+import { DEFAULT_KOMI, type AnalysisResult } from './types';
 import type { OnnxEngineConfig } from './onnx-types';
 import {
   float32ToFloat16,
@@ -179,7 +179,7 @@ export class OnnxEngine extends Engine {
       nextPla = blackStones === whiteStones ? 1 : -1;
     }
 
-    const komi = options.komi ?? 7.5;
+    const komi = options.komi ?? DEFAULT_KOMI;
     const history = options.history || [];
     const numVisits: number = (options as any).numVisits ?? 1;
 
@@ -385,7 +385,7 @@ export class OnnxEngine extends Engine {
 
     for (let b = 0; b < actualBatchSize; b++) {
       const { options, board, nextPla } = uncachedInputs[b];
-      const komi = options.komi ?? 7.5;
+      const komi = options.komi ?? DEFAULT_KOMI;
       plas.push(nextPla);
       const history = options.history || [];
       featurizeToBuffer(board, nextPla, komi, history, bin_input, global_input, b, size);

@@ -25,6 +25,7 @@ import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import './AnalysisGraphPanel.css';
 import './AnalysisGraphPanelControls.css';
 import './AnalysisGraphPanelChart.css';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 export interface AnalysisGraphPanelProps {
   className?: string;
@@ -92,7 +93,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     }
 
     const boardSize = gameInfo.boardSize ?? 19;
-    const komi = gameInfo.komi ?? 7.5;
+    const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
     // Step 1: Get path from root to current node (this is the branch we're on)
     const pathToCurrentNode = getPathToNode(gameTree, currentNodeId);

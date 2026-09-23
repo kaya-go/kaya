@@ -321,3 +321,8 @@ write that matches the root's current value is dropped. That last rule
 matters because any write to the root yields a new tree, and `isDirty`
 compares tree identity — without it, clicking into a field and out again
 marks the game unsaved.
+
+A game whose SGF has no `KM` uses `DEFAULT_KOMI` (7.5, exported by
+`@kaya/ai-engine`, the engines' own default) everywhere: analysis, scoring,
+and the panel, which shows it in italics. Clearing Komi in the panel deletes
+`KM`. New games always write `KM`, 0 included.

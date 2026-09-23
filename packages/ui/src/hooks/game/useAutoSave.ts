@@ -5,6 +5,7 @@ import { type SGFProperty } from '../../types/game';
 import { injectAnalysisToTree } from '../../utils/sgfAnalysis';
 import { GoBoard } from '@kaya/goboard';
 import type { AnalysisResult } from '@kaya/ai-engine';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 const AUTO_SAVE_KEY = 'kaya-auto-save';
 const AUTO_SAVE_TIMESTAMP_KEY = 'kaya-auto-save-timestamp';
@@ -37,7 +38,7 @@ export function autoSaveCurrentGame(
       const board = GoBoard.fromDimensions(boardSize ?? 19);
       // Use cache or empty map
       const cache = analysisCache?.current ?? new Map();
-      rootNode = injectAnalysisToTree(rootNode, cache, board, komi ?? 7.5);
+      rootNode = injectAnalysisToTree(rootNode, cache, board, komi ?? DEFAULT_KOMI);
     }
 
     const sgfContent = stringifySGF([rootNode]);

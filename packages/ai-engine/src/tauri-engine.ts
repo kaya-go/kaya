@@ -18,7 +18,7 @@ import {
   type EngineCapabilities,
   type EngineRuntimeInfo,
 } from './base-engine';
-import type { AnalysisResult } from './types';
+import { DEFAULT_KOMI, type AnalysisResult } from './types';
 import type { MCTSProgress } from './onnx-types';
 import {
   type UploadProgress,
@@ -238,7 +238,7 @@ export class TauriEngine extends Engine {
     }
 
     const numVisits: number = (options as any).numVisits ?? 1;
-    const komi = options.komi ?? 7.5;
+    const komi = options.komi ?? DEFAULT_KOMI;
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
     const signal = (options as any).signal as AbortSignal | undefined;
 
@@ -367,7 +367,7 @@ export class TauriEngine extends Engine {
         input: {
           signMap: signMap.map(row => row.map(s => s as number)),
           options: {
-            komi: options.komi ?? 7.5,
+            komi: options.komi ?? DEFAULT_KOMI,
             nextToPlay: options.nextToPlay,
             history: this.convertHistory(options.history),
           },

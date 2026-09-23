@@ -21,6 +21,7 @@ import { useLiveAnalysis } from './useLiveAnalysis';
 import { useFullGameAnalysis } from './useFullGameAnalysis';
 import { buildHeatmap } from './ai/heatmapBuilder';
 import { computeNextMoveInfo, computeNextMoveVertex } from './ai/nextMoveInfoBuilder';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 // Re-export public API
 export { useAIAnalysis } from './ai-analysis-types';
@@ -221,7 +222,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Invalidate only the current position's cache entry
       if (gameTree && currentNodeId !== null && currentNodeId !== undefined) {
         const boardSize = currentBoard.signMap.length;
-        const komi = gameInfo?.komi ?? 7.5;
+        const komi = gameInfo?.komi ?? DEFAULT_KOMI;
         const sequence = getPathToNode(gameTree, currentNodeId);
         let state = createInitialAnalysisState(boardSize);
         for (let i = 0; i < sequence.length; i++) {

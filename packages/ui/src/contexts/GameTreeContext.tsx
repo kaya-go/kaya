@@ -28,6 +28,7 @@ import { usePatternMatching } from '../hooks/game/usePatternMatching';
 import { useGameSettings } from '../hooks/game/useGameSettings';
 import { useGameTreeUndoRedo } from './useGameTreeUndoRedo';
 import { useGameTreeSGFOperations } from './useGameTreeSGFOperations';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 // Re-export types for consumers
 export type {
@@ -303,7 +304,7 @@ export const GameTreeProvider: React.FC<{
     analysisCache,
     saveAnalysisToSgf: aiSettings.saveAnalysisToSgf,
     boardSize: gameInfo.boardSize ?? 19,
-    komi: gameInfo.komi ?? 7.5,
+    komi: gameInfo.komi ?? DEFAULT_KOMI,
     analysisCacheSize, // Triggers auto-save when analysis results are added
   });
 

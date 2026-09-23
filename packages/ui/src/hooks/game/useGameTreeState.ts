@@ -255,7 +255,10 @@ export function useGameTreeState() {
 
     const rootData: SGFProperty = {
       SZ: [config?.boardSize ? String(config.boardSize) : '19'],
-      KM: [config?.komi ? String(config.komi) : '6.5'],
+      // A komi of 0 is a real choice (handicap games), not a missing one.
+      KM: [
+        config?.komi !== undefined && Number.isFinite(config.komi) ? String(config.komi) : '6.5',
+      ],
       GM: ['1'],
       FF: ['4'],
       CA: ['UTF-8'],

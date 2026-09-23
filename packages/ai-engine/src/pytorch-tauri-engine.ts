@@ -16,7 +16,7 @@ import {
   type EngineCapabilities,
   type EngineRuntimeInfo,
 } from './base-engine';
-import type { AnalysisResult, MoveSuggestion } from './types';
+import { DEFAULT_KOMI, type AnalysisResult, type MoveSuggestion } from './types';
 
 /**
  * Type for the Tauri invoke function
@@ -231,7 +231,7 @@ export class PyTorchTauriEngine extends Engine {
 
     const signMapArray = signMap.map(row => row.map(s => s as number));
     const tauriOptions: TauriAnalysisOptions = {
-      komi: options.komi ?? 7.5,
+      komi: options.komi ?? DEFAULT_KOMI,
       nextToPlay: options.nextToPlay,
       history: options.history ?? [],
     };
@@ -274,7 +274,7 @@ export class PyTorchTauriEngine extends Engine {
         input: {
           signMap: signMap.map(row => row.map(s => s as number)),
           options: {
-            komi: options.komi ?? 7.5,
+            komi: options.komi ?? DEFAULT_KOMI,
             nextToPlay: options.nextToPlay,
             history: options.history ?? [],
           },

@@ -19,6 +19,7 @@ import {
 } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
 import { createEngine, type CreateEngineOptions } from '../../workers/engineFactory';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 export interface ChainStepEvent {
   backend: BackendId;
@@ -188,7 +189,12 @@ async function warmUp(engine: Engine, boardSize: number): Promise<void> {
   const empty: SignMap = Array.from({ length: boardSize }, () =>
     Array(boardSize).fill(0 as const)
   ) as SignMap;
-  await engine.analyze(empty, { nextToPlay: 'B', komi: 7.5, history: [], skipCache: true });
+  await engine.analyze(empty, {
+    nextToPlay: 'B',
+    komi: DEFAULT_KOMI,
+    history: [],
+    skipCache: true,
+  });
 }
 
 async function safeDispose(engine: Engine): Promise<void> {

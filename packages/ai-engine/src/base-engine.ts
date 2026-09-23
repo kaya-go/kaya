@@ -6,7 +6,7 @@
  */
 
 import type { SignMap } from '@kaya/goboard';
-import type { AnalysisResult } from './types';
+import { DEFAULT_KOMI, type AnalysisResult } from './types';
 
 /**
  * Base configuration for all AI engines
@@ -345,7 +345,7 @@ export abstract class Engine {
     // The NN uses history as input features, so different histories produce different results
     const boardHash = this.defaultHashSignMap(signMap);
     const nextToPlay = options.nextToPlay ?? 'B';
-    const komi = options.komi ?? 7.5;
+    const komi = options.komi ?? DEFAULT_KOMI;
 
     // Only include the last 5 moves of history (what the NN actually uses)
     const history = options.history || [];

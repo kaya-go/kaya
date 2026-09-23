@@ -35,6 +35,13 @@ export interface AnalysisResult {
 }
 
 /**
+ * Komi the engines assume when a caller passes none, and so the komi Kaya
+ * uses for a game whose SGF has no `KM`. The Rust engine's `default_komi()`
+ * mirrors it.
+ */
+export const DEFAULT_KOMI = 7.5;
+
+/**
  * Analysis configuration options
  */
 export interface AnalysisOptions {

@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 import type { EditableField, TranslatedFieldConfig } from './GameInfoEditorConfig';
 
 type EditElement = HTMLInputElement | HTMLTextAreaElement;
@@ -111,7 +112,9 @@ export const GameInfoField: React.FC<GameInfoFieldProps> = ({
   if (config.renderValue) {
     displayValue = config.renderValue(value);
   } else if (config.key === 'komi') {
-    displayValue = value ?? 6.5;
+    // No KM in the file: show, in italics like other fallbacks, the komi that
+    // analysis and scoring actually use.
+    displayValue = value ?? <em>{DEFAULT_KOMI}</em>;
   } else {
     displayValue = value || null;
   }

@@ -7,6 +7,7 @@ import {
 } from '@kaya/sgf';
 import { injectAnalysisToTree, extractAnalysisFromTree } from '../utils/sgfAnalysis';
 import type { GameInfo, AISettings, NewGameConfig } from '../types/game';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface UseGameTreeSGFOperationsParams {
   gameTree: any;
@@ -80,7 +81,7 @@ export function useGameTreeSGFOperations({
         if (nodes.length > 0) {
           const info = extractGameInfoFromSGF(nodes[0]);
           const size = info.boardSize ?? 19;
-          const komi = info.komi ?? 7.5;
+          const komi = info.komi ?? DEFAULT_KOMI;
           const initialBoard = GoBoard.fromDimensions(size);
 
           const extractedCount = extractAnalysisFromTree(
@@ -113,7 +114,7 @@ export function useGameTreeSGFOperations({
     if (!rootNode) return '';
 
     const board = GoBoard.fromDimensions(gameInfo.boardSize);
-    const komi = gameInfo.komi ?? 7.5;
+    const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
     const injectedRoot = injectAnalysisToTree(rootNode, analysisCache.current, board, komi);
     return stringifySGF([injectedRoot]);
@@ -168,7 +169,7 @@ export function useGameTreeSGFOperations({
       if (!rootNode) return;
 
       const size = gameInfo.boardSize ?? 19;
-      const komi = gameInfo.komi ?? 7.5;
+      const komi = gameInfo.komi ?? DEFAULT_KOMI;
       const initialBoard = GoBoard.fromDimensions(size);
 
       const extractedCount = extractAnalysisFromTree(
