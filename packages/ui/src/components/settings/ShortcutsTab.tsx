@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuRotateCcw, LuKeyboard, LuTriangleAlert, LuX, LuCheck } from 'react-icons/lu';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import {
   useKeyboardShortcuts,
   type ShortcutId,
@@ -49,6 +50,8 @@ export const ShortcutsTab: React.FC<ShortcutsTabProps> = () => {
 
   const [recording, setRecording] = useState<RecordingState | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  useCloseOnBack(!!recording?.collision, () => setRecording(null));
+  useCloseOnBack(showResetConfirm, () => setShowResetConfirm(false));
   const recordingRef = useRef<HTMLButtonElement>(null);
 
   // Handle keyboard capture for recording

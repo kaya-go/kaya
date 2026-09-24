@@ -46,16 +46,29 @@ Detection:
 | Swipe left on board  | Next move                                     |
 | Swipe right on board | Previous move                                 |
 | Multi-touch          | Suppressed during pinch — no accidental plays |
+| Long-press tree node | Branch menu (make main, copy, cut, delete)    |
 
 Implemented in
 [`packages/shudan/src/Goban.tsx`](../packages/shudan/src/Goban.tsx)
 (touch handlers) and
 [`packages/ui/src/hooks/useSwipeGesture.ts`](../packages/ui/src/hooks/useSwipeGesture.ts).
 
+The game tree node long-press is implemented in
+[`packages/ui/src/components/gametree/StoneNode.tsx`](../packages/ui/src/components/gametree/StoneNode.tsx)
+and opens [`GameTreeContextMenu`](../packages/ui/src/components/gametree/GameTreeContextMenu.tsx).
+It uses a pointer timer rather than the `contextmenu` event because iOS Safari
+does not synthesise one for long-presses. A second finger cancels it, so a
+pinch-zoom that starts on a stone does not open the menu. Destructive menu
+actions offer Undo in a toast, since touch users have no Cmd/Ctrl+Z.
+
 The decided-but-not-yet-shipped UX is **tap-confirm**: tap shows a ghost
 stone and a small ✓; the stone commits on the second tap. Picked over
 direct tap (misclicks are unrecoverable in normal play) and hold-to-place
 (conflicts with future drag/pan).
+
+The system back gesture (Android, and browser back on the web) closes the
+topmost dialog or menu, and exits when none is open. Implemented in
+[`packages/ui/src/hooks/useCloseOnBack.ts`](../packages/ui/src/hooks/useCloseOnBack.ts).
 
 ## Touch targets
 
@@ -64,6 +77,17 @@ the `--touch-target-min` custom property — don't hardcode pixel sizes
 that bypass it. Densely packed toolbars need particular attention; the
 mobile action bar is icons-only with horizontal scroll on overflow rather
 than crowding the row.
+
+The one deliberate exception is the game tree graph. Its stones are 24 px
+because the layout worker spaces nodes on that grid (42 px along the main
+axis, 38 px across), so a 44 px hit area would overlap neighbouring nodes
+and make taps ambiguous. React Flow marks every node `role="button"`, so
+the global touch-target rule in `theme.css` matches them;
+`GameTreeGraph.css` pins `.react-flow__node-stone` to 24 px with a more
+specific selector that wins over it. Pinch-zoom is the small-target
+affordance there. Keep the global rule's selectors at their current
+specificity: component rules such as `.toggle-switch` size themselves by
+beating it.
 
 ## Mobile-specific components
 
@@ -97,3 +121,8 @@ Anything new must work in all three modes. Practically:
 3. Verify touch targets stay above `var(--touch-target-min)` on mobile.
 4. Test in dev with the browser's responsive tools — phone, phone
    landscape, tablet, desktop.
+5. Anything with `white-space: nowrap` that sits in a flex row (status pills,
+   chips, badges) needs `min-width: 0` on itself and on every ancestor that must
+   shrink, otherwise it overflows the row rather than truncating and can push a
+   close button off screen. Give the row's last interactive item
+   `flex-shrink: 0`.

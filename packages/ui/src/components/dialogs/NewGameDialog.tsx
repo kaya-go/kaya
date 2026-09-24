@@ -11,6 +11,7 @@
 
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './NewGameDialog.css';
 
 interface NewGameConfig {
@@ -31,6 +32,7 @@ interface NewGameDialogProps {
 
 export const NewGameDialog: React.FC<NewGameDialogProps> = ({ isOpen, onClose, onConfirm }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onClose);
   const [boardSize, setBoardSize] = useState<number>(19);
   const [playerBlack, setPlayerBlack] = useState<string>('Black');
   const [playerWhite, setPlayerWhite] = useState<string>('White');

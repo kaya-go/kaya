@@ -27,6 +27,7 @@ import { useI18n } from '@kaya/i18n';
 import type { Locale } from '@kaya/i18n';
 import type { VersionData } from './StatusBar';
 import type { PwaInstallState } from '../../hooks/usePwaInstall';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './MobileMenu.css';
 
 // Flag emojis for each locale
@@ -85,6 +86,8 @@ export const MobileMenu: React.FC<MobileMenuProps> = ({
   const { t } = useTranslation();
   const { locale, setLocale, locales } = useI18n();
   const [showLanguages, setShowLanguages] = useState(false);
+
+  useCloseOnBack(isOpen, onClose);
 
   if (!isOpen) return null;
 

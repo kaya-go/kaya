@@ -71,6 +71,7 @@ export * from './performance-report';
 // Auto-configuration: probe environment + pick model/backend
 export {
   CANONICAL_MODEL,
+  AUTO_PICK_REASONS,
   probeEnvironment,
   pickConfig,
   type BackendId,
@@ -79,6 +80,7 @@ export {
   type Probe,
   type HostOS,
   type AutoPick,
+  type AutoPickReason,
 } from './auto-config';
 
 // Analysis queue: single-source-of-truth for live + batch analysis

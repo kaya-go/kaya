@@ -4,7 +4,7 @@
  * (engine, isInitializing, activeBackend, error).
  */
 
-import type { BackendId, Quantization } from '@kaya/ai-engine';
+import type { AutoPickReason, BackendId, Quantization } from '@kaya/ai-engine';
 
 export type EngineStatus =
   | { phase: 'idle' }
@@ -26,7 +26,11 @@ export type EngineStatus =
       phase: 'ready';
       backend: string;
       quantization: Quantization;
-      reasoning: string;
+      /**
+       * Why this backend was picked, as a translatable id. Absent when the
+       * status was rebuilt after a module reload and the original pick is gone.
+       */
+      reason?: AutoPickReason;
     }
   | { phase: 'error'; message: string };
 

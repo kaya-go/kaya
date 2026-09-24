@@ -41,6 +41,18 @@
   background-color: var(--bg-secondary);
 }
 
+/* Stone tiles are a fixed 24px: the layout worker spaces nodes on that grid
+   (NODE_WIDTH/NODE_HEIGHT in graphLayout.worker.ts) and derives handle
+   positions from it. Keep this pinned so a broad rule elsewhere (the
+   touch-target rule in theme.css matches React Flow's role="button" node
+   wrappers) cannot resize the boxes and detach the edges from the stones. */
+.gametree-graph-container .react-flow__node-stone {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+}
+
 .gametree-graph-canvas {
   display: block;
   cursor: pointer;

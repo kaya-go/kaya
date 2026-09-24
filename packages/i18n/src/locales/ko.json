@@ -147,8 +147,16 @@
       "loadingModel": "모델 로딩 중… {{progress}}",
       "loadingModelMessage": "{{message}}",
       "initializing": "{{backend}} 시작 중 ({{step}}/{{total}})",
-      "ready": "{{reasoning}}",
       "error": "AI 엔진 오류: {{message}}"
+    },
+    "backendReason": {
+      "pytorchSidecar": "PyTorch 사이드카",
+      "nativeGpu": "네이티브 GPU",
+      "nativeCpu": "네이티브 CPU",
+      "webgpu": "GPU — WebGPU",
+      "webgpuNoF16": "WebGPU (f16 없음)",
+      "wasmNativeUnavailable": "WASM (네이티브 없음)",
+      "wasmNoGpu": "GPU 없음 — WASM"
     },
     "modelUploadedSuccess": "모델 업로드 성공",
     "modelUploadFailed": "모델 업로드 실패",
@@ -383,6 +391,8 @@
     "copy": "복사",
     "pasteBranch": "붙여넣기",
     "paste": "붙여넣기",
+    "cutBranch": "변화 잘라내기",
+    "deleteContinuation": "이후 변화 삭제 (현재 위치 유지)",
     "deleteCurrentBranch": "현재 변화 삭제",
     "deleteOtherBranches": "다른 변화 삭제 (현재 수순만 유지)",
     "history": "기록",
@@ -463,7 +473,12 @@
     "switchToHorizontal": "가로 레이아웃으로 전환",
     "hideMinimap": "미니맵 숨기기",
     "showMinimap": "미니맵 보기",
-    "centerOnPosition": "현재 위치 중앙에"
+    "centerOnPosition": "현재 위치 중앙에",
+    "branchActions": "변화 작업",
+    "branchDeleted": "변화가 삭제되었습니다",
+    "branchCut": "변화를 잘라냈습니다",
+    "continuationDeleted": "이후 변화가 삭제되었습니다",
+    "otherBranchesDeleted": "다른 변화가 삭제되었습니다"
   },
   "boardControls": {
     "captured": "잡힌 돌",

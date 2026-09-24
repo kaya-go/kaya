@@ -8,6 +8,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { LuFolder, LuFolderOpen, LuChevronRight, LuChevronDown } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
 import type { LibraryItem } from '@kaya/game-library';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './SaveFileDialog.css';
 
 interface SaveToLibraryDialogProps {
@@ -34,6 +35,7 @@ export const SaveToLibraryDialog: React.FC<SaveToLibraryDialogProps> = ({
   onSave,
 }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onClose);
   const [fileName, setFileName] = useState(defaultFileName);
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());

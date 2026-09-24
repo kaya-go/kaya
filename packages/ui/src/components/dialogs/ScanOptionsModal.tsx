@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CameraCapture } from './CameraCapture';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './ScanOptionsModal.css';
 
 interface ScanOptionsModalProps {
@@ -15,6 +16,7 @@ export const ScanOptionsModal: React.FC<ScanOptionsModalProps> = ({
   onSelectFile,
 }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onClose);
   const [hasCamera, setHasCamera] = useState<boolean | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);

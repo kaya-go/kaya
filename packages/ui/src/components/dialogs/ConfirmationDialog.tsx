@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './ConfirmationDialog.css';
 
 interface ConfirmationDialogProps {
@@ -22,6 +23,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onCancel,
 }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onCancel);
   const confirmText = confirmLabel ?? t('confirm');
   const cancelText = cancelLabel ?? t('cancel');
   if (!isOpen) return null;

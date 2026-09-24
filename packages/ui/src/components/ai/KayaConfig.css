@@ -44,6 +44,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   background-color: var(--bg-tertiary, #f8f9fa);
   flex-shrink: 0;
 }
@@ -52,18 +53,48 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--text-primary, #333);
+  /* The status pill is a full sentence sharing this row with the close button.
+     - min-width:0 lets this item shrink instead of overflowing the header and
+       pushing the close button off screen;
+     - overflow:hidden cuts the message cleanly at the row's edge rather than
+       letting it run out under/past the close button. */
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .kaya-config-icon-main {
   font-size: 1.2rem;
   color: var(--accent-color, #007bff);
+  flex-shrink: 0;
 }
 
 .kaya-config-title h2 {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
+  /* The message gives up space before the title does. */
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* The status message sits on the same line, hugging the close button: tighter
+   horizontal padding buys space for text, and `clip` means it ends abruptly
+   rather than trailing an ellipsis. On a narrow sheet a ready label also
+   clears itself after a few seconds (see AIStatusPill), so a message that does
+   reach the ✕ is short-lived. */
+.kaya-config-status-pill {
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: clip;
+  padding: 0.15rem 0.4rem;
+}
+
+.kaya-config-status-pill .ai-status-pill__text {
+  overflow: hidden;
+  text-overflow: clip;
 }
 
 .kaya-config-close {
@@ -77,6 +108,11 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
+  /* Never let a long title/pill squeeze or push the only way out, and keep it
+     painting above them in case they meet. */
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .kaya-config-close:hover {
@@ -231,6 +267,10 @@
 
   .kaya-config-header {
     padding: 12px 16px;
+  }
+
+  .kaya-config-title h2 {
+    font-size: 1rem;
   }
 
   .kaya-config-tabs {

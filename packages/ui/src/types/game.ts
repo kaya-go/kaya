@@ -255,6 +255,7 @@ export interface GameTreeContextValue {
   setNodeName: (name: string) => void;
   setNodeComment: (comment: string) => void;
   deleteNode: () => void;
+  deleteContinuation: () => void;
   cutNode: () => void;
   copyNode: () => void;
   pasteNode: () => void;

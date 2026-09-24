@@ -57,6 +57,23 @@ export const cancelDeferred = (handle: IdleCallbackHandle): void => {
 
 export { type IdleCallbackHandle };
 
+/**
+ * Window event dispatched by a stone node when the user long-presses it on a
+ * touch device. React Flow only emits `onNodeContextMenu` for mouse events,
+ * and iOS Safari does not synthesise a contextmenu event for long-presses,
+ * so the node reports the gesture itself.
+ */
+export const GAMETREE_NODE_LONGPRESS_EVENT = 'kaya:gametree-node-longpress';
+
+export interface GameTreeNodeLongPressDetail {
+  nodeId: number | string;
+  clientX: number;
+  clientY: number;
+}
+
+/** Hold duration before a touch counts as a long press. */
+export const GAMETREE_NODE_LONGPRESS_MS = 450;
+
 // Node size constants (must match worker)
 const NODE_WIDTH = 24;
 const NODE_HEIGHT = 24;

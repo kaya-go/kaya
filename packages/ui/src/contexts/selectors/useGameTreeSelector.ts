@@ -177,6 +177,7 @@ export function useGameTreeEdit() {
         setNodeName: ctx.setNodeName,
         setNodeComment: ctx.setNodeComment,
         deleteNode: ctx.deleteNode,
+        deleteContinuation: ctx.deleteContinuation,
         cutNode: ctx.cutNode,
         copyNode: ctx.copyNode,
         pasteNode: ctx.pasteNode,

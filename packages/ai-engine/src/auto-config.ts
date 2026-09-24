@@ -33,12 +33,31 @@ export interface Probe {
   hasPyTorchSidecar: boolean;
 }
 
-/** What we picked, plus a one-line explanation for the status pill. */
+/** Stable identifiers for the auto-pick explanation shown in the status pill.
+ *
+ * The picker returns one of these instead of prose so the UI can translate it:
+ * these labels are user-facing and the value used to be a hardcoded English
+ * sentence. The UI looks each up at `aiConfig.backendReason.<reason>`; the
+ * names here are deliberately the i18n sub-keys to keep that mapping trivial.
+ * `AUTO_PICK_REASONS` is the runtime list, used by the coverage test. */
+export const AUTO_PICK_REASONS = [
+  'pytorchSidecar',
+  'nativeGpu',
+  'nativeCpu',
+  'webgpu',
+  'webgpuNoF16',
+  'wasmNativeUnavailable',
+  'wasmNoGpu',
+] as const;
+
+export type AutoPickReason = (typeof AUTO_PICK_REASONS)[number];
+
+/** What we picked, plus the reason id behind it for the status pill. */
 export interface AutoPick {
   modelId: ModelId;
   quantization: Quantization;
   backendChain: BackendId[]; // first = preferred, rest = fallback
-  reasoning: string;
+  reason: AutoPickReason;
 }
 
 /**
@@ -83,13 +102,13 @@ export function pickConfig(probe: Probe): AutoPick {
   const backendChain = pickBackendChain(probe);
   const preferred = backendChain[0];
   const quantization = pickQuantization(preferred, probe);
-  const reasoning = explainPick(preferred, probe);
+  const reason = pickReason(preferred, probe);
 
   return {
     modelId: CANONICAL_MODEL,
     quantization,
     backendChain,
-    reasoning,
+    reason,
   };
 }
 
@@ -205,26 +224,25 @@ function pickQuantization(preferred: BackendId, probe: Probe): Quantization {
 }
 
 /**
- * One line for the status pill. Deliberately says nothing about precision:
- * this describes the *recommended* config, while the pill renders it next to
- * the backend and precision actually loaded, and the user is free to run a
- * variant we did not recommend.
+ * Why this backend was preferred, as a translatable reason id.
+ *
+ * Kept deliberately terse: the label renders in the settings header next to the
+ * close button, so it has to survive a 320 px viewport. Says nothing about
+ * precision: this describes the *recommended* config, while the pill renders it
+ * next to the backend and precision actually loaded, and the user is free to
+ * run a variant we did not recommend.
  */
-function explainPick(backend: BackendId, probe: Probe): string {
+function pickReason(backend: BackendId, probe: Probe): AutoPickReason {
   switch (backend) {
     case 'pytorch':
-      return 'Linux GPU detected — running on PyTorch sidecar';
+      return 'pytorchSidecar';
     case 'native-gpu':
-      return 'Native GPU detected — running on ONNX Runtime';
+      return 'nativeGpu';
     case 'native-cpu':
-      return 'Running on CPU via native ONNX Runtime';
+      return 'nativeCpu';
     case 'webgpu':
-      return probe.hasShaderF16
-        ? 'Browser GPU detected — running on WebGPU'
-        : 'Browser GPU detected without shader-f16 — running on WebGPU';
+      return probe.hasShaderF16 ? 'webgpu' : 'webgpuNoF16';
     case 'wasm':
-      return probe.isTauri
-        ? 'Running on WASM (native backend unavailable)'
-        : 'Browser GPU not available — running on WASM';
+      return probe.isTauri ? 'wasmNativeUnavailable' : 'wasmNoGpu';
   }
 }

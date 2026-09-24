@@ -18,6 +18,7 @@ import { BoardSizeSelector } from './components/BoardSizeSelector';
 import { ImportDropdown } from './components/ImportDropdown';
 import { MobileTabs, type MobileTab } from './components/MobileTabs';
 import { useBoardRecognition } from './hooks/useBoardRecognition';
+import { useCloseOnBack } from '../../../hooks/useCloseOnBack';
 import { DEFAULT_THRESHOLD } from '@kaya/board-recognition';
 import { PhotoPanel } from './components/PhotoPanel';
 import { PreviewPanel } from './components/PreviewPanel';
@@ -56,6 +57,8 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   onClose,
 }) => {
   const { t } = useTranslation();
+  // Mounted only while a recognition session is open.
+  useCloseOnBack(true, onClose);
 
   const [boardSize, setBoardSize] = useState<number | null>(19);
   const [mokuThreshold, setMokuThreshold] = useState(1 - DEFAULT_THRESHOLD);

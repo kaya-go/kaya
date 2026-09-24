@@ -1,8 +1,8 @@
-import type { AutoPick, BackendId } from '@kaya/ai-engine';
+import type { AutoPick, AutoPickReason, BackendId } from '@kaya/ai-engine';
 import type { ModelQuantization } from '../../hooks/game/ai-analysis-types';
 import type { AISettings } from '../../types/game';
 import type { EngineStatus } from './engineStatus';
-import { settingToChainBackend } from './backendVocabulary';
+import { runtimeBackendToSetting, settingToChainBackend } from './backendVocabulary';
 
 /** User-friendly backend display names for toasts. */
 export function backendDisplayName(backend: string): string {
@@ -48,6 +48,24 @@ export function resolveBackendChain(settings: AISettings, autoPick: AutoPick): B
   return [preferred, ...autoPick.backendChain.filter(b => b !== preferred)];
 }
 
+/**
+ * The auto-pick reason explains the backend auto *preferred*, so it describes
+ * the engine only when auto made the choice and that backend is what came up.
+ * After a fallback down the chain, or with a backend chosen in settings, the
+ * status carries no reason and the pill names the backend instead.
+ */
+export function readyReason(
+  backendSetting: string,
+  autoPick: AutoPick,
+  activeBackend: string
+): AutoPickReason | undefined {
+  // Same test as `resolveBackendChain`: anything it translates is an explicit choice.
+  if (settingToChainBackend(backendSetting) !== null) return undefined;
+  // The runtime label is not the chain vocabulary (`native` vs `native-gpu`).
+  const landedOn = settingToChainBackend(runtimeBackendToSetting(activeBackend));
+  return landedOn === autoPick.backendChain[0] ? autoPick.reason : undefined;
+}
+
 /** Quantization label inferred from a model name (best effort). */
 export function quantFromModelName(name: string): ModelQuantization {
   if (/\.fp16\.|-fp16/i.test(name)) return 'fp16';
@@ -56,10 +74,11 @@ export function quantFromModelName(name: string): ModelQuantization {
 }
 
 /**
- * Module reloads lose auto-pick reasoning, so rebuild a minimal ready
- * status. The provider re-derives full reasoning on its next initialize()
- * call, which happens on first settings change.
+ * Module reloads lose the auto-pick reason, so rebuild a minimal ready
+ * status; the pill falls back to the backend name meanwhile. The provider
+ * re-derives the full status on its next initialize() call, which happens on
+ * the first settings change.
  */
 export function buildReadyStatus(): EngineStatus {
-  return { phase: 'ready', backend: 'unknown', quantization: 'fp32', reasoning: '' };
+  return { phase: 'ready', backend: 'unknown', quantization: 'fp32' };
 }

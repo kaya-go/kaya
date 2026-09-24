@@ -1,6 +1,7 @@
 import React from 'react';
 import { LuSave, LuTrash2, LuX } from 'react-icons/lu';
 import { useTranslation } from 'react-i18next';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './UnsavedChangesDialog.css';
 
 export type UnsavedChangesAction = 'save' | 'discard' | 'cancel';
@@ -18,6 +19,8 @@ export const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
   onAction,
 }) => {
   const { t } = useTranslation();
+  // Backing out of this dialog is treated as "cancel" — it is the safe choice.
+  useCloseOnBack(isOpen, () => onAction('cancel'));
   if (!isOpen) return null;
 
   return (

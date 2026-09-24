@@ -12,6 +12,7 @@ import {
   LuCamera,
 } from 'react-icons/lu';
 import { ShortcutsTab } from '../settings/ShortcutsTab';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import { useKayaConfig, type UseKayaConfigReturn } from './useKayaConfig';
 import { KayaConfigAnalysisTab } from './KayaConfigAnalysisTab';
 import { KayaConfigThemeTab } from './KayaConfigThemeTab';
@@ -127,6 +128,11 @@ export const KayaConfig: React.FC = () => {
     gameSettings,
     setGameSettings,
   } = config;
+
+  // Settings is a full-screen sheet on phones whose only close button is at the
+  // top right, so the system back gesture must dismiss it instead of leaving
+  // the page (and, in the Android app, instead of quitting).
+  useCloseOnBack(isAIConfigOpen, closeModal);
 
   const modalContent = (
     <div

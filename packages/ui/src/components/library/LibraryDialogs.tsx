@@ -5,6 +5,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuTriangleAlert } from 'react-icons/lu';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 
 export interface ConfirmDialogState {
   title: string;
@@ -29,6 +30,8 @@ export const NewFolderDialog: React.FC<NewFolderDialogProps> = ({
   inputRef,
 }) => {
   const { t } = useTranslation();
+  // Mounted only while the dialog is open.
+  useCloseOnBack(true, onClose);
 
   return (
     <div className="library-dialog-overlay" onClick={onClose}>
@@ -69,6 +72,7 @@ export interface ConfirmDialogProps {
 
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({ dialog, onClose }) => {
   const { t } = useTranslation();
+  useCloseOnBack(true, onClose);
 
   return (
     <div className="library-dialog-overlay" onClick={onClose}>

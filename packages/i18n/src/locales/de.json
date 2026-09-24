@@ -147,8 +147,16 @@
       "loadingModel": "Modell wird geladen… {{progress}}",
       "loadingModelMessage": "{{message}}",
       "initializing": "{{backend}} wird gestartet ({{step}}/{{total}})",
-      "ready": "{{reasoning}}",
       "error": "KI-Engine-Fehler: {{message}}"
+    },
+    "backendReason": {
+      "pytorchSidecar": "PyTorch-Sidecar",
+      "nativeGpu": "Native GPU",
+      "nativeCpu": "Native CPU",
+      "webgpu": "GPU — WebGPU",
+      "webgpuNoF16": "WebGPU (ohne f16)",
+      "wasmNativeUnavailable": "WASM (kein Native)",
+      "wasmNoGpu": "Keine GPU — WASM"
     },
     "modelUploadedSuccess": "Modell erfolgreich hochgeladen",
     "modelUploadFailed": "Modell-Upload fehlgeschlagen",
@@ -383,6 +391,8 @@
     "copy": "Kopieren",
     "pasteBranch": "Einfügen",
     "paste": "Einfügen",
+    "cutBranch": "Variante ausschneiden",
+    "deleteContinuation": "Fortsetzung löschen (aktuelle Position behalten)",
     "deleteCurrentBranch": "Aktuelle Variante löschen",
     "deleteOtherBranches": "Andere Varianten löschen (nur aktuelle Linie behalten)",
     "history": "Verlauf",
@@ -463,7 +473,12 @@
     "switchToHorizontal": "Zu horizontalem Layout wechseln",
     "hideMinimap": "Minimap ausblenden",
     "showMinimap": "Minimap anzeigen",
-    "centerOnPosition": "Auf Position zentrieren"
+    "centerOnPosition": "Auf Position zentrieren",
+    "branchActions": "Varianten-Aktionen",
+    "branchDeleted": "Variante gelöscht",
+    "branchCut": "Variante ausgeschnitten",
+    "continuationDeleted": "Fortsetzung gelöscht",
+    "otherBranchesDeleted": "Andere Varianten gelöscht"
   },
   "boardControls": {
     "captured": "Gefangen",

@@ -117,9 +117,10 @@ The default backend is **`auto`** — at provider mount time
 [`probeEnvironment`](../packages/ai-engine/src/auto-config.ts) detects
 Tauri / WebGPU / shader-f16 / PyTorch-sidecar availability and
 [`pickConfig`](../packages/ai-engine/src/auto-config.ts) returns a
-backend chain plus a one-line reasoning string. The status pill
+backend chain plus a `reason` id (`AutoPickReason`). The status pill
 ([`AIStatusPill`](../packages/ui/src/components/ai/AIStatusPill.tsx))
-surfaces that reasoning to the user. Manual overrides live behind the
+shows it translated (`aiConfig.backendReason.<reason>`) when the preferred
+backend came up, and the backend name otherwise. Manual overrides live behind the
 **Advanced** disclosure in the AI settings modal — see
 [`specs/2026-05-04-ai-analysis-mcts-first.md`](../specs/2026-05-04-ai-analysis-mcts-first.md).
 

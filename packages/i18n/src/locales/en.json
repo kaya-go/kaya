@@ -147,8 +147,16 @@
       "loadingModel": "Loading model… {{progress}}",
       "loadingModelMessage": "{{message}}",
       "initializing": "Starting {{backend}} ({{step}}/{{total}})",
-      "ready": "{{reasoning}}",
       "error": "AI engine error: {{message}}"
+    },
+    "backendReason": {
+      "pytorchSidecar": "PyTorch sidecar",
+      "nativeGpu": "Native GPU",
+      "nativeCpu": "Native CPU",
+      "webgpu": "GPU — WebGPU",
+      "webgpuNoF16": "WebGPU (no f16)",
+      "wasmNativeUnavailable": "WASM (no native)",
+      "wasmNoGpu": "No GPU — WASM"
     },
     "modelUploadedSuccess": "Model uploaded successfully",
     "modelUploadFailed": "Failed to upload model",
@@ -383,6 +391,8 @@
     "copy": "Copy",
     "pasteBranch": "Paste",
     "paste": "Paste",
+    "cutBranch": "Cut Branch",
+    "deleteContinuation": "Delete Continuation (keep current position)",
     "deleteCurrentBranch": "Delete Current Branch",
     "deleteOtherBranches": "Delete Other Branches (keep only current path)",
     "history": "History",
@@ -463,7 +473,12 @@
     "switchToHorizontal": "Switch to horizontal layout",
     "hideMinimap": "Hide minimap",
     "showMinimap": "Show minimap",
-    "centerOnPosition": "Center on current position"
+    "centerOnPosition": "Center on current position",
+    "branchActions": "Branch actions",
+    "branchDeleted": "Branch deleted",
+    "branchCut": "Branch cut",
+    "continuationDeleted": "Continuation deleted",
+    "otherBranchesDeleted": "Other branches deleted"
   },
   "boardControls": {
     "captured": "captured",

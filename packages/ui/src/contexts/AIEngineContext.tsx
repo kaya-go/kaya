@@ -42,6 +42,7 @@ import {
   backendDisplayName,
   buildReadyStatus,
   quantFromModelName,
+  readyReason,
   resolveBackendChain,
 } from './ai/engineHelpers';
 import { showModelErrorRecoveryToast } from './ai/modelErrorRecovery';
@@ -53,7 +54,7 @@ let globalEngine: Engine | null = null;
 let globalQueue: AnalysisQueue | null = null;
 let globalEnginePromise: Promise<Engine> | null = null;
 let globalEngineKey: string | null = null;
-// Captured so the status pill can show backend + reasoning across
+// Captured so the status pill can show backend + reason across
 // provider remounts without re-running the probe.
 let globalReadyStatus: EngineStatus | null = null;
 
@@ -319,13 +320,13 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             `[AIEngine] ready — backend=${result.activeBackend} precision=${result.inputDataType} model=${modelName || 'custom'}`
           );
 
-          // Capture the ready status (backend + reasoning) so subsequent
+          // Capture the ready status (backend + reason) so subsequent
           // mounts/setState calls can show the same pill without re-probing.
           globalReadyStatus = {
             phase: 'ready',
             backend: result.activeBackend,
             quantization: quant,
-            reasoning: autoPick.reasoning,
+            reason: readyReason(aiSettings.backend, autoPick, result.activeBackend),
           };
 
           return result.engine;

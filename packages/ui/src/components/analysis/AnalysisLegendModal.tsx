@@ -2,6 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { LuX } from 'react-icons/lu';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './AnalysisLegendModal.css';
 
 interface AnalysisLegendModalProps {
@@ -11,6 +12,7 @@ interface AnalysisLegendModalProps {
 
 export const AnalysisLegendModal: React.FC<AnalysisLegendModalProps> = ({ isOpen, onClose }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onClose);
 
   if (!isOpen) return null;
 

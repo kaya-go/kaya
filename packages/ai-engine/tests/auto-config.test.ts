@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { pickConfig, type HostOS, type Probe } from '../src/auto-config';
+import { AUTO_PICK_REASONS, pickConfig, type HostOS, type Probe } from '../src/auto-config';
 
 function probe(overrides: Partial<Probe> = {}): Probe {
   return {
@@ -85,18 +85,28 @@ describe('pickBackendChain', () => {
   });
 });
 
-describe('explainPick', () => {
-  test('says nothing about precision — the pill reports what actually loaded', () => {
+describe('pickReason', () => {
+  test('every pick reports one of the translatable reason ids', () => {
     const hosts: Probe[] = [
       desktop('macos'),
       desktop('linux', { hasPyTorchSidecar: true }),
       probe({ hasWebGPU: true, hasShaderF16: true }),
+      probe({ hasWebGPU: true, hasShaderF16: false }),
       probe(),
+      { ...probe(), isTauri: true },
     ];
     for (const p of hosts) {
-      const { reasoning } = pickConfig(p);
-      expect(reasoning).not.toMatch(/fp16|fp32|uint8|int8/i);
-      expect(reasoning.length).toBeGreaterThan(0);
+      const { reason } = pickConfig(p);
+      expect(AUTO_PICK_REASONS).toContain(reason as (typeof AUTO_PICK_REASONS)[number]);
+    }
+  });
+
+  test('says nothing about precision — the pill reports what actually loaded', () => {
+    // The reason is an id rather than prose, so the guarantee is structural:
+    // no id may name a *model precision*. `webgpuNoF16` is allowed through —
+    // shader-f16 is a GPU capability, not a quantization.
+    for (const reason of AUTO_PICK_REASONS) {
+      expect(reason).not.toMatch(/fp16|fp32|uint8|int8/i);
     }
   });
 });

@@ -11,6 +11,9 @@
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Allow the pill to shrink inside a flex header instead of forcing its
+     container to overflow. */
+  min-width: 0;
 }
 
 .ai-status-pill__icon {
@@ -27,6 +30,7 @@
 .ai-status-pill__text {
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .ai-status-pill--busy {

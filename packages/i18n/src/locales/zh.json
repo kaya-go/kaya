@@ -147,8 +147,16 @@
       "loadingModel": "正在加载模型… {{progress}}",
       "loadingModelMessage": "{{message}}",
       "initializing": "正在启动 {{backend}} ({{step}}/{{total}})",
-      "ready": "{{reasoning}}",
       "error": "AI 引擎错误：{{message}}"
+    },
+    "backendReason": {
+      "pytorchSidecar": "PyTorch 辅助进程",
+      "nativeGpu": "原生 GPU",
+      "nativeCpu": "原生 CPU",
+      "webgpu": "GPU — WebGPU",
+      "webgpuNoF16": "WebGPU（无 f16）",
+      "wasmNativeUnavailable": "WASM（无原生）",
+      "wasmNoGpu": "无 GPU — WASM"
     },
     "modelUploadedSuccess": "模型上传成功",
     "modelUploadFailed": "模型上传失败",
@@ -383,6 +391,8 @@
     "copy": "复制",
     "pasteBranch": "粘贴",
     "paste": "粘贴",
+    "cutBranch": "剪切分支",
+    "deleteContinuation": "删除后续变化（保留当前位置）",
     "deleteCurrentBranch": "删除当前分支",
     "deleteOtherBranches": "删除其他分支（仅保留当前路径）",
     "history": "历史",
@@ -463,7 +473,12 @@
     "switchToHorizontal": "切换到水平布局",
     "hideMinimap": "隐藏小地图",
     "showMinimap": "显示小地图",
-    "centerOnPosition": "居中当前位置"
+    "centerOnPosition": "居中当前位置",
+    "branchActions": "分支操作",
+    "branchDeleted": "分支已删除",
+    "branchCut": "分支已剪切",
+    "continuationDeleted": "后续变化已删除",
+    "otherBranchesDeleted": "其他分支已删除"
   },
   "boardControls": {
     "captured": "提子",

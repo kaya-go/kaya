@@ -97,12 +97,7 @@ export const GameTreeProvider: React.FC<{
 
   // 1.5. Undo/Redo History
   const { setGameTreeWithHistory, undo, redo, canUndo, canRedo, clearHistory } =
-    useGameTreeUndoRedo({
-      gameTree,
-      currentNodeId,
-      setGameTree,
-      setCurrentNodeId,
-    });
+    useGameTreeUndoRedo({ gameTree, currentNodeId, setGameTree, setCurrentNodeId });
 
   // 2. Edit Mode (must be before useBoardState to provide editMode flag)
   const {
@@ -166,6 +161,7 @@ export const GameTreeProvider: React.FC<{
     setNodeName,
     setNodeComment,
     deleteNode,
+    deleteContinuation,
     cutNode,
     copyNode,
     pasteNode,
@@ -202,10 +198,7 @@ export const GameTreeProvider: React.FC<{
     isEstimating,
     estimationMode,
     toggleEstimationMode,
-  } = useScoring({
-    currentBoard,
-    gameInfo,
-  });
+  } = useScoring({ currentBoard, gameInfo });
 
   // 7. AI Analysis
   const {
@@ -243,23 +236,14 @@ export const GameTreeProvider: React.FC<{
     downloadModel,
     deleteModel,
     uploadModel,
-  } = useAIAnalysis({
-    currentBoard,
-    gameInfo,
-    currentNode,
-  });
+  } = useAIAnalysis({ currentBoard, gameInfo, currentNode });
 
   // 8. Game Settings (non-AI)
   const { gameSettings, setGameSettings } = useGameSettings();
 
   // 9. Pattern Matching
   const { moveName, moveUrl, patternMatchingEnabled, setPatternMatchingEnabled } =
-    usePatternMatching({
-      gameTree: gameTree!,
-      currentNodeId,
-      currentNode,
-      gameInfo,
-    });
+    usePatternMatching({ gameTree: gameTree!, currentNodeId, currentNode, gameInfo });
 
   // 9. SGF operations with analysis integration + dirty state
   const { saveSGF, loadSGF, loadSGFAsync, createNewGame, isDirty, setIsDirty } =
@@ -378,6 +362,7 @@ export const GameTreeProvider: React.FC<{
       setNodeName,
       setNodeComment,
       deleteNode,
+      deleteContinuation,
       cutNode,
       copyNode,
       pasteNode,
@@ -479,7 +464,7 @@ export const GameTreeProvider: React.FC<{
       makeMove, createNewGame, loadSGF, saveSGF, updateGameInfo,
       editMode, editPlayMode, editTool, stoneToolColor, addSetupStone, addSetupPosition, clearSetupStones,
       clearAllMarkersAndLabels, addMarker, setNodeName, setNodeComment,
-      deleteNode, cutNode, copyNode, pasteNode, flattenVariations, makeMainVariation, shiftVariation, toggleEditMode,
+      deleteNode, cutNode, deleteContinuation, copyNode, pasteNode, flattenVariations, makeMainVariation, shiftVariation, toggleEditMode,
       copiedBranch, scoreMode, scoreData, deadStones, toggleDeadStone, autoScore, resetScore,
       isEstimating, estimationMode, toggleEstimationMode,
       analysisMode, analysisResult, isAnalyzing, winRate, scoreLead, bestMove, engineState,

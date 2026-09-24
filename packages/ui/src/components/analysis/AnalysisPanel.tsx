@@ -8,6 +8,7 @@
 import React, { useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import { LuChartLine, LuChartBar, LuInfo, LuX } from 'react-icons/lu';
 import { AnalysisGraphPanel } from './AnalysisGraphPanel';
 import { PerformanceReportTab, getCategoryColor } from './PerformanceReportTab';
@@ -30,6 +31,7 @@ export const AnalysisPanel: React.FC<AnalysisPanelProps> = ({
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<AnalysisPanelTab>(defaultTab);
   const [showHelp, setShowHelp] = useState(false);
+  useCloseOnBack(showHelp, () => setShowHelp(false));
 
   const handleTabChange = useCallback((tab: AnalysisPanelTab) => {
     setActiveTab(tab);

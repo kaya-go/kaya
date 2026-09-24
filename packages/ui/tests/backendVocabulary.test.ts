@@ -20,7 +20,7 @@ import {
   runtimeBackendToSetting,
   settingToChainBackend,
 } from '../src/contexts/ai/backendVocabulary';
-import { resolveBackendChain } from '../src/contexts/ai/engineHelpers';
+import { readyReason, resolveBackendChain } from '../src/contexts/ai/engineHelpers';
 
 /** Runtime labels `getRuntimeInfo().backend` can report today. */
 const RUNTIME_LABELS = [
@@ -38,7 +38,7 @@ const webAutoPick: AutoPick = {
   modelId: 'kata1-b28-latest',
   quantization: 'fp16',
   backendChain: ['webgpu', 'wasm'],
-  reasoning: 'test fixture',
+  reason: 'webgpu',
 };
 
 /** Every backend id `initOneBackend` has a case for. */
@@ -156,5 +156,34 @@ describe('resolveBackendChain', () => {
 
     expect(second).toEqual(first);
     expect(second[0]).toBe('webgpu');
+  });
+});
+
+/* The status pill shows the reason as the name of the running backend, so it
+   must never describe a backend other than the one that came up. */
+describe('readyReason', () => {
+  test('auto landing on its preferred backend keeps the reason', () => {
+    expect(readyReason('auto', webAutoPick, 'webgpu')).toBe('webgpu');
+    // Graph capture is still the preferred WebGPU backend.
+    expect(readyReason('auto', webAutoPick, RUNTIME_WEBGPU_GC)).toBe('webgpu');
+  });
+
+  test('a fallback down the chain drops the reason', () => {
+    expect(readyReason('auto', webAutoPick, 'wasm')).toBeUndefined();
+  });
+
+  test('the native runtime label matches the native-gpu chain entry', () => {
+    const desktop: AutoPick = {
+      ...webAutoPick,
+      backendChain: ['native-gpu', 'native-cpu'],
+      reason: 'nativeGpu',
+    };
+    expect(readyReason('auto', desktop, 'native')).toBe('nativeGpu');
+    expect(readyReason('auto', desktop, 'native-cpu')).toBeUndefined();
+  });
+
+  test('a backend chosen in settings drops the reason, even when it is the preferred one', () => {
+    expect(readyReason('webgpu', webAutoPick, 'webgpu')).toBeUndefined();
+    expect(readyReason('wasm', webAutoPick, 'wasm')).toBeUndefined();
   });
 });

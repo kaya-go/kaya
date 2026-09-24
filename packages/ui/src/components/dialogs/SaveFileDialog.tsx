@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './SaveFileDialog.css';
 
 interface SaveFileDialogProps {
@@ -22,6 +23,7 @@ export const SaveFileDialog: React.FC<SaveFileDialogProps> = ({
   onSave,
 }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onClose);
   const [fileName, setFileName] = useState(defaultFileName);
   const inputRef = useRef<HTMLInputElement>(null);
 

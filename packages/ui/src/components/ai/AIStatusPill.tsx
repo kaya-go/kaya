@@ -1,20 +1,66 @@
 /**
- * AIStatusPill — compact indicator that surfaces the AIEngineContext
- * status directly to the user. Replaces the scatter of toasts and
- * model-init progress UI with a single always-visible signal.
+ * AIStatusPill — compact indicator that surfaces the AIEngineContext status
+ * directly to the user.
+ *
+ * It shares the settings header with the close button. On a narrow sheet a
+ * ready label is shown for a few seconds and then clears itself, so leaving it
+ * up permanently cannot crowd that button out or sit there truncated. Wider,
+ * it stays: it is the only place that shows which backend is running. Work in
+ * progress and errors always stay. It also must not change the header's
+ * height — the settings sheet below it must not shift when a status appears.
  */
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuActivity, LuCpu, LuLoader, LuSparkles, LuTriangleAlert, LuZap } from 'react-icons/lu';
 import { useAIEngineOptional } from '../../contexts/AIEngineContext';
+import { useMediaQuery } from '../../hooks/useMediaQuery';
 import './AIStatusPill.css';
+
+/** How long a ready status stays on a narrow header before clearing itself. */
+const SETTLED_LINGER_MS = 3000;
+
+/** Where the settings sheet spans the viewport (`.kaya-config-modal` in
+ *  KayaConfig.css) and its header is tight. */
+const NARROW_HEADER_QUERY = '(max-width: 640px)';
 
 export const AIStatusPill: React.FC<{ className?: string }> = ({ className }) => {
   const ctx = useAIEngineOptional();
   const { t } = useTranslation();
+  const phase = ctx?.status.phase ?? 'idle';
+  const narrow = useMediaQuery(NARROW_HEADER_QUERY);
+  const [visible, setVisible] = useState(phase !== 'idle');
+  const timerRef = useRef<number | null>(null);
 
-  if (!ctx) return null;
+  useEffect(() => {
+    const clearTimer = () => {
+      if (timerRef.current !== null) {
+        window.clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+
+    clearTimer();
+
+    if (phase === 'idle') {
+      setVisible(false);
+      return clearTimer;
+    }
+
+    // Hiding a running download or a failed initialisation would be worse than
+    // leaving it up, so only a ready label expires, and only where it crowds.
+    setVisible(true);
+    if (phase !== 'ready' || !narrow) return clearTimer;
+
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
+      setVisible(false);
+    }, SETTLED_LINGER_MS);
+
+    return clearTimer;
+  }, [phase, narrow]);
+
+  if (!ctx || !visible) return null;
   const status = ctx.status;
   const upload = ctx.nativeUploadProgress;
 
@@ -53,23 +99,30 @@ export const AIStatusPill: React.FC<{ className?: string }> = ({ className }) =>
           })}
         </Pill>
       );
-    case 'ready':
+    case 'ready': {
+      // The reason is an id, not prose, so it can be translated. Fall back to
+      // the backend name when there is no reason: a module reload, a fallback
+      // off the preferred backend, or a manually chosen one.
+      const label = status.reason
+        ? t(`aiConfig.backendReason.${status.reason}`, {
+            defaultValue: backendDisplayName(status.backend),
+          })
+        : backendDisplayName(status.backend);
       return (
-        <Pill
-          kind="ready"
-          className={className}
-          icon={readyIcon(status.backend)}
-          title={status.reasoning || undefined}
-        >
-          {status.reasoning || backendDisplayName(status.backend)}
+        <Pill kind="ready" className={className} icon={readyIcon(status.backend)} title={label}>
+          {label}
         </Pill>
       );
-    case 'error':
+    }
+    case 'error': {
+      // The header clips the text, so the full message rides along as a title.
+      const message = t('aiConfig.status.error', { message: status.message });
       return (
-        <Pill kind="error" className={className} icon={<LuTriangleAlert />}>
-          {t('aiConfig.status.error', { message: status.message })}
+        <Pill kind="error" className={className} icon={<LuTriangleAlert />} title={message}>
+          {message}
         </Pill>
       );
+    }
   }
 };
 

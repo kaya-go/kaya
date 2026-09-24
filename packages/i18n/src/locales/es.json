@@ -147,8 +147,16 @@
       "loadingModel": "Cargando modelo… {{progress}}",
       "loadingModelMessage": "{{message}}",
       "initializing": "Iniciando {{backend}} ({{step}}/{{total}})",
-      "ready": "{{reasoning}}",
       "error": "Error del motor de IA: {{message}}"
+    },
+    "backendReason": {
+      "pytorchSidecar": "Sidecar PyTorch",
+      "nativeGpu": "GPU nativa",
+      "nativeCpu": "CPU nativa",
+      "webgpu": "GPU — WebGPU",
+      "webgpuNoF16": "WebGPU (sin f16)",
+      "wasmNativeUnavailable": "WASM (sin nativo)",
+      "wasmNoGpu": "Sin GPU — WASM"
     },
     "modelUploadedSuccess": "Modelo subido correctamente",
     "modelUploadFailed": "Error al subir el modelo",
@@ -383,6 +391,8 @@
     "copy": "Copiar",
     "pasteBranch": "Pegar",
     "paste": "Pegar",
+    "cutBranch": "Cortar variante",
+    "deleteContinuation": "Eliminar continuación (mantener la posición actual)",
     "deleteCurrentBranch": "Eliminar variante actual",
     "deleteOtherBranches": "Eliminar otras variantes (mantener solo la línea actual)",
     "history": "Historial",
@@ -463,7 +473,12 @@
     "switchToHorizontal": "Cambiar a disposición horizontal",
     "hideMinimap": "Ocultar minimapa",
     "showMinimap": "Mostrar minimapa",
-    "centerOnPosition": "Centrar en posición"
+    "centerOnPosition": "Centrar en posición",
+    "branchActions": "Acciones de variantes",
+    "branchDeleted": "Variante eliminada",
+    "branchCut": "Variante cortada",
+    "continuationDeleted": "Continuación eliminada",
+    "otherBranchesDeleted": "Otras variantes eliminadas"
   },
   "boardControls": {
     "captured": "Capturadas",

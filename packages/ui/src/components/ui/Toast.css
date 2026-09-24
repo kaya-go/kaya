@@ -37,6 +37,48 @@
   }
 }
 
+/* Below the desktop 3-pane breakpoint (>1024px) there is not enough room for a
+   top-right toast: the settings modal is fullscreen on phones and only
+   ~600px wide on tablets, so a top-right toast covered its close button and
+   made the dialog impossible to dismiss. Anchor toasts to the bottom instead,
+   clear of the mobile tab bar. These rules come after the base .toast rule so
+   they win over its min/max-width. */
+@media (max-width: 1024px) {
+  .toast-container {
+    top: auto;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(var(--mobile-nav-height, 56px) + 0.75rem + env(safe-area-inset-bottom, 0px));
+    align-items: stretch;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: none;
+    width: 100%;
+    animation-name: toastSlideUp;
+  }
+}
+
+@media (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+  .toast-container {
+    bottom: calc(
+      var(--mobile-nav-height-landscape, 48px) + 0.75rem + env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
+
+@keyframes toastSlideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .toast-success {
   border-left: 4px solid #10b981;
 }

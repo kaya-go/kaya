@@ -2,6 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuX, LuExternalLink } from 'react-icons/lu';
 import type { VersionData } from '../layout/StatusBar';
+import { useCloseOnBack } from '../../hooks/useCloseOnBack';
 import './AboutDialog.css';
 
 interface AboutDialogProps {
@@ -14,6 +15,7 @@ const GITHUB_REPO_URL = 'https://github.com/kaya-go/kaya';
 
 export const AboutDialog: React.FC<AboutDialogProps> = ({ isOpen, onClose, versionData }) => {
   const { t } = useTranslation();
+  useCloseOnBack(isOpen, onClose);
 
   if (!isOpen) return null;
 
