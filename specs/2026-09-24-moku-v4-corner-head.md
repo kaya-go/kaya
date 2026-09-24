@@ -47,6 +47,18 @@ Numbers from moku's Python port of Kaya's pipeline, see the
 
 ## Learnings
 
+- The first published moku-v4 `model.onnx` did not load in the app: the
+  export (transformers 5) left the encoder's sine position embedding in
+  float64, and `onnxruntime-web` 1.24.3 has no float64 `Sin`/`Cos` kernel
+  ("Could not find an implementation for Cos(7)" at every optimization level).
+  moku-v3's export ran them in float32. Python's ONNX Runtime, where moku
+  measures everything, runs the float64 graph fine, and so does
+  `onnxruntime-web` 1.30. moku's export now casts them to float32 (outputs
+  move by less than 1e-5, kaya-go/moku#4), and the fixed `model.onnx` replaced
+  the published one, which keeps Kaya on its ORT version.
+- Loading the model with `onnxruntime-web` under bun reproduces the browser's
+  behaviour, but only from inside the repo: a script outside it gets bun's
+  auto-installed latest ORT, which loads the float64 graph and hides the bug.
 - The tests use synthetic model outputs (head path, v3 fallback, 3-peak
   completion, fewer than 2 peaks, both `refilter` paths, `detect` with a fake
   session), not the real model. moku's `moku predict --json` golden fixtures
