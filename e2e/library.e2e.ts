@@ -93,6 +93,29 @@ test.describe('Library rename', () => {
 // clear of it.
 const ROW_CORNER = { x: 5, y: 5 };
 
+/**
+ * Keeps a dragged pointer on a folder until the folder shows it will take the drop.
+ *
+ * react-dnd re-evaluates the hovered target on dragenter, and on dragover at most once
+ * per animation frame, for the targets under the dragover that queued the frame.
+ * Chrome drops only if the last dragover accepted the drop. Releasing in the frame the
+ * pointer arrives therefore races a stale hover: a frame queued over the source row can
+ * even clear the folder's highlight after it appears. While a pointer rests, a browser
+ * keeps firing dragover; Playwright fires one per mouse move, so send another and let a
+ * frame pass until the highlight holds.
+ */
+async function holdOverFolder(
+  page: Page,
+  folder: ReturnType<Page['locator']>,
+  point: { x: number; y: number }
+) {
+  await expect(async () => {
+    await page.mouse.move(point.x, point.y);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    expect(await folder.evaluate(el => el.classList.contains('drop-target'))).toBe(true);
+  }).toPass({ timeout: 5000 });
+}
+
 test.describe('Library context menu', () => {
   test('closes on Escape', async ({ page }) => {
     const row = await createFolder(page, 'Openings');
@@ -136,10 +159,12 @@ test.describe('Library context menu', () => {
     // register a hover, so drive the mouse in steps.
     const from = (await source.boundingBox())!;
     const to = (await target.boundingBox())!;
+    const dropPoint = { x: to.x + to.width / 2, y: to.y + to.height / 2 };
     await page.mouse.move(from.x + ROW_CORNER.x, from.y + ROW_CORNER.y);
     await page.mouse.down();
     await page.mouse.move(from.x + 15, from.y + 10, { steps: 5 });
-    await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 });
+    await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 10 });
+    await holdOverFolder(page, target, dropPoint);
     await page.mouse.up();
 
     await expect(page.locator('.library-context-menu')).toHaveCount(0);
