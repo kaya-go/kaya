@@ -60,3 +60,4 @@ link forward to the replacement. Don't delete history.
 | 2026-09-22 | [Game Info round-trips the SGF game-info properties](2026-09-22-game-info-sgf-roundtrip.md)                 | shipped    |
 | 2026-09-23 | [One default komi for a game without `KM`](2026-09-23-one-default-komi.md)                                  | shipped    |
 | 2026-09-23 | [The update installed, and the dialog never said so](2026-09-23-updater-restart-prompt.md)                  | shipped    |
+| 2026-09-24 | [Moku v4: board corners from a corner head](2026-09-24-moku-v4-corner-head.md)                              | shipped    |

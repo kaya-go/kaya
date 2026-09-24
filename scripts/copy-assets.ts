@@ -1,6 +1,10 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  MOKU_BUNDLED_MODEL_FILE,
+  MOKU_MODEL_URL,
+} from '../packages/board-recognition/src/moku-model';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,14 +115,36 @@ async function fetchWithRetry(url: string, attempts = 6): Promise<Response | nul
   return null;
 }
 
-// The model is ~77 MB; anything much smaller is a truncated download or an
+// The model is ~80 MB; anything much smaller is a truncated download or an
 // error page saved to disk, both of which look like success to the bundler.
 const MIN_MOKU_MODEL_BYTES = 50 * 1024 * 1024;
 
+/**
+ * Everything under public/models ships in the desktop bundle, so a model left
+ * over from a previous version (or restored from an old CI cache) would add
+ * ~80 MB to the installer.
+ */
+async function removeStaleMokuModels(destDir: string) {
+  let entries: string[];
+  try {
+    entries = await fs.readdir(destDir);
+  } catch {
+    return; // Directory doesn't exist yet
+  }
+  for (const name of entries) {
+    if (/^moku-.*\.onnx$/.test(name) && name !== MOKU_BUNDLED_MODEL_FILE) {
+      await fs.rm(path.join(destDir, name));
+      console.log(`🗑️  Removed stale Moku model ${name}`);
+    }
+  }
+}
+
 async function downloadMokuModel() {
-  const modelUrl = 'https://huggingface.co/kaya-go/moku-v3/resolve/main/model.onnx';
+  const modelUrl = MOKU_MODEL_URL;
   const destDir = path.join(rootDir, 'apps', 'desktop', 'public', 'models');
-  const destFile = path.join(destDir, 'moku-v3.onnx');
+  const destFile = path.join(destDir, MOKU_BUNDLED_MODEL_FILE);
+
+  await removeStaleMokuModels(destDir);
 
   // Skip if already downloaded, unless what is there is too small to be it
   try {

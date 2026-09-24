@@ -11,6 +11,7 @@
 import type { RawImage, MokuRawDetection, RecognitionResult } from './types';
 import { buildSGF } from './sgf';
 import { mokuLog, fetchModelWithFallback, type ProgressCallback } from './moku-model-cache';
+import { MOKU_MODEL_URL } from './moku-model';
 import {
   CLASS_BOARD_CORNER,
   DEFAULT_THRESHOLD,
@@ -39,12 +40,10 @@ async function getOrt() {
   return _ort;
 }
 
-const DEFAULT_MODEL_URL = 'https://huggingface.co/kaya-go/moku-v3/resolve/main/model.onnx';
-
 export interface MokuDetectorConfig {
   /** URL to a locally bundled ONNX model (tried first, desktop only) */
   bundledModelUrl?: string;
-  /** URL to the remote ONNX model (fallback: HuggingFace kaya-go/moku-v3) */
+  /** URL to the remote ONNX model (fallback: HuggingFace kaya-go/moku-v4) */
   modelUrl?: string;
   /** Pre-loaded model data — when provided, URL fetching is skipped entirely */
   modelData?: ArrayBuffer;
@@ -69,6 +68,8 @@ export class MokuDetector {
   // Cached inference outputs for fast threshold re-filtering
   private cachedLogits: Float32Array | null = null;
   private cachedPredBoxes: Float32Array | null = null;
+  /** Corner head output (moku-v4+); null for models without one (moku-v3). */
+  private cachedCornerPoints: Float32Array | null = null;
   private cachedImg: RawImage | null = null;
 
   // Cached postprocess outputs that don't depend on the stone threshold
@@ -99,7 +100,7 @@ export class MokuDetector {
       mokuLog('Using pre-loaded custom model data');
     } else {
       // Fetch model from URL(s)
-      const remoteUrl = this.config.modelUrl ?? DEFAULT_MODEL_URL;
+      const remoteUrl = this.config.modelUrl ?? MOKU_MODEL_URL;
       const modelUrls = this.config.bundledModelUrl
         ? [this.config.bundledModelUrl, remoteUrl]
         : [remoteUrl];
@@ -135,6 +136,8 @@ export class MokuDetector {
     // that some ONNX runtime/WebView combinations cannot resolve, causing
     // "Graph output (logits) does not exist in the graph" errors (e.g. Tauri
     // WKWebView on macOS). Overriding them to concrete values avoids this.
+    // moku-v4 only has `batch_size` left dynamic; the Gather* keys are kept for
+    // moku-v3 (cached or custom models) and are ignored when absent.
     if (!this.session) {
       mokuLog('Standard session creation failed; retrying with freeDimensionOverrides…');
       const freeDimensionOverrides: Record<string, number> = {
@@ -162,7 +165,10 @@ export class MokuDetector {
       }
     }
     const t1 = performance.now();
-    mokuLog(`Ready in ${((t1 - t0) / 1000).toFixed(1)}s`);
+    const hasCornerHead = this.session!.outputNames.includes('corner_points');
+    mokuLog(
+      `Ready in ${((t1 - t0) / 1000).toFixed(1)}s (corners from ${hasCornerHead ? 'corner head' : 'queries'})`
+    );
   }
 
   /** Whether the model is loaded and ready for inference. */
@@ -194,14 +200,25 @@ export class MokuDetector {
     const t2 = performance.now();
     const logits = results.logits.data as Float32Array; // (1, 300, 3)
     const predBoxes = results.pred_boxes.data as Float32Array; // (1, 300, 4)
+    // Read by name: absent on moku-v3 and older (no corner head)
+    const cornerPoints = (results.corner_points?.data as Float32Array | undefined) ?? null; // (1, 8, 3)
 
     // Cache inference outputs for fast re-filtering
     this.cachedLogits = logits;
     this.cachedPredBoxes = predBoxes;
+    this.cachedCornerPoints = cornerPoints;
     this.cachedImg = img;
 
     // 3. Postprocess → RecognitionResult
-    const out = postprocess(logits, predBoxes, img, options.boardSize, threshold, outputSize);
+    const out = postprocess(
+      logits,
+      predBoxes,
+      img,
+      options.boardSize,
+      threshold,
+      outputSize,
+      cornerPoints
+    );
     this.cachedResult = copyResultForCache(out);
     const t3 = performance.now();
     logStoneStats(
@@ -236,7 +253,8 @@ export class MokuDetector {
         this.cachedImg,
         options.boardSize,
         threshold,
-        outputSize
+        outputSize,
+        this.cachedCornerPoints
       );
       this.cachedResult = copyResultForCache(out);
       const t1 = performance.now();
@@ -308,6 +326,7 @@ export class MokuDetector {
     this.session = null;
     this.cachedLogits = null;
     this.cachedPredBoxes = null;
+    this.cachedCornerPoints = null;
     this.cachedImg = null;
     this.cachedResult = null;
   }

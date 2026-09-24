@@ -18,6 +18,12 @@ import { computeHomography, applyHomography } from './perspective';
 import { warpPerspective } from './perspective';
 import { buildSGF } from './sgf';
 import { mokuLog } from './moku-model-cache';
+import {
+  CORNER_MIN_THRESHOLD,
+  completeCornerQuad,
+  cornerCandidatesFromHead,
+  dedupeCornerCandidates,
+} from './moku-corners';
 
 export const INPUT_SIZE = 640;
 export const NUM_QUERIES = 300;
@@ -158,20 +164,24 @@ export function preprocess(img: RawImage, TensorCtor: typeof import('onnxruntime
   return new TensorCtor('float32', buf, [1, 3, INPUT_SIZE, INPUT_SIZE]);
 }
 
+/**
+ * Decode raw model outputs into a RecognitionResult.
+ *
+ * @param cornerPoints The corner head's `corner_points` output (moku-v4+).
+ *   When set, board corners come from it and `board_corner` queries are
+ *   ignored; when null (moku-v3 and older), corners come from the queries.
+ */
 export function postprocess(
   logits: Float32Array,
   predBoxes: Float32Array,
   origImg: RawImage,
   boardSize: number,
   threshold: number,
-  outputSize: number
+  outputSize: number,
+  cornerPoints: Float32Array | null = null
 ): RecognitionResult {
   const stones: MokuRawDetection[] = [];
-  const cornerCandidates: MokuRawDetection[] = [];
-
-  // Minimum threshold for corner detection — much lower than the stone
-  // threshold so we always collect as many corner candidates as possible.
-  const CORNER_MIN_THRESHOLD = 0.005;
+  const queryCorners: MokuRawDetection[] = [];
 
   // Decode all 300 queries – each query represents ONE object.
   // Use argmax to pick the best class per query (RT-DETR convention).
@@ -190,8 +200,12 @@ export function postprocess(
       }
     }
 
+    const isCorner = bestClass === CLASS_BOARD_CORNER;
+    // With a corner head, corner queries are neither stones nor candidates
+    if (isCorner && cornerPoints) continue;
+
     // Apply different thresholds: low for corners, user-controlled for stones
-    const minScore = bestClass === CLASS_BOARD_CORNER ? CORNER_MIN_THRESHOLD : threshold;
+    const minScore = isCorner ? CORNER_MIN_THRESHOLD : threshold;
     if (bestScore < minScore) continue;
 
     // pred_boxes: [cx, cy, w, h] normalized to [0, 1]
@@ -199,33 +213,20 @@ export function postprocess(
     const cy = predBoxes[boxBase + 1] * origImg.height;
 
     const det: MokuRawDetection = { cx, cy, classId: bestClass, score: bestScore };
-    if (bestClass === CLASS_BOARD_CORNER) {
-      cornerCandidates.push(det);
+    if (isCorner) {
+      queryCorners.push(det);
     } else {
       stones.push(det);
     }
   }
 
-  // Sort corners by confidence, take top 4
-  cornerCandidates.sort((a, b) => b.score - a.score);
-
-  // Deduplicate overlapping corners: if two candidates are within 5% of the
-  // image diagonal, drop the lower-scoring one. This turns 4 overlapping
-  // corners into 3, letting the parallelogram inference recover the 4th.
-  const dedupeMinDist = Math.hypot(origImg.width, origImg.height) * 0.05;
-  for (let i = 0; i < cornerCandidates.length; i++) {
-    for (let j = i + 1; j < cornerCandidates.length; j++) {
-      const d = Math.hypot(
-        cornerCandidates[i].cx - cornerCandidates[j].cx,
-        cornerCandidates[i].cy - cornerCandidates[j].cy
-      );
-      if (d < dedupeMinDist) {
-        // j has lower score (sorted), remove it
-        cornerCandidates.splice(j, 1);
-        j--; // re-check same index
-      }
-    }
-  }
+  const cornerCandidates = dedupeCornerCandidates(
+    cornerPoints
+      ? cornerCandidatesFromHead(cornerPoints, origImg.width, origImg.height, CLASS_BOARD_CORNER)
+      : queryCorners,
+    origImg.width,
+    origImg.height
+  );
 
   if (cornerCandidates.length < 2) {
     // Fallback: fewer than 2 corners detected → use image bounds with margin
@@ -243,92 +244,7 @@ export function postprocess(
     };
   }
 
-  let top4Points: Point[];
-  if (cornerCandidates.length === 2) {
-    // Infer 2 missing corners assuming a square board.
-    // Two interpretations: the 2 points are adjacent (share an edge)
-    // or diagonal (opposite corners). We try both and pick the
-    // candidate whose 4 corners all land inside the image.
-    const p1: Point = [cornerCandidates[0].cx, cornerCandidates[0].cy];
-    const p2: Point = [cornerCandidates[1].cx, cornerCandidates[1].cy];
-    const mx = (p1[0] + p2[0]) / 2;
-    const my = (p1[1] + p2[1]) / 2;
-    const dx = p2[0] - p1[0];
-    const dy = p2[1] - p1[1];
-
-    const candidates: Point[][] = [];
-
-    // Interpretation 1: diagonal — rotate half-diagonal 90° around center
-    // to get the other diagonal endpoints.
-    const hdx = dx / 2;
-    const hdy = dy / 2;
-    candidates.push([p1, [mx + hdy, my - hdx], p2, [mx - hdy, my + hdx]]);
-
-    // Interpretation 2: adjacent (p1-p2 is one side) — perpendicular of
-    // same length. Two possible directions (left or right of the edge).
-    const p3a: Point = [p2[0] - dy, p2[1] + dx]; // +90°
-    const p4a: Point = [p1[0] - dy, p1[1] + dx];
-    candidates.push([p1, p2, p3a, p4a]);
-
-    const p3b: Point = [p2[0] + dy, p2[1] - dx]; // -90°
-    const p4b: Point = [p1[0] + dy, p1[1] - dx];
-    candidates.push([p1, p2, p3b, p4b]);
-
-    // Score each candidate: prefer the one with the most corners inside
-    // the image, breaking ties by how far inside they are (margin sum).
-    const w = origImg.width;
-    const h = origImg.height;
-    let bestQuad: Point[] = candidates[0];
-    let bestScore = -Infinity;
-    for (const quad of candidates) {
-      let inside = 0;
-      let marginSum = 0;
-      for (const pt of quad) {
-        const mx = Math.min(pt[0], w - pt[0]);
-        const my = Math.min(pt[1], h - pt[1]);
-        if (mx >= 0 && my >= 0) {
-          inside++;
-          marginSum += mx + my;
-        } else {
-          // Penalize out-of-bounds points
-          marginSum += mx + my; // negative
-        }
-      }
-      const score = inside * 1e6 + marginSum;
-      if (score > bestScore) {
-        bestScore = score;
-        bestQuad = quad;
-      }
-    }
-    top4Points = bestQuad;
-  } else if (cornerCandidates.length === 3) {
-    // Infer 4th corner by completing the parallelogram.
-    // Try all 3 ways to pick the "diagonal" vertex and choose the completion
-    // that produces the quadrilateral closest to a rectangle (smallest
-    // deviation of diagonal lengths).
-    const pts = cornerCandidates.map(d => [d.cx, d.cy] as Point);
-    let bestQuad: Point[] | null = null;
-    let bestScore = Infinity;
-    for (let diag = 0; diag < 3; diag++) {
-      const a = pts[diag];
-      const b = pts[(diag + 1) % 3];
-      const c = pts[(diag + 2) % 3];
-      // P4 = B + C - A  (A is the diagonal vertex)
-      const p4: Point = [b[0] + c[0] - a[0], b[1] + c[1] - a[1]];
-      const quad = [a, b, c, p4];
-      // Score: difference between the two diagonal lengths (0 = perfect rectangle)
-      const d1 = Math.hypot(a[0] - p4[0], a[1] - p4[1]);
-      const d2 = Math.hypot(b[0] - c[0], b[1] - c[1]);
-      const score = Math.abs(d1 - d2);
-      if (score < bestScore) {
-        bestScore = score;
-        bestQuad = quad;
-      }
-    }
-    top4Points = bestQuad!;
-  } else {
-    top4Points = cornerCandidates.slice(0, 4).map(d => [d.cx, d.cy] as Point);
-  }
+  const top4Points = completeCornerQuad(cornerCandidates, origImg.width, origImg.height);
 
   // Order corners clockwise: TL → TR → BR → BL
   let corners = orderCorners(top4Points);

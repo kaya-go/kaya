@@ -2,13 +2,14 @@ import React, { useCallback, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuCamera, LuUpload, LuRotateCcw, LuExternalLink, LuTriangleAlert } from 'react-icons/lu';
+import { MOKU_MODEL_REPO } from '@kaya/board-recognition';
 import { useGameTree } from '../../contexts/GameTreeContext';
 import { useToast } from '../ui/Toast';
 import { saveMokuCustomModel, deleteMokuCustomModel } from '../../services/mokuModelStorage';
 import { destroySharedWorker } from '../../workers/BoardRecognitionWorker';
 import './KayaConfigDetectionTab.css';
 
-const MOKU_MODEL_URL = 'https://huggingface.co/kaya-go/moku-v3';
+const MOKU_MODEL_URL = `https://huggingface.co/${MOKU_MODEL_REPO}`;
 
 export const KayaConfigDetectionTab: React.FC = () => {
   const { t } = useTranslation();
@@ -92,7 +93,7 @@ export const KayaConfigDetectionTab: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
             >
-              kaya-go/moku-v3 <LuExternalLink size={12} />
+              {MOKU_MODEL_REPO} <LuExternalLink size={12} />
             </a>
           )}
         </div>

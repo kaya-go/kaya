@@ -10,6 +10,7 @@ import type {
   RecognitionResult,
   RawImage,
 } from '@kaya/board-recognition';
+import { MOKU_BUNDLED_MODEL_FILE } from '@kaya/board-recognition';
 import type { BoardRecognitionWorker } from '../../../../workers/BoardRecognitionWorker';
 import {
   acquireSharedWorker,
@@ -133,7 +134,8 @@ export function useBoardRecognition(
       await workerRef.current!.mokuInit(
         {
           wasmPath,
-          ...(isTauriApp() && !modelData && { bundledModelUrl: '/models/moku-v3.onnx' }),
+          ...(isTauriApp() &&
+            !modelData && { bundledModelUrl: `/models/${MOKU_BUNDLED_MODEL_FILE}` }),
         },
         progress => {
           if (!cancelled) setMokuProgress(progress);

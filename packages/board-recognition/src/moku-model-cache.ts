@@ -86,6 +86,29 @@ async function fetchRemoteEtag(modelUrl: string): Promise<string | null> {
 }
 
 /**
+ * Drop the cached models (and their ETag/timestamp entries) of every other
+ * URL, so a model version bump does not leave the previous ~80 MB behind.
+ */
+async function pruneOtherModels(cache: Cache, modelUrl: string): Promise<void> {
+  const keep = new Set(
+    [modelUrl, `${ETAG_KEY_PREFIX}${modelUrl}`, `${TIMESTAMP_KEY_PREFIX}${modelUrl}`].map(
+      url => new Request(url).url
+    )
+  );
+  for (const request of await cache.keys()) {
+    if (!keep.has(request.url)) {
+      await cache.delete(request);
+      if (
+        !request.url.startsWith(ETAG_KEY_PREFIX) &&
+        !request.url.startsWith(TIMESTAMP_KEY_PREFIX)
+      ) {
+        mokuLog(`Removed stale cached model ${request.url}`);
+      }
+    }
+  }
+}
+
+/**
  * Clear the cached model. Useful when a new version is available.
  */
 export async function clearModelCache(): Promise<void> {
@@ -183,6 +206,7 @@ export async function fetchModelWithCache(
           await storeEtag(cache, modelUrl, etag);
         }
         await storeTimestamp(cache, modelUrl);
+        await pruneOtherModels(cache, modelUrl);
       } catch (cacheErr) {
         mokuWarn('Failed to cache model:', (cacheErr as Error).message);
       }

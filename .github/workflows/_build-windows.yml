@@ -133,7 +133,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: apps/desktop/public/models
-          key: moku-model-v3
+          key: moku-model-v4
 
       - name: Build desktop app
         run: bun run tauri:build -- --bundles nsis

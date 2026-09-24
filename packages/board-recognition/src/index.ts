@@ -40,6 +40,7 @@ export {
   clearModelCache,
   DEFAULT_THRESHOLD,
 } from './moku-detector';
+export { MOKU_MODEL_REPO, MOKU_MODEL_URL, MOKU_BUNDLED_MODEL_FILE } from './moku-model';
 export type { MokuDetectorConfig, MokuDetectOptions, ProgressCallback } from './moku-detector';
 
 // ============================================================================

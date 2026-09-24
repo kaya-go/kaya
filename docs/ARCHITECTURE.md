@@ -45,7 +45,7 @@ desktop, a PWA in the browser. KataGo runs locally — through ONNX Runtime
 | Native AI inference       | `ort` (Rust ONNX Runtime)                                          |
 | Web AI inference          | `onnxruntime-web` (WebGPU / WASM)                                  |
 | AI model                  | KataGo via ONNX                                                    |
-| Board recognition         | Moku AI (RT-DETR) + classic CV pipeline                            |
+| Board recognition         | Moku AI (RT-DETR + corner head) + classic CV pipeline              |
 | Go logic                  | TypeScript ports from [Sabaki](https://github.com/SabakiHQ/Sabaki) |
 
 ## Monorepo layout
