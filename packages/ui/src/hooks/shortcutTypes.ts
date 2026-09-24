@@ -138,9 +138,13 @@ export const DEFAULT_SHORTCUTS: Record<ShortcutId, Omit<ShortcutDefinition, 'id'
   },
 
   // View shortcuts
+  // NOTE: this deliberately does *not* use Cmd/Ctrl+Shift+M — that is the
+  // mnemonic binding for 'edit.makeMainBranch' (Sabaki uses it too). Both
+  // handlers are independent window listeners, so sharing a binding made a
+  // single keypress toggle the header *and* reorder the game tree.
   'view.toggleHeader': {
     category: 'view',
-    defaultBinding: createPlatformBinding('m', { shift: true }),
+    defaultBinding: createPlatformBinding('h', { shift: true }),
   },
   'view.toggleSidebar': {
     category: 'view',

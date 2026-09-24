@@ -62,3 +62,4 @@ link forward to the replacement. Don't delete history.
 | 2026-09-23 | [The update installed, and the dialog never said so](2026-09-23-updater-restart-prompt.md)                  | shipped    |
 | 2026-09-24 | [Moku v4: board corners from a corner head](2026-09-24-moku-v4-corner-head.md)                              | shipped    |
 | 2026-09-24 | [Mobile: tree edges, toasts, back gesture, AI status pill](2026-09-24-mobile-tree-toast-and-back.md)        | shipped    |
+| 2026-09-24 | [Game tree branches: main line, context menu, no splicing](2026-09-24-gametree-branch-management.md)        | shipped    |

@@ -391,6 +391,8 @@
     "copy": "Copia",
     "pasteBranch": "Incolla",
     "paste": "Incolla",
+    "cutBranch": "Taglia variante",
+    "deleteContinuation": "Elimina continuazione (mantieni la posizione corrente)",
     "deleteCurrentBranch": "Elimina variante corrente",
     "deleteOtherBranches": "Elimina altre varianti (mantieni solo linea corrente)",
     "history": "Cronologia",
@@ -471,7 +473,12 @@
     "switchToHorizontal": "Passa a layout orizzontale",
     "hideMinimap": "Nascondi minimappa",
     "showMinimap": "Mostra minimappa",
-    "centerOnPosition": "Centra sulla posizione"
+    "centerOnPosition": "Centra sulla posizione",
+    "branchActions": "Azioni sulle varianti",
+    "branchDeleted": "Variante eliminata",
+    "branchCut": "Variante tagliata",
+    "continuationDeleted": "Continuazione eliminata",
+    "otherBranchesDeleted": "Altre varianti eliminate"
   },
   "boardControls": {
     "captured": "Catturate",

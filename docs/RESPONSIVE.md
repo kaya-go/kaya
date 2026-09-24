@@ -46,11 +46,20 @@ Detection:
 | Swipe left on board  | Next move                                     |
 | Swipe right on board | Previous move                                 |
 | Multi-touch          | Suppressed during pinch — no accidental plays |
+| Long-press tree node | Branch menu (make main, copy, cut, delete)    |
 
 Implemented in
 [`packages/shudan/src/Goban.tsx`](../packages/shudan/src/Goban.tsx)
 (touch handlers) and
 [`packages/ui/src/hooks/useSwipeGesture.ts`](../packages/ui/src/hooks/useSwipeGesture.ts).
+
+The game tree node long-press is implemented in
+[`packages/ui/src/components/gametree/StoneNode.tsx`](../packages/ui/src/components/gametree/StoneNode.tsx)
+and opens [`GameTreeContextMenu`](../packages/ui/src/components/gametree/GameTreeContextMenu.tsx).
+It uses a pointer timer rather than the `contextmenu` event because iOS Safari
+does not synthesise one for long-presses. A second finger cancels it, so a
+pinch-zoom that starts on a stone does not open the menu. Destructive menu
+actions offer Undo in a toast, since touch users have no Cmd/Ctrl+Z.
 
 The decided-but-not-yet-shipped UX is **tap-confirm**: tap shows a ghost
 stone and a small ✓; the stone commits on the second tap. Picked over
