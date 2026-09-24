@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.13] - 2026-09-24
+
+Board recognition moves to moku-v4, whose new corner head finds the board far more reliably: on real game photos, the share of boards read back exactly goes from 2% to 47%. The game tree gets a right-click and long-press menu for branch actions (make main, cut, delete, with undo), and on phones the back gesture now closes dialogs and menus, tree nodes are the right size again and notifications fit the screen.
+
+### <!-- 0 -->🚀 Features
+
+- *(board-recognition)* Support moku-v4 and its corner head ([#194](https://github.com/kaya-go/kaya/issues/194)) by @hadim
+
+- *(ui)* Add game tree branch context menu and fix main-branch shortcut ([#195](https://github.com/kaya-go/kaya/issues/195)) by @Aitai
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Mobile game tree edges, toasts, back gesture and AI status label ([#196](https://github.com/kaya-go/kaya/issues/196)) by @Aitai
+
+- *(ui)* Clear the react-hooks dependency warnings and deny new ones ([#197](https://github.com/kaya-go/kaya/issues/197)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @Aitai
+- @github-actions[bot]
+
 ## [0.4.12] - 2026-09-23
 
 The desktop updater now shows download progress and finishes with a Restart button in its own dialog, instead of spinning on “Installing update…” after an install that had in fact succeeded. Updating from 0.4.11 still runs the old updater one last time: if it stays on “Installing…”, quit and reopen Kaya — the update is already installed.
@@ -10,10 +32,14 @@ The desktop updater now shows download progress and finishes with a Restart butt
 
 - *(desktop)* Finish the macos update flow and show download progress ([#193](https://github.com/kaya-go/kaya/issues/193)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.12 ([5c7c595](https://github.com/kaya-go/kaya/commit/5c7c595c5a69d84226282205e739992781a049e6)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.4.11] - 2026-09-23
 

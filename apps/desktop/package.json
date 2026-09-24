@@ -1,6 +1,6 @@
 {
   "name": "@kaya/desktop",
-  "version": "0.4.13-dev",
+  "version": "0.4.13",
   "private": true,
   "description": "Kaya desktop application",
   "type": "module",
