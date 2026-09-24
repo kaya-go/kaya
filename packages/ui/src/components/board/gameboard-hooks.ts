@@ -192,7 +192,6 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
       aiEngine,
       isModelLoaded,
       currentBoard,
-      currentNode,
       gameInfo.komi,
       aiSettings.numVisits,
       waitForCurrentAnalysis,

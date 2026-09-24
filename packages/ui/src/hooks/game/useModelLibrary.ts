@@ -309,7 +309,7 @@ export function useModelLibrary() {
         downloadingRef.current.delete(id);
       }
     },
-    [modelLibrary, selectedModelId]
+    [modelLibrary]
   );
 
   // Delete a model

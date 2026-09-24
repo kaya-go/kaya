@@ -41,6 +41,8 @@ export const PerformanceReportTab: React.FC = () => {
       return null;
     }
     return buildPerformanceReport(gameTree, rootId, currentNodeId, gameInfo, analysisCache, t);
+    // analysisCache is mutated in place: analysisCacheSize is what changes when results land.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisCacheSize, t]);
 
   // Get filtered stats based on phase

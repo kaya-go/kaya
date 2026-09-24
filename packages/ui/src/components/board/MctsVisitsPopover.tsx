@@ -61,6 +61,12 @@ const visitsToSlider = (v: number): number =>
 
 const sliderToVisits = (s: number): number => snapToNice(10 ** s);
 
+const categoryOf = (v: number): HintCategory => {
+  if (v === 1) return 'fast';
+  if (isExtremeVisits(v)) return 'extreme';
+  return 'deep';
+};
+
 export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
   open,
   presets,
@@ -72,11 +78,6 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
   const { t } = useTranslation();
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<PopoverPosition | null>(null);
-  const categoryOf = (v: number): HintCategory => {
-    if (v === 1) return 'fast';
-    if (isExtremeVisits(v)) return 'extreme';
-    return 'deep';
-  };
   const [hintCategory, setHintCategory] = useState<HintCategory>(categoryOf(current));
   const setHoverCategory = (next: HintCategory) =>
     setHintCategory(prev => (prev === next ? prev : next));
@@ -150,7 +151,7 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
       window.removeEventListener('resize', compute);
       window.removeEventListener('scroll', compute, true);
     };
-  }, [open, anchorRef]);
+  }, [open, anchorRef, current]);
 
   // Close on outside click and Escape
   useEffect(() => {

@@ -478,7 +478,7 @@ export const GameTreeProvider: React.FC<{
       // open changes nothing else, so the toggles looked inert until the next navigation.
       showOwnership, toggleOwnership, showTopMoves, toggleTopMoves,
       showAnalysisBar, toggleShowAnalysisBar,
-      analysisCacheSize, updateAnalysisCacheSize,
+      analysisCache, analysisCacheSize, updateAnalysisCacheSize,
       gameId, territoryMap, totalMovesInBranch, loadSGFAsync, resign,
       downloadModel, deleteModel, uploadModel,
       // Setters are stable, but the array is exhaustive on purpose: this is what drifted.

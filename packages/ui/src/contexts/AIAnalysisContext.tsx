@@ -310,7 +310,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     return map;
-  }, [showOwnership, analysisResult, currentBoard.signMap.length]);
+  }, [showOwnership, analysisResult, currentBoard.signMap]);
 
   // Reset state on game change
   useEffect(() => {

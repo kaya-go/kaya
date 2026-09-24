@@ -147,7 +147,7 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
         };
         reader.readAsText(file);
       },
-      [loadSGF, setFileName, setCustomAIModel, clearLoadedFile, checkUnsavedChanges]
+      [onFileDrop, loadSGF, setFileName, setCustomAIModel, clearLoadedFile, checkUnsavedChanges]
     );
 
     useImperativeHandle(ref, () => ({ loadFile: handleFileLoad }), [handleFileLoad]);
@@ -268,7 +268,7 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
           alert('Please drop a .sgf, .onnx, or image file');
         }
       },
-      [handleFileLoad]
+      [handleFileLoad, resetDragState]
     );
 
     return (
