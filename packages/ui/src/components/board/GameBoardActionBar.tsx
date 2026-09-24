@@ -163,8 +163,6 @@ export const GameBoardActionBar: React.FC<GameBoardActionBarProps> = ({
     showNextMove,
     isModelLoaded,
     isGeneratingMove,
-    bindingToDisplayString,
-    getBinding,
   ]);
 
   return (

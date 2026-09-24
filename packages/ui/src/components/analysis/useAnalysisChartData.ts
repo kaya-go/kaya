@@ -94,7 +94,7 @@ function useContainerWidth(wrapperRef: RefObject<HTMLDivElement | null>): number
 
     resizeObserver.observe(wrapper);
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [wrapperRef]);
 
   return containerWidth;
 }

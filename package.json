@@ -58,7 +58,7 @@
     "generate-pwa-assets": "bun run scripts/generate-pwa-assets.ts",
     "generate-updater-json": "bun run scripts/generate-updater-json.ts",
     "release-summary": "bun run scripts/release-summary.ts",
-    "lint": "oxlint packages apps e2e scripts",
+    "lint": "oxlint --deny-warnings packages apps e2e scripts",
     "format": "prettier --write . && markdownlint --fix '**/*.md' --ignore node_modules",
     "format:check": "prettier --check . && markdownlint '**/*.md' --ignore node_modules",
     "type-check": "bun run --filter='*' type-check",

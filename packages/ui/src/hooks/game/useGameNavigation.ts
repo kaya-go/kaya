@@ -305,9 +305,10 @@ export function useGameNavigation({
   });
 
   // Calculate total moves in the current active branch
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const totalMovesInBranch = useMemo(
     () => computeTotalMovesInBranch(gameTree, rootId, getActiveChildForNode),
+    // The active branch follows navigation, which only currentNodeId signals.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [gameTree, rootId, getActiveChildForNode, currentNodeId]
   );
 

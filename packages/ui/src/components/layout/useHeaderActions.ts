@@ -23,6 +23,7 @@ import { useHeaderKeyboardShortcuts } from './useHeaderKeyboardShortcuts';
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 
 export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
+  const onNavigateToBoard = options?.onNavigateToBoard;
   const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const { soundEnabled, toggleSound } = useGameSounds();
@@ -140,9 +141,9 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       clearLoadedFile();
       loadSGFAsync(sgf);
       setFileName('scan.sgf');
-      options?.onNavigateToBoard?.();
+      onNavigateToBoard?.();
     },
-    [loadSGFAsync, setFileName, clearLoadedFile, options?.onNavigateToBoard]
+    [loadSGFAsync, setFileName, clearLoadedFile, onNavigateToBoard]
   );
 
   const handleOpenClick = useCallback(() => {

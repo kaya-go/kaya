@@ -162,6 +162,8 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
       currentPositionIndex,
       analyzedCount,
     };
+    // analysisCache is mutated in place: analysisCacheSize is what changes when results land.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisCacheSize]);
 
   const { dataPoints, totalPositions, currentPositionIndex, analyzedCount } = analysisData;

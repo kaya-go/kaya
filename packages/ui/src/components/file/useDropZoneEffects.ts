@@ -203,7 +203,13 @@ export function useTauriDragDrop({
     return () => {
       if (unlistenDrop) unlistenDrop();
     };
-  }, [handleFileLoadFromPath, handleFileImportToLibrary, updateDragState, updateLibraryState]);
+  }, [
+    handleFileLoadFromPath,
+    handleFileImportToLibrary,
+    updateDragState,
+    updateLibraryState,
+    isOverLibraryRef,
+  ]);
 }
 
 // --- Paste handler hook ---

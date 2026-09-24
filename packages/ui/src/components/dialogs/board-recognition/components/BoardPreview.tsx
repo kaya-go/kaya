@@ -275,7 +275,7 @@ export const BoardPreview: React.FC<PreviewProps> = ({
       ctx.fillStyle = '#fff';
       ctx.fill();
     }
-  }, [result, hints, gridCorners, gridClicks, settingGrid, delta, moveMarker, containerSize]);
+  }, [result, hints, gridCorners, gridClicks, delta, moveMarker, containerSize]);
 
   // Keep paintRef in sync
   paintRef.current = paintCanvas;
