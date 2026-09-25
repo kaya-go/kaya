@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.14] - 2026-09-25
+
+A small maintenance release: the desktop app now clears the old board-recognition model (moku-v3, about 80 MB) that an earlier version could leave in its cache, and every desktop build now checks that the bundled model loads in the app and has its corner head before it ships.
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(board-recognition)* Check the moku model at build time and prune old ones ([#199](https://github.com/kaya-go/kaya/issues/199)) by @hadim
+
+### <!-- 6 -->🧪 Testing
+
+- *(e2e)* Release the library drag once the folder is highlighted ([#198](https://github.com/kaya-go/kaya/issues/198)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.4.13] - 2026-09-24
 
 Board recognition moves to moku-v4, whose new corner head finds the board far more reliably: on real game photos, the share of boards read back exactly goes from 2% to 47%. The game tree gets a right-click and long-press menu for branch actions (make main, cut, delete, with undo), and on phones the back gesture now closes dialogs and menus, tree nodes are the right size again and notifications fit the screen.
@@ -18,11 +35,15 @@ Board recognition moves to moku-v4, whose new corner head finds the board far mo
 
 - *(ui)* Clear the react-hooks dependency warnings and deny new ones ([#197](https://github.com/kaya-go/kaya/issues/197)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.13 ([60fedcc](https://github.com/kaya-go/kaya/commit/60fedcc08745fa542a322f2d29ccf04396021fb1)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @Aitai
-- @github-actions[bot]
 
 ## [0.4.12] - 2026-09-23
 
