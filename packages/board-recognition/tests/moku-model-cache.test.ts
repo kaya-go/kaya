@@ -3,7 +3,7 @@
  * Run with: bun test
  */
 import { describe, test, expect, afterEach } from 'bun:test';
-import { fetchModelWithCache } from '../src/moku-model-cache';
+import { fetchModelWithCache, fetchModelWithFallback } from '../src/moku-model-cache';
 
 const OLD_URL = 'https://huggingface.co/kaya-go/moku-v3/resolve/main/model.onnx';
 const NEW_URL = 'https://huggingface.co/kaya-go/moku-v4/resolve/main/model.onnx';
@@ -70,5 +70,18 @@ describe('fetchModelWithCache', () => {
 
     expect(new Uint8Array(buffer)).toEqual(new Uint8Array([2]));
     expect(cache.entries.has(OLD_URL)).toBe(true);
+  });
+
+  test('loading the bundled model prunes other versions but keeps the remote entry', async () => {
+    const cache = new FakeCache();
+    await cache.put(OLD_URL, new Response(new Uint8Array([1])));
+    await cache.put(ETAG(OLD_URL), new Response('"v3"'));
+    await cache.put(NEW_URL, new Response(new Uint8Array([2])));
+    install(cache, new Uint8Array([7, 7]));
+
+    const buffer = await fetchModelWithFallback(['/models/moku-v4.onnx', NEW_URL]);
+
+    expect(new Uint8Array(buffer)).toEqual(new Uint8Array([7, 7]));
+    expect([...cache.entries.keys()]).toEqual([NEW_URL]);
   });
 });
