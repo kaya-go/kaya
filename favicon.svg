@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient bambou simplifié -->
+    <linearGradient id="bambooDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2f855a" />
+      <stop offset="100%" style="stop-color:#22543d" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Bambou simplifié - 3 tiges bold (sans fond) -->
+  <g fill="url(#bambooDark)">
+    <!-- Tige gauche -->
+    <rect x="135" y="110" width="48" height="292" rx="24" />
+    <ellipse cx="159" cy="180" rx="26" ry="11" fill="#1a4731" />
+    <ellipse cx="159" cy="310" rx="26" ry="11" fill="#1a4731" />
+    
+    <!-- Tige centrale -->
+    <rect x="232" y="70" width="48" height="372" rx="24" />
+    <ellipse cx="256" cy="150" rx="26" ry="11" fill="#1a4731" />
+    <ellipse cx="256" cy="280" rx="26" ry="11" fill="#1a4731" />
+    <ellipse cx="256" cy="400" rx="26" ry="11" fill="#1a4731" />
+    
+    <!-- Tige droite -->
+    <rect x="329" y="130" width="48" height="272" rx="24" />
+    <ellipse cx="353" cy="205" rx="26" ry="11" fill="#1a4731" />
+    <ellipse cx="353" cy="335" rx="26" ry="11" fill="#1a4731" />
+  </g>
+</svg>
