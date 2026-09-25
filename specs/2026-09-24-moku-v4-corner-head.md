@@ -45,6 +45,13 @@ Numbers from moku's Python port of Kaya's pipeline, see the
   otherwise ship both, +80 MB), and the web cache evicts other model URLs after
   a fresh download.
 
+- Guards added after the release: `copy-assets --with-model` loads the model
+  with the app's own `onnxruntime-web` and runs it once, and fails the desktop
+  build (in CI) if it cannot load or has no `corner_points` of shape 1×8×3. A
+  model without the head does not error in the app, it silently falls back to
+  the DETR corners. Loading the bundled model also prunes other model versions
+  from the web cache, which the desktop app otherwise never did.
+
 ## Learnings
 
 - The first published moku-v4 `model.onnx` did not load in the app: the

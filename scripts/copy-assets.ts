@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import {
   MOKU_BUNDLED_MODEL_FILE,
@@ -139,6 +140,50 @@ async function removeStaleMokuModels(destDir: string) {
   }
 }
 
+/**
+ * Load the model with the app's own onnxruntime-web and run it once. Python's
+ * checks (moku) cannot see what breaks the app: the first moku-v4 export used
+ * float64 Sin/Cos, which onnxruntime-web 1.24 cannot load, and a model without
+ * `corner_points` does not fail at all — Kaya silently falls back to the much
+ * weaker DETR corners. Returns why the model is unusable, or null.
+ */
+async function checkMokuModel(file: string): Promise<string | null> {
+  const require = createRequire(
+    path.join(rootDir, 'packages', 'board-recognition', 'package.json')
+  );
+  const ort = require('onnxruntime-web') as typeof import('onnxruntime-web');
+  ort.env.wasm.numThreads = 1;
+  const model = await fs.readFile(file);
+
+  // Same fallback order as MokuDetector.init: the app works if any level loads.
+  let session: import('onnxruntime-web').InferenceSession | null = null;
+  let lastError = '';
+  for (const level of ['all', 'basic', 'disabled'] as const) {
+    try {
+      session = await ort.InferenceSession.create(model, {
+        executionProviders: ['wasm'],
+        graphOptimizationLevel: level,
+      });
+      break;
+    } catch (error) {
+      lastError = String(error);
+    }
+  }
+  if (!session) return `onnxruntime-web cannot load it: ${lastError}`;
+
+  try {
+    if (!session.outputNames.includes('corner_points')) {
+      return `it has no corner_points output (outputs: ${session.outputNames.join(', ')})`;
+    }
+    const input = new ort.Tensor('float32', new Float32Array(3 * 640 * 640), [1, 3, 640, 640]);
+    const outputs = await session.run({ pixel_values: input });
+    const dims = outputs.corner_points.dims.join('x');
+    return dims === '1x8x3' ? null : `corner_points has shape ${dims}, expected 1x8x3`;
+  } finally {
+    await session.release();
+  }
+}
+
 async function downloadMokuModel() {
   const modelUrl = MOKU_MODEL_URL;
   const destDir = path.join(rootDir, 'apps', 'desktop', 'public', 'models');
@@ -146,14 +191,20 @@ async function downloadMokuModel() {
 
   await removeStaleMokuModels(destDir);
 
-  // Skip if already downloaded, unless what is there is too small to be it
+  // Skip if already downloaded, unless what is there is too small to be it or
+  // does not run (a CI cache can hold a model the Hub has since replaced)
   try {
     const { size } = await fs.stat(destFile);
-    if (size >= MIN_MOKU_MODEL_BYTES) {
-      console.log('✅ Moku model already exists, skipping download');
-      return;
+    if (size < MIN_MOKU_MODEL_BYTES) {
+      console.warn(`⚠️  Moku model on disk is only ${size} bytes, downloading it again`);
+    } else {
+      const problem = await checkMokuModel(destFile);
+      if (!problem) {
+        console.log('✅ Moku model already exists and runs, skipping download');
+        return;
+      }
+      console.warn(`⚠️  Moku model on disk is unusable (${problem}), downloading it again`);
     }
-    console.warn(`⚠️  Moku model on disk is only ${size} bytes, downloading it again`);
   } catch {
     // File doesn't exist, proceed with download
   }
@@ -175,7 +226,13 @@ async function downloadMokuModel() {
 
   await fs.writeFile(destFile, Buffer.from(buffer));
   const sizeMB = (buffer.byteLength / 1024 / 1024).toFixed(1);
-  console.log(`✅ Moku model downloaded: ${sizeMB} MB`);
+  const problem = await checkMokuModel(destFile);
+  if (problem) {
+    await fs.rm(destFile);
+    assetFailure(`The Moku model at ${modelUrl} is unusable in the app: ${problem}`);
+    return;
+  }
+  console.log(`✅ Moku model downloaded and checked: ${sizeMB} MB`);
 }
 
 async function main() {

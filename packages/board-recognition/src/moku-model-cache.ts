@@ -108,6 +108,16 @@ async function pruneOtherModels(cache: Cache, modelUrl: string): Promise<void> {
   }
 }
 
+/** `pruneOtherModels` on the model cache, when there is one. Never throws. */
+async function pruneModelCache(keepUrl: string): Promise<void> {
+  if (typeof caches === 'undefined') return;
+  try {
+    await pruneOtherModels(await caches.open(MODEL_CACHE_NAME), keepUrl);
+  } catch (e) {
+    mokuWarn('Failed to prune the model cache:', (e as Error).message);
+  }
+}
+
 /**
  * Clear the cached model. Useful when a new version is available.
  */
@@ -255,7 +265,12 @@ export async function fetchModelWithFallback(
   const errors: string[] = [];
   for (const url of modelUrls) {
     try {
-      return await fetchModelWithCache(url, onProgress);
+      const buffer = await fetchModelWithCache(url, onProgress);
+      // The desktop app loads its bundled model first, which never touches the
+      // cache, so a model an older version cached (after a remote fallback)
+      // would otherwise stay there for good. Keep only the remote URL's entry.
+      await pruneModelCache(modelUrls[modelUrls.length - 1]);
+      return buffer;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       mokuWarn(`Failed to load model from ${url}: ${msg}`);
