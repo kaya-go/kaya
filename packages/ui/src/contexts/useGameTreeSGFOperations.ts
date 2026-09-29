@@ -22,7 +22,7 @@ interface UseGameTreeSGFOperationsParams {
   coreLoadSGFAsync: (content: string) => Promise<void>;
   coreCreateNewGame: (config?: NewGameConfig) => void;
   isTreeDirty: boolean;
-  setTreeDirty: (dirty: boolean) => void;
+  markTreeClean: () => void;
   clearHistory: () => void;
   isInitialized: boolean;
 }
@@ -40,7 +40,7 @@ export function useGameTreeSGFOperations({
   coreLoadSGFAsync,
   coreCreateNewGame,
   isTreeDirty,
-  setTreeDirty,
+  markTreeClean,
   clearHistory,
   isInitialized,
 }: UseGameTreeSGFOperationsParams) {
@@ -59,17 +59,23 @@ export function useGameTreeSGFOperations({
     return aiSettings.saveAnalysisToSgf && analysisCacheSize > cleanAnalysisCacheSize;
   }, [aiSettings.saveAnalysisToSgf, analysisCacheSize, cleanAnalysisCacheSize]);
 
-  const isDirty = isTreeDirty || isAnalysisDirty;
+  // Explicit setIsDirty(true), for changes neither comparison can see (e.g.
+  // clearing analysis a save would otherwise write). Kept apart from the tree
+  // comparison so undoing back to the saved tree still reads as clean.
+  const [forcedDirty, setForcedDirty] = React.useState(false);
+
+  const isDirty = isTreeDirty || isAnalysisDirty || forcedDirty;
 
   const setIsDirty = useCallback(
     (dirty: boolean) => {
-      setTreeDirty(dirty);
+      setForcedDirty(dirty);
       if (!dirty) {
+        markTreeClean();
         updateAnalysisCacheSize();
         setCleanAnalysisCacheSize(analysisCache.current.size);
       }
     },
-    [setTreeDirty, analysisCache, updateAnalysisCacheSize]
+    [markTreeClean, analysisCache, updateAnalysisCacheSize]
   );
 
   // Helper: extract analysis from SGF content into cache
@@ -128,6 +134,7 @@ export function useGameTreeSGFOperations({
       extractAnalysisFromContent(content);
       coreLoadSGF(content);
       setCleanAnalysisCacheSize(analysisCache.current.size);
+      setForcedDirty(false);
     },
     [analysisCache, clearHistory, extractAnalysisFromContent, coreLoadSGF]
   );
@@ -140,6 +147,7 @@ export function useGameTreeSGFOperations({
       extractAnalysisFromContent(content);
       await coreLoadSGFAsync(content);
       setCleanAnalysisCacheSize(analysisCache.current.size);
+      setForcedDirty(false);
     },
     [analysisCache, clearHistory, extractAnalysisFromContent, coreLoadSGFAsync]
   );
@@ -151,6 +159,7 @@ export function useGameTreeSGFOperations({
       clearHistory();
       coreCreateNewGame(config);
       setCleanAnalysisCacheSize(0);
+      setForcedDirty(false);
     },
     [analysisCache, coreCreateNewGame, clearHistory]
   );

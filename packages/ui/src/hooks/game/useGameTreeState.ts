@@ -31,21 +31,12 @@ export function useGameTreeState() {
   // Compute isDirty by comparing current tree to clean tree reference
   const isDirty = gameTree !== null && gameTree !== cleanTreeRef.current;
 
-  // Function to mark current state as clean (called after save/load)
+  // Mark the current tree as the saved one. There is deliberately no way to
+  // force the tree dirty: an edit already yields a new tree, and undoing back to
+  // the clean tree must read as clean again.
   const markClean = useCallback(() => {
     cleanTreeRef.current = gameTree;
   }, [gameTree]);
-
-  // Mark clean after save. Dirty is derived from tree identity — do not null
-  // cleanTreeRef on dirty=true (that would break undo back to the loaded tree).
-  const setIsDirty = useCallback(
-    (dirty: boolean) => {
-      if (!dirty) {
-        cleanTreeRef.current = gameTree;
-      }
-    },
-    [gameTree]
-  );
 
   // Loading states
   const [isLoadingSGF, setIsLoadingSGF] = useState(false);
@@ -350,7 +341,6 @@ export function useGameTreeState() {
     updateGameInfo,
     gameInfo,
     isDirty,
-    setIsDirty,
     markClean,
   };
 }

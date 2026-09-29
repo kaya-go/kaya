@@ -91,7 +91,7 @@ export const GameTreeProvider: React.FC<{
     filename,
     setFilename,
     isDirty: isTreeDirty,
-    setIsDirty: setTreeDirty,
+    markClean: markTreeClean,
     isInitialized,
   } = useGameTreeState();
 
@@ -259,7 +259,7 @@ export const GameTreeProvider: React.FC<{
       coreLoadSGFAsync,
       coreCreateNewGame,
       isTreeDirty,
-      setTreeDirty,
+      markTreeClean,
       clearHistory,
       isInitialized,
     });
