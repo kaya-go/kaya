@@ -48,7 +48,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     toggleOwnership,
     showTopMoves,
     toggleTopMoves,
-    setIsDirty,
     isLoadingSGF,
   } = useGameTree();
 
@@ -124,23 +123,13 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [updateAnalysisCacheSize, gameId]);
 
   const clearAnalysisCache = useCallback(() => {
-    if (analysisCache.current.size > 0 && aiSettings.saveAnalysisToSgf) {
-      setIsDirty(true);
-    }
     // Cancel any in-flight work and clear the shared cache map.
     queue?.cancelAll();
     queue?.clearCache();
     // analysisCache shares the same Map ref as queue.cache; clearCache cleared it.
     updateAnalysisCacheSize();
     setAnalysisResult(null);
-  }, [
-    analysisCache,
-    updateAnalysisCacheSize,
-    setAnalysisResult,
-    queue,
-    aiSettings.saveAnalysisToSgf,
-    setIsDirty,
-  ]);
+  }, [updateAnalysisCacheSize, setAnalysisResult, queue]);
 
   // Track if this is the first render (to avoid clearing on mount)
   const isFirstRenderRef = useRef(true);

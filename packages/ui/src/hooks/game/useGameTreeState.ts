@@ -36,14 +36,11 @@ export function useGameTreeState() {
     cleanTreeRef.current = gameTree;
   }, [gameTree]);
 
-  // Function to manually set dirty state (for external use)
+  // Mark clean after save. Dirty is derived from tree identity — do not null
+  // cleanTreeRef on dirty=true (that would break undo back to the loaded tree).
   const setIsDirty = useCallback(
     (dirty: boolean) => {
-      if (dirty) {
-        // Force dirty by setting cleanTreeRef to a different value
-        cleanTreeRef.current = null;
-      } else {
-        // Mark current state as clean
+      if (!dirty) {
         cleanTreeRef.current = gameTree;
       }
     },

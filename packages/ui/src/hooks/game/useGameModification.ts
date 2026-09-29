@@ -18,7 +18,6 @@ interface UseGameModificationProps {
   editTool: string;
   stoneToolColor: Sign;
   currentBoard: GoBoard;
-  setIsDirty: (dirty: boolean) => void;
 }
 
 export function useGameModification({
@@ -31,7 +30,6 @@ export function useGameModification({
   editTool,
   stoneToolColor,
   currentBoard,
-  setIsDirty,
 }: UseGameModificationProps) {
   // Tree-reshaping actions live in their own hook (CLAUDE.md file-size budget);
   // board/annotation editing stays here.
@@ -51,7 +49,6 @@ export function useGameModification({
     setGameTree,
     currentNodeId,
     setCurrentNodeId,
-    setIsDirty,
   });
 
   const playMove = useCallback(
@@ -86,7 +83,6 @@ export function useGameModification({
       logPerf(opLabel, now() - mutateStart, 'mutate');
 
       setGameTree(newTree);
-      setIsDirty(true);
 
       // Navigate to new node
       const newNode = newTree
@@ -96,7 +92,7 @@ export function useGameModification({
         setCurrentNodeId(newNode.id);
       }
     },
-    [gameTree, currentNodeId, setGameTree, setCurrentNodeId, setIsDirty]
+    [gameTree, currentNodeId, setGameTree, setCurrentNodeId]
   );
 
   const addSetupStone = useCallback(
@@ -136,10 +132,9 @@ export function useGameModification({
       });
 
       setGameTree(newTree);
-      setIsDirty(true);
       boardCache.clear();
     },
-    [gameTree, currentNodeId, setGameTree, setIsDirty]
+    [gameTree, currentNodeId, setGameTree]
   );
 
   const clearSetupStones = useCallback(() => {
@@ -152,9 +147,8 @@ export function useGameModification({
     });
 
     setGameTree(newTree);
-    setIsDirty(true);
     boardCache.clear();
-  }, [gameTree, currentNodeId, setGameTree, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree]);
 
   /** Add a new child node at the current position with AB/AW setup stones.
    * If clearCoords is provided, AE (Add Empty) entries are added first to clear those intersections. */
@@ -177,10 +171,9 @@ export function useGameModification({
 
       setGameTree(newTree);
       if (newNode) setCurrentNodeId(newNode.id);
-      setIsDirty(true);
       boardCache.clear();
     },
-    [gameTree, currentNodeId, setGameTree, setCurrentNodeId, setIsDirty]
+    [gameTree, currentNodeId, setGameTree, setCurrentNodeId]
   );
 
   const addMarker = useCallback(
@@ -301,9 +294,8 @@ export function useGameModification({
       });
 
       setGameTree(newTree);
-      setIsDirty(true);
     },
-    [gameTree, currentNodeId, setGameTree, setIsDirty]
+    [gameTree, currentNodeId, setGameTree]
   );
 
   const clearAllMarkersAndLabels = useCallback(() => {
@@ -317,8 +309,7 @@ export function useGameModification({
     });
 
     setGameTree(newTree);
-    setIsDirty(true);
-  }, [gameTree, currentNodeId, setGameTree, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree]);
 
   const setNodeName = useCallback(
     (name: string) => {
@@ -327,9 +318,8 @@ export function useGameModification({
         draft.updateProperty(currentNodeId, 'N', [name]);
       });
       setGameTree(newTree);
-      setIsDirty(true);
     },
-    [gameTree, currentNodeId, setGameTree, setIsDirty]
+    [gameTree, currentNodeId, setGameTree]
   );
 
   const setNodeComment = useCallback(
@@ -339,9 +329,8 @@ export function useGameModification({
         draft.updateProperty(currentNodeId, 'C', [comment]);
       });
       setGameTree(newTree);
-      setIsDirty(true);
     },
-    [gameTree, currentNodeId, setGameTree, setIsDirty]
+    [gameTree, currentNodeId, setGameTree]
   );
 
   return {

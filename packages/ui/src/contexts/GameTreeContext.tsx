@@ -182,7 +182,6 @@ export const GameTreeProvider: React.FC<{
     editTool,
     stoneToolColor,
     currentBoard,
-    setIsDirty: setTreeDirty, // Use tree-only dirty for modifications
   });
 
   // 6. Scoring

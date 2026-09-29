@@ -29,7 +29,6 @@ interface UseBranchModificationProps {
   setGameTree: (tree: GameTree<SGFProperty>) => void;
   currentNodeId: number | string | null;
   setCurrentNodeId: (id: number | string) => void;
-  setIsDirty: (dirty: boolean) => void;
 }
 
 export function useBranchModification({
@@ -37,7 +36,6 @@ export function useBranchModification({
   setGameTree,
   currentNodeId,
   setCurrentNodeId,
-  setIsDirty,
 }: UseBranchModificationProps) {
   const [copiedBranch, setCopiedBranch] = useState<GameTreeNode<SGFProperty> | null>(null);
 
@@ -48,8 +46,7 @@ export function useBranchModification({
 
     setGameTree(edit.tree);
     setCurrentNodeId(edit.currentNodeId);
-    setIsDirty(true);
-  }, [gameTree, currentNodeId, setGameTree, setCurrentNodeId, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree, setCurrentNodeId]);
 
   const copyNode = useCallback(() => {
     if (!gameTree || currentNodeId === null) return;
@@ -63,8 +60,7 @@ export function useBranchModification({
     if (!newTree) return;
 
     setGameTree(newTree);
-    setIsDirty(true);
-  }, [gameTree, currentNodeId, copiedBranch, setGameTree, setIsDirty]);
+  }, [gameTree, currentNodeId, copiedBranch, setGameTree]);
 
   const cutNode = useCallback(() => {
     if (!gameTree || currentNodeId === null) return;
@@ -74,8 +70,7 @@ export function useBranchModification({
     setCopiedBranch(edit.branch);
     setGameTree(edit.tree);
     setCurrentNodeId(edit.currentNodeId);
-    setIsDirty(true);
-  }, [gameTree, currentNodeId, setGameTree, setCurrentNodeId, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree, setCurrentNodeId]);
 
   const flattenVariations = useCallback(() => {
     console.warn('flattenVariations not implemented');
@@ -88,8 +83,7 @@ export function useBranchModification({
     if (!newTree) return;
 
     setGameTree(newTree);
-    setIsDirty(true);
-  }, [gameTree, currentNodeId, setGameTree, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree]);
 
   const shiftVariation = useCallback(
     (direction: 'left' | 'right') => {
@@ -98,9 +92,8 @@ export function useBranchModification({
         draft.shiftNode(currentNodeId, direction);
       });
       setGameTree(newTree);
-      setIsDirty(true);
     },
-    [gameTree, currentNodeId, setGameTree, setIsDirty]
+    [gameTree, currentNodeId, setGameTree]
   );
 
   /**
@@ -113,9 +106,8 @@ export function useBranchModification({
     if (!newTree) return;
 
     setGameTree(newTree);
-    setIsDirty(true);
     boardCache.clear();
-  }, [gameTree, currentNodeId, setGameTree, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree]);
 
   /**
    * Drop everything after the current node, keeping the current position
@@ -132,9 +124,8 @@ export function useBranchModification({
     if (!newTree) return;
 
     setGameTree(newTree);
-    setIsDirty(true);
     boardCache.clear();
-  }, [gameTree, currentNodeId, setGameTree, setIsDirty]);
+  }, [gameTree, currentNodeId, setGameTree]);
 
   return {
     copiedBranch,
