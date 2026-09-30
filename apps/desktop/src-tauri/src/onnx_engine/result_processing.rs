@@ -72,12 +72,12 @@ pub fn process_raw_outputs(
         })
         .collect();
 
-    // Ownership
+    // Ownership: KataGo ONNX head is pre-tanh; pla flips current-player → Black.
     let ownership_out = ownership.map(|own| {
         let stride = board_size * board_size;
         own[..stride.min(own.len())]
             .iter()
-            .map(|v| v * (pla as f32))
+            .map(|v| v.tanh() * (pla as f32))
             .collect()
     });
 

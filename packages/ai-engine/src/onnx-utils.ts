@@ -217,7 +217,8 @@ export async function processBatchResults(
       scoreLead: blackLead,
       currentTurn: pla === 1 ? 'B' : 'W',
       visits: 1,
-      ownership: ownership ? Array.from(ownership).map(v => v * pla) : undefined,
+      // KataGo ONNX ownership is pre-tanh; pla flips current-player → Black.
+      ownership: ownership ? Array.from(ownership).map(v => Math.tanh(v) * pla) : undefined,
     });
   }
 

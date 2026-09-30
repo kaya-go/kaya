@@ -232,8 +232,9 @@ export async function runMCTS(
         value = filtered.winRate;
         scoreLead = filtered.scoreLead;
 
-        // Accumulate ownership at the root level
-        if (filtered.ownership) {
+        // Only the root position's ownership map is meaningful for the result.
+        // Deeper leaves are different boards — averaging them pollutes the heatmap.
+        if (item.path.length === 1 && filtered.ownership) {
           for (let i = 0; i < boardArea; i++) {
             ownershipSum[i] += filtered.ownership[i];
           }
