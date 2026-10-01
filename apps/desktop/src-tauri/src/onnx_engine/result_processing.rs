@@ -158,3 +158,30 @@ impl OnnxEngine {
         Ok(results)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::process_raw_outputs;
+
+    #[test]
+    fn ownership_is_tanh_squashed_and_black_centric() {
+        let raw = [3.0f32, -2.5, 0.0, 0.5];
+        for pla in [1i8, -1] {
+            let result = process_raw_outputs(
+                &[0.0; 5],
+                &[0.0; 3],
+                &[0.0; 10],
+                Some(&raw),
+                &[1, 1, 5],
+                pla,
+                2,
+            )
+            .unwrap();
+            let own = result.ownership.unwrap();
+            for (v, r) in own.iter().zip(raw) {
+                assert!((v - r.tanh() * pla as f32).abs() < 1e-6);
+                assert!((-1.0..=1.0).contains(v));
+            }
+        }
+    }
+}

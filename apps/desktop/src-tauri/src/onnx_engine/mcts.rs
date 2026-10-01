@@ -547,15 +547,13 @@ impl OnnxEngine {
                     value = filtered.win_rate as f64;
                     score_lead = filtered.score_lead as f64;
 
-                    // Only the root position's ownership map is meaningful for the result.
-                    // Deeper leaves are different boards — averaging them pollutes the heatmap.
-                    if item.child_indices.is_empty() {
-                        if let Some(ref own) = filtered.ownership {
-                            for (i, &v) in own.iter().enumerate().take(board_area) {
-                                ownership_sum[i] += v as f64;
-                            }
-                            ownership_count += 1;
+                    // Average ownership over every evaluated node, like KataGo's tree-averaged
+                    // ownership: it predicts final territory, so deeper positions refine it.
+                    if let Some(ref own) = filtered.ownership {
+                        for (i, &v) in own.iter().enumerate().take(board_area) {
+                            ownership_sum[i] += v as f64;
                         }
+                        ownership_count += 1;
                     }
                 } else {
                     value = if leaf.n > 0 { leaf.w / leaf.n as f64 } else { 0.5 };

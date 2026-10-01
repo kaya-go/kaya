@@ -232,9 +232,9 @@ export async function runMCTS(
         value = filtered.winRate;
         scoreLead = filtered.scoreLead;
 
-        // Only the root position's ownership map is meaningful for the result.
-        // Deeper leaves are different boards — averaging them pollutes the heatmap.
-        if (item.path.length === 1 && filtered.ownership) {
+        // Average ownership over every evaluated node, like KataGo's tree-averaged
+        // ownership: it predicts final territory, so deeper positions refine it.
+        if (filtered.ownership) {
           for (let i = 0; i < boardArea; i++) {
             ownershipSum[i] += filtered.ownership[i];
           }
