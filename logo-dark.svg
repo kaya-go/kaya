@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Gradient pour le cercle (pierre de Go) - VERSION DARK -->
+    <radialGradient id="stoneGradientDark" cx="50%" cy="30%">
+      <stop offset="0%" style="stop-color:#cbd5e0;stop-opacity:0.15" />
+      <stop offset="100%" style="stop-color:#a0aec0;stop-opacity:0.08" />
+    </radialGradient>
+    
+    <!-- Gradient pour le bambou - VERSION DARK (plus clair) -->
+    <linearGradient id="bambooGradientDark" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#48bb78;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#38a169;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Cercle arrière-plan (pierre de Go) -->
+  <circle cx="256" cy="256" r="220" fill="url(#stoneGradientDark)" />
+  
+  <!-- Bambou - 3 tiges TRÈS ÉPAISSES avec nœuds -->
+  <g id="bamboo" fill="url(#bambooGradientDark)" stroke="none">
+    <!-- Tige gauche - ÉPAISSE -->
+    <g id="left-stem">
+      <rect x="130" y="100" width="50" height="312" rx="25" />
+      <ellipse cx="155" cy="170" rx="28" ry="12" fill="#2f855a" />
+      <ellipse cx="155" cy="290" rx="28" ry="12" fill="#2f855a" />
+      <path d="M 120 150 Q 90 135 75 155 Q 68 168 82 176 Q 105 186 120 172 Z" fill="#68d391" opacity="0.9" />
+      <path d="M 120 260 Q 85 252 70 272 Q 63 285 77 293 Q 100 303 120 289 Z" fill="#68d391" opacity="0.9" />
+    </g>
+    
+    <!-- Tige centrale (plus haute) - TRÈS ÉPAISSE -->
+    <g id="center-stem">
+      <rect x="228" y="60" width="55" height="392" rx="27" />
+      <ellipse cx="256" cy="140" rx="30" ry="13" fill="#2f855a" />
+      <ellipse cx="256" cy="270" rx="30" ry="13" fill="#2f855a" />
+      <ellipse cx="256" cy="390" rx="30" ry="13" fill="#2f855a" />
+      <path d="M 290 125 Q 320 110 337 130 Q 344 143 330 151 Q 307 161 290 147 Z" fill="#68d391" opacity="0.9" />
+      <path d="M 220 240 Q 190 225 173 245 Q 166 258 180 266 Q 203 276 220 262 Z" fill="#68d391" opacity="0.9" />
+      <path d="M 290 360 Q 325 352 342 372 Q 349 385 335 393 Q 312 403 290 389 Z" fill="#68d391" opacity="0.9" />
+    </g>
+    
+    <!-- Tige droite - ÉPAISSE -->
+    <g id="right-stem">
+      <rect x="332" y="120" width="50" height="292" rx="25" />
+      <ellipse cx="357" cy="195" rx="28" ry="12" fill="#2f855a" />
+      <ellipse cx="357" cy="325" rx="28" ry="12" fill="#2f855a" />
+      <path d="M 392 180 Q 422 165 437 185 Q 444 198 430 206 Q 407 216 392 202 Z" fill="#68d391" opacity="0.9" />
+      <path d="M 392 305 Q 427 297 444 317 Q 451 330 437 338 Q 414 348 392 334 Z" fill="#68d391" opacity="0.9" />
+    </g>
+  </g>
+  
+  <!-- Ombre légère -->
+  <g id="shadows" opacity="0.15">
+    <ellipse cx="155" cy="415" rx="25" ry="8" fill="#000" />
+    <ellipse cx="256" cy="455" rx="27" ry="9" fill="#000" />
+    <ellipse cx="357" cy="415" rx="25" ry="8" fill="#000" />
+  </g>
+</svg>
