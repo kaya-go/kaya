@@ -172,7 +172,9 @@ export function useScoring({ currentBoard, gameInfo }: UseScoringProps) {
     if (scoreMode) {
       autoScore();
     } else {
-      setDeadStones(new Set());
+      // autoScore changes with the board, so this runs on every navigation:
+      // keep the same empty Set to skip a second provider render.
+      setDeadStones(prev => (prev.size === 0 ? prev : new Set()));
       setEstimationMode(true);
       setProbabilityMap(null);
     }

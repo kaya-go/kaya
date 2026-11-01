@@ -108,6 +108,7 @@ kaya/
 
 - Manages game state, board reconstruction, SGF parsing, navigation
 - Consume via `useGameTreeSelector` or its domain hooks (`useGameTreeBoard`, ...): they read a stable store through `useSyncExternalStore`, so a component only re-renders when its slice changes. `useGameTree()` re-renders on every change
+- Callbacks from selectors keep one identity for good and call the latest version, so never use one as an effect dep to detect a state change. Select only what renders: a domain hook that exposes `currentBoard` re-renders on every navigation, and in a root-level component that drags the whole tree. For a value needed only in an event handler, use `useGameTreeGetter()`
 - Uses LRU board cache for performance
 - Modular hook architecture: `useGameTreeState`, `useBoardState`, `useGameNavigation`, `useGameModification`, `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`, `useGameTreeUndoRedo`
 

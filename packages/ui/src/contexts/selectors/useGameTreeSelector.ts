@@ -10,20 +10,22 @@
 
 import { useContext, useRef, useCallback, useSyncExternalStore } from 'react';
 import type { GameTreeContextValue } from '../../types/game';
-import { GameTreeStoreContext } from './gameTreeStore';
+import { GameTreeStoreContext, shallowEqual } from './gameTreeStore';
 
-// Default equality. A fresh object with the same field references does not
-// re-render; primitives compare by value. Pass another function to override.
-export function shallowEqual<T>(a: T, b: T): boolean {
-  if (Object.is(a, b)) return true;
-  if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
-  const keysA = Object.keys(a) as (keyof T)[];
-  const keysB = Object.keys(b);
-  if (keysA.length !== keysB.length) return false;
-  for (const key of keysA) {
-    if (a[key] !== b[key]) return false;
+function useGameTreeStoreContext() {
+  const store = useContext(GameTreeStoreContext);
+  if (!store) {
+    throw new Error('useGameTreeSelector must be used within a GameTreeProvider');
   }
-  return true;
+  return store;
+}
+
+/**
+ * Read the latest context value inside an event handler, without subscribing.
+ * For values a component only needs when something happens, not to render.
+ */
+export function useGameTreeGetter(): () => GameTreeContextValue {
+  return useGameTreeStoreContext().getSnapshot;
 }
 
 /**
@@ -37,10 +39,7 @@ export function useGameTreeSelector<T>(
   selector: (context: GameTreeContextValue) => T,
   isEqual: (a: T, b: T) => boolean = shallowEqual
 ): T {
-  const store = useContext(GameTreeStoreContext);
-  if (!store) {
-    throw new Error('useGameTreeSelector must be used within a GameTreeProvider');
-  }
+  const store = useGameTreeStoreContext();
 
   const selectorRef = useRef(selector);
   selectorRef.current = selector;

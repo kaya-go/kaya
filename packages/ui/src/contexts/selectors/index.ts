@@ -3,6 +3,7 @@
  */
 export {
   useGameTreeSelector,
+  useGameTreeGetter,
   useGameTreeCore,
   useGameTreeNavigation,
   useGameTreeBoard,

@@ -27,22 +27,47 @@ state not updating inside a transition: no `startTransition` touches game state.
 
 ## Learnings
 
-Measured with Playwright on the web app, stepping back five moves in a ten-move
-game, 53 subscribers, 10 value changes (518 possible subscriber commits):
+The store alone barely helped. Stepping back five moves in a ten-move game (web
+app in dev, 53 subscribers, 518 possible subscriber commits), 484 commits still
+happened, for three reasons:
 
-| Version                               | Subscriber commits | Skipped |
-| ------------------------------------- | ------------------ | ------- |
-| Store only                            | 484                | 7%      |
-| Store + stable callbacks (experiment) | 259                | 50%     |
+- Around 60 callbacks in the context value changed identity on every provider
+  render, so any slice holding one re-rendered anyway.
+- A few root-level consumers re-rendered and dragged the tree along.
+  `useGameInfoEditMode` used `useGameTreeBoard()` only for `gameId`, and it runs in
+  `AppContent`. `useHeaderActions` and `AppDropZone` subscribed to `currentBoard`
+  for values they only needed in a dialog or a click handler.
+- `useScoring` called `setDeadStones(new Set())` on every navigation outside score
+  mode, which forced a second provider render each time.
 
-The store is necessary but not sufficient. Around 60 callbacks in the context
-value change identity on every provider render: inline aliases (`goBack`,
-`toggleAnalysisMode`, `togglePatternMatching`...), and `useGameNavigation` /
-`useGameModification` results that close over state. Any slice holding one
-re-renders anyway, and `LibraryProviderWrapper` and `useAppContentState` sit near
-the root, so they drag most of the tree with them. The provider also rebuilds the
-value twice per navigation.
+Each `StoneNode` also subscribed to `currentNodeId`, so every visible node
+re-rendered on each step.
 
-Follow-up: give those callbacks a stable identity. The experiment wrapped each
-function field in a latest-ref proxy; before shipping that, check the effects
-that list a callback in their deps, since some may rely on its identity changing.
+## Follow-up shipped the same day
+
+- `useGameTreeStore` wraps every function field in a permanent identity that
+  forwards to the latest version, and keeps the previous snapshot when only
+  callbacks changed. **Selector callbacks no longer change identity**, so an
+  effect or memo can't use one as a signal that state changed: select the state.
+- `useGameTreeGetter()` reads the latest value in an event handler without
+  subscribing.
+- `StoneNode` selects a boolean, so a step re-renders the two nodes it affects.
+- `CurrentBoardRecognitionDialog` subscribes to the board only while it is open.
+
+An audit of the 11 effects outside the provider's own hooks that list a context
+callback in their deps found they only re-register listeners or call it, so none
+relies on its identity changing. The two callbacks that return data (`saveSGF`,
+`exportSGF`) aren't called during render.
+
+Main thread time per navigation, 300-move game, production web build, from
+Chrome's `TaskDuration` over 100 steps:
+
+| Version                        | Total | Script | Total at 4x CPU throttle |
+| ------------------------------ | ----- | ------ | ------------------------ |
+| Store only                     | 20 ms | 9 ms   | 72 ms                    |
+| Stable callbacks               | 16 ms | 5.5 ms | 49 ms                    |
+| Stable callbacks + subscribers | 14 ms | 4.5 ms | 41 ms                    |
+
+What re-renders now is what shows the position: board, controls, comment, graph
+and analysis. The rest of the 14 ms is style, paint and compositing, which React
+changes won't reach.

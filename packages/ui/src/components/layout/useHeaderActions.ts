@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
   useGameTreeFile,
-  useGameTreeBoard,
+  useGameTreeSelector,
+  useGameTreeGetter,
   useGameTreeEdit,
   useGameTreeAI,
   useGameTreeActions,
@@ -12,6 +13,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { useGameSounds } from '../../useGameSounds';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import type { NewGameConfig } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { saveFile } from '@kaya/platform';
 import { loadContentOrOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { readClipboardText, writeClipboardText } from '@kaya/platform';
@@ -30,7 +32,17 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
   const { getBinding, bindingToDisplayString } = useKeyboardShortcuts();
   const { loadSGFAsync, exportSGF, newGame, fileName, setFileName, isDirty, triggerAutoSave } =
     useGameTreeFile();
-  const { currentBoard, gameInfo } = useGameTreeBoard();
+  const { boardWidth, boardHeight, gameInfo } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        boardWidth: ctx.currentBoard.width,
+        boardHeight: ctx.currentBoard.height,
+        gameInfo: ctx.gameInfo,
+      }),
+      []
+    )
+  );
+  const getGameTree = useGameTreeGetter();
   const { makeMainVariation, undo, redo, canUndo, canRedo, addSetupPosition } = useGameTreeEdit();
   const { setAIConfigOpen } = useGameTreeAI();
   const { playMove } = useGameTreeActions();
@@ -254,10 +266,10 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
   );
 
   const handleNewGame = useCallback(() => {
-    const isBoardEmpty = currentBoard.isEmpty();
+    const isBoardEmpty = getGameTree().currentBoard.isEmpty();
     if (isBoardEmpty) setIsNewGameDialogOpen(true);
     else setIsConfirmationDialogOpen(true);
-  }, [currentBoard]);
+  }, [getGameTree]);
 
   const handleConfirmationConfirm = useCallback(() => {
     setIsConfirmationDialogOpen(false);
@@ -272,7 +284,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     const canProceed = await checkUnsavedChanges();
     if (!canProceed) return;
     newGame({
-      boardSize: currentBoard.width,
+      boardSize: boardWidth,
       playerBlack: 'Black',
       playerWhite: 'White',
       rankBlack: '',
@@ -281,7 +293,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       handicap: 0,
     });
     clearLoadedFile();
-  }, [newGame, currentBoard, clearLoadedFile, checkUnsavedChanges]);
+  }, [newGame, boardWidth, clearLoadedFile, checkUnsavedChanges]);
 
   const handleNewGameConfirm = useCallback(
     async (config: NewGameConfig) => {
@@ -350,7 +362,8 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     bindingToDisplayString,
     fileName,
     isDirty,
-    currentBoard,
+    boardWidth,
+    boardHeight,
     loadedFileId,
     libraryItems,
     librarySelectedId,

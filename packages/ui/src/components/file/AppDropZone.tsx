@@ -21,7 +21,7 @@ import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
-import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
+import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
 import { useTauriDragDrop, usePasteHandler } from './useDropZoneEffects';
 import './AppDropZone.css';
 
@@ -46,28 +46,20 @@ const isInsideLibrary = (target: EventTarget | null): boolean => {
 export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
   ({ children, onFileDrop, onNavigateToBoard }, ref) => {
     const { t } = useTranslation();
-    const {
-      loadSGF,
-      loadSGFAsync,
-      setFileName,
-      setCustomAIModel,
-      addSetupPosition,
-      currentBoard,
-      playMove,
-    } = useGameTreeSelector(
-      useCallback(
-        (ctx: GameTreeContextValue) => ({
-          loadSGF: ctx.loadSGF,
-          loadSGFAsync: ctx.loadSGFAsync,
-          setFileName: ctx.setFileName,
-          setCustomAIModel: ctx.setCustomAIModel,
-          addSetupPosition: ctx.addSetupPosition,
-          currentBoard: ctx.currentBoard,
-          playMove: ctx.playMove,
-        }),
-        []
-      )
-    );
+    const { loadSGF, loadSGFAsync, setFileName, setCustomAIModel, addSetupPosition, playMove } =
+      useGameTreeSelector(
+        useCallback(
+          (ctx: GameTreeContextValue) => ({
+            loadSGF: ctx.loadSGF,
+            loadSGFAsync: ctx.loadSGFAsync,
+            setFileName: ctx.setFileName,
+            setCustomAIModel: ctx.setCustomAIModel,
+            addSetupPosition: ctx.addSetupPosition,
+            playMove: ctx.playMove,
+          }),
+          []
+        )
+      );
     const { clearLoadedFile, createFile, importZip, checkUnsavedChanges } = useLibrary();
     const { setTauriDragging, setOverLibrary } = useTauriDrag();
     const [isDragging, setIsDragging] = useState(false);
@@ -304,12 +296,11 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
           </div>
         )}
         {recognitionFile && (
-          <BoardRecognitionDialog
+          <CurrentBoardRecognitionDialog
             file={recognitionFile}
             onImport={handleRecognitionImport}
             onImportSGF={handleRecognitionImportSGF}
             onPlayMove={playMove}
-            currentBoard={currentBoard}
             onClose={() => setRecognitionFile(null)}
           />
         )}
