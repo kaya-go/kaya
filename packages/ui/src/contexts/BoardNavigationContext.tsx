@@ -18,7 +18,8 @@ import React, {
   ReactNode,
 } from 'react';
 import type { Sign } from '@kaya/goboard';
-import { useGameTree } from './GameTreeContext';
+import { useGameTreeSelector } from './GameTreeContext';
+import type { GameTreeContextValue } from '../types/game';
 import { useGameController, type GameControllerState } from '../useGameController';
 
 interface BoardNavigationContextValue {
@@ -67,7 +68,27 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
     toggleShowAnalysisBar,
     branchInfo,
     switchBranch,
-  } = useGameTree();
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        playMove: ctx.playMove,
+        goBack: ctx.goBack,
+        goForward: ctx.goForward,
+        goBackSteps: ctx.goBackSteps,
+        goForwardSteps: ctx.goForwardSteps,
+        canGoBack: ctx.canGoBack,
+        canGoForward: ctx.canGoForward,
+        currentBoard: ctx.currentBoard,
+        moveNumber: ctx.moveNumber,
+        editMode: ctx.editMode,
+        setEditMode: ctx.setEditMode,
+        toggleShowAnalysisBar: ctx.toggleShowAnalysisBar,
+        branchInfo: ctx.branchInfo,
+        switchBranch: ctx.switchBranch,
+      }),
+      []
+    )
+  );
 
   // Get dynamic board size from current board
   const boardSize = currentBoard.signMap.length;

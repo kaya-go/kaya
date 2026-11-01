@@ -28,10 +28,10 @@ import { StoneNode } from './StoneNode';
 import { GameTreeContextMenu, type GameTreeMenuItem } from './GameTreeContextMenu';
 import { useGameTreeLayout } from './useGameTreeLayout';
 import { useUndoToast } from './useUndoToast';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import { useGameTreeEdit } from '../../contexts/selectors';
 import { hasOtherBranches, isOnMainLine } from '../../hooks/game/branchOperations';
-import type { SGFProperty } from '../../types/game';
+import type { GameTreeContextValue, SGFProperty } from '../../types/game';
 import {
   GAMETREE_NODE_LONGPRESS_EVENT,
   type GameTreeNodeLongPressDetail,
@@ -62,7 +62,16 @@ interface MenuState {
 export const GameTreeGraph = forwardRef<GameTreeGraphRef, GameTreeGraphProps>(
   ({ horizontal: controlledHorizontal, onLayoutChange, showMinimap = false }, ref) => {
     const { t } = useTranslation();
-    const { gameTree, currentNodeId, goToNode } = useGameTree();
+    const { gameTree, currentNodeId, goToNode } = useGameTreeSelector(
+      useCallback(
+        (ctx: GameTreeContextValue) => ({
+          gameTree: ctx.gameTree,
+          currentNodeId: ctx.currentNodeId,
+          goToNode: ctx.goToNode,
+        }),
+        []
+      )
+    );
     const {
       copiedBranch,
       copyNode,

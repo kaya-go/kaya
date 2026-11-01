@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  useGameTree,
+  useGameTreeSelector,
   useLibraryPanel,
   useGameInfoEditMode,
   useKeyboardShortcuts,
@@ -9,6 +9,7 @@ import {
   type GameTreeGraphRef,
   type MobileTab,
 } from '@kaya/ui';
+import type { GameTreeContextValue } from '@kaya/ui';
 
 interface UseAppContentStateOptions {
   onMobileTabChange?: (tab: MobileTab) => void;
@@ -53,7 +54,34 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     }
   }, [showMinimap]);
 
-  const { moveName, moveUrl, patternMatchingEnabled, togglePatternMatching } = useGameTree();
+  const {
+    moveName,
+    moveUrl,
+    patternMatchingEnabled,
+    togglePatternMatching,
+    gameTree,
+    rootId,
+    createNewGame,
+    filename,
+    loadSGFAsync,
+    setFileName,
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        moveName: ctx.moveName,
+        moveUrl: ctx.moveUrl,
+        patternMatchingEnabled: ctx.patternMatchingEnabled,
+        togglePatternMatching: ctx.togglePatternMatching,
+        gameTree: ctx.gameTree,
+        rootId: ctx.rootId,
+        createNewGame: ctx.createNewGame,
+        filename: ctx.filename,
+        loadSGFAsync: ctx.loadSGFAsync,
+        setFileName: ctx.setFileName,
+      }),
+      []
+    )
+  );
 
   // Header visibility state
   const [showHeader, setShowHeader] = useState(() => {
@@ -127,8 +155,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
   const [pendingOpenLibrary, setPendingOpenLibrary] = useState(false);
 
   // Game state check for Landing Page
-  const { gameTree, rootId, createNewGame, filename } = useGameTree();
-
   // Determine if there is a saved game state
   // We consider a game "saved" if there are moves played (more than just root)
   // OR if there is a filename associated with it (loaded file)
@@ -199,7 +225,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     }
   }, [isMobile, onMobileTabChange]);
 
-  const { loadSGFAsync, setFileName } = useGameTree();
   const handleFileDrop = useCallback(
     (file: File) => {
       const reader = new FileReader();

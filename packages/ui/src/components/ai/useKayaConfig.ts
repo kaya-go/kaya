@@ -1,7 +1,8 @@
 import type { ChangeEvent } from 'react';
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useBoardTheme } from '@kaya/themes';
 import { useToast } from '../ui/Toast';
 import { isTauriApp } from '@kaya/platform';
@@ -30,7 +31,27 @@ export function useKayaConfig() {
     downloadModel,
     deleteModel,
     uploadModel,
-  } = useGameTree();
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        aiSettings: ctx.aiSettings,
+        setAISettings: ctx.setAISettings,
+        gameSettings: ctx.gameSettings,
+        setGameSettings: ctx.setGameSettings,
+        isAIConfigOpen: ctx.isAIConfigOpen,
+        setAIConfigOpen: ctx.setAIConfigOpen,
+        configInitialTab: ctx.configInitialTab,
+        setConfigInitialTab: ctx.setConfigInitialTab,
+        modelLibrary: ctx.modelLibrary,
+        selectedModelId: ctx.selectedModelId,
+        setSelectedModelId: ctx.setSelectedModelId,
+        downloadModel: ctx.downloadModel,
+        deleteModel: ctx.deleteModel,
+        uploadModel: ctx.uploadModel,
+      }),
+      []
+    )
+  );
   const { showToast } = useToast();
   const { boardTheme, setBoardTheme, availableThemes } = useBoardTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);

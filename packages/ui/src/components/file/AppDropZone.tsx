@@ -17,7 +17,8 @@ import React, {
   forwardRef,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
@@ -53,7 +54,20 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
       addSetupPosition,
       currentBoard,
       playMove,
-    } = useGameTree();
+    } = useGameTreeSelector(
+      useCallback(
+        (ctx: GameTreeContextValue) => ({
+          loadSGF: ctx.loadSGF,
+          loadSGFAsync: ctx.loadSGFAsync,
+          setFileName: ctx.setFileName,
+          setCustomAIModel: ctx.setCustomAIModel,
+          addSetupPosition: ctx.addSetupPosition,
+          currentBoard: ctx.currentBoard,
+          playMove: ctx.playMove,
+        }),
+        []
+      )
+    );
     const { clearLoadedFile, createFile, importZip, checkUnsavedChanges } = useLibrary();
     const { setTauriDragging, setOverLibrary } = useTauriDrag();
     const [isDragging, setIsDragging] = useState(false);

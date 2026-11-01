@@ -23,7 +23,8 @@ import {
 } from '@kaya/ai-engine';
 import { useTranslation } from 'react-i18next';
 import { isTauriApp, writeClipboardText } from '@kaya/platform';
-import { useGameTree } from './GameTreeContext';
+import { useGameTreeSelector } from './GameTreeContext';
+import type { GameTreeContextValue } from '../types/game';
 import { useToast } from '../components/ui/Toast';
 import { parseModelId } from '../hooks/game/useAIAnalysis';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
@@ -101,7 +102,24 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSelectedModelId,
     downloadModel,
     analysisCache,
-  } = useGameTree();
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        customAIModel: ctx.customAIModel,
+        isModelLoaded: ctx.isModelLoaded,
+        aiSettings: ctx.aiSettings,
+        setAISettings: ctx.setAISettings,
+        setAIConfigOpen: ctx.setAIConfigOpen,
+        gameInfo: ctx.gameInfo,
+        modelLibrary: ctx.modelLibrary,
+        selectedModelId: ctx.selectedModelId,
+        setSelectedModelId: ctx.setSelectedModelId,
+        downloadModel: ctx.downloadModel,
+        analysisCache: ctx.analysisCache,
+      }),
+      []
+    )
+  );
   const boardSize = gameInfo?.boardSize ?? 19;
 
   const { showToast } = useToast();

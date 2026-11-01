@@ -7,7 +7,8 @@
  */
 
 import React, { useEffect, useCallback, useRef, useMemo } from 'react';
-import { useGameTree } from './GameTreeContext';
+import { useGameTreeSelector } from './GameTreeContext';
+import type { GameTreeContextValue } from '../types/game';
 import { useAIEngine } from './AIEngineContext';
 import { getPathToNode } from '../utils/gameCache';
 import {
@@ -50,7 +51,34 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     toggleTopMoves,
     setIsDirty,
     isLoadingSGF,
-  } = useGameTree();
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        currentBoard: ctx.currentBoard,
+        analysisMode: ctx.analysisMode,
+        setAnalysisMode: ctx.setAnalysisMode,
+        moveNumber: ctx.moveNumber,
+        gameId: ctx.gameId,
+        customAIModel: ctx.customAIModel,
+        gameTree: ctx.gameTree,
+        currentNodeId: ctx.currentNodeId,
+        aiSettings: ctx.aiSettings,
+        gameInfo: ctx.gameInfo,
+        analysisCache: ctx.analysisCache,
+        analysisCacheSize: ctx.analysisCacheSize,
+        updateAnalysisCacheSize: ctx.updateAnalysisCacheSize,
+        analysisResult: ctx.analysisResult,
+        setAnalysisResult: ctx.setAnalysisResult,
+        showOwnership: ctx.showOwnership,
+        toggleOwnership: ctx.toggleOwnership,
+        showTopMoves: ctx.showTopMoves,
+        toggleTopMoves: ctx.toggleTopMoves,
+        setIsDirty: ctx.setIsDirty,
+        isLoadingSGF: ctx.isLoadingSGF,
+      }),
+      []
+    )
+  );
 
   // Get queue from AIEngineContext (engine kept for runtime info logs only)
   const {

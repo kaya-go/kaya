@@ -6,7 +6,7 @@ import {
   AIEngineProvider,
   AIAnalysisProvider,
   CommentEditorProvider,
-  useGameTree,
+  useGameTreeSelector,
   type VersionData,
   ToastProvider,
   useToast,
@@ -17,6 +17,7 @@ import {
   setSoundInitErrorHandler,
 } from '@kaya/ui';
 import { useTranslation } from 'react-i18next';
+import type { GameTreeContextValue } from '@kaya/ui';
 import { Updater } from './Updater';
 import { AppContent } from './AppContent';
 
@@ -94,7 +95,18 @@ function AppWithToast({ versionData }: { versionData: VersionData | undefined })
 }
 
 function LibraryProviderWrapper({ versionData }: { versionData: VersionData | undefined }) {
-  const { loadSGFAsync, exportSGF, setFileName, isDirty, setIsDirty } = useGameTree();
+  const { loadSGFAsync, exportSGF, setFileName, isDirty, setIsDirty } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        loadSGFAsync: ctx.loadSGFAsync,
+        exportSGF: ctx.exportSGF,
+        setFileName: ctx.setFileName,
+        isDirty: ctx.isDirty,
+        setIsDirty: ctx.setIsDirty,
+      }),
+      []
+    )
+  );
   const [activeMobileTab, setActiveMobileTab] = useState<MobileTab>('board');
 
   // Callback when a file is opened from the library

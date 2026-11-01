@@ -4,7 +4,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Node, Edge, ReactFlowInstance, CoordinateExtent } from 'reactflow';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useTheme } from '../../contexts/ThemeContext';
 import { rafThrottle } from '../../utils/throttle';
 import {
@@ -44,7 +45,17 @@ export function useGameTreeLayout(
   controlledHorizontal: boolean | undefined,
   showMinimap: boolean
 ): UseGameTreeLayoutResult {
-  const { gameTree, rootId, currentNodeId, goToNode } = useGameTree();
+  const { gameTree, rootId, currentNodeId, goToNode } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        gameTree: ctx.gameTree,
+        rootId: ctx.rootId,
+        currentNodeId: ctx.currentNodeId,
+        goToNode: ctx.goToNode,
+      }),
+      []
+    )
+  );
   const { theme } = useTheme();
   const edgeColor = theme === 'dark' ? '#fff' : '#333';
   const [internalHorizontal, setInternalHorizontal] = React.useState(true);

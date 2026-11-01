@@ -7,7 +7,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sign, Marker, Vertex } from '@kaya/shudan';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useAIEngine } from '../../contexts/AIEngineContext';
 import { useToast } from '../ui/Toast';
 import {
@@ -113,7 +114,15 @@ export function useGameBoardState() {
 
 export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   const { t } = useTranslation();
-  const { isModelLoaded, aiSettings } = useGameTree();
+  const { isModelLoaded, aiSettings } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        isModelLoaded: ctx.isModelLoaded,
+        aiSettings: ctx.aiSettings,
+      }),
+      []
+    )
+  );
   const { currentBoard, currentNode, gameInfo } = useGameTreeBoard();
   const { playMove } = useGameTreeActions();
   const { engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
