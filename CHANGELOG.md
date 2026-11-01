@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.15] - 2026-11-01
+
+Stepping through a game now does less work, most noticeably on slower machines. The ownership heatmap shows real values instead of saturating, undoing back to the loaded game clears the unsaved marker, and Tauri and its plugins are up to date.
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Keep cleanTreeRef so undo clears dirty ([#200](https://github.com/kaya-go/kaya/issues/200)) by @xifeiwu
+
+- *(ai-engine)* Apply tanh to ONNX ownership head ([#201](https://github.com/kaya-go/kaya/issues/201)) by @xifeiwu
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ui)* Selective GameTree subscriptions via external store ([#204](https://github.com/kaya-go/kaya/issues/204)) by @xifeiwu
+
+### <!-- 4 -->⚡ Performance
+
+- *(ui)* Stop re-rendering the app tree on every navigation ([#205](https://github.com/kaya-go/kaya/issues/205)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @dependabot[bot]
+- @xifeiwu
+- @github-actions[bot]
+
 ## [0.4.14] - 2026-09-25
 
 A small maintenance release: the desktop app now clears the old board-recognition model (moku-v3, about 80 MB) that an earlier version could leave in its cache, and every desktop build now checks that the bundled model loads in the app and has its corner head before it ships.
@@ -14,10 +39,14 @@ A small maintenance release: the desktop app now clears the old board-recognitio
 
 - *(e2e)* Release the library drag once the folder is highlighted ([#198](https://github.com/kaya-go/kaya/issues/198)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.14 ([2c1dde2](https://github.com/kaya-go/kaya/commit/2c1dde2ed1540ce6d5f46d2be0e47ee649f70a7f)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.4.13] - 2026-09-24
 
