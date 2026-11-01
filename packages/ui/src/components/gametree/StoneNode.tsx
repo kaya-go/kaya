@@ -4,7 +4,8 @@
 
 import React from 'react';
 import { Handle, Position } from 'reactflow';
-import { useGameTreeCore } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import {
   GAMETREE_NODE_LONGPRESS_EVENT,
   GAMETREE_NODE_LONGPRESS_MS,
@@ -36,9 +37,14 @@ function getHandleStyle(position: Position): React.CSSProperties {
 }
 
 // Memoized to prevent unnecessary re-renders (React Flow best practice)
-// Uses optimized selector to only subscribe to currentNodeId changes
+// Selects a boolean, so a navigation only re-renders the two nodes it affects
 export const StoneNode = React.memo(({ data }: { data: any }) => {
-  const { currentNodeId } = useGameTreeCore();
+  const isCurrent = useGameTreeSelector(
+    React.useCallback(
+      (ctx: GameTreeContextValue) => String(data.nodeId) === String(ctx.currentNodeId),
+      [data.nodeId]
+    )
+  );
   const {
     color,
     moveNumber,
@@ -50,10 +56,6 @@ export const StoneNode = React.memo(({ data }: { data: any }) => {
     nodeId,
     isPass,
   } = data;
-
-  // Calculate isCurrent directly from context
-  // This prevents rebuilding entire nodes array on every navigation
-  const isCurrent = String(nodeId) === String(currentNodeId);
 
   // Long-press (touch) opens the branch menu. Mouse users get right-click,
   // which React Flow reports via onNodeContextMenu.

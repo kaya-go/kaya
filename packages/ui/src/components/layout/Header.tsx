@@ -5,7 +5,7 @@ import { NewGameDialog } from '../dialogs/NewGameDialog';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { SaveToLibraryDialog } from '../dialogs/SaveToLibraryDialog';
 import { ToastContainer } from '../ui/Toast';
-import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
+import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
 import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
 import { useHeaderActions } from './useHeaderActions';
 import { HeaderFileControls } from './HeaderFileControls';
@@ -62,8 +62,8 @@ export const Header: React.FC<HeaderProps> = ({
 
         <HeaderFileControls
           filenameInputRef={actions.filenameInputRef}
-          currentBoardWidth={actions.currentBoard.width}
-          currentBoardHeight={actions.currentBoard.height}
+          currentBoardWidth={actions.boardWidth}
+          currentBoardHeight={actions.boardHeight}
           fileName={actions.fileName}
           isDirty={actions.isDirty}
           loadedFileId={actions.loadedFileId}
@@ -155,12 +155,11 @@ export const Header: React.FC<HeaderProps> = ({
         onSelectFile={actions.handleScanFileSelected}
       />
       {actions.recognitionFile && (
-        <BoardRecognitionDialog
+        <CurrentBoardRecognitionDialog
           file={actions.recognitionFile}
           onImport={actions.handleRecognitionImport}
           onImportSGF={actions.handleRecognitionImportSGF}
           onPlayMove={actions.playMove}
-          currentBoard={actions.currentBoard}
           onClose={() => actions.setRecognitionFile(null)}
         />
       )}

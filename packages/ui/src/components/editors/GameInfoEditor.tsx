@@ -10,7 +10,8 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuPencil } from 'react-icons/lu';
-import { useGameTreeBoard } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import type { GameInfoPatch } from '../../types/game';
 import type { EditableField, TranslatedFieldConfig } from './GameInfoEditorConfig';
@@ -22,7 +23,8 @@ type EditElement = HTMLInputElement | HTMLTextAreaElement;
 
 // Hook to get game info editor state for external header actions
 export const useGameInfoEditMode = () => {
-  const { gameId } = useGameTreeBoard();
+  // A primitive slice: AppContent calls this hook, and must not re-render on navigation.
+  const gameId = useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.gameId, []));
   const [isEditMode, setIsEditMode] = useState(false);
 
   // Reset edit mode when game changes
@@ -64,7 +66,16 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   onEditModeChange,
 }) => {
   const { t } = useTranslation();
-  const { gameInfo, updateGameInfo, gameId } = useGameTreeBoard();
+  const { gameInfo, updateGameInfo, gameId } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        gameInfo: ctx.gameInfo,
+        updateGameInfo: ctx.updateGameInfo,
+        gameId: ctx.gameId,
+      }),
+      []
+    )
+  );
   const { clearAnalysisCache } = useAIAnalysis();
 
   const fieldConfigs: TranslatedFieldConfig[] = useMemo(() => {
