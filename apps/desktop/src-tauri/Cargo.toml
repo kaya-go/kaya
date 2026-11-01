@@ -40,7 +40,7 @@ half = "2.7"
 # reqwest and the updater/window-state plugins are desktop-only too: Android
 # would drag in OpenSSL/ring, and HTTP there goes through the WebView instead.
 [target.'cfg(not(target_os = "android"))'.dependencies]
-rodio = { version = "0.22", default-features = false, features = ["playback", "lewton"] }
+rodio = { version = "0.23", default-features = false, features = ["playback", "lewton"] }
 reqwest = { version = "0.13", features = ["stream"] }
 tauri-plugin-http = "2"
 tauri-plugin-process = "2"
