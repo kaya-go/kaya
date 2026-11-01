@@ -3,7 +3,14 @@
  * Logic split into hooks in ./hooks/game/ and sibling context files.
  */
 
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useMemo,
+  useCallback,
+  useRef,
+  useLayoutEffect,
+} from 'react';
 
 import {
   SGFProperty,
@@ -56,6 +63,7 @@ export {
   useScoreMode,
   useAnalysisMode,
 } from './selectors';
+import { GameTreeStoreContext, type GameTreeStore } from './selectors/gameTreeStore';
 
 const GameTreeContext = createContext<GameTreeContextValue | null>(null);
 
@@ -488,5 +496,30 @@ export const GameTreeProvider: React.FC<{
     ]
   );
 
-  return <GameTreeContext.Provider value={value}>{children}</GameTreeContext.Provider>;
+  const listenersRef = useRef(new Set<() => void>());
+  const valueRef = useRef(value);
+  valueRef.current = value;
+
+  useLayoutEffect(() => {
+    listenersRef.current.forEach(listener => listener());
+  }, [value]);
+
+  const store = useMemo<GameTreeStore>(
+    () => ({
+      subscribe: onStoreChange => {
+        listenersRef.current.add(onStoreChange);
+        return () => {
+          listenersRef.current.delete(onStoreChange);
+        };
+      },
+      getSnapshot: () => valueRef.current,
+    }),
+    []
+  );
+
+  return (
+    <GameTreeStoreContext.Provider value={store}>
+      <GameTreeContext.Provider value={value}>{children}</GameTreeContext.Provider>
+    </GameTreeStoreContext.Provider>
+  );
 };
