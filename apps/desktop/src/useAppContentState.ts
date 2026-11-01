@@ -8,8 +8,8 @@ import {
   useLayoutMode,
   type GameTreeGraphRef,
   type MobileTab,
+  type GameTreeContextValue,
 } from '@kaya/ui';
-import type { GameTreeContextValue } from '@kaya/ui';
 import { listen } from '@tauri-apps/api/event';
 import { analytics } from './analytics';
 

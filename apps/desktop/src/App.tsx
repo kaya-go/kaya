@@ -15,9 +15,9 @@ import {
   type MobileTab,
   KeyboardShortcutsProvider,
   setSoundInitErrorHandler,
+  type GameTreeContextValue,
 } from '@kaya/ui';
 import { useTranslation } from 'react-i18next';
-import type { GameTreeContextValue } from '@kaya/ui';
 import { Updater } from './Updater';
 import { AppContent } from './AppContent';
 

@@ -8,8 +8,8 @@ import {
   usePwaInstall,
   type GameTreeGraphRef,
   type MobileTab,
+  type GameTreeContextValue,
 } from '@kaya/ui';
-import type { GameTreeContextValue } from '@kaya/ui';
 
 interface UseAppContentStateOptions {
   onMobileTabChange?: (tab: MobileTab) => void;

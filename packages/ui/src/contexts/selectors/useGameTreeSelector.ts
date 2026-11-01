@@ -12,11 +12,12 @@ import { useContext, useRef, useCallback, useSyncExternalStore } from 'react';
 import type { GameTreeContextValue } from '../../types/game';
 import { GameTreeStoreContext } from './gameTreeStore';
 
-// Default equality for object selectors. A fresh object with the same field
-// references does not re-render. Pass another function to override.
-export function shallowEqual<T extends Record<string, unknown>>(a: T, b: T): boolean {
-  if (a === b) return true;
-  const keysA = Object.keys(a);
+// Default equality. A fresh object with the same field references does not
+// re-render; primitives compare by value. Pass another function to override.
+export function shallowEqual<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
+  const keysA = Object.keys(a) as (keyof T)[];
   const keysB = Object.keys(b);
   if (keysA.length !== keysB.length) return false;
   for (const key of keysA) {
@@ -27,12 +28,12 @@ export function shallowEqual<T extends Record<string, unknown>>(a: T, b: T): boo
 
 /**
  * Generic selector hook that only triggers re-renders when selected value changes.
- * Selectors return an object. The default compare is shallowEqual.
+ * The default compare is shallowEqual.
  *
  * @param selector - Function to select specific values from context
  * @returns Selected values that only change when the selected data changes
  */
-export function useGameTreeSelector<T extends Record<string, unknown>>(
+export function useGameTreeSelector<T>(
   selector: (context: GameTreeContextValue) => T,
   isEqual: (a: T, b: T) => boolean = shallowEqual
 ): T {
@@ -321,37 +322,29 @@ export function useGameTreeFile() {
 }
 
 /**
- * Current node id. Object slice so shallowEqual can keep the previous reference.
+ * Just currentNodeId - for components that only need to know which node is current
  */
 export function useCurrentNodeId() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ({ currentNodeId: ctx.currentNodeId }), [])
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.currentNodeId, []));
 }
 
 /**
- * Edit mode. Object slice so shallowEqual can keep the previous reference.
+ * Just editMode - for components that conditionally render based on edit mode
  */
 export function useEditMode() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ({ editMode: ctx.editMode }), [])
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.editMode, []));
 }
 
 /**
- * Score mode. Object slice so shallowEqual can keep the previous reference.
+ * Just scoreMode - for components that conditionally render based on score mode
  */
 export function useScoreMode() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ({ scoreMode: ctx.scoreMode }), [])
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.scoreMode, []));
 }
 
 /**
- * Analysis mode. Object slice so shallowEqual can keep the previous reference.
+ * Just analysisMode - for components that conditionally render based on analysis mode
  */
 export function useAnalysisMode() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ({ analysisMode: ctx.analysisMode }), [])
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.analysisMode, []));
 }

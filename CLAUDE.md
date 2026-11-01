@@ -107,7 +107,7 @@ kaya/
 **1. GameTreeContext is the Single Source of Truth** (`packages/ui/src/contexts/GameTreeContext.tsx`)
 
 - Manages game state, board reconstruction, SGF parsing, navigation
-- All apps consume via `useGameTree()` hook
+- Consume via `useGameTreeSelector` or its domain hooks (`useGameTreeBoard`, ...): they read a stable store through `useSyncExternalStore`, so a component only re-renders when its slice changes. `useGameTree()` re-renders on every change
 - Uses LRU board cache for performance
 - Modular hook architecture: `useGameTreeState`, `useBoardState`, `useGameNavigation`, `useGameModification`, `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`, `useGameTreeUndoRedo`
 
