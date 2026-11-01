@@ -28,7 +28,8 @@ import { BoardControls } from './BoardControls';
 import { ScoreEstimator } from './ScoreEstimator';
 import { EditToolbar } from '../editors/EditToolbar';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { AnalysisLegendModal } from '../analysis/AnalysisLegendModal';
 import { AnalysisBar } from './AnalysisBar';
@@ -99,7 +100,9 @@ export const GameBoard: React.FC = memo(() => {
   useBoardControlsKeyNav();
 
   // AI Analysis integration (for heatMap/ownershipMap on the board)
-  const { isModelLoaded } = useGameTree();
+  const { isModelLoaded } = useGameTreeSelector(
+    useCallback((ctx: GameTreeContextValue) => ({ isModelLoaded: ctx.isModelLoaded }), [])
+  );
   const { heatMap, ownershipMap } = useAIAnalysis();
   // Extracted hooks
   const { currentPlayer, ghostStonePlayer, ghostMarker, lastPlacedColor, setLastPlacedColor } =

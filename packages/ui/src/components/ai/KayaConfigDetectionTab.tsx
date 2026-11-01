@@ -3,7 +3,8 @@ import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuCamera, LuUpload, LuRotateCcw, LuExternalLink, LuTriangleAlert } from 'react-icons/lu';
 import { MOKU_MODEL_REPO } from '@kaya/board-recognition';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useToast } from '../ui/Toast';
 import { saveMokuCustomModel, deleteMokuCustomModel } from '../../services/mokuModelStorage';
 import { destroySharedWorker } from '../../workers/BoardRecognitionWorker';
@@ -13,7 +14,15 @@ const MOKU_MODEL_URL = `https://huggingface.co/${MOKU_MODEL_REPO}`;
 
 export const KayaConfigDetectionTab: React.FC = () => {
   const { t } = useTranslation();
-  const { gameSettings, setGameSettings } = useGameTree();
+  const { gameSettings, setGameSettings } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        gameSettings: ctx.gameSettings,
+        setGameSettings: ctx.setGameSettings,
+      }),
+      []
+    )
+  );
   const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);

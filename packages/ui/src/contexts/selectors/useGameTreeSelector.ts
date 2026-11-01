@@ -4,44 +4,62 @@
  * These hooks allow components to subscribe to specific parts of the context
  * without re-rendering when unrelated values change.
  *
- * Uses useSyncExternalStore for efficient subscriptions.
+ * Uses useSyncExternalStore for efficient subscriptions against GameTreeStore
+ * (not useGameTree() + filter — that still re-rendered on every context update).
  */
 
-import { useRef, useCallback, useSyncExternalStore } from 'react';
-import { useGameTree, GameTreeContextValue } from '../GameTreeContext';
+import { useContext, useRef, useCallback, useSyncExternalStore } from 'react';
+import type { GameTreeContextValue } from '../../types/game';
+import { GameTreeStoreContext } from './gameTreeStore';
 
-/**
- * Generic selector hook that only triggers re-renders when selected value changes
- *
- * @param selector - Function to select specific values from context
- * @returns Selected values that only change when the selected data changes
- */
-export function useGameTreeSelector<T>(
-  selector: (context: GameTreeContextValue) => T,
-  isEqual: (a: T, b: T) => boolean = Object.is
-): T {
-  const context = useGameTree();
-  const selectedRef = useRef<T>(selector(context));
-
-  // Update ref if selected value changed
-  const currentSelected = selector(context);
-  if (!isEqual(selectedRef.current, currentSelected)) {
-    selectedRef.current = currentSelected;
-  }
-
-  return selectedRef.current;
-}
-
-// Shallow equality check for objects
-function shallowEqual<T extends Record<string, unknown>>(a: T, b: T): boolean {
-  if (a === b) return true;
-  const keysA = Object.keys(a);
+// Default equality. A fresh object with the same field references does not
+// re-render; primitives compare by value. Pass another function to override.
+export function shallowEqual<T>(a: T, b: T): boolean {
+  if (Object.is(a, b)) return true;
+  if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) return false;
+  const keysA = Object.keys(a) as (keyof T)[];
   const keysB = Object.keys(b);
   if (keysA.length !== keysB.length) return false;
   for (const key of keysA) {
     if (a[key] !== b[key]) return false;
   }
   return true;
+}
+
+/**
+ * Generic selector hook that only triggers re-renders when selected value changes.
+ * The default compare is shallowEqual.
+ *
+ * @param selector - Function to select specific values from context
+ * @returns Selected values that only change when the selected data changes
+ */
+export function useGameTreeSelector<T>(
+  selector: (context: GameTreeContextValue) => T,
+  isEqual: (a: T, b: T) => boolean = shallowEqual
+): T {
+  const store = useContext(GameTreeStoreContext);
+  if (!store) {
+    throw new Error('useGameTreeSelector must be used within a GameTreeProvider');
+  }
+
+  const selectorRef = useRef(selector);
+  selectorRef.current = selector;
+  const isEqualRef = useRef(isEqual);
+  isEqualRef.current = isEqual;
+  const selectedRef = useRef<T | undefined>(undefined);
+
+  // Return the previous reference when isEqual says the slice is unchanged so
+  // useSyncExternalStore can skip the subscriber re-render (Object.is on snapshot).
+  const getSelected = useCallback(() => {
+    const next = selectorRef.current(store.getSnapshot());
+    if (selectedRef.current !== undefined && isEqualRef.current(selectedRef.current, next)) {
+      return selectedRef.current;
+    }
+    selectedRef.current = next;
+    return next;
+  }, [store]);
+
+  return useSyncExternalStore(store.subscribe, getSelected, getSelected);
 }
 
 // ============================================================================
@@ -60,8 +78,7 @@ export function useGameTreeCore() {
         rootId: ctx.rootId,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -104,8 +121,7 @@ export function useGameTreeNavigation() {
         goToEnd: ctx.goToEnd,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -130,8 +146,7 @@ export function useGameTreeBoard() {
         setGameSettings: ctx.setGameSettings,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -148,8 +163,7 @@ export function useGameTreeActions() {
         removeSetupStone: ctx.removeSetupStone,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -199,8 +213,7 @@ export function useGameTreeEdit() {
         canRedo: ctx.canRedo,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -227,8 +240,7 @@ export function useGameTreeScore() {
         toggleEstimationMode: ctx.toggleEstimationMode,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -273,8 +285,7 @@ export function useGameTreeAI() {
         uploadModel: ctx.uploadModel,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -306,8 +317,7 @@ export function useGameTreeFile() {
         isSaving: ctx.isSaving,
       }),
       []
-    ),
-    shallowEqual
+    )
   );
 }
 
@@ -315,38 +325,26 @@ export function useGameTreeFile() {
  * Just currentNodeId - for components that only need to know which node is current
  */
 export function useCurrentNodeId() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ctx.currentNodeId, []),
-    Object.is
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.currentNodeId, []));
 }
 
 /**
  * Just editMode - for components that conditionally render based on edit mode
  */
 export function useEditMode() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ctx.editMode, []),
-    Object.is
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.editMode, []));
 }
 
 /**
  * Just scoreMode - for components that conditionally render based on score mode
  */
 export function useScoreMode() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ctx.scoreMode, []),
-    Object.is
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.scoreMode, []));
 }
 
 /**
  * Just analysisMode - for components that conditionally render based on analysis mode
  */
 export function useAnalysisMode() {
-  return useGameTreeSelector(
-    useCallback((ctx: GameTreeContextValue) => ctx.analysisMode, []),
-    Object.is
-  );
+  return useGameTreeSelector(useCallback((ctx: GameTreeContextValue) => ctx.analysisMode, []));
 }

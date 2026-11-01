@@ -24,7 +24,8 @@ import { PhotoPanel } from './components/PhotoPanel';
 import { PreviewPanel } from './components/PreviewPanel';
 import { SensitivitySlider } from './components/SensitivitySlider';
 import { useLayoutMode } from '../../../hooks/useMediaQuery';
-import { useGameTree } from '../../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../../types/game';
 import { computeDeltaStones, type DeltaStone } from './utils/deltaStones';
 import './styles/BoardRecognitionDialog.css';
 import './styles/BoardRecognitionDialogMobile.css';
@@ -71,7 +72,16 @@ export const BoardRecognitionDialog: React.FC<Props> = ({
   const [mobileTab, setMobileTab] = useState<MobileTab>('photo');
   const layoutMode = useLayoutMode();
   const isMobile = layoutMode === 'mobile';
-  const { gameSettings, setAIConfigOpen, setConfigInitialTab } = useGameTree();
+  const { gameSettings, setAIConfigOpen, setConfigInitialTab } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        gameSettings: ctx.gameSettings,
+        setAIConfigOpen: ctx.setAIConfigOpen,
+        setConfigInitialTab: ctx.setConfigInitialTab,
+      }),
+      []
+    )
+  );
 
   const recognition = useBoardRecognition(
     file,

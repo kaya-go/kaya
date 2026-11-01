@@ -93,8 +93,10 @@ Tauri command (desktop) | IndexedDB / fetch (web)
 ### 1. `GameTreeContext` is the single source of truth
 
 Lives at [`packages/ui/src/contexts/GameTreeContext.tsx`](../packages/ui/src/contexts/GameTreeContext.tsx).
-Owns game state, board reconstruction, SGF parsing, navigation. Apps
-consume via the `useGameTree()` hook. The provider is thin — business
+Owns game state, board reconstruction, SGF parsing, navigation. Consumers
+read it through `useGameTreeSelector` and its domain hooks, which subscribe
+to a stable store and re-render only when their slice changes (`useGameTree()`
+returns the full value and re-renders on every change). The provider is thin — business
 logic is broken into per-concern hooks (`useGameTreeState`,
 `useBoardState`, `useGameNavigation`, `useGameModification`,
 `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`,

@@ -10,7 +10,8 @@ import {
   LuLoader,
   LuBrain,
 } from 'react-icons/lu';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { AnalysisLegendModal } from './AnalysisLegendModal';
 import {
@@ -48,7 +49,23 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     navigateToMove,
     analysisMode,
     toggleAnalysisMode,
-  } = useGameTree();
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        gameTree: ctx.gameTree,
+        currentNodeId: ctx.currentNodeId,
+        rootId: ctx.rootId,
+        gameInfo: ctx.gameInfo,
+        analysisCache: ctx.analysisCache,
+        analysisCacheSize: ctx.analysisCacheSize,
+        navigate: ctx.navigate,
+        navigateToMove: ctx.navigateToMove,
+        analysisMode: ctx.analysisMode,
+        toggleAnalysisMode: ctx.toggleAnalysisMode,
+      }),
+      []
+    )
+  );
 
   const {
     analyzeFullGame,

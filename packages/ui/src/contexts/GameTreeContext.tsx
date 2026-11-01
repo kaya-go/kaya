@@ -56,6 +56,7 @@ export {
   useScoreMode,
   useAnalysisMode,
 } from './selectors';
+import { GameTreeStoreContext, useGameTreeStore } from './selectors/gameTreeStore';
 
 const GameTreeContext = createContext<GameTreeContextValue | null>(null);
 
@@ -488,5 +489,11 @@ export const GameTreeProvider: React.FC<{
     ]
   );
 
-  return <GameTreeContext.Provider value={value}>{children}</GameTreeContext.Provider>;
+  const store = useGameTreeStore(value);
+
+  return (
+    <GameTreeStoreContext.Provider value={store}>
+      <GameTreeContext.Provider value={value}>{children}</GameTreeContext.Provider>
+    </GameTreeStoreContext.Provider>
+  );
 };

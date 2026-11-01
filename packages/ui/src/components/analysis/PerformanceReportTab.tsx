@@ -8,7 +8,8 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LuInfo, LuLoader } from 'react-icons/lu';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { type GamePhase, type MistakeInfo, DEFAULT_PHASE_THRESHOLDS } from '@kaya/ai-engine';
 import { DistributionBars, getCategoryColor } from './PerformanceReportDistribution';
@@ -28,7 +29,20 @@ type PhaseFilter = 'entireGame' | GamePhase;
 export const PerformanceReportTab: React.FC = () => {
   const { t } = useTranslation();
   const { gameTree, currentNodeId, rootId, gameInfo, analysisCache, analysisCacheSize, navigate } =
-    useGameTree();
+    useGameTreeSelector(
+      useCallback(
+        (ctx: GameTreeContextValue) => ({
+          gameTree: ctx.gameTree,
+          currentNodeId: ctx.currentNodeId,
+          rootId: ctx.rootId,
+          gameInfo: ctx.gameInfo,
+          analysisCache: ctx.analysisCache,
+          analysisCacheSize: ctx.analysisCacheSize,
+          navigate: ctx.navigate,
+        }),
+        []
+      )
+    );
 
   const { isFullGameAnalyzing, fullGameProgress, analyzeFullGame, isInitializing } =
     useAIAnalysis();

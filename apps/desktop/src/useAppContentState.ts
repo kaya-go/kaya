@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  useGameTree,
+  useGameTreeSelector,
   useLibraryPanel,
   useGameInfoEditMode,
   useKeyboardShortcuts,
@@ -8,6 +8,7 @@ import {
   useLayoutMode,
   type GameTreeGraphRef,
   type MobileTab,
+  type GameTreeContextValue,
 } from '@kaya/ui';
 import { listen } from '@tauri-apps/api/event';
 import { analytics } from './analytics';
@@ -85,7 +86,23 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     filename,
     loadSGFAsync,
     setFileName,
-  } = useGameTree();
+  } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        moveName: ctx.moveName,
+        moveUrl: ctx.moveUrl,
+        patternMatchingEnabled: ctx.patternMatchingEnabled,
+        togglePatternMatching: ctx.togglePatternMatching,
+        gameTree: ctx.gameTree,
+        rootId: ctx.rootId,
+        createNewGame: ctx.createNewGame,
+        filename: ctx.filename,
+        loadSGFAsync: ctx.loadSGFAsync,
+        setFileName: ctx.setFileName,
+      }),
+      []
+    )
+  );
 
   // Layout mode for responsive landing page
   const layoutMode = useLayoutMode();

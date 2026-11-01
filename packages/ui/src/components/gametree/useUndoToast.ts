@@ -13,7 +13,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../ui/Toast';
-import { useGameTree } from '../../contexts/GameTreeContext';
+import { useGameTreeSelector } from '../../contexts/GameTreeContext';
+import type { GameTreeContextValue } from '../../types/game';
 
 interface PendingToast {
   /** Tree before the action ran. */
@@ -24,7 +25,15 @@ interface PendingToast {
 export function useUndoToast() {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const { gameTree, undo } = useGameTree();
+  const { gameTree, undo } = useGameTreeSelector(
+    useCallback(
+      (ctx: GameTreeContextValue) => ({
+        gameTree: ctx.gameTree,
+        undo: ctx.undo,
+      }),
+      []
+    )
+  );
 
   const treeRef = useRef<unknown>(gameTree);
   const undoRef = useRef(undo);
