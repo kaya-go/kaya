@@ -102,6 +102,12 @@ logic is broken into per-concern hooks (`useGameTreeState`,
 `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`,
 `useGameTreeUndoRedo`).
 
+Selector callbacks keep one identity for good and call the latest version, so
+an effect can't use one to detect a state change: select the state instead. For
+a value only an event handler needs, `useGameTreeGetter()` reads it without
+subscribing. See
+[`specs/2026-11-01-game-tree-selector-store.md`](../specs/2026-11-01-game-tree-selector-store.md).
+
 ### 2. Board reconstruction goes through an LRU cache
 
 Without the cache, jumping to move 300 in a long game requires replaying
