@@ -11,23 +11,8 @@
 import { type Engine, type OnnxEngineConfig } from '@kaya/ai-engine';
 import { TauriEngine } from '@kaya/ai-engine/tauri-engine';
 import { PyTorchTauriEngine } from '@kaya/ai-engine/pytorch-tauri-engine';
+import { isTauriApp } from '@kaya/platform';
 import { WorkerEngine } from './WorkerEngine';
-
-/**
- * Check if we're in a Tauri environment
- * This is a safe check that works in any context (main thread, workers, etc.)
- */
-function isTauriContext(): boolean {
-  try {
-    return (
-      typeof window !== 'undefined' &&
-      window !== null &&
-      ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
-    );
-  } catch {
-    return false;
-  }
-}
 
 export interface CreateEngineOptions {
   /** Model buffer (ArrayBuffer) */
@@ -96,11 +81,11 @@ export async function createEngine(
   const engineType = options.engineType ?? 'auto';
 
   // Determine which engine to use
-  const useNative = engineType === 'native' || (engineType === 'auto' && isTauriContext());
+  const useNative = engineType === 'native' || (engineType === 'auto' && isTauriApp());
   const usePyTorch = engineType === 'pytorch';
 
   if (usePyTorch) {
-    if (!isTauriContext()) {
+    if (!isTauriApp()) {
       throw new Error('PyTorchTauriEngine is only available in Tauri desktop apps');
     }
 
@@ -120,7 +105,7 @@ export async function createEngine(
     return engine;
   } else if (useNative) {
     // Use native Tauri engine - dynamically import to avoid loading in workers
-    if (!isTauriContext()) {
+    if (!isTauriApp()) {
       throw new Error('TauriEngine is only available in Tauri desktop apps');
     }
 
@@ -175,14 +160,14 @@ export async function createEngine(
  * Check if native engine is available
  */
 export function isNativeEngineAvailable(): boolean {
-  return isTauriContext();
+  return isTauriApp();
 }
 
 /**
  * Get a description of the current engine type
  */
 export function getEngineDescription(): string {
-  if (isTauriContext()) {
+  if (isTauriApp()) {
     return 'Native ONNX Runtime (GPU accelerated)';
   }
   return 'ONNX Runtime Web';

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { isTauriApp } from '@kaya/platform';
 
 /**
  * Protocols handed to the OS rather than followed inside the webview.
@@ -52,13 +53,12 @@ export function useExternalLinks(): void {
       event.preventDefault();
       event.stopPropagation();
 
-      // Check if we're in Tauri environment
-      if (typeof window !== 'undefined' && '__TAURI__' in window) {
+      if (isTauriApp()) {
         try {
-          // Access Tauri internals directly to avoid dynamic import issues
+          // Access Tauri globals directly to avoid dynamic import issues
           const tauri = (
             window as unknown as {
-              __TAURI__: { core: { invoke: (cmd: string, args: unknown) => Promise<unknown> } };
+              __TAURI__?: { core: { invoke: (cmd: string, args: unknown) => Promise<unknown> } };
             }
           ).__TAURI__;
           if (tauri?.core?.invoke) {
