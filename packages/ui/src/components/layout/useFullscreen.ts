@@ -8,11 +8,7 @@ export function useFullscreen(): {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const toggleFullscreen = useCallback(async () => {
-    const isTauri =
-      isTauriApp() ||
-      (typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window));
-
-    if (isTauri) {
+    if (isTauriApp()) {
       try {
         const { getCurrentWindow } = await import('@tauri-apps/api/window');
         const appWindow = getCurrentWindow();

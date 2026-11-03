@@ -1,6 +1,7 @@
 import { type AISettings } from '../../types/game';
 import { MAX_VISITS } from '../../components/ai/mcts-visits-presets';
 import { Vertex } from '@kaya/goboard';
+import { isTauriApp } from '@kaya/platform';
 
 const AI_SETTINGS_STORAGE_KEY = 'kaya-ai-settings';
 
@@ -167,11 +168,6 @@ function isWebGPUAvailable(): boolean {
   return typeof navigator !== 'undefined' && !!(navigator as any).gpu;
 }
 
-// Check if running in Tauri (used for default backend selection)
-function isTauriDesktop(): boolean {
-  return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-}
-
 // Default backend is 'auto' — AIEngineContext probes the host and picks
 // the best chain (see packages/ai-engine/src/auto-config.ts). Explicit
 // values remain available for advanced overrides.
@@ -194,7 +190,7 @@ const DEFAULT_AI_SETTINGS: AISettings = {
 // Load AI settings from localStorage
 export function loadAISettings(): AISettings {
   const hasGPU = isWebGPUAvailable();
-  const isTauri = isTauriDesktop();
+  const isTauri = isTauriApp();
   const defaultBackend = getDefaultBackend();
 
   try {

@@ -4,10 +4,9 @@
 
 import { useEffect, useCallback, MutableRefObject, useRef } from 'react';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
-import { readClipboardText } from '@kaya/platform';
+import { isTauriApp, readClipboardText } from '@kaya/platform';
 
-// Check if running in Tauri
-const isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+const isTauri = isTauriApp();
 
 // Check if the position is inside the library panel (ignoring overlay elements)
 const isPositionInsideLibrary = (x: number, y: number): boolean => {

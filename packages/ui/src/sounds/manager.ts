@@ -1,3 +1,4 @@
+import { isTauriApp } from '@kaya/platform';
 import { type SoundType } from '../services/sounds';
 import { HtmlAudioBackend, TauriAudioBackend, WebAudioBackend } from './backends';
 import { setGlobalSoundEnabled } from './store';
@@ -27,9 +28,7 @@ const reportSoundError = (message: string, backend: string) => {
   onSoundInitError?.(error);
 };
 
-// Detect Tauri environment
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const isTauri = typeof window !== 'undefined' && !!(window as any).__TAURI_INTERNALS__;
+const isTauri = isTauriApp();
 
 const initSoundBackend = (): void => {
   if (backendInitialized) return;

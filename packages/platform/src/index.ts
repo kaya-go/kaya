@@ -5,7 +5,9 @@
  * clipboard access, and Tauri environment detection.
  */
 
-export { saveFile, isTauriApp, setTauriSaveAPI, type TauriSaveAPI } from './fileSave';
+export { saveFile, setTauriSaveAPI, type TauriSaveAPI } from './fileSave';
+
+export { isTauriApp } from './isTauri';
 
 export { readClipboardText, writeClipboardText, setTauriClipboardAPI } from './clipboard';
 

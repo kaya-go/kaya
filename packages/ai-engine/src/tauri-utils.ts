@@ -4,7 +4,11 @@
  * Types, interfaces, and helper functions used by the TauriEngine.
  */
 
+import { isTauriApp } from '@kaya/platform';
 import type { BaseEngineConfig } from './base-engine';
+
+// Alias kept for the public `@kaya/ai-engine/tauri-engine` export surface.
+export const isTauriEnvironment = isTauriApp;
 
 /**
  * Progress info for model upload
@@ -115,28 +119,11 @@ export type TauriListenFn = <T>(
 ) => Promise<TauriUnlistenFn>;
 
 /**
- * Check if we're running in a Tauri environment
- * This checks for the global Tauri object without any dynamic imports
- */
-export function isTauriEnvironment(): boolean {
-  try {
-    if (typeof window === 'undefined' || window === null) {
-      return false;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = window as any;
-    return '__TAURI_INTERNALS__' in w || '__TAURI__' in w;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Get the Tauri invoke function from the global window object
  * This does NOT use dynamic imports to avoid bundler issues
  */
 export function getTauriInvoke(): TauriInvokeFn | null {
-  if (!isTauriEnvironment()) {
+  if (!isTauriApp()) {
     return null;
   }
 
@@ -163,7 +150,7 @@ export function getTauriInvoke(): TauriInvokeFn | null {
  * Get the Tauri event listen function from the global window object
  */
 export function getTauriListen(): TauriListenFn | null {
-  if (!isTauriEnvironment()) {
+  if (!isTauriApp()) {
     return null;
   }
 
