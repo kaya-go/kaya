@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.16] - 2026-11-03
+
+AI analysis on Apple Silicon Macs is about three times faster, with the same results. Renaming or moving the open file in the library now keeps its name in the header up to date, and this release includes a round of dependency security fixes.
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Sync header filename when library renames loaded file ([#210](https://github.com/kaya-go/kaya/issues/210)) by @xifeiwu
+
+- *(ui)* Sync header filename when move uniquifies open file ([#213](https://github.com/kaya-go/kaya/issues/213)) by @xifeiwu
+
+### <!-- 2 -->🚜 Refactor
+
+- Unify Tauri detection on isTauriApp ([#209](https://github.com/kaya-go/kaya/issues/209)) by @xifeiwu
+
+### <!-- 4 -->⚡ Performance
+
+- *(ai)* Migrate ort to 2.0.0-rc.15, coreml runs 3x faster ([#211](https://github.com/kaya-go/kaya/issues/211)) by @hadim
+
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- *(ci)* Bump actions/setup-java from 6.0.1 to 6.1.0 ([#206](https://github.com/kaya-go/kaya/issues/206)) by @dependabot[bot]
+
+### 🙏 Contributors
+
+- @hadim
+- @xifeiwu
+- @dependabot[bot]
+- @github-actions[bot]
+
 ## [0.4.15] - 2026-11-01
 
 Stepping through a game now does less work, most noticeably on slower machines. The ownership heatmap shows real values instead of saturating, undoing back to the loaded game clears the unsaved marker, and Tauri and its plugins are up to date.
@@ -20,12 +49,16 @@ Stepping through a game now does less work, most noticeably on slower machines. 
 
 - *(ui)* Stop re-rendering the app tree on every navigation ([#205](https://github.com/kaya-go/kaya/issues/205)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.15 ([b396cce](https://github.com/kaya-go/kaya/commit/b396cce505b6ea9993658c8a094074c9bdfe817a)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @dependabot[bot]
 - @xifeiwu
-- @github-actions[bot]
 
 ## [0.4.14] - 2026-09-25
 
@@ -812,6 +845,8 @@ AI analysis now picks the fastest backend and precision for your machine on its 
 
 ### <!-- 7 -->⚙️ Miscellaneous Tasks
 
+- Exclude GitHub Actions bot from contributors list ([556bb51](https://github.com/kaya-go/kaya/commit/556bb51b7845fcacf84f5fa81ebc10bb63af36bb)) by @hadim
+
 - *(ci)* Bump actions/setup-java from 4 to 5 ([#45](https://github.com/kaya-go/kaya/issues/45)) by @dependabot[bot]
 
 - Exclude cla-signatures.json from prettier check ([#52](https://github.com/kaya-go/kaya/issues/52)) by @Copilot
@@ -860,14 +895,12 @@ AI analysis now picks the fastest backend and precision for your machine on its 
 
 ### <!-- 7 -->⚙️ Miscellaneous Tasks
 
-- Exclude GitHub Actions bot from contributors list ([556bb51](https://github.com/kaya-go/kaya/commit/556bb51b7845fcacf84f5fa81ebc10bb63af36bb)) by @hadim
-
 - Release v0.2.4 ([8f88b67](https://github.com/kaya-go/kaya/commit/8f88b67d19ebfc7fe9bd9f3bd3599e3e947c870f)) by @github-actions[bot]
 
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.2.3] - 2026-01-02
 
@@ -938,6 +971,10 @@ AI analysis now picks the fastest backend and precision for your machine on its 
 
 ## [0.2.1] - 2025-12-31
 
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Only process left-click for drag-to-paint markers ([7715d9d](https://github.com/kaya-go/kaya/commit/7715d9d942f2c05f752bd4571aa73f737ce286ec)) by @hadim
+
 ### <!-- 7 -->⚙️ Miscellaneous Tasks
 
 - Release v0.2.1 ([011d40a](https://github.com/kaya-go/kaya/commit/011d40a5d45d53e35c9b12523c29d59c14640578)) by @github-actions[bot]
@@ -963,8 +1000,6 @@ AI analysis now picks the fastest backend and precision for your machine on its 
 
 - *(ci)* Add linux appimage EGL fix to release workflow ([346c4bc](https://github.com/kaya-go/kaya/commit/346c4bcd61236f7c4557a42d4854437c671f5ad5)) by @hadim
 
-- *(ui)* Only process left-click for drag-to-paint markers ([7715d9d](https://github.com/kaya-go/kaya/commit/7715d9d942f2c05f752bd4571aa73f737ce286ec)) by @hadim
-
 ### <!-- 6 -->🧪 Testing
 
 - *(e2e)* Add gameplay and edit tools tests ([45c4834](https://github.com/kaya-go/kaya/commit/45c48340271c3f6e75e937f01eb5594fd6b5dc27)) by @hadim
@@ -977,8 +1012,8 @@ AI analysis now picks the fastest backend and precision for your machine on its 
 
 ### 🙏 Contributors
 
-- @hadim
 - @github-actions[bot]
+- @hadim
 
 ## [0.1.12] - 2025-12-30
 
