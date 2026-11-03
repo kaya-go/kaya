@@ -7,7 +7,8 @@
  * typing in the middle of a name and checking the caret never jumps.
  *
  * Also covers keeping the header filename in step with the open file, which is
- * a separate store from the library item (see #210).
+ * a separate store from the library item — both rename and move-into-collision
+ * (see #210).
  *
  * Also covers how the context menu is dismissed, including after a tree drag
  * (see #181).
@@ -59,6 +60,51 @@ async function startRename(page: Page, row: ReturnType<Page['locator']>) {
   const input = page.locator('.library-tree-node-input');
   await expect(input).toBeFocused();
   return input;
+}
+
+// The menu opens with its top-left corner on the right-click point (the row's
+// centre), so follow-up pointer actions aim at the row's top-left corner to stay
+// clear of it.
+const ROW_CORNER = { x: 5, y: 5 };
+
+/**
+ * Keeps a dragged pointer on a folder until the folder shows it will take the drop.
+ *
+ * react-dnd re-evaluates the hovered target on dragenter, and on dragover at most once
+ * per animation frame, for the targets under the dragover that queued the frame.
+ * Chrome drops only if the last dragover accepted the drop. Releasing in the frame the
+ * pointer arrives therefore races a stale hover: a frame queued over the source row can
+ * even clear the folder's highlight after it appears. While a pointer rests, a browser
+ * keeps firing dragover; Playwright fires one per mouse move, so send another and let a
+ * frame pass until the highlight holds.
+ */
+async function holdOverFolder(
+  page: Page,
+  folder: ReturnType<Page['locator']>,
+  point: { x: number; y: number }
+) {
+  await expect(async () => {
+    await page.mouse.move(point.x, point.y);
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
+    expect(await folder.evaluate(el => el.classList.contains('drop-target'))).toBe(true);
+  }).toPass({ timeout: 5000 });
+}
+
+/** Drags a tree row into a folder, waiting for the drop-target highlight. */
+async function dragIntoFolder(
+  page: Page,
+  source: ReturnType<Page['locator']>,
+  folder: ReturnType<Page['locator']>
+) {
+  const from = (await source.boundingBox())!;
+  const to = (await folder.boundingBox())!;
+  const dropPoint = { x: to.x + to.width / 2, y: to.y + to.height / 2 };
+  await page.mouse.move(from.x + ROW_CORNER.x, from.y + ROW_CORNER.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 15, from.y + 10, { steps: 5 });
+  await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 10 });
+  await holdOverFolder(page, folder, dropPoint);
+  await page.mouse.up();
 }
 
 test.describe('Library rename', () => {
@@ -128,35 +174,42 @@ test.describe('Library rename', () => {
     await expect(page.locator('.library-tree-node', { hasText: 'Renamed Joseki' })).toBeVisible();
     await expect(page.locator('.header-filename').first()).toContainText('opening.sgf');
   });
+
+  // moveItem also runs makeUniqueName; a collision in the destination renames
+  // the stored item without going through renameItem (see follow-up to #210).
+  test('moving the open file into a name collision updates the header', async ({ page }) => {
+    const target = await createFolder(page, 'Dest');
+    const first = await openLibraryFile(page, 'opening.sgf');
+
+    // Park a same-named file inside Dest so the next move must uniquify.
+    await dragIntoFolder(page, first, target);
+    await expect(
+      page.locator('[role="treeitem"][aria-level="2"]', { hasText: 'opening.sgf' })
+    ).toBeVisible();
+
+    // Load+save another root file with the same name (clears loadedFileId first).
+    // Do not reuse openLibraryFile: an opening.sgf row already exists under Dest.
+    await page.locator('.app-header input[type="file"][accept^=".sgf"]').setInputFiles({
+      name: 'opening.sgf',
+      mimeType: 'application/x-go-sgf',
+      buffer: Buffer.from('(;GM[1]FF[4]SZ[19];B[qd];W[dd])'),
+    });
+    await expect(page.locator('.header-filename').first()).toContainText('opening.sgf');
+    // Ctrl+S still updates the open library file until clearLoadedFile commits;
+    // wait so Save creates a new root item instead of overwriting Dest/opening.sgf.
+    await expect(page.locator('.library-tree-node.loaded')).toHaveCount(0);
+    await page.keyboard.press('ControlOrMeta+s');
+    const second = page.locator('[role="treeitem"][aria-level="1"]', { hasText: 'opening.sgf' });
+    await expect(second).toBeVisible();
+
+    await dragIntoFolder(page, second, target);
+
+    await expect(
+      page.locator('[role="treeitem"][aria-level="2"]', { hasText: 'opening (1).sgf' })
+    ).toBeVisible();
+    await expect(page.locator('.header-filename').first()).toContainText('opening (1).sgf');
+  });
 });
-
-// The menu opens with its top-left corner on the right-click point (the row's
-// centre), so follow-up pointer actions aim at the row's top-left corner to stay
-// clear of it.
-const ROW_CORNER = { x: 5, y: 5 };
-
-/**
- * Keeps a dragged pointer on a folder until the folder shows it will take the drop.
- *
- * react-dnd re-evaluates the hovered target on dragenter, and on dragover at most once
- * per animation frame, for the targets under the dragover that queued the frame.
- * Chrome drops only if the last dragover accepted the drop. Releasing in the frame the
- * pointer arrives therefore races a stale hover: a frame queued over the source row can
- * even clear the folder's highlight after it appears. While a pointer rests, a browser
- * keeps firing dragover; Playwright fires one per mouse move, so send another and let a
- * frame pass until the highlight holds.
- */
-async function holdOverFolder(
-  page: Page,
-  folder: ReturnType<Page['locator']>,
-  point: { x: number; y: number }
-) {
-  await expect(async () => {
-    await page.mouse.move(point.x, point.y);
-    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
-    expect(await folder.evaluate(el => el.classList.contains('drop-target'))).toBe(true);
-  }).toPass({ timeout: 5000 });
-}
 
 test.describe('Library context menu', () => {
   test('closes on Escape', async ({ page }) => {
@@ -197,17 +250,7 @@ test.describe('Library context menu', () => {
     await expect(page.locator('.library-context-menu')).toBeVisible();
 
     // HTML5 drag-and-drop fires no click, which is what used to leave the menu open.
-    // Locator.dragTo jumps to the target in one move, too fast for react-dnd to
-    // register a hover, so drive the mouse in steps.
-    const from = (await source.boundingBox())!;
-    const to = (await target.boundingBox())!;
-    const dropPoint = { x: to.x + to.width / 2, y: to.y + to.height / 2 };
-    await page.mouse.move(from.x + ROW_CORNER.x, from.y + ROW_CORNER.y);
-    await page.mouse.down();
-    await page.mouse.move(from.x + 15, from.y + 10, { steps: 5 });
-    await page.mouse.move(dropPoint.x, dropPoint.y, { steps: 10 });
-    await holdOverFolder(page, target, dropPoint);
-    await page.mouse.up();
+    await dragIntoFolder(page, source, target);
 
     await expect(page.locator('.library-context-menu')).toHaveCount(0);
     await expect(
