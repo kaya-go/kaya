@@ -138,7 +138,12 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const inFlightRef = useRef(false);
 
-  // Track which (backend, model, board, batch) combo we last initialized for.
+  // Track which (backend, model, batch) combo we last initialized for.
+  // Board size is intentionally omitted: the shipped ONNX has dynamic
+  // height/width, native/pytorch/wasm accept any size, and WebGPU graph
+  // capture recreates its session/buffers inside OnnxEngine when size
+  // changes. WebNN (the original reason this was in the key) is no longer
+  // a reachable chain backend — see settingToChainBackend('webnn') → wasm.
   const prevKeyRef = useRef<string | null>(globalEngineKey);
 
   const buildKey = useCallback((): string => {
@@ -146,9 +151,8 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       modelName: customAIModel?.name || 'default',
       backend: aiSettings.backend ?? 'auto',
       webgpuBatchSize: aiSettings.webgpuBatchSize,
-      boardSize,
     });
-  }, [customAIModel?.name, aiSettings.backend, aiSettings.webgpuBatchSize, boardSize]);
+  }, [customAIModel?.name, aiSettings.backend, aiSettings.webgpuBatchSize]);
 
   const disposeEngine = useCallback(async () => {
     setEngine(null);
