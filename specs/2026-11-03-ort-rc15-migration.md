@@ -34,8 +34,7 @@ the fixes and the Rust deadline both argue against waiting.
 but `build()` refuses a second environment even after the first is dropped, so it
 has to outlive any engine, and nothing else here lives that long. `ENGINE` is
 already a global that keeps it alive through its session, and a loaded engine has
-never released the environment at exit, so teardown does not change. The test run
-exits cleanly on all three desktops.
+never released the environment at exit, so teardown does not change. The test process ends normally on all three desktops.
 
 ## The traps
 
@@ -44,8 +43,7 @@ Each of these passes `cargo check`, which is all CI runs.
 1. **A release build does not link on macOS.** The CoreML provider in the prebuilt
    archive uses `@available`, which needs `__isPlatformVersionAtLeast`. rc.13's
    `ort-sys` linked `clang_rt.osx` to provide it. rc.14 dropped that, counting on
-   the copy in Rust's std, but thin LTO discards that copy: a debug build links and
-   `cargo build --release` does not. `build.rs` now passes `-fapple-link-rtlib`.
+   the copy in Rust's std, but thin LTO discards that copy: a debug build links, and so does a release build with LTO off, while our thin LTO release does not. `build.rs` now passes `-fapple-link-rtlib`.
 2. **The CPU backend breaks on macOS.** `ort` gives every session the
    `MaxEfficiency` device policy, which on macOS registers CoreML unasked. Under
    1.31 that turns a CPU session into one that fails, either on what CoreML rejects
@@ -106,9 +104,9 @@ and rc.15, but the runtime behind it changed. Android was only `cargo check`ed.
 
 ## Learnings
 
-- **Measure a bump, even a boring one.** The largest performance gain of the year
-  came from a dependency update and was invisible without a benchmark, and without
-  the upgrade-path run existing users would never have received it.
+- **Measure a bump, even a boring one.** A 3x gain came from a dependency update
+  and was invisible without a benchmark, and without the upgrade-path run existing
+  users would never have received it.
 - **Test the upgrade path as well as the clean install.** A cache built by the
   previous version is exactly what a real user has.
 - To re-run the check after an `ort` bump:
