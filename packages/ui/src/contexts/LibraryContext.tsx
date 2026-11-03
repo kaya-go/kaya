@@ -180,9 +180,15 @@ export function LibraryProvider({
   const moveItems = useCallback(
     async (ids: LibraryItemId[], newParentId: LibraryItemId | null) => {
       const storage = getLibraryStorage();
+      // Destination may uniquify the name; remember if the open file's stored name changed.
+      let loadedFileNewName: string | undefined;
       try {
         for (const id of ids) {
-          await storage.moveItem({ itemId: id, newParentId });
+          // Use the returned name: storage may uniquify on collision in the destination.
+          const moved = await storage.moveItem({ itemId: id, newParentId });
+          if (id === loadedFileId) {
+            loadedFileNewName = moved.name;
+          }
         }
       } finally {
         // Refresh once, even after a partial failure, so the tree matches storage
@@ -190,9 +196,13 @@ export function LibraryProvider({
         if (newParentId) {
           expandFolder(newParentId);
         }
+        // Same path as renameItem: keep the header session filename aligned.
+        if (loadedFileNewName !== undefined) {
+          onLoadedFileRenamed?.(loadedFileNewName);
+        }
       }
     },
-    [refresh, expandFolder]
+    [refresh, expandFolder, loadedFileId, onLoadedFileRenamed]
   );
 
   const moveItem = useCallback(
