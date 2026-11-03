@@ -10,7 +10,8 @@
 
 import { describe, test, expect } from 'bun:test';
 // From source, not the package entry: that resolves to the built `dist`, so the
-// test would need `build:packages` first and could check a stale list.
+// test could check a stale list. `auto-config` itself imports `@kaya/platform`,
+// so `build:packages` still has to have run once.
 import { AUTO_PICK_REASONS } from '../../ai-engine/src/auto-config';
 
 import en from '../../i18n/src/locales/en.json';
