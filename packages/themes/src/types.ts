@@ -102,12 +102,7 @@ export interface ResolvedBoardTheme extends BoardThemeConfig {
  * Available built-in theme IDs
  */
 export type BuiltInThemeId =
-  | 'hikaru'
-  | 'shell-slate'
-  | 'yunzi'
-  | 'happy-stones'
-  | 'kifu'
-  | 'baduktv';
+  'hikaru' | 'shell-slate' | 'yunzi' | 'happy-stones' | 'kifu' | 'baduktv';
 
 /**
  * Board theme context value
