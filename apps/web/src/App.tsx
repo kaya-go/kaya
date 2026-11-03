@@ -130,12 +130,21 @@ function LibraryProviderWrapper({ versionData }: { versionData: VersionData | un
     setIsDirty(false);
   }, [setIsDirty]);
 
+  // Keep header filename in sync when the open library file is renamed in the panel
+  const handleLoadedFileRenamed = useCallback(
+    (newName: string) => {
+      setFileName(newName);
+    },
+    [setFileName]
+  );
+
   return (
     <LibraryProvider
       onFileOpen={handleFileOpen}
       getCurrentGameContent={getCurrentGameContent}
       getIsDirty={getIsDirty}
       onSaveComplete={handleSaveComplete}
+      onLoadedFileRenamed={handleLoadedFileRenamed}
     >
       <CommentEditorProvider>
         <AppContent

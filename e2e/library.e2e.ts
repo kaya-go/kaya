@@ -6,6 +6,9 @@
  * destroys the focused rename field (see #146): these tests pin that down by
  * typing in the middle of a name and checking the caret never jumps.
  *
+ * Also covers keeping the header filename in step with the open file, which is
+ * a separate store from the library item (see #210).
+ *
  * Also covers how the context menu is dismissed, including after a tree drag
  * (see #181).
  */
@@ -28,6 +31,21 @@ async function createFolder(page: Page, name: string) {
   await dialogInput.fill(name);
   await page.locator('.library-dialog-btn.primary').click();
 
+  const row = page.locator('.library-tree-node', { hasText: name });
+  await expect(row).toBeVisible();
+  return row;
+}
+
+/** Loads an SGF and saves it to the library, which makes it the open library file. */
+async function openLibraryFile(page: Page, name: string) {
+  await page.locator('.app-header input[type="file"][accept^=".sgf"]').setInputFiles({
+    name,
+    mimeType: 'application/x-go-sgf',
+    buffer: Buffer.from('(;GM[1]FF[4]SZ[19];B[pd];W[dp])'),
+  });
+  await expect(page.locator('.header-filename').first()).toContainText(name);
+
+  await page.keyboard.press('ControlOrMeta+s');
   const row = page.locator('.library-tree-node', { hasText: name });
   await expect(row).toBeVisible();
   return row;
@@ -85,6 +103,30 @@ test.describe('Library rename', () => {
     await expect(page.locator('.library-tree-node', { hasText: 'Should not stick' })).toHaveCount(
       0
     );
+  });
+
+  test('renaming the open file updates the header filename', async ({ page }) => {
+    await page.goto('/');
+    const row = await openLibraryFile(page, 'opening.sgf');
+    const input = await startRename(page, row);
+
+    await input.fill('renamed.sgf');
+    await page.keyboard.press('Enter');
+
+    await expect(input).toHaveCount(0);
+    await expect(page.locator('.header-filename').first()).toContainText('renamed.sgf');
+  });
+
+  test('renaming another item leaves the header filename alone', async ({ page }) => {
+    const folder = await createFolder(page, 'Joseki');
+    await openLibraryFile(page, 'opening.sgf');
+    const input = await startRename(page, folder);
+
+    await input.fill('Renamed Joseki');
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('.library-tree-node', { hasText: 'Renamed Joseki' })).toBeVisible();
+    await expect(page.locator('.header-filename').first()).toContainText('opening.sgf');
   });
 });
 
