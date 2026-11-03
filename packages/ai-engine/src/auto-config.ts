@@ -188,8 +188,8 @@ function pickBackendChain(probe: Probe): BackendId[] {
 function pickQuantization(preferred: BackendId, probe: Probe): Quantization {
   switch (preferred) {
     case 'native-gpu':
-      // MEASURED (macOS / CoreML, M3 Max, b28c512): fp32 beats fp16 at every
-      // batch size, and uint8 is catastrophic (6.6x slower than fp32).
+      // MEASURED (macOS / CoreML, M3 Max, b28c512, ONNX Runtime 1.31): fp32 beats
+      // fp16 at every batch size, and uint8 is catastrophic (23x slower than fp32).
       // UNTESTED (Windows / DirectML): no measurement exists on any Windows
       // GPU. fp16 is kept there because it is what the app has always shipped
       // — switching to a 280 MB download on a guess would repeat exactly the

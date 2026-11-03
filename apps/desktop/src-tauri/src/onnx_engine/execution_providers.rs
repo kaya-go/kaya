@@ -9,12 +9,11 @@ use ort::ep::coreml::{ComputeUnits, ModelFormat, SpecializationStrategy};
 use ort::ep::DirectML;
 #[cfg(target_os = "android")]
 use ort::ep::NNAPI;
+use ort::environment::Environment;
 use ort::session::Session;
-use ort::session::builder::SessionBuilder;
+use ort::session::builder::{AutoDevicePolicy, SessionBuilder};
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
-#[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Execution provider preference for ONNX Runtime
 ///
@@ -79,17 +78,27 @@ pub fn preference_to_name(pref: ExecutionProviderPreference) -> String {
     }
 }
 
-/// Track if ONNX Runtime has been initialized (for load-dynamic on Android)
-#[cfg(target_os = "android")]
-static ORT_INITIALIZED: AtomicBool = AtomicBool::new(false);
+/// The process-wide ONNX Runtime environment.
+///
+/// `ort` allows one per process and refuses a second even after the first is
+/// dropped, so it has to outlive any engine: disposing one and loading another
+/// model needs it again. Upstream advises against keeping it in a global, but
+/// nothing else here lives that long, and `ENGINE` is a global holding on to it
+/// through its session anyway.
+static ORT_ENV: Mutex<Option<Environment>> = Mutex::new(None);
 
-/// Initialize ONNX Runtime library (required on Android with load-dynamic)
-#[cfg(target_os = "android")]
-pub fn ensure_ort_initialized() -> Result<(), String> {
-    if ORT_INITIALIZED.swap(true, Ordering::SeqCst) {
-        return Ok(()); // Already initialized
+/// Get the ONNX Runtime environment, creating it on first use.
+fn ort_environment() -> Result<Environment, String> {
+    let mut env = ORT_ENV.lock().map_err(|e| e.to_string())?;
+    if let Some(env) = env.as_ref() {
+        return Ok(env.clone());
     }
+    Ok(env.insert(build_environment()?).clone())
+}
 
+/// Load the ONNX Runtime library and create its environment (load-dynamic on Android)
+#[cfg(target_os = "android")]
+fn build_environment() -> Result<Environment, String> {
     // On Android, native libraries from jniLibs are loaded into the app's native library directory.
     // The exact path varies by Android version and installation type.
     // We try multiple common paths.
@@ -119,13 +128,13 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
         if path.exists() {
             eprintln!("[OnnxEngine] Loading ONNX Runtime from: {}", path_pattern);
             match ort::init_from(path_pattern) {
-                Ok(builder) => {
-                    if builder.commit() {
-                        return Ok(());
+                Ok(builder) => match builder.build() {
+                    Ok(env) => return Ok(env),
+                    Err(e) => {
+                        eprintln!("[OnnxEngine] Failed to create ORT environment from {}: {}", path_pattern, e);
+                        continue;
                     }
-                    eprintln!("[OnnxEngine] Failed to commit ORT init from: {}", path_pattern);
-                    continue;
-                }
+                },
                 Err(e) => {
                     eprintln!("[OnnxEngine] Failed to load from {}: {}", path_pattern, e);
                     continue;
@@ -138,12 +147,10 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
     // This relies on the JNI loader having already loaded the library or it being in LD_LIBRARY_PATH.
     eprintln!("[OnnxEngine] Attempting to load ONNX Runtime via system loader (libonnxruntime.so)");
     match ort::init_from("libonnxruntime.so") {
-        Ok(builder) => {
-            if builder.commit() {
-                return Ok(());
-            }
-            eprintln!("[OnnxEngine] Failed to commit ORT init for libonnxruntime.so");
-        }
+        Ok(builder) => match builder.build() {
+            Ok(env) => return Ok(env),
+            Err(e) => eprintln!("[OnnxEngine] Failed to create ORT environment for libonnxruntime.so: {}", e),
+        },
         Err(e) => {
             eprintln!("[OnnxEngine] Failed to load libonnxruntime.so: {}", e);
         }
@@ -151,18 +158,17 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
     
     // Last resort: initialize without specifying a path
     eprintln!("[OnnxEngine] Attempting default ONNX Runtime initialization");
-    if !ort::init().commit() {
-        return Err("Failed to initialize ONNX Runtime".to_string());
-    }
-    
-    Ok(())
+    ort::init()
+        .build()
+        .map_err(|e| format!("Failed to initialize ONNX Runtime: {}", e))
 }
 
 #[cfg(not(target_os = "android"))]
-pub fn ensure_ort_initialized() -> Result<(), String> {
+fn build_environment() -> Result<Environment, String> {
     // On desktop (Linux/macOS/Windows), ort uses download-binaries for static linking.
-    // No runtime initialization needed.
-    Ok(())
+    ort::init()
+        .build()
+        .map_err(|e| format!("Failed to initialize ONNX Runtime: {}", e))
 }
 
 /// Build an optimized CoreML execution provider (macOS only).
@@ -175,8 +181,9 @@ pub fn ensure_ort_initialized() -> Result<(), String> {
 ///
 /// The 2026-05 "CoreML rejects all 2214 nodes" finding was the missing
 /// registration, not op coverage: with `ort/coreml` on, CoreML claims most of
-/// the graph and runs 4.2x faster than the CPU EP at the MCTS batch size
-/// (specs/2026-09-12-coreml-on-by-default-macos.md).
+/// the graph and runs 13x faster than the CPU EP at the MCTS batch size
+/// (specs/2026-09-12-coreml-on-by-default-macos.md,
+/// specs/2026-11-03-ort-rc15-migration.md).
 ///
 /// `static_input_shapes` is deliberately left at its default (false) — the
 /// previous code set it to `true`, which made things strictly worse for
@@ -191,7 +198,7 @@ fn build_coreml_provider(cache_dir: Option<&str>) -> ExecutionProviderDispatch {
         .with_compute_units(ComputeUnits::All);
 
     if let Some(dir) = cache_dir {
-        let coreml_cache = format!("{}/coreml", dir);
+        let coreml_cache = coreml_cache_dir(dir);
         if std::fs::create_dir_all(&coreml_cache).is_ok() {
             eprintln!("[OnnxEngine] CoreML model cache dir: {}", coreml_cache);
             ep = ep.with_model_cache_dir(&coreml_cache);
@@ -199,6 +206,27 @@ fn build_coreml_provider(cache_dir: Option<&str>) -> ExecutionProviderDispatch {
     }
 
     ep.build()
+}
+
+/// CoreML's compiled-model cache, one directory per ONNX Runtime version.
+///
+/// A compiled model outlives the runtime that compiled it and gets reused as is:
+/// without this, an existing install stays on the 47 positions/s model ONNX
+/// Runtime 1.28 compiled, while a clean one gets 154 from 1.31
+/// (specs/2026-11-03-ort-rc15-migration.md). Recompiling costs seconds once.
+#[cfg(target_os = "macos")]
+fn coreml_cache_dir(cache_dir: &str) -> String {
+    let current = format!("coreml-{}", ort::MINOR_VERSION);
+    if let Ok(entries) = std::fs::read_dir(cache_dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name();
+            let name = name.to_string_lossy();
+            if name.starts_with("coreml") && name != current {
+                let _ = std::fs::remove_dir_all(entry.path());
+            }
+        }
+    }
+    format!("{}/{}", cache_dir, current)
 }
 
 /// The execution provider that actually registered on a session.
@@ -329,7 +357,14 @@ pub fn configure_execution_providers(
 }
 
 fn new_session_builder() -> Result<SessionBuilder, String> {
-    Session::builder().map_err(|e| format!("Failed to create session builder: {}", e))
+    // Left alone, ort gives every session the `MaxEfficiency` policy, which on
+    // macOS registers CoreML behind our back: a session meant for the CPU then
+    // fails on what CoreML rejects, or when saving the optimized model. Providers
+    // we register ourselves still take precedence over this.
+    Session::builder(&ort_environment()?)
+        .map_err(|e| format!("Failed to create session builder: {}", e))?
+        .with_auto_device(AutoDevicePolicy::PreferCPU)
+        .map_err(|e| format!("Failed to set the device policy: {}", e))
 }
 
 /// Get information about the current execution provider by name
@@ -428,6 +463,24 @@ mod tests {
             "'auto' resolved to '{}' — the GPU execution provider did not register",
             provider.name
         );
+    }
+
+    /// Caches from another ONNX Runtime must go, and nothing else.
+    #[cfg(target_os = "macos")]
+    #[test]
+    fn coreml_cache_dir_drops_caches_from_other_versions() {
+        let dir = std::env::temp_dir().join(format!("kaya-ep-cache-{}", std::process::id()));
+        for sub in ["coreml", "coreml-28", "optimized"] {
+            std::fs::create_dir_all(dir.join(sub)).unwrap();
+        }
+
+        let current = coreml_cache_dir(dir.to_str().unwrap());
+
+        assert!(current.ends_with(&format!("coreml-{}", ort::MINOR_VERSION)));
+        assert!(!dir.join("coreml").exists());
+        assert!(!dir.join("coreml-28").exists());
+        assert!(dir.join("optimized").exists());
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     /// `get_available_providers` must not advertise a provider this build
