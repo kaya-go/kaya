@@ -196,10 +196,10 @@ export function LibraryProvider({
         if (newParentId) {
           expandFolder(newParentId);
         }
-      }
-      // Same path as renameItem: keep the header session filename aligned.
-      if (loadedFileNewName !== undefined) {
-        onLoadedFileRenamed?.(loadedFileNewName);
+        // Same path as renameItem: keep the header session filename aligned.
+        if (loadedFileNewName !== undefined) {
+          onLoadedFileRenamed?.(loadedFileNewName);
+        }
       }
     },
     [refresh, expandFolder, loadedFileId, onLoadedFileRenamed]
