@@ -64,22 +64,22 @@ tauri-plugin-window-state = "2.4.1"
 # ORT_DYLIB_PATH is ignored unless ort is built with `load-dynamic`. The GPU
 # path on Linux is the PyTorch sidecar (specs/2026-02-28-pytorch-sidecar-rocm.md).
 [target.'cfg(target_os = "linux")'.dependencies]
-ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half"] }
+ort = { version = "2.0.0-rc.15", features = ["download-binaries", "half"] }
 
 # macOS: `coreml` does not change the download — with an empty feature set
 # `resolve_dist()` already resolves the `coreml` distribution, the only one
 # published for aarch64-apple-darwin. It only unlocks the registration call,
 # exactly like `directml` on Windows. Measured on an M3 Max against the CPU EP
-# (specs/2026-09-12-coreml-on-by-default-macos.md): 4.2x throughput at the
-# batch size MCTS uses, for ~8s of one-off model compilation on a cold cache.
+# (specs/2026-11-03-ort-rc15-migration.md): 13x throughput at the batch size
+# MCTS uses, for a few seconds of one-off model compilation on a cold cache.
 [target.'cfg(target_os = "macos")'.dependencies]
-ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "coreml"] }
+ort = { version = "2.0.0-rc.15", features = ["download-binaries", "half", "coreml"] }
 
 # Windows: the x86_64-pc-windows-msvc distribution ships DirectML.dll and the
 # build script links the DX12 libraries, so `directml` only unlocks the
 # registration call.
 [target.'cfg(target_os = "windows")'.dependencies]
-ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "directml"] }
+ort = { version = "2.0.0-rc.15", features = ["download-binaries", "half", "directml"] }
 
 # Android: dynamic loading at runtime (we bundle libonnxruntime.so in the APK).
 # default-features = false disables download-binaries, which doesn't work for
@@ -87,7 +87,7 @@ ort = { version = "2.0.0-rc.13", features = ["download-binaries", "half", "direc
 # api-24 matches the ONNX Runtime 1.24.3 AAR pulled by
 # scripts/download-onnxruntime-android.sh.
 [target.'cfg(target_os = "android")'.dependencies]
-ort = { version = "2.0.0-rc.13", default-features = false, features = ["load-dynamic", "ndarray", "half", "api-24", "nnapi"] }
+ort = { version = "2.0.0-rc.15", default-features = false, features = ["load-dynamic", "ndarray", "half", "api-24", "nnapi"] }
 # Note: reqwest is NOT included for Android to avoid OpenSSL/ring compilation issues
 # HTTP requests on Android should be done via the frontend/WebView
 

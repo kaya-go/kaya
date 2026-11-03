@@ -199,7 +199,7 @@ is enabled — that is what the desktop builds currently ship:
 | Platform | Provider | Cargo feature | Notes                                               |
 | -------- | -------- | ------------- | --------------------------------------------------- |
 | Windows  | DirectML | `directml` ✅ | GPU path; the pyke ORT build always includes it     |
-| macOS    | CoreML   | `coreml` ✅   | 4.2x over the CPU EP at the MCTS batch size         |
+| macOS    | CoreML   | `coreml` ✅   | 13x over the CPU EP at the MCTS batch size          |
 | Linux    | —        | —             | CPU distribution; GPU is the PyTorch sidecar        |
 | Android  | NNAPI    | `nnapi` ✅    | Nothing downloaded; `load-dynamic` supplies the .so |
 
@@ -222,7 +222,9 @@ for why a missing feature silently downgrades to CPU,
 [`specs/2026-09-12-coreml-on-by-default-macos.md`](../specs/2026-09-12-coreml-on-by-default-macos.md)
 for the macOS measurements and the first-load cost, and
 [`specs/2026-09-12-ort-rc13-migration.md`](../specs/2026-09-12-ort-rc13-migration.md)
-for the distribution tables.
+for the distribution tables, and
+[`specs/2026-11-03-ort-rc15-migration.md`](../specs/2026-11-03-ort-rc15-migration.md)
+for the current numbers and the traps a bump can hide from `cargo check`.
 
 `apps/desktop/src-tauri/examples/ep_bench.rs` reproduces those numbers: it
 mirrors `OnnxEngine::new` exactly and takes `--provider coreml|cpu`,

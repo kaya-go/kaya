@@ -25,7 +25,7 @@ pub use featurization::determine_next_player;
 pub use result_processing::process_raw_outputs;
 pub use types::{AnalysisOptions, AnalysisResult, HistoryMove};
 
-use execution_providers::{configure_execution_providers, ensure_ort_initialized};
+use execution_providers::configure_execution_providers;
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use std::path::Path;
@@ -98,8 +98,6 @@ impl OnnxEngine {
         use std::time::Instant;
         let total_start = Instant::now();
 
-        ensure_ort_initialized()?;
-        
         let preference = get_execution_provider_preference();
         let cache_dir = Self::get_cache_dir();
         let num_threads = Self::get_num_threads();
@@ -165,8 +163,6 @@ impl OnnxEngine {
         use std::time::Instant;
         let total_start = Instant::now();
 
-        ensure_ort_initialized()?;
-        
         let preference = get_execution_provider_preference();
         let cache_dir = Self::get_cache_dir();
         let num_threads = Self::get_num_threads();
@@ -436,4 +432,83 @@ pub fn run_mcts_analysis(
 /// Signal the MCTS search to abort.
 pub fn abort_mcts() {
     MCTS_ABORT.store(true, Ordering::Relaxed);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A real analysis through the whole native stack, which CI never runs: it
+    /// stops at `cargo check`, while an `ort` bump swaps the ONNX Runtime binary.
+    /// Run it after touching either:
+    ///
+    /// ```sh
+    /// KAYA_TEST_MODEL=/path/to/katago-latest.onnx \
+    ///     cargo test --release --lib real_analysis -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "needs a real model, see KAYA_TEST_MODEL"]
+    fn real_analysis_of_a_balanced_opening() {
+        let model = std::env::var("KAYA_TEST_MODEL").expect("KAYA_TEST_MODEL must point at a model");
+
+        // Each colour on two opposite 4-4 points, Black to play.
+        let mut sign_map = vec![vec![0i8; 19]; 19];
+        sign_map[3][15] = 1;
+        sign_map[15][3] = 1;
+        sign_map[3][3] = -1;
+        sign_map[15][15] = -1;
+
+        // The default twice, since the second session needs the environment to
+        // outlive the first, then a session that must stay on the CPU.
+        let preferences = [
+            ExecutionProviderPreference::Auto,
+            ExecutionProviderPreference::Auto,
+            ExecutionProviderPreference::Cpu,
+        ];
+        for preference in preferences {
+            set_execution_provider_preference(preference);
+            let mut engine = OnnxEngine::new(Path::new(&model)).expect("engine should load");
+            if preference == ExecutionProviderPreference::Cpu {
+                assert_eq!(engine.get_provider_name(), "cpu");
+            }
+
+            let options = AnalysisOptions {
+                komi: 7.5,
+                next_to_play: Some("B".to_string()),
+                history: vec![],
+            };
+            let result = engine.analyze(&sign_map, &options).expect("analysis should run");
+            let top: Vec<_> = result.move_suggestions.iter().take(3).collect();
+            eprintln!(
+                "provider={} winRate={:.4} scoreLead={:.3} top={:?}",
+                engine.get_provider_name(),
+                result.win_rate,
+                result.score_lead,
+                top
+            );
+            assert!((0.2..=0.8).contains(&result.win_rate), "win rate {}", result.win_rate);
+            assert!(result.score_lead.abs() < 15.0, "score lead {}", result.score_lead);
+            assert!(result.move_suggestions[0].probability > 0.01);
+            let ownership = result.ownership.expect("model should output ownership");
+            assert_eq!(ownership.len(), 361);
+            assert!(ownership.iter().all(|o| (-1.0..=1.0).contains(o)));
+
+            let search = mcts::MCTSAnalysisOptions {
+                komi: 7.5,
+                next_to_play: Some("B".to_string()),
+                history: vec![],
+                num_visits: 100,
+                include_move: None,
+                ko_info: None,
+            };
+            let searched = engine
+                .run_mcts(&sign_map, &search, &AtomicBool::new(false), &mut |_| {})
+                .expect("search should run");
+            eprintln!(
+                "mcts winRate={:.4} scoreLead={:.3} best={:?}",
+                searched.win_rate, searched.score_lead, searched.move_suggestions.first()
+            );
+            assert!((0.2..=0.8).contains(&searched.win_rate), "win rate {}", searched.win_rate);
+        }
+    }
 }

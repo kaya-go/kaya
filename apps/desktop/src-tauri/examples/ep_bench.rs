@@ -18,7 +18,10 @@ use std::time::{Duration, Instant};
 
 use half::f16;
 use ndarray::{Array2, Array4};
-use ort::session::{builder::GraphOptimizationLevel, Session};
+use ort::session::{
+    builder::{AutoDevicePolicy, GraphOptimizationLevel},
+    Session,
+};
 use ort::value::Tensor;
 
 #[cfg(target_os = "macos")]
@@ -96,14 +99,16 @@ fn coreml_session(model: &Path, cache: Option<&Path>) -> Result<Session, String>
         .with_compute_units(ComputeUnits::All);
 
     if let Some(dir) = cache {
-        let coreml_cache = dir.join("coreml");
+        let coreml_cache = dir.join(format!("coreml-{}", ort::MINOR_VERSION));
         if std::fs::create_dir_all(&coreml_cache).is_ok() {
             ep = ep.with_model_cache_dir(coreml_cache.to_string_lossy().as_ref());
         }
     }
 
     let threads = num_threads();
-    Session::builder()
+    Session::builder(&ort::init().build().map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?
+        .with_auto_device(AutoDevicePolicy::PreferCPU)
         .map_err(|e| e.to_string())?
         .with_execution_providers([ep.build().error_on_failure()])
         .map_err(|e| format!("CoreML failed to register: {}", e))?
@@ -127,7 +132,9 @@ fn coreml_session(_model: &Path, _cache: Option<&Path>) -> Result<Session, Strin
 /// Same as the CPU branch of `OnnxEngine::new`, optimized-model cache included.
 fn cpu_session(model: &Path, cache: Option<&Path>) -> Result<Session, String> {
     let threads = num_threads();
-    let mut builder = Session::builder()
+    let mut builder = Session::builder(&ort::init().build().map_err(|e| e.to_string())?)
+        .map_err(|e| e.to_string())?
+        .with_auto_device(AutoDevicePolicy::PreferCPU)
         .map_err(|e| e.to_string())?
         .with_optimization_level(GraphOptimizationLevel::Level3)
         .map_err(|e| e.to_string())?
@@ -209,7 +216,7 @@ fn main() {
 
     if args.cold {
         if let Some(ref dir) = cache {
-            let coreml = dir.join("coreml");
+            let coreml = dir.join(format!("coreml-{}", ort::MINOR_VERSION));
             let _ = std::fs::remove_dir_all(&coreml);
             let _ = std::fs::create_dir_all(&coreml);
             println!("cold start: wiped {}", coreml.display());
