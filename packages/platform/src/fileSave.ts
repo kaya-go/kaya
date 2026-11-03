@@ -26,15 +26,6 @@ export function setTauriSaveAPI(api: TauriSaveAPI) {
 }
 
 /**
- * Check if running in Tauri
- */
-export function isTauriApp(): boolean {
-  return (
-    tauriSaveAPI !== null || (typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window)
-  );
-}
-
-/**
  * Desktop: Use Tauri's native save dialog
  */
 async function saveTauriFile(content: string, defaultFileName: string): Promise<string | null> {
@@ -106,7 +97,8 @@ async function saveWebFile(content: string, fileName: string): Promise<string | 
  * @returns Saved filename (or null if cancelled/failed)
  */
 export async function saveFile(content: string, fileName: string): Promise<string | null> {
-  if (isTauriApp()) {
+  // Injected save API, not isTauriApp(): globals can exist before setTauriSaveAPI runs.
+  if (tauriSaveAPI) {
     return await saveTauriFile(content, fileName);
   } else {
     return await saveWebFile(content, fileName);

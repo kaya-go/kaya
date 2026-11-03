@@ -2,9 +2,11 @@
  * Auto-config: probe the runtime environment, pick the best model
  * + backend chain. Goal — the user never picks a model or a backend.
  *
- * Pure functions, no Tauri or worker imports. PyTorch sidecar availability
- * is passed in by the caller (only it has access to invoke()).
+ * Pure functions, no Tauri invoke or worker imports. PyTorch sidecar
+ * availability is passed in by the caller (only it has access to invoke()).
  */
+
+import { isTauriApp } from '@kaya/platform';
 
 export type BackendId =
   | 'webgpu' // Browser WebGPU via ORT-Web
@@ -69,7 +71,7 @@ export interface AutoPick {
 export async function probeEnvironment(opts?: {
   pyTorchSidecarAvailable?: boolean;
 }): Promise<Probe> {
-  const isTauri = detectTauri();
+  const isTauri = isTauriApp();
   const os = detectOS();
   const { hasWebGPU, hasShaderF16 } = await detectWebGPU();
 
@@ -113,18 +115,6 @@ export function pickConfig(probe: Probe): AutoPick {
 }
 
 // --- internals -------------------------------------------------------------
-
-function detectTauri(): boolean {
-  try {
-    return (
-      typeof window !== 'undefined' &&
-      window !== null &&
-      ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
-    );
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Best-effort OS detection from the user agent. Only ever used to pick a

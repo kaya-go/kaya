@@ -35,6 +35,7 @@ export function LibraryProvider({
   getCurrentGameContent,
   getIsDirty,
   onSaveComplete,
+  onLoadedFileRenamed,
 }: LibraryProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -165,10 +166,15 @@ export function LibraryProvider({
   const renameItem = useCallback(
     async (id: LibraryItemId, newName: string) => {
       const storage = getLibraryStorage();
-      await storage.renameItem({ itemId: id, newName });
+      // Use the returned name: storage may sanitize or uniquify it.
+      const renamed = await storage.renameItem({ itemId: id, newName });
       await refresh();
+      // Notify outside when the loaded file's stored name changed.
+      if (id === loadedFileId) {
+        onLoadedFileRenamed?.(renamed.name);
+      }
     },
-    [refresh]
+    [refresh, loadedFileId, onLoadedFileRenamed]
   );
 
   const moveItems = useCallback(

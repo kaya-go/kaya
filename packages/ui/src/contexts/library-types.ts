@@ -103,4 +103,9 @@ export interface LibraryProviderProps {
   getIsDirty?: () => boolean;
   /** Callback after successful save (to reset dirty state) */
   onSaveComplete?: () => void;
+  /**
+   * Notify the outside that the loaded file was renamed (stored name after
+   * sanitize / uniqueness). e.g. the header session filename.
+   */
+  onLoadedFileRenamed?: (newName: string) => void;
 }
