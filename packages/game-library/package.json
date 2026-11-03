@@ -12,11 +12,11 @@
   },
   "dependencies": {
     "@kaya/sgf": "workspace:*",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.2"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "fake-indexeddb": "^6.2.5",
+    "fake-indexeddb": "^6.2.7",
     "typescript": "^7.0.2"
   }
 }

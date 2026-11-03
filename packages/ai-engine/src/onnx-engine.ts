@@ -364,8 +364,7 @@ export class OnnxEngine extends Engine {
       const board = new GoBoard(signMap);
       const nextPla: Sign = options.nextToPlay === 'W' ? -1 : 1;
       const koInfo = (options as any).koInfo as
-        | { sign: Sign; vertex: [number, number] }
-        | undefined;
+        { sign: Sign; vertex: [number, number] } | undefined;
       if (koInfo && (koInfo.sign as number) !== 0) {
         board._koInfo = { sign: koInfo.sign, vertex: koInfo.vertex };
       }

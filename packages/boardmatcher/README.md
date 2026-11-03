@@ -302,9 +302,7 @@ function equals(v: Vertex): (w: Vertex) => boolean;
 import { nameMove } from '@kaya/boardmatcher';
 import type { SignMap } from '@kaya/boardmatcher';
 
-const board: SignMap = [
-  /* ... */
-];
+const board: SignMap = [/* ... */];
 
 // Check what a move at position [5, 7] would be called
 const moveName = nameMove(board, 1, [5, 7]);
