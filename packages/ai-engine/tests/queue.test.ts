@@ -1,12 +1,15 @@
 /**
- * Unit tests for the AnalysisQueue preemption path.
+ * Unit tests for AnalysisQueue: preemption and the shared cache-key format.
  *
  * A live request must be able to cut in front of a running full-game batch,
  * and the positions the batch already finished must not be thrown away.
+ *
+ * generateAnalysisCacheKey is pinned here because queue + SGF KA + UI share
+ * the same Map; a silent format change would orphan entries.
  */
 
 import { describe, test, expect } from 'bun:test';
-import { AnalysisQueue, type AnalysisRequest } from '../src/queue';
+import { AnalysisQueue, generateAnalysisCacheKey, type AnalysisRequest } from '../src/queue';
 import type { Engine } from '../src/base-engine';
 import type { AnalysisResult } from '../src/types';
 import type { SignMap } from '@kaya/goboard';
@@ -143,5 +146,48 @@ describe('AnalysisQueue preemption', () => {
     expect(results).toHaveLength(3);
     expect(engine.batchCalls).toBe(1);
     expect(engine.positionsComputed).toBe(3);
+  });
+});
+
+describe('generateAnalysisCacheKey', () => {
+  test('stable format for empty board', () => {
+    const signMap: SignMap = Array.from({ length: 9 }, () => Array(9).fill(0));
+    const key = generateAnalysisCacheKey(signMap, 'B', 7.5, []);
+    expect(key).toBe(
+      JSON.stringify({
+        board: `9:${signMap.map(row => row.join(',')).join(';')}`,
+        nextToPlay: 'B',
+        komi: 7.5,
+        history: [],
+      })
+    );
+  });
+
+  test('uses only last 5 history moves', () => {
+    const signMap: SignMap = [
+      [1, 0],
+      [0, -1],
+    ];
+    const history = [
+      { color: 1 as const, x: 0, y: 0 },
+      { color: -1 as const, x: 1, y: 1 },
+      { color: 1 as const, x: 0, y: 1 },
+      { color: -1 as const, x: 1, y: 0 },
+      { color: 1 as const, x: -1, y: -1 },
+      { color: -1 as const, x: 0, y: 0 },
+    ];
+    const key = generateAnalysisCacheKey(signMap, 'W', 6.5, history);
+    const parsed = JSON.parse(key) as { history: string[] };
+    expect(parsed.history).toEqual(['-1:1,1', '1:0,1', '-1:1,0', '1:-1,-1', '-1:0,0']);
+    expect(parsed.history).toHaveLength(5);
+  });
+
+  test('different nextToPlay or komi yields different keys', () => {
+    const signMap: SignMap = [[0]];
+    const a = generateAnalysisCacheKey(signMap, 'B', 7.5, []);
+    const b = generateAnalysisCacheKey(signMap, 'W', 7.5, []);
+    const c = generateAnalysisCacheKey(signMap, 'B', 6.5, []);
+    expect(a).not.toBe(b);
+    expect(a).not.toBe(c);
   });
 });

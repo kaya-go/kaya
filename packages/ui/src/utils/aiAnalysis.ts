@@ -1,4 +1,4 @@
-import { GoBoard, type Sign, type SignMap } from '@kaya/goboard';
+import { GoBoard, type Sign } from '@kaya/goboard';
 import { type GameTreeNode } from '@kaya/gametree';
 import { sgfToVertex } from '@kaya/sgf';
 import { type SGFProperty } from '../types/game';
@@ -53,27 +53,9 @@ export interface AnalysisState {
   nextToPlay: 'B' | 'W';
 }
 
-/**
- * Generate a cache key for analysis results.
- * Includes the last 5 moves of history since they affect neural network features.
- * The NN uses history as input features (planes 9-13 for last 5 move positions,
- * global features 0-4 for pass detection).
- */
-export function generateAnalysisCacheKey(
-  signMap: SignMap,
-  nextToPlay: 'B' | 'W',
-  komi: number,
-  history: AnalysisHistoryItem[]
-): string {
-  // Only include the last 5 moves (what the NN actually uses)
-  const last5Moves = history.slice(-5).map(m => `${m.color}:${m.x},${m.y}`);
-
-  // Use the same board hash format as the engine's getCacheKey
-  // This ensures UI cache and engine cache use identical keys
-  const boardHash = `${signMap.length}:${signMap.map(row => row.join(',')).join(';')}`;
-
-  return JSON.stringify({ board: boardHash, nextToPlay, komi, history: last5Moves });
-}
+// Canonical implementation lives in @kaya/ai-engine so AnalysisQueue and
+// SGF KA persistence cannot diverge. Re-export for existing UI call sites.
+export { generateAnalysisCacheKey } from '@kaya/ai-engine';
 
 /**
  * Convert GTP coordinate (e.g., "D4") to vertex [x, y]
