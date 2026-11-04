@@ -511,4 +511,52 @@ mod tests {
             assert!((0.2..=0.8).contains(&searched.win_rate), "win rate {}", searched.win_rate);
         }
     }
+
+    /// One session has to serve every board size: the engine is not rebuilt when
+    /// a game changes size, and CI never runs a real model. Run it after touching
+    /// the session setup:
+    ///
+    /// ```sh
+    /// KAYA_TEST_MODEL=/path/to/katago-latest.onnx \
+    ///     cargo test --release --lib real_session -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "needs a real model, see KAYA_TEST_MODEL"]
+    fn real_session_serves_every_board_size() {
+        let model = std::env::var("KAYA_TEST_MODEL").expect("KAYA_TEST_MODEL must point at a model");
+        let mut engine = OnnxEngine::new(Path::new(&model)).expect("engine should load");
+
+        for size in [19usize, 9, 13, 19] {
+            let sign_map = vec![vec![0i8; size]; size];
+            let options = AnalysisOptions {
+                komi: 7.5,
+                next_to_play: Some("B".to_string()),
+                history: vec![],
+            };
+            let result = engine.analyze(&sign_map, &options).expect("analysis should run");
+            eprintln!(
+                "size={size} provider={} winRate={:.4} scoreLead={:.3} best={:?}",
+                engine.get_provider_name(),
+                result.win_rate,
+                result.score_lead,
+                result.move_suggestions.first()
+            );
+            assert!((0.1..=0.9).contains(&result.win_rate), "win rate {}", result.win_rate);
+            let ownership = result.ownership.expect("model should output ownership");
+            assert_eq!(ownership.len(), size * size);
+
+            let search = mcts::MCTSAnalysisOptions {
+                komi: 7.5,
+                next_to_play: Some("B".to_string()),
+                history: vec![],
+                num_visits: 50,
+                include_move: None,
+                ko_info: None,
+            };
+            let searched = engine
+                .run_mcts(&sign_map, &search, &AtomicBool::new(false), &mut |_| {})
+                .expect("search should run");
+            assert!((0.1..=0.9).contains(&searched.win_rate), "win rate {}", searched.win_rate);
+        }
+    }
 }

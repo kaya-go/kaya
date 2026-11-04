@@ -68,19 +68,23 @@ export class OnnxEngine extends Engine {
 
   private async ensureGpuBuffers(size: number): Promise<void> {
     if (!this.storedSessionOptions || !this.modelSource) return;
-    const result = await recreateSessionForBoardSize(
-      this.gpu,
-      size,
-      this.inputDataType,
-      this.maxInferenceBatch,
-      this.storedSessionOptions,
-      this.modelSource,
-      this.session
-    );
-    if (result) {
-      this.session = result.session;
-      this.graphCaptureEnabled = result.graphCaptureEnabled;
-      this.useGpuInputs = result.useGpuInputs;
+    try {
+      const session = await recreateSessionForBoardSize(
+        this.gpu,
+        size,
+        this.inputDataType,
+        this.maxInferenceBatch,
+        this.storedSessionOptions,
+        this.modelSource,
+        this.session
+      );
+      if (session) this.session = session;
+    } catch (e) {
+      // The old session is already released, so this engine can't run anything.
+      this.session = null;
+      const error = e instanceof Error ? e : new Error(String(e));
+      this.onEngineLost?.(error);
+      throw error;
     }
   }
 

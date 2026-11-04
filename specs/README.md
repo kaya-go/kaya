@@ -66,3 +66,4 @@ link forward to the replacement. Don't delete history.
 | 2026-09-24 | [Library drag e2e: release once the folder is highlighted](2026-09-24-library-drag-e2e-flake.md)            | shipped    |
 | 2026-11-01 | [GameTree selectors read an external store](2026-11-01-game-tree-selector-store.md)                         | shipped    |
 | 2026-11-03 | [ort 2.0.0-rc.15: CoreML 3x faster, and four traps](2026-11-03-ort-rc15-migration.md)                       | shipped    |
+| 2026-11-04 | [A failed session swap reruns the backend chain](2026-11-04-engine-lost-reruns-chain.md)                    | shipped    |
