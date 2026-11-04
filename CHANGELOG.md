@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.17] - 2026-11-04
+
+Switching between 9×9, 13×13 and 19×19 games no longer reloads the AI engine, and the analysis report and graph no longer get cut off in a short panel.
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(web)* Drop the stale board image preload ([#215](https://github.com/kaya-go/kaya/issues/215)) by @hadim
+
+- *(ui)* Omit board size from the ai engine identity key ([#216](https://github.com/kaya-go/kaya/issues/216)) by @xifeiwu
+
+- *(ui)* Stop clipping analysis report behind panel height ([#218](https://github.com/kaya-go/kaya/issues/218)) by @xifeiwu
+
+- *(ai-engine)* Rerun the backend chain when a session swap fails ([#219](https://github.com/kaya-go/kaya/issues/219)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ai-engine)* Unify analysis cache key in the queue ([#217](https://github.com/kaya-go/kaya/issues/217)) by @xifeiwu
+
+### 🙏 Contributors
+
+- @hadim
+- @xifeiwu
+- @github-actions[bot]
+
 ## [0.4.16] - 2026-11-03
 
 AI analysis on Apple Silicon Macs is about three times faster, with the same results. Renaming or moving the open file in the library now keeps its name in the header up to date, and this release includes a round of dependency security fixes.
@@ -24,12 +48,14 @@ AI analysis on Apple Silicon Macs is about three times faster, with the same res
 
 - *(ci)* Bump actions/setup-java from 6.0.1 to 6.1.0 ([#206](https://github.com/kaya-go/kaya/issues/206)) by @dependabot[bot]
 
+- Release v0.4.16 ([69673da](https://github.com/kaya-go/kaya/commit/69673daa5cf1750e35dc1ac7c3885103ab83c95c)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @xifeiwu
 - @dependabot[bot]
-- @github-actions[bot]
 
 ## [0.4.15] - 2026-11-01
 

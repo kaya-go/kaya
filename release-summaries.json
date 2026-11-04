@@ -1,4 +1,5 @@
 {
+  "0.4.17": "Switching between 9×9, 13×13 and 19×19 games no longer reloads the AI engine, and the analysis report and graph no longer get cut off in a short panel.",
   "0.4.16": "AI analysis on Apple Silicon Macs is about three times faster, with the same results. Renaming or moving the open file in the library now keeps its name in the header up to date, and this release includes a round of dependency security fixes.",
   "0.4.15": "Stepping through a game now does less work, most noticeably on slower machines. The ownership heatmap shows real values instead of saturating, undoing back to the loaded game clears the unsaved marker, and Tauri and its plugins are up to date.",
   "0.4.14": "A small maintenance release: the desktop app now clears the old board-recognition model (moku-v3, about 80 MB) that an earlier version could leave in its cache, and every desktop build now checks that the bundled model loads in the app and has its corner head before it ships.",
