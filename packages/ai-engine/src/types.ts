@@ -2,6 +2,18 @@
  * AI Engine Types
  */
 
+import type { Sign } from '@kaya/goboard';
+
+/**
+ * One move in the recent history fed to the NN as input features.
+ * Passes use x = -1, y = -1.
+ */
+export interface HistoryMove {
+  color: Sign;
+  x: number;
+  y: number;
+}
+
 /**
  * Represents a move suggestion from the AI
  */

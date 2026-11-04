@@ -20,10 +20,10 @@
  *     shared with other subsystems (e.g. SGF save/load).
  */
 
-import type { Sign, SignMap } from '@kaya/goboard';
+import type { SignMap } from '@kaya/goboard';
 import type { Engine } from './base-engine';
 import type { MCTSProgress } from './onnx-types';
-import type { AnalysisResult } from './types';
+import type { AnalysisResult, HistoryMove } from './types';
 
 export type Priority = 'live' | 'batch';
 export type RequestId = string;
@@ -32,7 +32,7 @@ export interface AnalysisRequest {
   signMap: SignMap;
   nextToPlay: 'B' | 'W';
   komi: number;
-  history: Array<{ color: Sign; x: number; y: number }>;
+  history: HistoryMove[];
   numVisits: number;
   priority: Priority;
   /** Optional tag for bulk cancellation (e.g. "full-game"). */
@@ -45,6 +45,27 @@ export interface AnalysisRequest {
   cacheKey?: string;
   /** Engine-specific extras (e.g. koInfo) forwarded to engine.analyze. */
   extra?: Record<string, unknown>;
+}
+
+/**
+ * Shared analysis cache key — single source of truth for AnalysisQueue,
+ * SGF KA persistence, and UI lookups that share the same Map.
+ *
+ * Key intentionally omits visit count: the queue treats cache entries as
+ * monotonic in visits (N visits satisfies any request asking for ≤ N).
+ * BaseEngine's internal cache is a separate Map and may include visits.
+ *
+ * Includes the last 5 history moves (NN planes 9-13 / pass globals 0-4).
+ */
+export function generateAnalysisCacheKey(
+  signMap: SignMap,
+  nextToPlay: 'B' | 'W',
+  komi: number,
+  history: HistoryMove[]
+): string {
+  const last5Moves = history.slice(-5).map(m => `${m.color}:${m.x},${m.y}`);
+  const boardHash = `${signMap.length}:${signMap.map(row => row.join(',')).join(';')}`;
+  return JSON.stringify({ board: boardHash, nextToPlay, komi, history: last5Moves });
 }
 
 export interface SubmitHandle {
@@ -437,17 +458,7 @@ export class AnalysisQueue {
 
   private cacheKey(req: AnalysisRequest): string {
     if (req.cacheKey) return req.cacheKey;
-    const board = req.signMap.map(row => row.join(',')).join(';');
-    const last5 = req.history.slice(-5).map(m => `${m.color}:${m.x},${m.y}`);
-    // Match the format used by @kaya/ui's generateAnalysisCacheKey so the
-    // SGF persistence layer reads/writes against the same keys.
-    const boardHash = `${req.signMap.length}:${board}`;
-    return JSON.stringify({
-      board: boardHash,
-      nextToPlay: req.nextToPlay,
-      komi: req.komi,
-      history: last5,
-    });
+    return generateAnalysisCacheKey(req.signMap, req.nextToPlay, req.komi, req.history);
   }
 
   private cacheLookup(req: AnalysisRequest): AnalysisResult | null {

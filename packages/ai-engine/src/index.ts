@@ -86,6 +86,7 @@ export {
 // Analysis queue: single-source-of-truth for live + batch analysis
 export {
   AnalysisQueue,
+  generateAnalysisCacheKey,
   type AnalysisRequest,
   type AnalysisQueueOptions,
   type CacheRef,
