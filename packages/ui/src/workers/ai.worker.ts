@@ -35,6 +35,9 @@ const processQueue = async () => {
           await engine.dispose();
         }
         engine = new OnnxEngine(msg.config);
+        engine.onEngineLost = error => {
+          self.postMessage({ type: 'engine_lost', error: error.message });
+        };
         await engine.initialize();
         // Send runtime info along with success
         const runtimeInfo = engine.getRuntimeInfo();

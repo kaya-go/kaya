@@ -117,6 +117,12 @@ export abstract class Engine {
   // ECMAScript private: a subclass may well have its own `initPromise`.
   #initPromise: Promise<void> | null = null;
 
+  /**
+   * Called when the engine can no longer run anything: its session is gone and
+   * could not be rebuilt. The owner should dispose it and build a new one.
+   */
+  onEngineLost: ((error: Error) => void) | null = null;
+
   constructor(config: BaseEngineConfig = {}) {
     this.config = {
       maxMoves: 10,

@@ -101,7 +101,11 @@ export function uploadToGpuBuffers(
 
 /**
  * Recreate GPU buffers (and session) when board size changes in graph capture mode.
- * Returns null if no change was needed, otherwise the new session/flags to apply.
+ * Returns null if no change was needed, otherwise the new session.
+ *
+ * The current session is released before the new one exists, because both would
+ * not fit in GPU memory on some machines. So a failure here leaves nothing to fall
+ * back to, and it throws: the caller has to treat its engine as lost.
  */
 export async function recreateSessionForBoardSize(
   state: GpuBufferState,
@@ -111,11 +115,7 @@ export async function recreateSessionForBoardSize(
   sessionOptions: ort.InferenceSession.SessionOptions,
   modelSource: { buffer?: ArrayBuffer; url?: string },
   currentSession: ort.InferenceSession | null
-): Promise<{
-  session: ort.InferenceSession | null;
-  graphCaptureEnabled: boolean;
-  useGpuInputs: boolean;
-} | null> {
+): Promise<ort.InferenceSession | null> {
   if (size === state.allocatedBoardSize) return null;
 
   console.log(
@@ -124,13 +124,13 @@ export async function recreateSessionForBoardSize(
 
   releaseGpuBuffers(state);
 
+  let newSession: ort.InferenceSession | null = null;
   try {
     if (currentSession) {
       await currentSession.release();
     }
 
     const recreateStart = performance.now();
-    let newSession: ort.InferenceSession;
     if (modelSource.buffer) {
       newSession = await ort.InferenceSession.create(modelSource.buffer, sessionOptions);
     } else if (modelSource.url) {
@@ -144,9 +144,10 @@ export async function recreateSessionForBoardSize(
     console.log(
       `[OnnxEngine] Session recreated for ${size}x${size} board in ${elapsed.toFixed(0)}ms`
     );
-    return { session: newSession, graphCaptureEnabled: true, useGpuInputs: true };
+    return newSession;
   } catch (e) {
-    console.warn('[OnnxEngine] Session recreation failed, disabling graph capture:', e);
-    return { session: currentSession, graphCaptureEnabled: false, useGpuInputs: false };
+    console.warn('[OnnxEngine] Session recreation failed:', e);
+    await newSession?.release().catch(() => {});
+    throw e;
   }
 }

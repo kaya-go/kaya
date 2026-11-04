@@ -158,24 +158,30 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setEngine(null);
     setQueue(null);
     setStatus(idleStatus);
-    if (globalQueue) {
-      try {
-        await globalQueue.dispose();
-      } catch (err) {
-        console.error('[AIEngine] Failed to dispose queue:', err);
-      }
-      globalQueue = null;
-    }
-    if (globalEngine) {
-      try {
-        await globalEngine.dispose();
-      } catch (err) {
-        console.error('[AIEngine] Failed to dispose engine:', err);
-      }
+    // Clear the singletons before the first await: the auto-init effect can run
+    // during the awaits below and must not reuse an engine on its way out.
+    const oldQueue = globalQueue;
+    const oldEngine = globalEngine;
+    globalQueue = null;
+    if (oldEngine) {
       globalEngine = null;
       globalEnginePromise = null;
       globalEngineKey = null;
       globalReadyStatus = null;
+    }
+    if (oldQueue) {
+      try {
+        await oldQueue.dispose();
+      } catch (err) {
+        console.error('[AIEngine] Failed to dispose queue:', err);
+      }
+    }
+    if (oldEngine) {
+      try {
+        await oldEngine.dispose();
+      } catch (err) {
+        console.error('[AIEngine] Failed to dispose engine:', err);
+      }
     }
   }, []);
 
@@ -356,6 +362,12 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       const newEngine = await globalEnginePromise;
+      // Subscribed only now: during warm-up, a failure already moves the chain on.
+      // Once disposed, the auto-init effect runs the whole chain again.
+      newEngine.onEngineLost = lostError => {
+        console.warn('[AIEngine] Engine lost, running the backend chain again:', lostError.message);
+        void disposeEngine();
+      };
       const newQueue = new AnalysisQueue(newEngine, { cacheRef: analysisCache });
       globalEngine = newEngine;
       globalQueue = newQueue;
@@ -387,6 +399,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [
     buildKey,
+    disposeEngine,
     isModelLoaded,
     customAIModel,
     aiSettings,

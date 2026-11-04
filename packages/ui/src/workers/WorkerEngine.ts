@@ -70,6 +70,8 @@ export class WorkerEngine extends Engine {
         }
       } else if (msg.type === 'dispose_success') {
         // Handled by dispose() promise
+      } else if (msg.type === 'engine_lost') {
+        this.onEngineLost?.(new Error(msg.error));
       } else if (msg.type === 'error') {
         if (msg.id !== undefined) {
           const req = this.pendingRequests.get(msg.id);
