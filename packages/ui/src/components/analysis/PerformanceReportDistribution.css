@@ -91,8 +91,7 @@
 /* Key mistakes */
 .performance-report-mistakes {
   padding: 0.75rem;
-  flex: 1;
-  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .mistakes-title {
