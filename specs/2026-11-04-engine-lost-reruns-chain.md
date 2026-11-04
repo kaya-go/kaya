@@ -49,14 +49,15 @@ needs a new worker to get a new one.
 Measured in Chrome on an Apple GPU, with a real model and the swap failing by a
 local patch that was not committed:
 
-| Scenario                        | Load to analysis | Engine after                  |
-| ------------------------------- | ---------------- | ----------------------------- |
-| Swap succeeds (19 to 9)         | 1.6 s            | same engine, WebGPU           |
-| Swap fails once (19 to 9)       | 2.8 s            | new engine, WebGPU            |
-| Swap fails every time (19 to 9) | 4.7 s            | new engine, WASM, pill is CPU |
+| Scenario                        | Load to analysis | Engine after        |
+| ------------------------------- | ---------------- | ------------------- |
+| Swap succeeds (19 to 9)         | 1.6 s            | same engine, WebGPU |
+| Swap fails once (19 to 9)       | 2.8 s            | new engine, WebGPU  |
+| Swap fails every time (19 to 9) | 4.7 s            | new engine, WASM    |
 
-No error reached the UI in either failure, and the win rates matched a normal run
-on WebGPU.
+Neither failure logged an analysis error. After the single failure, the win rates
+were identical to a normal run on WebGPU. On WASM they differed by up to 2 points
+over the same four positions at 32 visits.
 
 The same session also serves every size natively:
 `real_session_serves_every_board_size` runs 19, 9, 13, then 19 again on CoreML and
