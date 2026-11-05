@@ -78,11 +78,12 @@ export function useLiveAnalysis({
 
   const lookupCachedResult = useCallback((): boolean => {
     if (!queue || !gameTree || currentNodeId === null || currentNodeId === undefined) return false;
-    const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
-    const boardHeight = gameInfo?.boardHeight;
+    // Engines take a board as square, sized by signMap.length: a shorter row panics
+    // the native engine and poisons its lock. Keep analysis square, as it always was.
+    const boardSize = currentBoard.signMap.length;
     const komi = gameInfo?.komi ?? DEFAULT_KOMI;
 
-    const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize, boardHeight);
+    const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize);
     const currentKey = generateAnalysisCacheKey(
       state.board.signMap,
       state.nextToPlay,
@@ -106,7 +107,7 @@ export function useLiveAnalysis({
     let prev: AnalysisResult | null = null;
     const parentId = gameTree.get(currentNodeId)?.parentId ?? null;
     if (parentId !== null && parentId !== undefined) {
-      const prevState = reconstructAnalysisState(gameTree, parentId, boardSize, boardHeight);
+      const prevState = reconstructAnalysisState(gameTree, parentId, boardSize);
       const prevKey = generateAnalysisCacheKey(
         prevState.board.signMap,
         prevState.nextToPlay,
@@ -151,8 +152,9 @@ export function useLiveAnalysis({
     });
     setError(null);
 
-    const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
-    const boardHeight = gameInfo?.boardHeight;
+    // Engines take a board as square, sized by signMap.length: a shorter row panics
+    // the native engine and poisons its lock. Keep analysis square, as it always was.
+    const boardSize = currentBoard.signMap.length;
     const komi = gameInfo?.komi ?? DEFAULT_KOMI;
 
     type Pos = {
@@ -164,7 +166,7 @@ export function useLiveAnalysis({
     };
 
     const toPos = (nodeId: number | string): Pos => {
-      const s = reconstructAnalysisState(gameTree, nodeId, boardSize, boardHeight);
+      const s = reconstructAnalysisState(gameTree, nodeId, boardSize);
       return {
         signMap: s.board.signMap,
         nextToPlay: s.nextToPlay,
@@ -188,9 +190,7 @@ export function useLiveAnalysis({
         if (moveData) {
           const v = sgfToVertex(moveData);
           if (v && v[0] >= 0) {
-            // GTP helpers take a single size; prefer height when rectangular.
-            const gtpBoardSize = boardHeight ?? boardSize;
-            const gtp = vertexToGTP(v as [number, number], gtpBoardSize);
+            const gtp = vertexToGTP(v as [number, number], boardSize);
             includeMove = gtp === 'PASS' ? undefined : gtp;
           }
         }

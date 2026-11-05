@@ -20,7 +20,6 @@ import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface GameInfoInput {
   boardSize?: number;
-  boardHeight?: number;
   komi?: number;
   playerBlack?: string;
   playerWhite?: string;
@@ -60,7 +59,6 @@ export function buildPerformanceReport(
   t: TFunction
 ): GamePerformanceReport | null {
   const boardSize = gameInfo.boardSize ?? 19;
-  const boardHeight = gameInfo.boardHeight;
   const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
   // Step 1: Get path from root to current node
@@ -82,6 +80,7 @@ export function buildPerformanceReport(
 
   // First pass: cache keys → analysis results along the branch
   const analysisResults = mapAnalysisPath(
+    gameTree,
     fullPath,
     state => {
       const cacheKey = generateAnalysisCacheKey(
@@ -92,8 +91,7 @@ export function buildPerformanceReport(
       );
       return analysisCache.current.get(cacheKey) ?? null;
     },
-    boardSize,
-    boardHeight
+    boardSize
   );
 
   // Second pass: pair consecutive results into before/after move positions

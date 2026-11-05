@@ -105,7 +105,6 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     }
 
     const boardSize = gameInfo.boardSize ?? 19;
-    const boardHeight = gameInfo.boardHeight;
     const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
     // Step 1: Get path from root to current node (this is the branch we're on)
@@ -130,6 +129,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     const rawResults: (import('@kaya/ai-engine').AnalysisResult | null)[] = [];
 
     mapAnalysisPath(
+      gameTree,
       fullPath,
       state => {
         const cacheKey = generateAnalysisCacheKey(
@@ -143,8 +143,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
         // Collect raw result (or null if not cached)
         rawResults.push(analysisCache.current.get(cacheKey) ?? null);
       },
-      boardSize,
-      boardHeight
+      boardSize
     );
 
     // Count how many positions have analysis results

@@ -15,7 +15,7 @@ import type { AnalysisQueue, AnalysisRequest, AnalysisResult, Engine } from '@ka
 import type { SignMap } from '@kaya/goboard';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { SGFProperty } from '../types/game';
-import { getPathToNode, boardCache, mapAnalysisPath } from '../utils/gameCache';
+import { getPathToNode, mapAnalysisPath } from '../utils/gameCache';
 import { generateAnalysisCacheKey } from '../utils/aiAnalysis';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
@@ -102,8 +102,6 @@ export function useFullGameAnalysis({
     // Drop any previous full-game submissions.
     queue.cancelTag(TAG);
 
-    boardCache.clear();
-
     setIsFullGameAnalyzing(true);
     setFullGameProgress(0);
     setFullGameETA(null);
@@ -115,8 +113,8 @@ export function useFullGameAnalysis({
       const fullSequence = [...historyNodes, ...futureNodes];
       setFullGameTotalMoves(fullSequence.length);
 
-      const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
-      const boardHeight = gameInfo?.boardHeight;
+      // Square, sized by height, as in useLiveAnalysis: engines cannot take anything else.
+      const boardSize = currentBoard.signMap.length;
       const komi = gameInfo?.komi ?? DEFAULT_KOMI;
       // Full-game uses its own visit setting (default 10) so deep live
       // search doesn't accidentally make a whole-game pass take hours.
@@ -132,6 +130,7 @@ export function useFullGameAnalysis({
       let cachedCount = 0;
 
       mapAnalysisPath(
+        gameTree,
         fullSequence,
         (state, i) => {
           const cacheKey = generateAnalysisCacheKey(
@@ -159,8 +158,7 @@ export function useFullGameAnalysis({
           }
           positions.push({ index: i, request });
         },
-        boardSize,
-        boardHeight
+        boardSize
       );
 
       if (positions.length === 0) {

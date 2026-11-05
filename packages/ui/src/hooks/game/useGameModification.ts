@@ -5,7 +5,6 @@ import { type Sign, type Vertex, GoBoard } from '@kaya/goboard';
 import { type Marker } from '@kaya/shudan';
 import { type SGFProperty, type GameInfo } from '../../types/game';
 import { now, logPerf } from '../../utils/perfLogger';
-import { boardCache } from '../../utils/gameCache';
 import { useBranchModification } from './useBranchModification';
 
 interface UseGameModificationProps {
@@ -132,7 +131,6 @@ export function useGameModification({
       });
 
       setGameTree(newTree);
-      boardCache.clear();
     },
     [gameTree, currentNodeId, setGameTree]
   );
@@ -147,7 +145,6 @@ export function useGameModification({
     });
 
     setGameTree(newTree);
-    boardCache.clear();
   }, [gameTree, currentNodeId, setGameTree]);
 
   /** Add a new child node at the current position with AB/AW setup stones.
@@ -171,7 +168,6 @@ export function useGameModification({
 
       setGameTree(newTree);
       if (newNode) setCurrentNodeId(newNode.id);
-      boardCache.clear();
     },
     [gameTree, currentNodeId, setGameTree, setCurrentNodeId]
   );

@@ -245,10 +245,9 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (prevNumVisitsRef.current !== currentNumVisits) {
       // Invalidate only the current position's cache entry
       if (gameTree && currentNodeId !== null && currentNodeId !== undefined) {
-        const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
-        const boardHeight = gameInfo?.boardHeight;
+        const boardSize = currentBoard.signMap.length;
         const komi = gameInfo?.komi ?? DEFAULT_KOMI;
-        const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize, boardHeight);
+        const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize);
         const cacheKey = generateAnalysisCacheKey(
           state.board.signMap,
           state.nextToPlay,

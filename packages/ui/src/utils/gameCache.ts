@@ -6,27 +6,27 @@ import { createInitialAnalysisState, updateAnalysisState, type AnalysisState } f
 /**
  * Unified position cache: board + history + nextToPlay (+ ko on the board).
  * One replay serves UI navigation (reconstructBoard) and AI analysis
- * (reconstructAnalysisState). Cleared on new game / load SGF via clearAllCaches,
- * and after tree edits via boardCache.clear().
+ * (reconstructAnalysisState). Valid for a single tree, see bindPositionCache.
  *
  * Uses LRU eviction. Size 200 to limit memory pressure for WebGPU on Apple Silicon.
  */
 const positionCache = new Map<string, AnalysisState>();
 const MAX_POSITION_CACHE_SIZE = 200;
 const CACHE_STEP = 10;
+let positionCacheTree: GameTree<SGFProperty> | null = null;
 
 /**
- * Back-compat for call sites that invalidate after tree edits.
- * Prefer clearAllCaches() when loading a new game.
+ * GameTree is immutable and keeps node ids across mutations, so the same id can
+ * hold different data in another tree: a setup stone undone, a handicap edited.
+ * Entries therefore only hold for the tree they were built from, and no writer
+ * has to remember to invalidate. A full replay at move 250 takes about 1ms, so
+ * starting over after an edit costs nothing that matters.
  */
-export const boardCache = {
-  clear(): void {
-    positionCache.clear();
-  },
-  get size(): number {
-    return positionCache.size;
-  },
-};
+function bindPositionCache(tree: GameTree<SGFProperty>): void {
+  if (tree === positionCacheTree) return;
+  positionCache.clear();
+  positionCacheTree = tree;
+}
 
 /**
  * Simple cache for pattern matching results.
@@ -41,6 +41,7 @@ export const MAX_PATTERN_CACHE_SIZE = 500;
  */
 export function clearAllCaches(): void {
   positionCache.clear();
+  positionCacheTree = null;
   patternCache.clear();
 }
 
@@ -123,6 +124,7 @@ function reconstructPosition(
     return createInitialAnalysisState(boardSize, boardHeight);
   }
 
+  bindPositionCache(tree);
   const cacheKey = positionCacheKey(nodeId, boardSize, boardHeight);
   const cached = positionCache.get(cacheKey);
   if (cached) {
@@ -194,11 +196,13 @@ export function reconstructAnalysisState(
  * reconstructBoard / reconstructAnalysisState hits are cheap.
  */
 export function mapAnalysisPath<T>(
+  tree: GameTree<SGFProperty>,
   nodes: GameTreeNode<SGFProperty>[],
   mapFn: (state: AnalysisState, index: number, node: GameTreeNode<SGFProperty>) => T,
   boardSize: number,
   boardHeight?: number
 ): T[] {
+  bindPositionCache(tree);
   let state = createInitialAnalysisState(boardSize, boardHeight);
   const results: T[] = new Array(nodes.length);
 
