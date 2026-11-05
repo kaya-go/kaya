@@ -14,12 +14,11 @@ import type { AnalysisQueue, AnalysisResult, MCTSProgress } from '@kaya/ai-engin
 import type { Engine } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
 import { sgfToVertex } from '@kaya/sgf';
-import { getPathToNode } from '../utils/gameCache';
+import { reconstructAnalysisState } from '../utils/gameCache';
 import {
-  createInitialAnalysisState,
-  updateAnalysisState,
   generateAnalysisCacheKey,
   smoothAnalysisResult,
+  type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
 import { vertexToGTP } from '../utils/gtpUtils';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
@@ -79,30 +78,17 @@ export function useLiveAnalysis({
 
   const lookupCachedResult = useCallback((): boolean => {
     if (!queue || !gameTree || currentNodeId === null || currentNodeId === undefined) return false;
-    const boardSize = currentBoard.signMap.length;
+    const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
+    const boardHeight = gameInfo?.boardHeight;
     const komi = gameInfo?.komi ?? DEFAULT_KOMI;
-    const sequence = getPathToNode(gameTree, currentNodeId);
-    const currentIndex = sequence.length - 1;
 
-    let state = createInitialAnalysisState(boardSize);
-    let prevState: typeof state | null = null;
-    let prevKey: string | null = null;
-    let currentKey: string | null = null;
-    for (let i = 0; i < sequence.length; i++) {
-      state = updateAnalysisState(state, sequence[i], i);
-      const key = generateAnalysisCacheKey(
-        state.board.signMap,
-        state.nextToPlay,
-        komi,
-        state.history
-      );
-      if (i === currentIndex - 1) {
-        prevState = { ...state, board: state.board.clone(), history: [...state.history] };
-        prevKey = key;
-      }
-      if (i === currentIndex) currentKey = key;
-    }
-    if (!currentKey) return false;
+    const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize, boardHeight);
+    const currentKey = generateAnalysisCacheKey(
+      state.board.signMap,
+      state.nextToPlay,
+      komi,
+      state.history
+    );
 
     const required = aiSettings.numVisits ?? 1;
     const cur = queue.peek({
@@ -116,8 +102,17 @@ export function useLiveAnalysis({
     });
     if (!cur) return false;
 
+    // Parent position for tempo smoothing; second reconstruct hits positionCache.
     let prev: AnalysisResult | null = null;
-    if (prevState && prevKey) {
+    const parentId = gameTree.get(currentNodeId)?.parentId ?? null;
+    if (parentId !== null && parentId !== undefined) {
+      const prevState = reconstructAnalysisState(gameTree, parentId, boardSize, boardHeight);
+      const prevKey = generateAnalysisCacheKey(
+        prevState.board.signMap,
+        prevState.nextToPlay,
+        komi,
+        prevState.history
+      );
       prev = queue.peek({
         signMap: prevState.board.signMap,
         nextToPlay: prevState.nextToPlay,
@@ -156,58 +151,33 @@ export function useLiveAnalysis({
     });
     setError(null);
 
-    const boardSize = currentBoard.signMap.length;
+    const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
+    const boardHeight = gameInfo?.boardHeight;
     const komi = gameInfo?.komi ?? DEFAULT_KOMI;
 
     type Pos = {
       signMap: SignMap;
       nextToPlay: 'B' | 'W';
-      history: ReturnType<typeof createInitialAnalysisState>['history'];
+      history: AnalysisHistoryItem[];
       cacheKey: string;
       koInfo: unknown;
     };
 
-    const sequence = getPathToNode(gameTree, currentNodeId);
-    const currentIndex = sequence.length - 1;
-    let state = createInitialAnalysisState(boardSize);
-    let prevPos: Pos | null = null;
-    let currentPos: Pos | null = null;
+    const toPos = (nodeId: number | string): Pos => {
+      const s = reconstructAnalysisState(gameTree, nodeId, boardSize, boardHeight);
+      return {
+        signMap: s.board.signMap,
+        nextToPlay: s.nextToPlay,
+        history: s.history,
+        cacheKey: generateAnalysisCacheKey(s.board.signMap, s.nextToPlay, komi, s.history),
+        koInfo: s.board._koInfo,
+      };
+    };
 
-    for (let i = 0; i < sequence.length; i++) {
-      state = updateAnalysisState(state, sequence[i], i);
-      const cacheKey = generateAnalysisCacheKey(
-        state.board.signMap,
-        state.nextToPlay,
-        komi,
-        state.history
-      );
-      if (i === currentIndex - 1 && currentIndex > 0) {
-        prevPos = {
-          signMap: state.board.clone().signMap,
-          nextToPlay: state.nextToPlay,
-          history: [...state.history],
-          cacheKey,
-          koInfo: state.board._koInfo,
-        };
-      } else if (i === currentIndex) {
-        currentPos = {
-          signMap: state.board.clone().signMap,
-          nextToPlay: state.nextToPlay,
-          history: [...state.history],
-          cacheKey,
-          koInfo: state.board._koInfo,
-        };
-      }
-    }
-
-    if (!currentPos) {
-      if (!isStale()) {
-        setIsAnalyzing(false);
-        completionRef.current?.();
-        completionRef.current = null;
-      }
-      return;
-    }
+    const currentPos: Pos = toPos(currentNodeId);
+    const parentId = gameTree.get(currentNodeId)?.parentId ?? null;
+    const prevPos: Pos | null =
+      parentId !== null && parentId !== undefined ? toPos(parentId) : null;
 
     // Detect the move actually played in the game so the engine force-visits it.
     let includeMove: string | undefined;
@@ -218,7 +188,9 @@ export function useLiveAnalysis({
         if (moveData) {
           const v = sgfToVertex(moveData);
           if (v && v[0] >= 0) {
-            const gtp = vertexToGTP(v as [number, number], boardSize);
+            // GTP helpers take a single size; prefer height when rectangular.
+            const gtpBoardSize = boardHeight ?? boardSize;
+            const gtp = vertexToGTP(v as [number, number], gtpBoardSize);
             includeMove = gtp === 'PASS' ? undefined : gtp;
           }
         }

@@ -10,12 +10,8 @@ import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useGameTreeSelector } from './GameTreeContext';
 import type { GameTreeContextValue } from '../types/game';
 import { useAIEngine } from './AIEngineContext';
-import { getPathToNode } from '../utils/gameCache';
-import {
-  createInitialAnalysisState,
-  updateAnalysisState,
-  generateAnalysisCacheKey,
-} from '../utils/aiAnalysis';
+import { reconstructAnalysisState } from '../utils/gameCache';
+import { generateAnalysisCacheKey } from '../utils/aiAnalysis';
 import { AIAnalysisContext } from './ai-analysis-types';
 import type { AIAnalysisContextValue } from './ai-analysis-types';
 import { useLiveAnalysis } from './useLiveAnalysis';
@@ -249,13 +245,10 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (prevNumVisitsRef.current !== currentNumVisits) {
       // Invalidate only the current position's cache entry
       if (gameTree && currentNodeId !== null && currentNodeId !== undefined) {
-        const boardSize = currentBoard.signMap.length;
+        const boardSize = gameInfo?.boardSize ?? currentBoard.signMap.length;
+        const boardHeight = gameInfo?.boardHeight;
         const komi = gameInfo?.komi ?? DEFAULT_KOMI;
-        const sequence = getPathToNode(gameTree, currentNodeId);
-        let state = createInitialAnalysisState(boardSize);
-        for (let i = 0; i < sequence.length; i++) {
-          state = updateAnalysisState(state, sequence[i], i);
-        }
+        const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize, boardHeight);
         const cacheKey = generateAnalysisCacheKey(
           state.board.signMap,
           state.nextToPlay,
