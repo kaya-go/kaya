@@ -13,7 +13,6 @@
 import { useCallback, useState } from 'react';
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { type SGFProperty } from '../../types/game';
-import { boardCache } from '../../utils/gameCache';
 import {
   copyBranch,
   cutBranch,
@@ -106,7 +105,6 @@ export function useBranchModification({
     if (!newTree) return;
 
     setGameTree(newTree);
-    boardCache.clear();
   }, [gameTree, currentNodeId, setGameTree]);
 
   /**
@@ -124,7 +122,6 @@ export function useBranchModification({
     if (!newTree) return;
 
     setGameTree(newTree);
-    boardCache.clear();
   }, [gameTree, currentNodeId, setGameTree]);
 
   return {

@@ -20,29 +20,18 @@ Target: <20ms for any navigation action
 
 ## Key Optimizations
 
-### 1. Board Reconstruction Cache
+### 1. Position Cache
 
-The most critical optimization. Without caching, navigating to move 300 requires replaying all moves from scratch (50-200ms). With caching: <5ms.
+Board navigation and AI analysis need the same thing at a node: the board, the move history and who plays next. `packages/ui/src/utils/gameCache.ts` keeps one LRU cache of 200 positions for both, and replays from the nearest cached ancestor on a miss. It also stores every tenth position along a path, and the walks in `mapAnalysisPath` seed it.
 
-```typescript
-// packages/ui/src/utils/gameCache.ts
-export const boardCache = new Map<string, GoBoard>();
-const MAX_BOARD_CACHE_SIZE = 200; // capped low for WebGPU memory pressure on Apple Silicon
+| Operation                 | Time (250-move game, M-series Mac) |
+| ------------------------- | ---------------------------------- |
+| Full replay from the root | about 1ms                          |
+| Read of a cached position | about 0.03ms                       |
 
-// Search backwards for closest cached position
-for (let i = sequence.length - 1; i >= 0; i--) {
-  const cached = boardCache.get(`${sequence[i].id}-${boardSize}`);
-  if (cached) {
-    board = cached;
-    break;
-  }
-}
+A replay is cheap, so the cache is there to avoid repeating work across consumers within a navigation, not to make a single replay affordable. That is why it can afford a simple validity rule: entries hold for one `GameTree` instance, and any other tree clears them. Trees are immutable and keep node ids across mutations, so undo, redo and any edit produce a different tree, possibly with different data under the same ids.
 
-// Cache intermediate positions every 10 moves
-if (i % 10 === 0) {
-  boardCache.set(key, board);
-}
-```
+`reconstructBoard` returns the cached board by reference: treat it as read-only.
 
 ### 2. Pattern Matching Disabled During Navigation
 
@@ -108,7 +97,8 @@ For large trees (joseki dictionaries with 60k+ nodes):
 ```typescript
 // Clear caches when loading new game
 export function clearAllCaches() {
-  boardCache.clear();
+  positionCache.clear();
+  positionCacheTree = null;
   patternCache.clear();
 }
 
@@ -123,7 +113,7 @@ if (cache.size >= MAX_SIZE) {
 
 ### Slow Navigation
 
-1. Check board cache is working (`boardCache.size` in console)
+1. Check that nothing replaces the game tree on every render: the position cache only holds for one tree
 2. Ensure pattern matching is disabled during navigation
 3. Profile with React DevTools
 

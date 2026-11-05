@@ -109,7 +109,7 @@ kaya/
 - Manages game state, board reconstruction, SGF parsing, navigation
 - Consume via `useGameTreeSelector` or its domain hooks (`useGameTreeBoard`, ...): they read a stable store through `useSyncExternalStore`, so a component only re-renders when its slice changes. `useGameTree()` re-renders on every change
 - Callbacks from selectors keep one identity for good and call the latest version, so never use one as an effect dep to detect a state change. Select only what renders: a domain hook that exposes `currentBoard` re-renders on every navigation, and in a root-level component that drags the whole tree. For a value needed only in an event handler, use `useGameTreeGetter()`
-- Uses LRU board cache for performance
+- Rebuilds positions through the LRU position cache it shares with AI analysis (see Performance Patterns)
 - Modular hook architecture: `useGameTreeState`, `useBoardState`, `useGameNavigation`, `useGameModification`, `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`, `useGameTreeUndoRedo`
 
 **2. AI Engine Lifecycle** (`packages/ui/src/contexts/AIEngineContext.tsx`)
@@ -173,11 +173,11 @@ const move = node.data.B?.[0] ?? node.data.W?.[0];
 
 ## Performance Patterns
 
-**Board Cache**: Essential for large games (300+ moves)
+**Position Cache** (`packages/ui/src/utils/gameCache.ts`): board, history and next player per node, one replay for navigation and analysis
 
-```typescript
-const boardCache = new Map<string, GoBoard>(); // 1000 entries max
-```
+- Rebuild a position with `reconstructBoard`, `reconstructAnalysisState` or `mapAnalysisPath`, never with a hand-written replay loop
+- Valid for one `GameTree` instance: any other tree clears it, so tree writers have nothing to invalidate
+- `reconstructBoard` returns the cached board by reference, so treat it as read-only and `.clone()` before mutating
 
 **Avoid Pattern Matching in Hot Paths**: `findPatternInMove()` is expensive (50-100ms)
 

@@ -15,12 +15,8 @@ import type { AnalysisQueue, AnalysisRequest, AnalysisResult, Engine } from '@ka
 import type { SignMap } from '@kaya/goboard';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { SGFProperty } from '../types/game';
-import { getPathToNode, boardCache } from '../utils/gameCache';
-import {
-  createInitialAnalysisState,
-  updateAnalysisState,
-  generateAnalysisCacheKey,
-} from '../utils/aiAnalysis';
+import { getPathToNode, mapAnalysisPath } from '../utils/gameCache';
+import { generateAnalysisCacheKey } from '../utils/aiAnalysis';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
@@ -106,8 +102,6 @@ export function useFullGameAnalysis({
     // Drop any previous full-game submissions.
     queue.cancelTag(TAG);
 
-    boardCache.clear();
-
     setIsFullGameAnalyzing(true);
     setFullGameProgress(0);
     setFullGameETA(null);
@@ -119,6 +113,7 @@ export function useFullGameAnalysis({
       const fullSequence = [...historyNodes, ...futureNodes];
       setFullGameTotalMoves(fullSequence.length);
 
+      // Square, sized by height, as in useLiveAnalysis: engines cannot take anything else.
       const boardSize = currentBoard.signMap.length;
       const komi = gameInfo?.komi ?? DEFAULT_KOMI;
       // Full-game uses its own visit setting (default 10) so deep live
@@ -131,37 +126,40 @@ export function useFullGameAnalysis({
         request: AnalysisRequest;
       };
 
-      let state = createInitialAnalysisState(boardSize);
       const positions: Position[] = [];
       let cachedCount = 0;
 
-      for (let i = 0; i < fullSequence.length; i++) {
-        state = updateAnalysisState(state, fullSequence[i], i);
-        const cacheKey = generateAnalysisCacheKey(
-          state.board.signMap,
-          state.nextToPlay,
-          komi,
-          state.history
-        );
+      mapAnalysisPath(
+        gameTree,
+        fullSequence,
+        (state, i) => {
+          const cacheKey = generateAnalysisCacheKey(
+            state.board.signMap,
+            state.nextToPlay,
+            komi,
+            state.history
+          );
 
-        const request: AnalysisRequest = {
-          signMap: state.board.clone().signMap,
-          nextToPlay: state.nextToPlay,
-          komi,
-          history: [...state.history],
-          numVisits,
-          priority: 'batch',
-          tag: TAG,
-          cacheKey,
-          extra: { koInfo: state.board._koInfo },
-        };
+          const request: AnalysisRequest = {
+            signMap: state.board.clone().signMap,
+            nextToPlay: state.nextToPlay,
+            komi,
+            history: [...state.history],
+            numVisits,
+            priority: 'batch',
+            tag: TAG,
+            cacheKey,
+            extra: { koInfo: state.board._koInfo },
+          };
 
-        if (queue.peek(request)) {
-          cachedCount++;
-          continue;
-        }
-        positions.push({ index: i, request });
-      }
+          if (queue.peek(request)) {
+            cachedCount++;
+            return;
+          }
+          positions.push({ index: i, request });
+        },
+        boardSize
+      );
 
       if (positions.length === 0) {
         setAllAnalyzedMessage(`All ${fullSequence.length} positions are already analyzed`);

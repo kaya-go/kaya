@@ -14,13 +14,8 @@ import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { AnalysisLegendModal } from './AnalysisLegendModal';
-import {
-  createInitialAnalysisState,
-  updateAnalysisState,
-  generateAnalysisCacheKey,
-  smoothAnalysisResult,
-} from '../../utils/aiAnalysis';
-import { getPathToNode } from '../../utils/gameCache';
+import { generateAnalysisCacheKey, smoothAnalysisResult } from '../../utils/aiAnalysis';
+import { getPathToNode, mapAnalysisPath } from '../../utils/gameCache';
 import { AnalysisChart, type AnalysisDataPoint } from './AnalysisChart';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import './AnalysisGraphPanel.css';
@@ -117,7 +112,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     const currentPositionIndex = pathToCurrentNode.length - 1;
 
     // Step 2: Extend from current node to end of branch (following first child)
-    const fullPath: Array<{ id: number | string; data: any }> = [...pathToCurrentNode];
+    const fullPath = [...pathToCurrentNode];
     let lastNode = pathToCurrentNode[pathToCurrentNode.length - 1];
 
     while (lastNode && lastNode.children.length > 0) {
@@ -132,24 +127,24 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     // First pass: compute all cache keys and collect raw results
     const cacheKeys: string[] = [];
     const rawResults: (import('@kaya/ai-engine').AnalysisResult | null)[] = [];
-    let state = createInitialAnalysisState(boardSize);
 
-    for (let i = 0; i < fullPath.length; i++) {
-      const pathNode = fullPath[i];
-      state = updateAnalysisState(state, pathNode as any, i);
+    mapAnalysisPath(
+      gameTree,
+      fullPath,
+      state => {
+        const cacheKey = generateAnalysisCacheKey(
+          state.board.signMap,
+          state.nextToPlay,
+          komi,
+          state.history
+        );
+        cacheKeys.push(cacheKey);
 
-      // Generate cache key for this position
-      const cacheKey = generateAnalysisCacheKey(
-        state.board.signMap,
-        state.nextToPlay,
-        komi,
-        state.history
-      );
-      cacheKeys.push(cacheKey);
-
-      // Collect raw result (or null if not cached)
-      rawResults.push(analysisCache.current.get(cacheKey) ?? null);
-    }
+        // Collect raw result (or null if not cached)
+        rawResults.push(analysisCache.current.get(cacheKey) ?? null);
+      },
+      boardSize
+    );
 
     // Count how many positions have analysis results
     const analyzedCount = rawResults.filter(r => r !== null).length;

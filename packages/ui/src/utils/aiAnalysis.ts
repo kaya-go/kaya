@@ -47,12 +47,6 @@ export function smoothAnalysisResult(
   };
 }
 
-export interface AnalysisState {
-  board: GoBoard;
-  history: AnalysisHistoryItem[];
-  nextToPlay: 'B' | 'W';
-}
-
 // Canonical implementation lives in @kaya/ai-engine so AnalysisQueue and
 // SGF KA persistence cannot diverge. Re-export for existing UI call sites.
 export { generateAnalysisCacheKey } from '@kaya/ai-engine';
@@ -97,9 +91,9 @@ export function formatProbability(probability: number): string {
   return `${(probability * 100).toFixed(1)}%`;
 }
 
-export function createInitialAnalysisState(boardSize: number): AnalysisState {
+export function createInitialAnalysisState(boardSize: number, boardHeight?: number): AnalysisState {
   return {
-    board: GoBoard.fromDimensions(boardSize),
+    board: GoBoard.fromDimensions(boardSize, boardHeight),
     history: [],
     nextToPlay: 'B',
   };

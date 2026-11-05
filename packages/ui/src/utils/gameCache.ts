@@ -1,18 +1,32 @@
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { GoBoard } from '@kaya/goboard';
-import { sgfToVertex } from '@kaya/sgf';
 import { type SGFProperty } from '../types/game';
+import { createInitialAnalysisState, updateAnalysisState, type AnalysisState } from './aiAnalysis';
 
 /**
- * Cache for board reconstruction - avoids replaying entire game on each navigation.
- * This is the ESSENTIAL cache - board reconstruction is O(N) where N = move number.
- * Without this cache, navigating to move 300 would replay all 300 moves every time.
+ * Unified position cache: board + history + nextToPlay (+ ko on the board).
+ * One replay serves UI navigation (reconstructBoard) and AI analysis
+ * (reconstructAnalysisState). Valid for a single tree, see bindPositionCache.
  *
- * Uses LRU (Least Recently Used) eviction strategy.
- * Size reduced to 200 to minimize memory pressure for WebGPU on Apple Silicon.
+ * Uses LRU eviction. Size 200 to limit memory pressure for WebGPU on Apple Silicon.
  */
-export const boardCache = new Map<string, GoBoard>();
-const MAX_BOARD_CACHE_SIZE = 200;
+const positionCache = new Map<string, AnalysisState>();
+const MAX_POSITION_CACHE_SIZE = 200;
+const CACHE_STEP = 10;
+let positionCacheTree: GameTree<SGFProperty> | null = null;
+
+/**
+ * GameTree is immutable and keeps node ids across mutations, so the same id can
+ * hold different data in another tree: a setup stone undone, a handicap edited.
+ * Entries therefore only hold for the tree they were built from, and no writer
+ * has to remember to invalidate. A full replay at move 250 takes about 1ms, so
+ * starting over after an edit costs nothing that matters.
+ */
+function bindPositionCache(tree: GameTree<SGFProperty>): void {
+  if (tree === positionCacheTree) return;
+  positionCache.clear();
+  positionCacheTree = tree;
+}
 
 /**
  * Simple cache for pattern matching results.
@@ -26,7 +40,8 @@ export const MAX_PATTERN_CACHE_SIZE = 500;
  * Clear all caches. Called when loading a new game or creating a new game.
  */
 export function clearAllCaches(): void {
-  boardCache.clear();
+  positionCache.clear();
+  positionCacheTree = null;
   patternCache.clear();
 }
 
@@ -57,15 +72,100 @@ export function getPathToNode(
   return path.reverse();
 }
 
+function positionCacheKey(
+  nodeId: number | string,
+  boardSize: number,
+  boardHeight?: number
+): string {
+  return `${nodeId}-${boardSize}x${boardHeight ?? boardSize}`;
+}
+
+/** Caller-owned snapshot — updateAnalysisState mutates board with mutate:true. */
+function cloneAnalysisState(state: AnalysisState): AnalysisState {
+  return {
+    board: state.board.clone(),
+    history: [...state.history],
+    nextToPlay: state.nextToPlay,
+  };
+}
+
+function putPositionCache(key: string, state: AnalysisState): void {
+  if (positionCache.has(key)) {
+    positionCache.delete(key);
+  } else if (positionCache.size >= MAX_POSITION_CACHE_SIZE) {
+    const firstKey = positionCache.keys().next().value;
+    if (firstKey !== undefined) positionCache.delete(firstKey);
+  }
+  // Store a clone so later mutate:true replays cannot corrupt the entry.
+  positionCache.set(key, cloneAnalysisState(state));
+}
+
+/**
+ * Shared reconstruction: LRU + incremental replay from nearest cached ancestor.
+ * Shared by reconstructBoard (returns .board by cache reference) and
+ * reconstructAnalysisState (clones). Do not mutate the returned state.
+ *
+ * OPTIMIZED with:
+ * 1. LRU position cache - avoids full replay on every navigation
+ * 2. Incremental reconstruction - finds nearest cached ancestor, replays from there
+ * 3. In-place mutation - updateAnalysisState uses mutate:true on an owned working copy
+ *    (clone from cache first) to reduce allocations
+ * 4. Ko check enabled - disableKoCheck:false so suicide stones are removed correctly
+ *    (matches prior reconstructBoard; cost is amortized by the cache)
+ * 5. Intermediate caching - caches positions every 10 moves for faster random access
+ */
+function reconstructPosition(
+  tree: GameTree<SGFProperty>,
+  nodeId: number | string | null,
+  boardSize: number,
+  boardHeight?: number
+): AnalysisState {
+  if (nodeId === null || nodeId === undefined) {
+    return createInitialAnalysisState(boardSize, boardHeight);
+  }
+
+  bindPositionCache(tree);
+  const cacheKey = positionCacheKey(nodeId, boardSize, boardHeight);
+  const cached = positionCache.get(cacheKey);
+  if (cached) {
+    // LRU: move to end
+    positionCache.delete(cacheKey);
+    positionCache.set(cacheKey, cached);
+    return cached;
+  }
+
+  const sequence = getPathToNode(tree, nodeId);
+  let state = createInitialAnalysisState(boardSize, boardHeight);
+  let lastCachedIndex = -1;
+
+  for (let i = sequence.length - 1; i >= 0; i--) {
+    const parentKey = positionCacheKey(sequence[i].id, boardSize, boardHeight);
+    const cachedParent = positionCache.get(parentKey);
+    if (cachedParent) {
+      state = cloneAnalysisState(cachedParent);
+      lastCachedIndex = i;
+      break;
+    }
+  }
+
+  for (let i = lastCachedIndex + 1; i < sequence.length; i++) {
+    state = updateAnalysisState(state, sequence[i], i);
+    // Cache every 10 moves + final for faster random access
+    if (i % CACHE_STEP === 0 || i === sequence.length - 1) {
+      putPositionCache(positionCacheKey(sequence[i].id, boardSize, boardHeight), state);
+    }
+  }
+
+  return positionCache.get(cacheKey) ?? cloneAnalysisState(state);
+}
+
 /**
  * Reconstruct board state by replaying moves from root to node.
  *
- * OPTIMIZED with:
- * 1. LRU board cache - avoids full replay on every navigation
- * 2. Incremental reconstruction - finds nearest cached ancestor, replays from there
- * 3. In-place mutation - uses mutate flag for intermediate boards to reduce allocations
- * 4. Ko check skipping - skips expensive ko detection for intermediate moves
- * 5. Intermediate caching - caches positions every 10 moves for faster random access
+ * Thin facade over reconstructPosition (shared LRU / incremental replay).
+ * Returns the cached GoBoard by reference — treat as read-only so
+ * useBoardState can keep identity via equals(). Mutate only after .clone(),
+ * or use reconstructAnalysisState when history / nextToPlay / ko are needed.
  */
 export function reconstructBoard(
   tree: GameTree<SGFProperty>,
@@ -73,101 +173,46 @@ export function reconstructBoard(
   boardSize: number,
   boardHeight?: number
 ): GoBoard {
-  if (nodeId === null || nodeId === undefined) {
-    return GoBoard.fromDimensions(boardSize, boardHeight);
+  // Return cached board by reference so useBoardState equals() can keep identity.
+  return reconstructPosition(tree, nodeId, boardSize, boardHeight).board;
+}
+
+/**
+ * Reconstruct analysis state at a node (board + history + nextToPlay + ko).
+ * Clones so callers can safely feed updateAnalysisState / queue submit.
+ */
+export function reconstructAnalysisState(
+  tree: GameTree<SGFProperty>,
+  nodeId: number | string | null,
+  boardSize: number,
+  boardHeight?: number
+): AnalysisState {
+  return cloneAnalysisState(reconstructPosition(tree, nodeId, boardSize, boardHeight));
+}
+
+/**
+ * Walk a node sequence with one createInitial + updateAnalysisState loop.
+ * Populates positionCache for intermediate/final nodes so later
+ * reconstructBoard / reconstructAnalysisState hits are cheap.
+ */
+export function mapAnalysisPath<T>(
+  tree: GameTree<SGFProperty>,
+  nodes: GameTreeNode<SGFProperty>[],
+  mapFn: (state: AnalysisState, index: number, node: GameTreeNode<SGFProperty>) => T,
+  boardSize: number,
+  boardHeight?: number
+): T[] {
+  bindPositionCache(tree);
+  let state = createInitialAnalysisState(boardSize, boardHeight);
+  const results: T[] = new Array(nodes.length);
+
+  for (let i = 0; i < nodes.length; i++) {
+    state = updateAnalysisState(state, nodes[i], i);
+    if (i % CACHE_STEP === 0 || i === nodes.length - 1) {
+      putPositionCache(positionCacheKey(nodes[i].id, boardSize, boardHeight), state);
+    }
+    results[i] = mapFn(state, i, nodes[i]);
   }
 
-  // Check cache first (LRU behavior: move to end on hit)
-  const cacheKey = `${nodeId}-${boardSize}x${boardHeight ?? boardSize}`;
-  const cached = boardCache.get(cacheKey);
-  if (cached) {
-    boardCache.delete(cacheKey);
-    boardCache.set(cacheKey, cached);
-    return cached;
-  }
-
-  // Get path from root to current node
-  const sequence = getPathToNode(tree, nodeId);
-  let board = GoBoard.fromDimensions(boardSize, boardHeight);
-
-  // Find closest cached ancestor (start from end, which is closest to target)
-  let lastCachedIndex = -1;
-  for (let i = sequence.length - 1; i >= 0; i--) {
-    const parentKey = `${sequence[i].id}-${boardSize}x${boardHeight ?? boardSize}`;
-    const cachedParent = boardCache.get(parentKey);
-    if (cachedParent) {
-      board = cachedParent;
-      lastCachedIndex = i;
-      break;
-    }
-  }
-
-  // Track if we own the current board instance (can mutate in-place)
-  let boardIsOwned = lastCachedIndex === -1;
-
-  // Replay moves from the closest cached position
-  for (let i = lastCachedIndex + 1; i < sequence.length; i++) {
-    const node = sequence[i];
-    const { data } = node;
-
-    // Cache every 20 moves for faster random access, and always cache the final position
-    // Interval of 20 balances memory usage vs navigation speed
-    const shouldCache = i % 20 === 0 || i === sequence.length - 1;
-    const canMutate = boardIsOwned;
-    // Always enable Ko check to ensure suicide stones are removed correctly
-    // Performance impact is minimal since this is cached
-    const disableKoCheck = false;
-
-    // Apply setup stones (AE first, then AB, AW)
-    if (data.AB || data.AW || data.AE) {
-      if (!canMutate) {
-        board = board.clone();
-        boardIsOwned = true;
-      }
-
-      for (const sgf of data.AE || []) {
-        const v = sgfToVertex(sgf);
-        if (v) board.set(v, 0);
-      }
-      for (const sgf of data.AB || []) {
-        const v = sgfToVertex(sgf);
-        if (v) board.set(v, 1);
-      }
-      for (const sgf of data.AW || []) {
-        const v = sgfToVertex(sgf);
-        if (v) board.set(v, -1);
-      }
-    }
-
-    // Apply move (B or W)
-    const moveCoord = data.B?.[0] || data.W?.[0];
-    if (moveCoord) {
-      const vertex = sgfToVertex(moveCoord);
-      if (vertex && vertex[0] >= 0 && vertex[1] >= 0) {
-        const sign = data.B ? 1 : -1;
-        try {
-          board = board.makeMove(sign, vertex, { mutate: canMutate, disableKoCheck });
-          boardIsOwned = true;
-        } catch {
-          // Invalid move in SGF, skip
-        }
-      }
-    }
-
-    // Cache intermediate positions
-    if (shouldCache) {
-      const intermediateKey = `${node.id}-${boardSize}`;
-      if (!boardCache.has(intermediateKey)) {
-        // LRU eviction
-        if (boardCache.size >= MAX_BOARD_CACHE_SIZE) {
-          const firstKey = boardCache.keys().next().value;
-          if (firstKey) boardCache.delete(firstKey);
-        }
-        boardCache.set(intermediateKey, board);
-      }
-      boardIsOwned = false; // Board is now shared via cache
-    }
-  }
-
-  return board;
+  return results;
 }

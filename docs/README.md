@@ -15,7 +15,7 @@ The agent-facing entry point is [`CLAUDE.md`](../CLAUDE.md) at the repo root.
 | [I18N.md](I18N.md)                             | Translation workflow, supported locales                            |
 | [RESPONSIVE.md](RESPONSIVE.md)                 | Breakpoints, touch interactions, mobile/tablet layout              |
 | [BRAND_GUIDE.md](BRAND_GUIDE.md)               | Logo, color palette, typography, voice                             |
-| [PERFORMANCE.md](PERFORMANCE.md)               | Navigation perf, board cache, worker offload                       |
+| [PERFORMANCE.md](PERFORMANCE.md)               | Navigation perf, position cache, worker offload                    |
 | [AI_ANALYSIS_FORMAT.md](AI_ANALYSIS_FORMAT.md) | SGF `KA` property — analysis serialization                         |
 | [RELEASE.md](RELEASE.md)                       | Release workflow, conventional commits, signing                    |
 

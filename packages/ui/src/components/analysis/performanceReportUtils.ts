@@ -13,12 +13,8 @@ import type {
   GamePerformanceReport,
 } from '@kaya/ai-engine';
 import { generatePerformanceReport } from '@kaya/ai-engine';
-import {
-  createInitialAnalysisState,
-  updateAnalysisState,
-  generateAnalysisCacheKey,
-} from '../../utils/aiAnalysis';
-import { getPathToNode } from '../../utils/gameCache';
+import { generateAnalysisCacheKey } from '../../utils/aiAnalysis';
+import { getPathToNode, mapAnalysisPath } from '../../utils/gameCache';
 import type { TFunction } from 'i18next';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
@@ -69,9 +65,7 @@ export function buildPerformanceReport(
   const pathToCurrentNode = getPathToNode(gameTree, currentNodeId ?? rootId);
 
   // Step 2: Extend from current node to end of branch (following first child)
-  const fullPath: Array<{ id: number | string; data: any; children: any[] }> = [
-    ...pathToCurrentNode,
-  ];
+  const fullPath = [...pathToCurrentNode];
   let lastNode = pathToCurrentNode[pathToCurrentNode.length - 1];
 
   while (lastNode && lastNode.children.length > 0) {
@@ -84,46 +78,29 @@ export function buildPerformanceReport(
     return null; // No moves to analyze
   }
 
-  // Build position data for each move
+  // First pass: cache keys → analysis results along the branch
+  const analysisResults = mapAnalysisPath(
+    gameTree,
+    fullPath,
+    state => {
+      const cacheKey = generateAnalysisCacheKey(
+        state.board.signMap,
+        state.nextToPlay,
+        komi,
+        state.history
+      );
+      return analysisCache.current.get(cacheKey) ?? null;
+    },
+    boardSize
+  );
+
+  // Second pass: pair consecutive results into before/after move positions
   const positions: AIPositionData[] = [];
-  let analysisState = createInitialAnalysisState(boardSize);
-
-  // First, compute all cache keys and get analysis results
-  const analysisResults: (AnalysisResult | null)[] = [];
-
-  for (let i = 0; i < fullPath.length; i++) {
-    const pathNode = fullPath[i];
-    analysisState = updateAnalysisState(analysisState, pathNode as any, i);
-
-    // Generate cache key for this position
-    const cacheKey = generateAnalysisCacheKey(
-      analysisState.board.signMap,
-      analysisState.nextToPlay,
-      komi,
-      analysisState.history
-    );
-
-    const result = analysisCache.current.get(cacheKey) ?? null;
-    analysisResults.push(result);
-  }
-
-  // Now build position data for each move (starting from move 1)
-  analysisState = createInitialAnalysisState(boardSize);
 
   for (let i = 1; i < fullPath.length; i++) {
     const currNode = fullPath[i];
     const nodeData = currNode.data;
 
-    // Update state to previous position first
-    if (i === 1) {
-      analysisState = updateAnalysisState(
-        createInitialAnalysisState(boardSize),
-        fullPath[0] as any,
-        0
-      );
-    }
-
-    // Determine player and move
     let player: 'B' | 'W' | null = null;
     let move: string | null = null;
 
@@ -135,31 +112,15 @@ export function buildPerformanceReport(
       move = nodeData.W[0];
     }
 
-    if (!player || !move) {
-      // Update state for non-move nodes
-      analysisState = updateAnalysisState(analysisState, currNode as any, i);
-      continue;
-    }
-
-    // Get analysis for position before move (previous node's result)
-    const analysisBeforeMove = analysisResults[i - 1];
-
-    // Update state to after this move
-    analysisState = updateAnalysisState(analysisState, currNode as any, i);
-
-    // Get analysis for position after move
-    const analysisAfterMove = analysisResults[i];
-
-    // Convert SGF move to GTP coordinate
-    const gtpMove = sgfToGtp(move, boardSize);
+    if (!player || !move) continue;
 
     positions.push({
       moveNumber: i,
       nodeId: currNode.id,
       player,
-      move: gtpMove,
-      analysisBeforeMove,
-      analysisAfterMove,
+      move: sgfToGtp(move, boardSize),
+      analysisBeforeMove: analysisResults[i - 1],
+      analysisAfterMove: analysisResults[i],
     });
   }
 
