@@ -1,7 +1,9 @@
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { GoBoard } from '@kaya/goboard';
-import { type SGFProperty } from '../types/game';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 import { createInitialAnalysisState, updateAnalysisState, type AnalysisState } from './aiAnalysis';
+import type { AnalysisRequest } from '@kaya/ai-engine';
+import type { GameInfo, SGFProperty } from '../types/game';
 
 /**
  * Unified position cache: board + history + nextToPlay (+ ko on the board).
@@ -115,12 +117,13 @@ function putPositionCache(key: string, state: AnalysisState): void {
  * 5. Intermediate caching - caches positions every 10 moves for faster random access
  */
 function reconstructPosition(
-  tree: GameTree<SGFProperty>,
+  tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
   boardHeight?: number
 ): AnalysisState {
-  if (nodeId === null || nodeId === undefined) {
+  // Null tree/node → empty board (same size); callers may pass context nulls.
+  if (!tree || nodeId == null) {
     return createInitialAnalysisState(boardSize, boardHeight);
   }
 
@@ -168,7 +171,7 @@ function reconstructPosition(
  * or use reconstructAnalysisState when history / nextToPlay / ko are needed.
  */
 export function reconstructBoard(
-  tree: GameTree<SGFProperty>,
+  tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
   boardHeight?: number
@@ -180,9 +183,10 @@ export function reconstructBoard(
 /**
  * Reconstruct analysis state at a node (board + history + nextToPlay + ko).
  * Clones so callers can safely feed updateAnalysisState / queue submit.
+ * Null tree/node → empty initial state at the given size.
  */
 export function reconstructAnalysisState(
-  tree: GameTree<SGFProperty>,
+  tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
   boardHeight?: number
@@ -215,4 +219,44 @@ export function mapAnalysisPath<T>(
   }
 
   return results;
+}
+
+export type BuildAnalysisRequestParams = {
+  gameTree: GameTree<SGFProperty> | null;
+  currentNodeId: number | string | null;
+  gameInfo: GameInfo;
+  overrides?: Partial<AnalysisRequest>;
+};
+
+/**
+ * Build a queue/engine AnalysisRequest from the tree position.
+ * gameTree + currentNodeId are the position keys; reconstruct yields
+ * signMap, history, nextToPlay, and ko together.
+ */
+export function buildAnalysisRequest({
+  gameTree,
+  currentNodeId,
+  gameInfo,
+  overrides,
+}: BuildAnalysisRequestParams): AnalysisRequest {
+  const { boardSize, boardHeight, komi } = gameInfo;
+  const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize, boardHeight);
+  const { nextToPlay, history, board } = state;
+  const {
+    extra: overrideExtra,
+    numVisits,
+    priority,
+    nextToPlay: nextToPlayOverride,
+  } = overrides ?? {};
+  return {
+    signMap: board.signMap,
+    // Seat override (e.g. UI currentPlayer) wins over tree-derived nextToPlay.
+    nextToPlay: nextToPlayOverride ?? nextToPlay,
+    // Prefer shared DEFAULT_KOMI (#192) over a hardcoded 7.5.
+    komi: komi ?? DEFAULT_KOMI,
+    history,
+    numVisits: numVisits ?? 1,
+    priority: priority ?? 'live',
+    extra: board._koInfo ? { koInfo: board._koInfo, ...overrideExtra } : overrideExtra,
+  };
 }

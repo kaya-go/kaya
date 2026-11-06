@@ -22,9 +22,9 @@ import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { parseGTPCoordinate } from '../../utils/gtpUtils';
+import { buildAnalysisRequest } from '../../utils/gameCache';
 import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
-import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 // =========================
 // Current Player & Ghost Logic
@@ -114,16 +114,18 @@ export function useGameBoardState() {
 
 export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   const { t } = useTranslation();
-  const { isModelLoaded, aiSettings } = useGameTreeSelector(
+  const { isModelLoaded, aiSettings, gameTree, currentNodeId } = useGameTreeSelector(
     useCallback(
       (ctx: GameTreeContextValue) => ({
         isModelLoaded: ctx.isModelLoaded,
         aiSettings: ctx.aiSettings,
+        gameTree: ctx.gameTree,
+        currentNodeId: ctx.currentNodeId,
       }),
       []
     )
   );
-  const { currentBoard, currentNode, gameInfo } = useGameTreeBoard();
+  const { currentNode, gameInfo } = useGameTreeBoard();
   const { playMove } = useGameTreeActions();
   const { engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
   const { showToast } = useToast();
@@ -148,7 +150,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
 
   const executeGenerateMove = useCallback(
     async (currentPlayer: Sign) => {
-      if (!aiEngine || !isModelLoaded) return;
+      if (!aiEngine || !isModelLoaded || !gameTree || currentNodeId == null) return;
 
       setIsGeneratingMove(true);
       setPendingSuggestMove(false);
@@ -172,16 +174,26 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
         if (cachedResult?.moveSuggestions && cachedResult.moveSuggestions.length > 0) {
           moveStr = cachedResult.moveSuggestions[0].move;
         } else {
-          const signMap = currentBoard.signMap;
-          const nextToPlay = currentPlayer === 1 ? 'B' : 'W';
-          moveStr = await aiEngine.generateMove(signMap, {
-            komi: gameInfo.komi ?? DEFAULT_KOMI,
-            nextToPlay,
-            numVisits: aiSettings.numVisits ?? 1,
+          // Position from gameTree + currentNodeId — not the UI currentBoard.
+          const request = buildAnalysisRequest({
+            gameTree,
+            currentNodeId,
+            gameInfo,
+            overrides: {
+              numVisits: aiSettings.numVisits ?? 1,
+              nextToPlay: currentPlayer ? (currentPlayer === 1 ? 'B' : 'W') : undefined,
+            },
+          });
+          moveStr = await aiEngine.generateMove(request.signMap, {
+            komi: request.komi,
+            nextToPlay: request.nextToPlay,
+            history: request.history,
+            numVisits: request.numVisits,
+            ...(request.extra ?? {}),
           });
         }
 
-        const vertex = parseGTPCoordinate(moveStr, currentBoard.width);
+        const vertex = parseGTPCoordinate(moveStr, gameInfo.boardSize);
 
         if (vertex === null) {
           playMove([-1, -1], currentPlayer);
@@ -200,8 +212,9 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
     [
       aiEngine,
       isModelLoaded,
-      currentBoard,
-      gameInfo.komi,
+      currentNodeId,
+      gameTree,
+      gameInfo,
       aiSettings.numVisits,
       waitForCurrentAnalysis,
       playMove,
