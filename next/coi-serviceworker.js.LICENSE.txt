@@ -1,0 +1,1 @@
+/*! coi-serviceworker v0.1.7 - Guido Zuidhof and contributors, licensed under MIT */
