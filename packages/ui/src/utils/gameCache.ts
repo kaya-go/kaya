@@ -1,7 +1,8 @@
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { GoBoard } from '@kaya/goboard';
-import { type SGFProperty } from '../types/game';
+import { DEFAULT_KOMI, type AnalysisRequest } from '@kaya/ai-engine';
 import { createInitialAnalysisState, updateAnalysisState, type AnalysisState } from './aiAnalysis';
+import type { GameInfo, SGFProperty } from '../types/game';
 
 /**
  * Unified position cache: board + history + nextToPlay (+ ko on the board).
@@ -115,12 +116,13 @@ function putPositionCache(key: string, state: AnalysisState): void {
  * 5. Intermediate caching - caches positions every 10 moves for faster random access
  */
 function reconstructPosition(
-  tree: GameTree<SGFProperty>,
+  tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
   boardHeight?: number
 ): AnalysisState {
-  if (nodeId === null || nodeId === undefined) {
+  // Null tree/node → empty board (same size); callers may pass context nulls.
+  if (!tree || nodeId == null) {
     return createInitialAnalysisState(boardSize, boardHeight);
   }
 
@@ -168,7 +170,7 @@ function reconstructPosition(
  * or use reconstructAnalysisState when history / nextToPlay / ko are needed.
  */
 export function reconstructBoard(
-  tree: GameTree<SGFProperty>,
+  tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
   boardHeight?: number
@@ -180,9 +182,10 @@ export function reconstructBoard(
 /**
  * Reconstruct analysis state at a node (board + history + nextToPlay + ko).
  * Clones so callers can safely feed updateAnalysisState / queue submit.
+ * Null tree/node → empty initial state at the given size.
  */
 export function reconstructAnalysisState(
-  tree: GameTree<SGFProperty>,
+  tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
   boardHeight?: number
@@ -215,4 +218,54 @@ export function mapAnalysisPath<T>(
   }
 
   return results;
+}
+
+/**
+ * Side of the square board analysis runs on, which is also the size to decode
+ * the engine's GTP moves with. Engines size a board by its row count, and a row
+ * shorter than that panics the native engine with its lock held, so analysis
+ * keeps the board square and sized by height, as live analysis does.
+ */
+export function analysisBoardSize(gameInfo: Pick<GameInfo, 'boardSize' | 'boardHeight'>): number {
+  return gameInfo.boardHeight ?? gameInfo.boardSize;
+}
+
+/** The request fields a caller may set. The position always comes from the tree. */
+export type AnalysisRequestOverrides = Partial<
+  Pick<AnalysisRequest, 'nextToPlay' | 'numVisits' | 'priority' | 'extra'>
+>;
+
+export type BuildAnalysisRequestParams = {
+  gameTree: GameTree<SGFProperty> | null;
+  currentNodeId: number | string | null;
+  gameInfo: GameInfo;
+  overrides?: AnalysisRequestOverrides;
+};
+
+/**
+ * Build an engine request for the position at a node: board, history, side to
+ * play and ko, all from one reconstruction. The board is square, see
+ * analysisBoardSize.
+ */
+export function buildAnalysisRequest({
+  gameTree,
+  currentNodeId,
+  gameInfo,
+  overrides = {},
+}: BuildAnalysisRequestParams): AnalysisRequest {
+  const { board, history, nextToPlay } = reconstructAnalysisState(
+    gameTree,
+    currentNodeId,
+    analysisBoardSize(gameInfo)
+  );
+  return {
+    signMap: board.signMap,
+    // A seat override (the UI's current player) wins over the tree's side to play.
+    nextToPlay: overrides.nextToPlay ?? nextToPlay,
+    komi: gameInfo.komi ?? DEFAULT_KOMI,
+    history,
+    numVisits: overrides.numVisits ?? 1,
+    priority: overrides.priority ?? 'live',
+    extra: { koInfo: board._koInfo, ...overrides.extra },
+  };
 }

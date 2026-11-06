@@ -17,14 +17,15 @@ import {
   useGameTreeAI,
   useGameTreeEdit,
   useGameTreeActions,
+  useGameTreeGetter,
 } from '../../contexts/selectors';
 import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
-import { parseGTPCoordinate } from '../../utils/gtpUtils';
+import { bestMoveOnBoard } from '../../utils/gtpUtils';
+import { analysisBoardSize, buildAnalysisRequest } from '../../utils/gameCache';
 import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
-import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 // =========================
 // Current Player & Ghost Logic
@@ -123,7 +124,8 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
       []
     )
   );
-  const { currentBoard, currentNode, gameInfo } = useGameTreeBoard();
+  // The position only matters when a move is asked for: read it then, unsubscribed.
+  const getGameTree = useGameTreeGetter();
   const { playMove } = useGameTreeActions();
   const { engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
   const { showToast } = useToast();
@@ -141,54 +143,65 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   useEffect(() => {
     analysisResultRef.current = analysisResult;
   }, [analysisResult]);
-  const currentNodeRef = useRef(currentNode);
-  useEffect(() => {
-    currentNodeRef.current = currentNode;
-  }, [currentNode]);
 
   const executeGenerateMove = useCallback(
     async (currentPlayer: Sign) => {
       if (!aiEngine || !isModelLoaded) return;
+      const { gameTree, currentNodeId, currentNode: nodeBefore, gameInfo } = getGameTree();
 
       setIsGeneratingMove(true);
       setPendingSuggestMove(false);
       try {
-        let moveStr: string;
-
-        // Read through the ref: the render-scope `currentNode` is a constant for
-        // this closure, so comparing it after the await could never detect that
-        // the user navigated away while the analysis was still running.
-        const nodeBefore = currentNodeRef.current;
+        // playMove plays on whatever node is current when it runs, and both awaits
+        // below can outlast a navigation. Check after each one that the user is
+        // still on the position the move is for.
+        const movedAway = () => getGameTree().currentNode !== nodeBefore;
 
         if (isAnalyzingRef.current) {
           await waitForCurrentAnalysis();
+          if (movedAway()) return;
         }
 
-        if (currentNodeRef.current !== nodeBefore) {
+        let moves: string[];
+        const cachedResult = analysisResultRef.current;
+        if (cachedResult?.moveSuggestions && cachedResult.moveSuggestions.length > 0) {
+          moves = cachedResult.moveSuggestions.map(s => s.move);
+        } else {
+          const request = buildAnalysisRequest({
+            gameTree,
+            currentNodeId,
+            gameInfo,
+            overrides: {
+              numVisits: aiSettings.numVisits ?? 1,
+              nextToPlay: currentPlayer ? (currentPlayer === 1 ? 'B' : 'W') : undefined,
+            },
+          });
+          // analyze, not generateMove: on a rectangular board the top move can be
+          // off the real board, and the ranking holds the best one that is not.
+          const result = await aiEngine.analyze(request.signMap, {
+            komi: request.komi,
+            nextToPlay: request.nextToPlay,
+            history: request.history,
+            numVisits: request.numVisits,
+            ...request.extra,
+          });
+          if (movedAway()) return;
+          moves = result.moveSuggestions.map(s => s.move);
+        }
+
+        const { boardSize: width, boardHeight: height = width } = gameInfo;
+        const vertex = bestMoveOnBoard(
+          moves.length > 0 ? moves : ['PASS'],
+          analysisBoardSize(gameInfo),
+          width,
+          height
+        );
+        if (vertex === null) {
+          showToast(t('gameboardActions.failedToGenerateMove'), 'error');
           return;
         }
 
-        const cachedResult = analysisResultRef.current;
-        if (cachedResult?.moveSuggestions && cachedResult.moveSuggestions.length > 0) {
-          moveStr = cachedResult.moveSuggestions[0].move;
-        } else {
-          const signMap = currentBoard.signMap;
-          const nextToPlay = currentPlayer === 1 ? 'B' : 'W';
-          moveStr = await aiEngine.generateMove(signMap, {
-            komi: gameInfo.komi ?? DEFAULT_KOMI,
-            nextToPlay,
-            numVisits: aiSettings.numVisits ?? 1,
-          });
-        }
-
-        const vertex = parseGTPCoordinate(moveStr, currentBoard.width);
-
-        if (vertex === null) {
-          playMove([-1, -1], currentPlayer);
-        } else {
-          playMove(vertex, currentPlayer);
-        }
-
+        playMove(vertex, currentPlayer);
         playSound('move');
       } catch (error) {
         console.error('Failed to generate AI move:', error);
@@ -200,8 +213,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
     [
       aiEngine,
       isModelLoaded,
-      currentBoard,
-      gameInfo.komi,
+      getGameTree,
       aiSettings.numVisits,
       waitForCurrentAnalysis,
       playMove,

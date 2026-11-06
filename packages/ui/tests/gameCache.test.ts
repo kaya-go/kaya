@@ -8,10 +8,14 @@
  */
 
 import { describe, test, expect, beforeEach } from 'bun:test';
+import { DEFAULT_KOMI } from '@kaya/ai-engine';
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
+import { GoBoard } from '@kaya/goboard';
 import { parse, sgfNodeToGameTreeNode } from '@kaya/sgf';
 import type { SGFProperty } from '../src/types/game';
 import {
+  analysisBoardSize,
+  buildAnalysisRequest,
   clearAllCaches,
   mapAnalysisPath,
   reconstructAnalysisState,
@@ -178,5 +182,81 @@ describe('position cache across trees', () => {
     const board = reconstructBoard(second, id, 9);
     expect(board.get([0, 0])).toBe(0);
     expect(board.get([1, 1])).toBe(1);
+  });
+});
+
+describe('buildAnalysisRequest', () => {
+  // GAME's W[bb] captures at cb and leaves black a ko it may not retake at once.
+  const KO_NODE = 8;
+
+  test('packs the position at the node: board, history, side to play, ko, komi', () => {
+    const tree = treeOf(GAME);
+    const nodes = mainLine(tree);
+    const request = buildAnalysisRequest({
+      gameTree: tree,
+      currentNodeId: nodes[KO_NODE].id,
+      gameInfo: { boardSize: 9, komi: 6.5 },
+    });
+
+    const expected = replay(nodes.slice(0, KO_NODE + 1), 9);
+    expect(request.signMap).toEqual(expected.board.signMap);
+    expect(request.history).toEqual(expected.history);
+    expect(request.nextToPlay).toBe('B');
+    expect(request.extra).toEqual({ koInfo: { sign: 1, vertex: [2, 1] } });
+    expect(request.komi).toBe(6.5);
+    expect(request.numVisits).toBe(1);
+    expect(request.priority).toBe('live');
+  });
+
+  test('takes the default komi when the game has none', () => {
+    const tree = treeOf(GAME);
+    const request = buildAnalysisRequest({
+      gameTree: tree,
+      currentNodeId: tree.root.id,
+      gameInfo: { boardSize: 9 },
+    });
+    expect(request.komi).toBe(DEFAULT_KOMI);
+  });
+
+  test('overrides win, and extra keeps the ko', () => {
+    const tree = treeOf(GAME);
+    const request = buildAnalysisRequest({
+      gameTree: tree,
+      currentNodeId: mainLine(tree)[KO_NODE].id,
+      gameInfo: { boardSize: 9 },
+      overrides: { nextToPlay: 'W', numVisits: 50, priority: 'batch', extra: { tag: 1 } },
+    });
+    expect(request.nextToPlay).toBe('W');
+    expect(request.numVisits).toBe(50);
+    expect(request.priority).toBe('batch');
+    expect(request.extra).toEqual({ koInfo: { sign: 1, vertex: [2, 1] }, tag: 1 });
+  });
+
+  test('a rectangular game is analysed on a square board sized by height', () => {
+    // A row shorter than the row count panics the native engine.
+    const gameInfo = { boardSize: 9, boardHeight: 13 };
+    const tree = treeOf('(;SZ[9:13];B[am])');
+    const request = buildAnalysisRequest({
+      gameTree: tree,
+      currentNodeId: tree.root.children[0].id,
+      gameInfo,
+    });
+
+    expect(analysisBoardSize(gameInfo)).toBe(13);
+    expect(request.signMap).toHaveLength(13);
+    expect(request.signMap.every(row => row.length === 13)).toBe(true);
+    expect(request.signMap[12][0]).toBe(1);
+  });
+
+  test('with no tree, an empty board of the game size', () => {
+    const request = buildAnalysisRequest({
+      gameTree: null,
+      currentNodeId: null,
+      gameInfo: { boardSize: 13 },
+    });
+    expect(request.signMap).toEqual(GoBoard.fromDimensions(13).signMap);
+    expect(request.history).toEqual([]);
+    expect(request.nextToPlay).toBe('B');
+    expect(reconstructBoard(null, null, 9, 13).signMap).toHaveLength(13);
   });
 });

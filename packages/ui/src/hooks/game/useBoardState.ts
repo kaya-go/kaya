@@ -28,9 +28,13 @@ export function useBoardState({
   // CRITICAL: Board reconstruction is the most expensive operation
   // But it's cached aggressively in reconstructBoard() so should be fast
   const currentBoard = useMemo(() => {
-    const newBoard = gameTree
-      ? reconstructBoard(gameTree, currentNodeId, gameInfo.boardSize, gameInfo.boardHeight)
-      : GoBoard.fromDimensions(19);
+    // Null tree/node → empty board at gameInfo size (reconstructBoard handles it).
+    const newBoard = reconstructBoard(
+      gameTree,
+      currentNodeId,
+      gameInfo.boardSize,
+      gameInfo.boardHeight
+    );
 
     // Reference stability: If content is identical, return the same object
     // This prevents downstream re-renders when navigating back to a visited position

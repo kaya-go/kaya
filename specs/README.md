@@ -68,3 +68,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-03 | [ort 2.0.0-rc.15: CoreML 3x faster, and four traps](2026-11-03-ort-rc15-migration.md)                       | shipped    |
 | 2026-11-04 | [A failed session swap reruns the backend chain](2026-11-04-engine-lost-reruns-chain.md)                    | shipped    |
 | 2026-11-05 | [One position cache, valid for one tree](2026-11-05-position-cache-tree-identity.md)                        | shipped    |
+| 2026-11-06 | [Suggest move sends the whole position, and plays it only there](2026-11-06-suggest-move-position.md)       | shipped    |

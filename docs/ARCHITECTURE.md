@@ -308,6 +308,13 @@ a code path that builds a board from `GameInfo`, pass `boardHeight` through;
 if you add one that feeds a model, a square board is a precondition to check,
 not an assumption to inherit.
 
+Today analysis runs on a square board sized by height, which `analysisBoardSize`
+in `gameCache.ts` decides and `buildAnalysisRequest` applies. A row shorter
+than the row count panics the native engine with its lock held. Decode the
+engine's GTP moves with the same size, and expect points past the real edge
+of the board: Suggest move plays the best ranked move that is on it
+(`bestMoveOnBoard`).
+
 ### 10. `gameControl` events have exactly one owner
 
 `gamecontroller.js` exposes a single-slot event API — `gameControl.on('connect', fn)`
