@@ -1,8 +1,7 @@
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { GoBoard } from '@kaya/goboard';
-import { DEFAULT_KOMI } from '@kaya/ai-engine';
+import { DEFAULT_KOMI, type AnalysisRequest } from '@kaya/ai-engine';
 import { createInitialAnalysisState, updateAnalysisState, type AnalysisState } from './aiAnalysis';
-import type { AnalysisRequest } from '@kaya/ai-engine';
 import type { GameInfo, SGFProperty } from '../types/game';
 
 /**
@@ -221,42 +220,52 @@ export function mapAnalysisPath<T>(
   return results;
 }
 
+/**
+ * Side of the square board analysis runs on, which is also the size to decode
+ * the engine's GTP moves with. Engines size a board by its row count, and a row
+ * shorter than that panics the native engine with its lock held, so analysis
+ * keeps the board square and sized by height, as live analysis does.
+ */
+export function analysisBoardSize(gameInfo: Pick<GameInfo, 'boardSize' | 'boardHeight'>): number {
+  return gameInfo.boardHeight ?? gameInfo.boardSize;
+}
+
+/** The request fields a caller may set. The position always comes from the tree. */
+export type AnalysisRequestOverrides = Partial<
+  Pick<AnalysisRequest, 'nextToPlay' | 'numVisits' | 'priority' | 'extra'>
+>;
+
 export type BuildAnalysisRequestParams = {
   gameTree: GameTree<SGFProperty> | null;
   currentNodeId: number | string | null;
   gameInfo: GameInfo;
-  overrides?: Partial<AnalysisRequest>;
+  overrides?: AnalysisRequestOverrides;
 };
 
 /**
- * Build a queue/engine AnalysisRequest from the tree position.
- * gameTree + currentNodeId are the position keys; reconstruct yields
- * signMap, history, nextToPlay, and ko together.
+ * Build an engine request for the position at a node: board, history, side to
+ * play and ko, all from one reconstruction. The board is square, see
+ * analysisBoardSize.
  */
 export function buildAnalysisRequest({
   gameTree,
   currentNodeId,
   gameInfo,
-  overrides,
+  overrides = {},
 }: BuildAnalysisRequestParams): AnalysisRequest {
-  const { boardSize, boardHeight, komi } = gameInfo;
-  const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize, boardHeight);
-  const { nextToPlay, history, board } = state;
-  const {
-    extra: overrideExtra,
-    numVisits,
-    priority,
-    nextToPlay: nextToPlayOverride,
-  } = overrides ?? {};
+  const { board, history, nextToPlay } = reconstructAnalysisState(
+    gameTree,
+    currentNodeId,
+    analysisBoardSize(gameInfo)
+  );
   return {
     signMap: board.signMap,
-    // Seat override (e.g. UI currentPlayer) wins over tree-derived nextToPlay.
-    nextToPlay: nextToPlayOverride ?? nextToPlay,
-    // Prefer shared DEFAULT_KOMI (#192) over a hardcoded 7.5.
-    komi: komi ?? DEFAULT_KOMI,
+    // A seat override (the UI's current player) wins over the tree's side to play.
+    nextToPlay: overrides.nextToPlay ?? nextToPlay,
+    komi: gameInfo.komi ?? DEFAULT_KOMI,
     history,
-    numVisits: numVisits ?? 1,
-    priority: priority ?? 'live',
-    extra: board._koInfo ? { koInfo: board._koInfo, ...overrideExtra } : overrideExtra,
+    numVisits: overrides.numVisits ?? 1,
+    priority: overrides.priority ?? 'live',
+    extra: { koInfo: board._koInfo, ...overrides.extra },
   };
 }

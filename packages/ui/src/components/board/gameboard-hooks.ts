@@ -17,12 +17,13 @@ import {
   useGameTreeAI,
   useGameTreeEdit,
   useGameTreeActions,
+  useGameTreeGetter,
 } from '../../contexts/selectors';
 import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
-import { parseGTPCoordinate } from '../../utils/gtpUtils';
-import { buildAnalysisRequest } from '../../utils/gameCache';
+import { bestMoveOnBoard } from '../../utils/gtpUtils';
+import { analysisBoardSize, buildAnalysisRequest } from '../../utils/gameCache';
 import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
 
@@ -114,18 +115,17 @@ export function useGameBoardState() {
 
 export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   const { t } = useTranslation();
-  const { isModelLoaded, aiSettings, gameTree, currentNodeId } = useGameTreeSelector(
+  const { isModelLoaded, aiSettings } = useGameTreeSelector(
     useCallback(
       (ctx: GameTreeContextValue) => ({
         isModelLoaded: ctx.isModelLoaded,
         aiSettings: ctx.aiSettings,
-        gameTree: ctx.gameTree,
-        currentNodeId: ctx.currentNodeId,
       }),
       []
     )
   );
-  const { currentNode, gameInfo } = useGameTreeBoard();
+  // The position only matters when a move is asked for: read it then, unsubscribed.
+  const getGameTree = useGameTreeGetter();
   const { playMove } = useGameTreeActions();
   const { engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
   const { showToast } = useToast();
@@ -143,38 +143,30 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   useEffect(() => {
     analysisResultRef.current = analysisResult;
   }, [analysisResult]);
-  const currentNodeRef = useRef(currentNode);
-  useEffect(() => {
-    currentNodeRef.current = currentNode;
-  }, [currentNode]);
 
   const executeGenerateMove = useCallback(
     async (currentPlayer: Sign) => {
-      if (!aiEngine || !isModelLoaded || !gameTree || currentNodeId == null) return;
+      if (!aiEngine || !isModelLoaded) return;
+      const { gameTree, currentNodeId, currentNode: nodeBefore, gameInfo } = getGameTree();
 
       setIsGeneratingMove(true);
       setPendingSuggestMove(false);
       try {
-        let moveStr: string;
-
-        // Read through the ref: the render-scope `currentNode` is a constant for
-        // this closure, so comparing it after the await could never detect that
-        // the user navigated away while the analysis was still running.
-        const nodeBefore = currentNodeRef.current;
+        // playMove plays on whatever node is current when it runs, and both awaits
+        // below can outlast a navigation. Check after each one that the user is
+        // still on the position the move is for.
+        const movedAway = () => getGameTree().currentNode !== nodeBefore;
 
         if (isAnalyzingRef.current) {
           await waitForCurrentAnalysis();
+          if (movedAway()) return;
         }
 
-        if (currentNodeRef.current !== nodeBefore) {
-          return;
-        }
-
+        let moves: string[];
         const cachedResult = analysisResultRef.current;
         if (cachedResult?.moveSuggestions && cachedResult.moveSuggestions.length > 0) {
-          moveStr = cachedResult.moveSuggestions[0].move;
+          moves = cachedResult.moveSuggestions.map(s => s.move);
         } else {
-          // Position from gameTree + currentNodeId — not the UI currentBoard.
           const request = buildAnalysisRequest({
             gameTree,
             currentNodeId,
@@ -184,23 +176,32 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
               nextToPlay: currentPlayer ? (currentPlayer === 1 ? 'B' : 'W') : undefined,
             },
           });
-          moveStr = await aiEngine.generateMove(request.signMap, {
+          // analyze, not generateMove: on a rectangular board the top move can be
+          // off the real board, and the ranking holds the best one that is not.
+          const result = await aiEngine.analyze(request.signMap, {
             komi: request.komi,
             nextToPlay: request.nextToPlay,
             history: request.history,
             numVisits: request.numVisits,
-            ...(request.extra ?? {}),
+            ...request.extra,
           });
+          if (movedAway()) return;
+          moves = result.moveSuggestions.map(s => s.move);
         }
 
-        const vertex = parseGTPCoordinate(moveStr, gameInfo.boardSize);
-
+        const { boardSize: width, boardHeight: height = width } = gameInfo;
+        const vertex = bestMoveOnBoard(
+          moves.length > 0 ? moves : ['PASS'],
+          analysisBoardSize(gameInfo),
+          width,
+          height
+        );
         if (vertex === null) {
-          playMove([-1, -1], currentPlayer);
-        } else {
-          playMove(vertex, currentPlayer);
+          showToast(t('gameboardActions.failedToGenerateMove'), 'error');
+          return;
         }
 
+        playMove(vertex, currentPlayer);
         playSound('move');
       } catch (error) {
         console.error('Failed to generate AI move:', error);
@@ -212,9 +213,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
     [
       aiEngine,
       isModelLoaded,
-      currentNodeId,
-      gameTree,
-      gameInfo,
+      getGameTree,
       aiSettings.numVisits,
       waitForCurrentAnalysis,
       playMove,

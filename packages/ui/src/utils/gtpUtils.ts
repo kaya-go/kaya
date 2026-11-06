@@ -96,3 +96,24 @@ export function vertexToGTP(vertex: Vertex | null, boardSize: number): string {
 
   return `${column}${row}`;
 }
+
+/**
+ * The first of the engine's ranked moves that lands on a `width` × `height`
+ * board, from an analysis run on a square board of side `size`. On a
+ * rectangular board the engine also ranks points past the real edge, so those
+ * are skipped. A pass, or a move that does not parse, is `[-1, -1]`, as
+ * playMove takes it. Null when every move is off the board.
+ */
+export function bestMoveOnBoard(
+  moves: string[],
+  size: number,
+  width: number,
+  height: number
+): Vertex | null {
+  for (const move of moves) {
+    const vertex = parseGTPCoordinate(move, size);
+    if (vertex === null) return [-1, -1];
+    if (vertex[0] < width && vertex[1] < height) return vertex;
+  }
+  return null;
+}

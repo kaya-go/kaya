@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { parseGTPCoordinate, vertexToGTP } from '../src/utils/gtpUtils';
+import { bestMoveOnBoard, parseGTPCoordinate, vertexToGTP } from '../src/utils/gtpUtils';
 
 describe('GTP Utils', () => {
   describe('parseGTPCoordinate', () => {
@@ -191,6 +191,26 @@ describe('GTP Utils', () => {
         expect(vertex).toBeNull();
         expect(vertexToGTP(vertex, 19)).toBe('PASS');
       });
+    });
+  });
+
+  describe('bestMoveOnBoard', () => {
+    test('takes the top move on a square board', () => {
+      expect(bestMoveOnBoard(['D4', 'Q16'], 19, 19, 19)).toEqual([3, 15]);
+    });
+
+    test('a pass, or nothing that parses, is a pass', () => {
+      expect(bestMoveOnBoard(['PASS', 'D4'], 19, 19, 19)).toEqual([-1, -1]);
+      expect(bestMoveOnBoard(['??'], 19, 19, 19)).toEqual([-1, -1]);
+    });
+
+    test('on a 9:13 board, skips the points past the right edge', () => {
+      // Analysed as 13x13: L7 is column 10, off a 9-wide board; E7 is on it.
+      expect(bestMoveOnBoard(['L7', 'E7'], 13, 9, 13)).toEqual([4, 6]);
+    });
+
+    test('null when every move is off the board', () => {
+      expect(bestMoveOnBoard(['L7', 'N1'], 13, 9, 13)).toBeNull();
     });
   });
 });
