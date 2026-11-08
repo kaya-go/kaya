@@ -132,6 +132,7 @@ export function useGameTreeBoard() {
     useCallback(
       (ctx: GameTreeContextValue) => ({
         currentBoard: ctx.currentBoard,
+        currentPlayer: ctx.currentPlayer,
         currentNode: ctx.currentNode,
         nextMoveNode: ctx.nextMoveNode,
         markerMap: ctx.markerMap,

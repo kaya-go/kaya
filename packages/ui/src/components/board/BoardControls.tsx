@@ -10,13 +10,9 @@
  * - Current player indicator
  */
 
-import React, { useCallback, memo, useState, useMemo } from 'react';
+import React, { useCallback, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  useGameTreeNavigation,
-  useGameTreeBoard,
-  useGameTreeActions,
-} from '../../contexts/selectors';
+import { useGameTreeBoard, useGameTreeActions } from '../../contexts/selectors';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { BoardControlsNavigation } from './BoardControlsNavigation';
 import './BoardControls.css';
@@ -24,33 +20,9 @@ import './BoardControls.css';
 export const BoardControls: React.FC = memo(() => {
   const { t } = useTranslation();
 
-  const { moveNumber } = useGameTreeNavigation();
-  const { currentBoard, currentNode, gameInfo } = useGameTreeBoard();
+  const { currentBoard, currentPlayer, gameInfo } = useGameTreeBoard();
   const { playMove, resign } = useGameTreeActions();
   const [showResignConfirm, setShowResignConfirm] = useState(false);
-
-  // Determine whose turn it is
-  // Check PL property first, then handicap, then alternate based on move number
-  const currentPlayer = useMemo((): 1 | -1 => {
-    // If current node has a move, next player is the opposite
-    if (currentNode?.data.B) return -1; // Black just played, White's turn
-    if (currentNode?.data.W) return 1; // White just played, Black's turn
-
-    // No move on current node (root or setup position)
-    // Check PL (Player to play) property
-    if (currentNode?.data.PL?.[0]) {
-      return currentNode.data.PL[0] === 'W' ? -1 : 1;
-    }
-
-    // Check handicap - if handicap >= 2, White plays first
-    if (gameInfo.handicap && gameInfo.handicap >= 2) {
-      // In handicap game, White plays first (at move 0)
-      return moveNumber % 2 === 0 ? -1 : 1;
-    }
-
-    // Default: Black plays first
-    return moveNumber % 2 === 0 ? 1 : -1;
-  }, [currentNode, gameInfo.handicap, moveNumber]);
 
   // Get captures from current board
   const capturesBlack = currentBoard.getCaptures(1);

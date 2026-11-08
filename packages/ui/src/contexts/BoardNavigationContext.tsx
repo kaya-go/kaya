@@ -17,7 +17,6 @@ import React, {
   useRef,
   ReactNode,
 } from 'react';
-import type { Sign } from '@kaya/goboard';
 import { useGameTreeSelector } from './GameTreeContext';
 import type { GameTreeContextValue } from '../types/game';
 import { useGameController, type GameControllerState } from '../useGameController';
@@ -62,6 +61,7 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
     canGoBack,
     canGoForward,
     currentBoard,
+    currentPlayer,
     moveNumber,
     editMode,
     setEditMode,
@@ -79,6 +79,7 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
         canGoBack: ctx.canGoBack,
         canGoForward: ctx.canGoForward,
         currentBoard: ctx.currentBoard,
+        currentPlayer: ctx.currentPlayer,
         moveNumber: ctx.moveNumber,
         editMode: ctx.editMode,
         setEditMode: ctx.setEditMode,
@@ -159,12 +160,10 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
     if (actionHandler) {
       actionHandler();
     } else {
-      // Fallback: determine whose turn it is
-      const currentPlayer = moveNumber % 2 === 0 ? 1 : -1;
-      // Place stone at cursor position (no sound)
-      playMove([cursorX, cursorY], currentPlayer as Sign);
+      // Fallback: same side-to-play as board / AI (position-cache replay).
+      playMove([cursorX, cursorY], currentPlayer);
     }
-  }, [navigationMode, cursorX, cursorY, playMove, moveNumber, actionHandler]);
+  }, [navigationMode, cursorX, cursorY, playMove, currentPlayer, actionHandler]);
 
   // Keyboard navigation
   useEffect(() => {

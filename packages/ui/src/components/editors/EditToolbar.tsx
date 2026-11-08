@@ -35,7 +35,7 @@ import './EditToolbar.css';
 
 export const EditToolbar: React.FC = () => {
   const { t } = useTranslation();
-  const { currentNode, gameInfo, moveNumber } = useGameTreeBoard();
+  const { currentNode, currentPlayer } = useGameTreeBoard();
   const { playMove } = useGameTreeActions();
   const {
     editTool,
@@ -58,29 +58,6 @@ export const EditToolbar: React.FC = () => {
     canUndo,
     canRedo,
   } = useGameTreeEdit();
-
-  // Get current player from game tree
-  // Check PL property first, then handicap, then alternate based on move number
-  const currentPlayer = React.useMemo(() => {
-    // If current node has a move, next player is the opposite
-    if (currentNode?.data.B) return -1; // Black just played, White's turn
-    if (currentNode?.data.W) return 1; // White just played, Black's turn
-
-    // No move on current node (root or setup position)
-    // Check PL (Player to play) property
-    if (currentNode?.data.PL?.[0]) {
-      return currentNode.data.PL[0] === 'W' ? -1 : 1;
-    }
-
-    // Check handicap - if handicap >= 2, White plays first
-    if (gameInfo.handicap && gameInfo.handicap >= 2) {
-      // In handicap game, White plays first (at move 0)
-      return moveNumber % 2 === 0 ? -1 : 1;
-    }
-
-    // Default: Black plays first
-    return moveNumber % 2 === 0 ? 1 : -1;
-  }, [currentNode, gameInfo.handicap, moveNumber]);
 
   // The root holds the game-info properties (SZ, KM, …), which do not belong
   // on a pasted child node, and it cannot be deleted, so it cannot be cut.
