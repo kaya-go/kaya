@@ -115,11 +115,12 @@ export function useGameBoardState() {
 
 export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   const { t } = useTranslation();
-  const { isModelLoaded, aiSettings } = useGameTreeSelector(
+  const { isModelLoaded, aiSettings, updateAnalysisCacheSize } = useGameTreeSelector(
     useCallback(
       (ctx: GameTreeContextValue) => ({
         isModelLoaded: ctx.isModelLoaded,
         aiSettings: ctx.aiSettings,
+        updateAnalysisCacheSize: ctx.updateAnalysisCacheSize,
       }),
       []
     )
@@ -127,7 +128,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
   // The position only matters when a move is asked for: read it then, unsubscribed.
   const getGameTree = useGameTreeGetter();
   const { playMove } = useGameTreeActions();
-  const { engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
+  const { queue, engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
   const { showToast } = useToast();
   const { isAnalyzing, analysisResult, waitForCurrentAnalysis } = useAIAnalysis();
 
@@ -146,7 +147,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
 
   const executeGenerateMove = useCallback(
     async (currentPlayer: Sign) => {
-      if (!aiEngine || !isModelLoaded) return;
+      if (!isModelLoaded) return;
       const { gameTree, currentNodeId, currentNode: nodeBefore, gameInfo } = getGameTree();
 
       setIsGeneratingMove(true);
@@ -167,6 +168,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
         if (cachedResult?.moveSuggestions && cachedResult.moveSuggestions.length > 0) {
           moves = cachedResult.moveSuggestions.map(s => s.move);
         } else {
+          if (!queue) return;
           const request = buildAnalysisRequest({
             gameTree,
             currentNodeId,
@@ -176,15 +178,12 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
               nextToPlay: currentPlayer ? (currentPlayer === 1 ? 'B' : 'W') : undefined,
             },
           });
-          // analyze, not generateMove: on a rectangular board the top move can be
-          // off the real board, and the ranking holds the best one that is not.
-          const result = await aiEngine.analyze(request.signMap, {
-            komi: request.komi,
-            nextToPlay: request.nextToPlay,
-            history: request.history,
-            numVisits: request.numVisits,
-            ...request.extra,
-          });
+          // Queue submit (not engine.analyze): writes shared analysisCache so
+          // Graph / SGF / later live+batch reuse the same raw result.
+          const handle = queue.submit(request);
+          const result = await handle.result;
+          // id === '' is a cache hit; bump size only when we actually ran.
+          if (handle.id !== '') updateAnalysisCacheSize();
           if (movedAway()) return;
           moves = result.moveSuggestions.map(s => s.move);
         }
@@ -211,10 +210,11 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
       }
     },
     [
-      aiEngine,
+      queue,
       isModelLoaded,
       getGameTree,
       aiSettings.numVisits,
+      updateAnalysisCacheSize,
       waitForCurrentAnalysis,
       playMove,
       playSound,
