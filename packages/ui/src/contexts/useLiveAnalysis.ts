@@ -17,6 +17,7 @@ import { sgfToVertex } from '@kaya/sgf';
 import { reconstructAnalysisState } from '../utils/gameCache';
 import {
   generateAnalysisCacheKey,
+  isAbortError,
   smoothAnalysisResult,
   type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
@@ -40,13 +41,6 @@ interface UseLiveAnalysisParams {
   updateAnalysisCacheSize: () => void;
   setAnalysisResult: (result: AnalysisResult | null) => void;
   selectedQuantization: ModelQuantization | null;
-}
-
-function isAbort(err: unknown): boolean {
-  if (err instanceof Error) {
-    return err.name === 'AbortError' || /aborted|cancelled/i.test(err.message);
-  }
-  return false;
 }
 
 export function useLiveAnalysis({
@@ -220,7 +214,7 @@ export function useLiveAnalysis({
           prevResult = await handle.result;
           if (!wasCacheHit) inferences++;
         } catch (err) {
-          if (isAbort(err)) return;
+          if (isAbortError(err)) return;
           throw err;
         }
       }
@@ -250,7 +244,7 @@ export function useLiveAnalysis({
         currentResult = await currentHandle.result;
         if (!wasCurrentCacheHit) inferences++;
       } catch (err) {
-        if (isAbort(err)) return;
+        if (isAbortError(err)) return;
         throw err;
       }
 
@@ -278,7 +272,7 @@ export function useLiveAnalysis({
         runtimePrecision: runtimeInfo.inputDataType,
       });
     } catch (err) {
-      if (isAbort(err)) return;
+      if (isAbortError(err)) return;
       if (isStale()) return;
       const message = err instanceof Error ? err.message : String(err);
       setError(`Analysis failed: ${message}`);
