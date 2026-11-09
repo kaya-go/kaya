@@ -26,6 +26,12 @@ export interface MoveSuggestion {
   winRate?: number;
   /** Score lead for this move (positive = Black leads) — available after MCTS */
   scoreLead?: number;
+  /**
+   * Search visits through this move. 0 means the search never tried it, so its
+   * winRate and scoreLead are the root position's, not its own. Absent when no
+   * search ran (policy only) or not known (analysis loaded from an SGF).
+   */
+  visits?: number;
 }
 
 /**

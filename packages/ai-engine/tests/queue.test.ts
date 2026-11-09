@@ -149,6 +149,102 @@ describe('AnalysisQueue preemption', () => {
   });
 });
 
+/**
+ * Lists two moves, as a search does: D4 always visited, A1 visited only when
+ * forced (and when the engine can play it), else 0 visits with the root's values.
+ */
+class SearchEngine {
+  runs: Array<{ numVisits: number; includeMove?: string }> = [];
+  constructor(private canPlayForcedMove = true) {}
+
+  async analyze(
+    _signMap: SignMap,
+    options: { numVisits: number; includeMove?: string }
+  ): Promise<AnalysisResult> {
+    this.runs.push({ numVisits: options.numVisits, includeMove: options.includeMove });
+    const forced = options.includeMove === 'A1' && options.numVisits > 1 && this.canPlayForcedMove;
+    return {
+      moveSuggestions: [
+        { move: 'D4', probability: 0.9, winRate: 0.6, scoreLead: 2, visits: options.numVisits },
+        { move: 'A1', probability: 0.1, winRate: 0.6, scoreLead: 2, visits: forced ? 3 : 0 },
+      ],
+      winRate: 0.6,
+      scoreLead: 2,
+      currentTurn: 'W',
+      visits: options.numVisits,
+    };
+  }
+}
+
+function search(numVisits: number, includeMove?: string): AnalysisRequest {
+  return { ...request(0, 'live'), numVisits, includeMove };
+}
+
+/** Submits and waits; returns whether the cache answered (no engine run). */
+async function ask(queue: AnalysisQueue, req: AnalysisRequest): Promise<boolean> {
+  const handle = queue.submit(req);
+  await handle.result;
+  return handle.id === '';
+}
+
+describe('AnalysisQueue cache and the forced move', () => {
+  test('a result that never visited the forced move is redone at its own depth', async () => {
+    const engine = new SearchEngine();
+    const queue = new AnalysisQueue(engine as unknown as Engine);
+
+    // Analysed before A1 was played: A1 has 0 visits.
+    expect(await ask(queue, search(32))).toBe(false);
+    // Back on the position, asking to force A1, at a lower setting.
+    expect(await ask(queue, search(16, 'A1'))).toBe(false);
+    expect(engine.runs[1]).toEqual({ numVisits: 32, includeMove: 'A1' });
+
+    // The replacement answers both requests: nothing more runs.
+    expect(await ask(queue, search(16, 'A1'))).toBe(true);
+    expect(await ask(queue, search(32))).toBe(true);
+    expect(engine.runs).toHaveLength(2);
+  });
+
+  test('answers when the forced move was visited, cannot be forced, or is unknown', async () => {
+    const engine = new SearchEngine();
+    const queue = new AnalysisQueue(engine as unknown as Engine);
+
+    await ask(queue, search(32));
+    expect(await ask(queue, search(32, 'D4'))).toBe(true); // visited
+    expect(await ask(queue, search(32, 'Q16'))).toBe(true); // not listed: illegal there
+    expect(engine.runs).toHaveLength(1);
+
+    // At 1 visit there is no search, so nothing can be forced.
+    const policy = new AnalysisQueue(new SearchEngine() as unknown as Engine);
+    await ask(policy, search(1));
+    expect(await ask(policy, search(1, 'A1'))).toBe(true);
+
+    // Loaded from an SGF: per-move visits are not stored.
+    const { signMap, nextToPlay, komi, history } = search(32);
+    const loaded: AnalysisResult = {
+      moveSuggestions: [{ move: 'A1', probability: 0.1, winRate: 0.4 }],
+      winRate: 0.6,
+      scoreLead: 2,
+      currentTurn: 'W',
+      visits: 32,
+    };
+    const key = generateAnalysisCacheKey(signMap, nextToPlay, komi, history);
+    const fromSgf = new AnalysisQueue(new SearchEngine() as unknown as Engine, {
+      cacheRef: { current: new Map([[key, loaded]]) },
+    });
+    expect(await ask(fromSgf, search(32, 'A1'))).toBe(true);
+  });
+
+  test('a forced move the engine cannot visit runs once, not on every lookup', async () => {
+    const engine = new SearchEngine(false);
+    const queue = new AnalysisQueue(engine as unknown as Engine);
+
+    await ask(queue, search(32));
+    expect(await ask(queue, search(32, 'A1'))).toBe(false);
+    expect(await ask(queue, search(32, 'A1'))).toBe(true);
+    expect(engine.runs).toHaveLength(2);
+  });
+});
+
 describe('generateAnalysisCacheKey', () => {
   test('stable format for empty board', () => {
     const signMap: SignMap = Array.from({ length: 9 }, () => Array(9).fill(0));

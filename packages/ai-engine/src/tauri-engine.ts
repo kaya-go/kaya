@@ -283,6 +283,7 @@ export class TauriEngine extends Engine {
           probability: number;
           winRate?: number;
           scoreLead?: number;
+          visits?: number;
         }[];
         winRate: number;
         scoreLead: number;

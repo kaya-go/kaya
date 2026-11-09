@@ -12,8 +12,11 @@
  *   - A new 'live' request also replaces any pending 'live' (only the
  *     latest navigation target matters).
  *   - Explicit cancel(id) / cancelTag(tag) rejects the submitter's promise.
- *   - Cache is monotonic on visit count: a cached result with N visits
- *     satisfies any request asking for ≤ N visits.
+ *   - A cached result answers a request when it searched at least as deep
+ *     and, for a request that forces a move, it explored that move (see
+ *     `answers`). Visit count is the only depth: the key omits it.
+ *   - The cache never loses depth: a result that misses only for the
+ *     unexplored move is redone at its own depth, then replaced.
  *   - Caller may pass a `cacheKey` (computed by the same generator the
  *     SGF persistence layer uses); otherwise the queue computes its own.
  *   - Caller may pass a `cacheRef` Map at construction so the cache is
@@ -123,6 +126,8 @@ export class AnalysisQueue {
   private inFlight: Item | null = null;
   private idCounter = 0;
   private disposed = false;
+  /** The forced move each result this queue ran was computed for (see `answers`). */
+  private ranFor = new WeakMap<AnalysisResult, string>();
 
   constructor(engine: Engine, opts: AnalysisQueueOptions = {}) {
     this.engine = engine;
@@ -283,9 +288,9 @@ export class AnalysisQueue {
   }
 
   /**
-   * Read-only cache probe — returns a satisfying result if one is cached
-   * with at least the requested visit count, else null. Does not queue
-   * anything or mutate state (other than touching LRU order).
+   * Read-only cache probe — returns the cached result if it answers the
+   * request (see `answers`), else null. Does not queue anything or mutate
+   * state (other than touching LRU order).
    */
   peek(req: AnalysisRequest): AnalysisResult | null {
     return this.cacheLookup(req);
@@ -359,7 +364,7 @@ export class AnalysisQueue {
         nextToPlay: req.request.nextToPlay,
         komi: req.request.komi,
         history: req.request.history,
-        numVisits: req.request.numVisits,
+        numVisits: this.visitsToRun(req.request),
         includeMove: req.request.includeMove,
         signal: req.controller.signal,
         onProgress: req.request.onProgress,
@@ -461,24 +466,51 @@ export class AnalysisQueue {
     return generateAnalysisCacheKey(req.signMap, req.nextToPlay, req.komi, req.history);
   }
 
+  /**
+   * Whether a cached result can stand in for running `req`. It must have searched
+   * at least as deep. A request that forces a move (`includeMove`, which engines
+   * honour only with search, so above 1 visit) also needs that move explored:
+   * engines list their top policy moves whether the search visited them or not,
+   * and one it never visited (`visits: 0`) carries the root's evaluation, not its
+   * own. Counted as explored: unknown visits (policy-only result, analysis loaded
+   * from an SGF), a move the result does not list (outside the moves the engine
+   * searches, so forcing it adds nothing), and a result already run for this move,
+   * so a move the engine cannot visit does not trigger a run on every lookup.
+   */
+  private answers(entry: AnalysisResult, req: AnalysisRequest): boolean {
+    if ((entry.visits ?? 1) < req.numVisits) return false;
+    const move = req.includeMove;
+    if (!move || req.numVisits <= 1 || this.ranFor.get(entry) === move) return true;
+    return entry.moveSuggestions.find(s => s.move === move)?.visits !== 0;
+  }
+
   private cacheLookup(req: AnalysisRequest): AnalysisResult | null {
     const key = this.cacheKey(req);
     const entry = this.cache.get(key);
-    if (!entry) return null;
-    const cachedVisits = entry.visits ?? 1;
-    if (cachedVisits < req.numVisits) return null;
+    if (!entry || !this.answers(entry, req)) return null;
     // Refresh LRU position.
     this.cache.delete(key);
     this.cache.set(key, entry);
     return entry;
   }
 
+  /**
+   * Visits to run `req` at. When the cached entry missed only because it did not
+   * explore the forced move, redo it at the entry's own depth: the replacement then
+   * loses nothing, and still answers every request the old entry answered.
+   */
+  private visitsToRun(req: AnalysisRequest): number {
+    return Math.max(req.numVisits, this.cache.get(this.cacheKey(req))?.visits ?? 0);
+  }
+
   private cacheStore(req: AnalysisRequest, result: AnalysisResult): void {
     const key = this.cacheKey(req);
     const existing = this.cache.get(key);
-    const existingVisits = existing?.visits ?? 0;
-    const newVisits = result.visits ?? req.numVisits;
-    if (existingVisits > newVisits) return;
+    if (req.includeMove) this.ranFor.set(result, req.includeMove);
+    // Keep a deeper entry only if it answers this request; otherwise the result
+    // that was run because the entry missed would be dropped, and the miss repeat.
+    const deeper = (existing?.visits ?? 0) > (result.visits ?? req.numVisits);
+    if (existing && deeper && this.answers(existing, req)) return;
     this.cache.delete(key);
     this.cache.set(key, result);
     if (this.cache.size > this.cacheSize) {
