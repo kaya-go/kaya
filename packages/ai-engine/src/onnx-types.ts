@@ -31,7 +31,8 @@ export interface MCTSProgress {
   bestMoveVisits: number;
   winRate: number;
   scoreLead: number;
-  topMoves: Array<{ move: string; visits: number; winRate: number; scoreLead: number }>;
+  /** winRate and scoreLead are absent for a move with no visits yet. */
+  topMoves: Array<{ move: string; visits: number; winRate?: number; scoreLead?: number }>;
 }
 
 export interface OnnxEngineConfig extends BaseEngineConfig {

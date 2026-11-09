@@ -32,8 +32,11 @@ pub struct MCTSTopMove {
     #[serde(rename = "move")]
     pub move_str: String,
     pub visits: usize,
-    pub win_rate: f32,
-    pub score_lead: f32,
+    /// None until the search visits the move (see `own_evaluation`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub win_rate: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub score_lead: Option<f32>,
 }
 
 /// MCTS analysis options for the Tauri command.
@@ -69,7 +72,7 @@ pub struct MCTSMoveSuggestion {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub score_lead: Option<f32>,
     /// Search visits through this move. 0 means the search never tried it, so
-    /// win_rate and score_lead are the root's. The analysis cache relies on it.
+    /// win_rate and score_lead are None. The analysis cache relies on it.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub visits: Option<usize>,
 }
@@ -292,6 +295,26 @@ fn expand_node(
 
     node.children = Some(children);
     node.expanded = true;
+}
+
+/// A move's own win rate and score, from the visits through it. A move the
+/// search never visited has none: giving it the root's would pass a guess for
+/// a result.
+fn own_evaluation(node: &MCTSNode) -> (Option<f32>, Option<f32>) {
+    if node.n == 0 {
+        return (None, None);
+    }
+    (
+        Some((node.w / node.n as f64) as f32),
+        Some((node.s / node.n as f64) as f32),
+    )
+}
+
+impl MCTSTopMove {
+    fn of(move_str: &str, node: &MCTSNode) -> Self {
+        let (win_rate, score_lead) = own_evaluation(node);
+        Self { move_str: move_str.to_string(), visits: node.n, win_rate, score_lead }
+    }
 }
 
 /// Filter ko moves from an analysis result and renormalize.
@@ -594,24 +617,14 @@ impl OnnxEngine {
                     let best_child = sorted[0].2;
 
                     let mut top_moves: Vec<MCTSTopMove> = sorted.iter().take(5)
-                        .map(|(_, m, c)| MCTSTopMove {
-                            move_str: m.to_string(),
-                            visits: c.n,
-                            win_rate: if c.n > 0 { (c.w / c.n as f64) as f32 } else { 0.5 },
-                            score_lead: if c.n > 0 { (c.s / c.n as f64) as f32 } else { 0.0 },
-                        })
+                        .map(|(_, m, c)| MCTSTopMove::of(m, c))
                         .collect();
 
                     // Append includeMove if not in top 5
                     if let Some(ref include_move) = options.include_move {
                         if !top_moves.iter().any(|tm| &tm.move_str == include_move) {
                             if let Some((_, m, c)) = sorted.iter().find(|(_, m, _)| *m == include_move.as_str()) {
-                                top_moves.push(MCTSTopMove {
-                                    move_str: m.to_string(),
-                                    visits: c.n,
-                                    win_rate: if c.n > 0 { (c.w / c.n as f64) as f32 } else { 0.5 },
-                                    score_lead: if c.n > 0 { (c.s / c.n as f64) as f32 } else { 0.0 },
-                                });
+                                top_moves.push(MCTSTopMove::of(m, c));
                             }
                         }
                     }
@@ -831,8 +844,6 @@ impl OnnxEngine {
         if let Some(ref children) = root.children {
             if !children.is_empty() {
                 let total_child_visits: usize = children.iter().map(|(_, c)| c.n).sum();
-                let root_win_rate = if root.n > 0 { (root.w / root.n as f64) as f32 } else { 0.5 };
-                let root_score_lead = if root.n > 0 { (root.s / root.n as f64) as f32 } else { 0.0 };
 
                 let mut sorted: Vec<&(String, MCTSNode)> = children.iter().collect();
                 sorted.sort_by(|a, b| {
@@ -849,16 +860,7 @@ impl OnnxEngine {
                     } else {
                         child.p
                     };
-                    let win_rate = if child.n > 0 {
-                        Some((child.w / child.n as f64) as f32)
-                    } else {
-                        Some(root_win_rate)
-                    };
-                    let score_lead = if child.n > 0 {
-                        Some((child.s / child.n as f64) as f32)
-                    } else {
-                        Some(root_score_lead)
-                    };
+                    let (win_rate, score_lead) = own_evaluation(child);
 
                     move_suggestions.push(MCTSMoveSuggestion {
                         move_str: move_str.clone(),

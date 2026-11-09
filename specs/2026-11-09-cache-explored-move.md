@@ -74,5 +74,15 @@ it at or above the live setting.
 - Forced visits move the played move up the list, which is sorted by visits (Q12
   went from #10 to #3). That was already the case for every game analysed with its
   moves in place.
-- The heatmap still shows the root's values for a listed move with no visits; with
-  `visits` available it can tell them apart.
+
+## Follow-up: an unvisited move has no value
+
+The heatmap's ΔWin% / ΔScore showed the root's values for a listed move with no
+visits, which read as "as good as the position". The fix went to the source
+rather than to each display: both engines now give a win rate and score only to
+a move the search visited (`ownEvaluation` in TS, `own_evaluation` in Rust), in
+the final result and in progress top moves (which had 0.5 / 0, a different
+guess). Every consumer already handled a missing value: the heatmap shows `—`,
+the next-move panel no delta, `KA` writes no `w`/`s`. The one exception, the
+panel's progress path, now goes through the same `delta` helper as its final
+path.

@@ -471,8 +471,7 @@ export class AnalysisQueue {
    * at least as deep. A request that forces a move (`includeMove`, which engines
    * honour only with search, so above 1 visit) also needs that move explored:
    * engines list their top policy moves whether the search visited them or not,
-   * and one it never visited (`visits: 0`) carries the root's evaluation, not its
-   * own. Counted as explored: unknown visits (policy-only result, analysis loaded
+   * and one it never visited (`visits: 0`) has no evaluation of its own. Counted as explored: unknown visits (policy-only result, analysis loaded
    * from an SGF), a move the result does not list (outside the moves the engine
    * searches, so forcing it adds nothing), and a result already run for this move,
    * so a move the engine cannot visit does not trigger a run on every lookup.

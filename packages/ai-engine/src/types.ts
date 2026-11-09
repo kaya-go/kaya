@@ -22,14 +22,14 @@ export interface MoveSuggestion {
   move: string;
   /** Policy network probability (0.0 to 1.0) */
   probability: number;
-  /** Win rate for this move (0.0 to 1.0, from Black's perspective) — available after MCTS */
+  /** Win rate for this move (0.0 to 1.0, from Black's perspective) — only for a visited move */
   winRate?: number;
-  /** Score lead for this move (positive = Black leads) — available after MCTS */
+  /** Score lead for this move (positive = Black leads) — only for a visited move */
   scoreLead?: number;
   /**
-   * Search visits through this move. 0 means the search never tried it, so its
-   * winRate and scoreLead are the root position's, not its own. Absent when no
-   * search ran (policy only) or not known (analysis loaded from an SGF).
+   * Search visits through this move. 0 means the search never tried it, so it has
+   * no winRate or scoreLead. Absent when no search ran (policy only) or not known
+   * (analysis saved by an older version).
    */
   visits?: number;
 }

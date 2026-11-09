@@ -37,6 +37,14 @@ export function filterKoMoves(
   return { ...result, moveSuggestions: filtered };
 }
 
+/**
+ * A move's own win rate and score, from the visits through it. A move the search
+ * never visited has none: giving it the root's would pass a guess for a result.
+ */
+function ownEvaluation(child: MCTSNode): { winRate?: number; scoreLead?: number } {
+  return child.N > 0 ? { winRate: child.W / child.N, scoreLead: child.S / child.N } : {};
+}
+
 /** Expand a node: create children from NN policy, skipping occupied and ko-illegal intersections. */
 export function expandNode(
   node: MCTSNode,
@@ -280,8 +288,7 @@ export async function runMCTS(
         topMoves: progressTopMoves.map(([move, child]) => ({
           move,
           visits: child.N,
-          winRate: child.N > 0 ? child.W / child.N : 0.5,
-          scoreLead: child.N > 0 ? child.S / child.N : 0,
+          ...ownEvaluation(child),
         })),
       });
 
@@ -427,16 +434,12 @@ export async function runMCTS(
       if (a.N !== b.N) return b.N - a.N;
       return b.P - a.P;
     });
-    const rootWinRate = root.N > 0 ? root.W / root.N : 0.5;
-    const rootScoreLead = root.N > 0 ? root.S / root.N : 0;
-
     for (const [move, child] of sorted) {
       moveSuggestions.push({
         move,
         probability: child.N > 0 && totalChildVisits > 0 ? child.N / totalChildVisits : child.P,
-        winRate: child.N > 0 ? child.W / child.N : rootWinRate,
-        scoreLead: child.N > 0 ? child.S / child.N : rootScoreLead,
         visits: child.N,
+        ...ownEvaluation(child),
       });
     }
   }
