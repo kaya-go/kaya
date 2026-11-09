@@ -64,7 +64,15 @@ it at or above the live setting.
 - Cost: going back to a position played with analysis on runs it once more, with
   the move forced, when that move was listed and unvisited. After that the cache
   answers.
-- `KA` in SGF files does not store per-move visits yet, although
-  `docs/AI_ANALYSIS_FORMAT.md` already specifies `v`. Loaded analysis keeps the old
-  behaviour.
-- The heatmap still shows the root's values for a listed move with no visits.
+- SGF `KA` now writes per-move visits (`v`, already in the format), about ten
+  small integers per analysed node. A file written before has none, which counts
+  as explored, so it loads as before.
+- When full-game analysis is set deeper than live (say 200 against 32), going back
+  to a position whose played move was listed and unvisited redoes it at 200 visits.
+  At the defaults (10 against 32) the full-game entry is too shallow to be reused
+  anyway.
+- Forced visits move the played move up the list, which is sorted by visits (Q12
+  went from #10 to #3). That was already the case for every game analysed with its
+  moves in place.
+- The heatmap still shows the root's values for a listed move with no visits; with
+  `visits` available it can tell them apart.
