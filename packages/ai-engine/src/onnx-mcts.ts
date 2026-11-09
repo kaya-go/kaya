@@ -436,6 +436,7 @@ export async function runMCTS(
         probability: child.N > 0 && totalChildVisits > 0 ? child.N / totalChildVisits : child.P,
         winRate: child.N > 0 ? child.W / child.N : rootWinRate,
         scoreLead: child.N > 0 ? child.S / child.N : rootScoreLead,
+        visits: child.N,
       });
     }
   }

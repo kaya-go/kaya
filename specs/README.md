@@ -70,3 +70,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-05 | [One position cache, valid for one tree](2026-11-05-position-cache-tree-identity.md)                        | shipped    |
 | 2026-11-06 | [Suggest move sends the whole position, and plays it only there](2026-11-06-suggest-move-position.md)       | shipped    |
 | 2026-11-08 | [Unify UI currentPlayer with analysis nextToPlay](2026-11-08-unify-current-player-next-to-play.md)          | shipped    |
+| 2026-11-09 | [The cache answers only if it explored the forced move](2026-11-09-cache-explored-move.md)                  | shipped    |

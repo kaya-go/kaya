@@ -68,6 +68,10 @@ pub struct MCTSMoveSuggestion {
     pub win_rate: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub score_lead: Option<f32>,
+    /// Search visits through this move. 0 means the search never tried it, so
+    /// win_rate and score_lead are the root's. The analysis cache relies on it.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub visits: Option<usize>,
 }
 
 /// Extended analysis result from MCTS (includes visits + per-move stats).
@@ -861,6 +865,7 @@ impl OnnxEngine {
                         probability,
                         win_rate,
                         score_lead,
+                        visits: Some(child.n),
                     });
                 }
             }

@@ -93,6 +93,7 @@ export function serializeAnalysis(result: AnalysisResult): string {
       p: Number(move.probability.toFixed(4)),
       ...(move.winRate != null ? { w: Number(move.winRate.toFixed(4)) } : {}),
       ...(move.scoreLead != null ? { s: Number(move.scoreLead.toFixed(2)) } : {}),
+      ...(move.visits != null ? { v: move.visits } : {}),
     })),
   };
 
@@ -120,6 +121,7 @@ export function parseAnalysis(json: string, currentTurn: 'B' | 'W'): AnalysisRes
       probability: m.p,
       ...(m.w != null ? { winRate: m.w } : {}),
       ...(m.s != null ? { scoreLead: m.s } : {}),
+      ...(m.v != null ? { visits: m.v } : {}),
     }));
 
     const result: AnalysisResult = {

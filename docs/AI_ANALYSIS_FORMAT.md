@@ -37,7 +37,7 @@ interface KayaAnalysisData {
     /** Score Lead for this move (Optional) */
     s?: number;
 
-    /** Visits for this move (Optional) */
+    /** Visits for this move (Optional). 0: the search never tried it, so its w/s are the position's */
     v?: number;
   }>;
 
