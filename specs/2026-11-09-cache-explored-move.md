@@ -86,3 +86,8 @@ guess). Every consumer already handled a missing value: the heatmap shows `—`,
 the next-move panel no delta, `KA` writes no `w`/`s`. The one exception, the
 panel's progress path, now goes through the same `delta` helper as its final
 path.
+
+Checked on real WebGPU, same position, ΔScore heatmap with all ten listed moves
+shown: on main the eight unvisited moves read `-0.0`; with this change they read
+`—`, and the two visited ones keep their values. The native real-model test still
+passes with the Option fields.
