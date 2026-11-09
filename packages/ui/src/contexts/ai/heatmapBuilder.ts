@@ -8,7 +8,7 @@ type HeatCell = { strength: number; text: string } | null;
 type HeatMap = HeatCell[][];
 
 interface MCTSProgressLike {
-  topMoves: Array<{ move: string; visits: number; winRate: number; scoreLead: number }>;
+  topMoves: Array<{ move: string; visits: number; winRate?: number; scoreLead?: number }>;
   winRate?: number;
   scoreLead?: number;
 }

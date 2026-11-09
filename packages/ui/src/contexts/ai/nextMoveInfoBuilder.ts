@@ -14,7 +14,12 @@ interface GameTreeLike {
 }
 
 interface MCTSProgressLike {
-  topMoves: Array<{ move: string; winRate: number; scoreLead: number }>;
+  topMoves: Array<{ move: string; winRate?: number; scoreLead?: number }>;
+}
+
+/** played − best, when both were evaluated (a move with no visits has no value). */
+function delta(played?: number, best?: number): number | undefined {
+  return played != null && best != null ? played - best : undefined;
 }
 
 interface AnalysisResultLike {
@@ -74,8 +79,8 @@ export function computeNextMoveInfo(args: {
         rank: idx,
         winRate: played.winRate,
         scoreLead: played.scoreLead,
-        deltaWinRate: played.winRate - best.winRate,
-        deltaScoreLead: played.scoreLead - best.scoreLead,
+        deltaWinRate: delta(played.winRate, best.winRate),
+        deltaScoreLead: delta(played.scoreLead, best.scoreLead),
       };
     }
     // Not in live topMoves — fall through to check analysisResult
@@ -96,14 +101,8 @@ export function computeNextMoveInfo(args: {
         rank: idx,
         winRate: played.winRate,
         scoreLead: played.scoreLead,
-        deltaWinRate:
-          played.winRate != null && best?.winRate != null
-            ? played.winRate - best.winRate
-            : undefined,
-        deltaScoreLead:
-          played.scoreLead != null && best?.scoreLead != null
-            ? played.scoreLead - best.scoreLead
-            : undefined,
+        deltaWinRate: delta(played.winRate, best?.winRate),
+        deltaScoreLead: delta(played.scoreLead, best?.scoreLead),
       };
     }
     return {
