@@ -175,10 +175,11 @@ const move = node.data.B?.[0] ?? node.data.W?.[0];
 
 **Position Cache** (`packages/ui/src/utils/gameCache.ts`): board, history and next player per node, one replay for navigation and analysis
 
-- Rebuild a position with `reconstructBoard`, `reconstructAnalysisState` or `mapAnalysisPath`, never with a hand-written replay loop
+- Rebuild a position with `reconstructBoard`, `reconstructPosition`, `reconstructAnalysisState` or `mapAnalysisPath`, never with a hand-written replay loop
+- UI `currentPlayer` (`useBoardState` → `GameTreeContext`) is the Sign projection of that same `nextToPlay` — do not re-derive side-to-play from `moveNumber` parity
 - Build an engine request for a node with `buildAnalysisRequest`: board, history, side to play and ko together, on the square board `analysisBoardSize` picks
 - Valid for one `GameTree` instance: any other tree clears it, so tree writers have nothing to invalidate
-- `reconstructBoard` returns the cached board by reference, so treat it as read-only and `.clone()` before mutating
+- `reconstructBoard` / `reconstructPosition` return the cached board by reference, so treat it as read-only and `.clone()` before mutating
 
 **Avoid Pattern Matching in Hot Paths**: `findPatternInMove()` is expensive (50-100ms)
 

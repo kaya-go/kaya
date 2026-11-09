@@ -16,6 +16,18 @@ export interface AnalysisState {
   nextToPlay: 'B' | 'W';
 }
 
+/** Map engine/SGF color to goboard player Sign (1 = Black, -1 = White; never empty). */
+export function nextToPlayToSign(nextToPlay: 'B' | 'W'): 1 | -1 {
+  return nextToPlay === 'B' ? 1 : -1;
+}
+
+/** Map goboard Sign to engine/SGF color. */
+export function signToNextToPlay(sign: Sign): 'B' | 'W' | undefined {
+  if (sign === 1) return 'B';
+  if (sign === -1) return 'W';
+  return undefined;
+}
+
 /**
  * Smooth analysis results by averaging with the previous position.
  *
@@ -111,9 +123,11 @@ export function updateAnalysisState(
   let { board, history, nextToPlay } = state;
   const { data } = node;
 
-  // Determine next player based on node properties or default alternation
-  if (data.PL) {
-    nextToPlay = data.PL[0] as 'B' | 'W';
+  // Side to play: PL (only B/W) > last move color > root HA > keep previous.
+  // Empty/malformed PL must not wipe nextToPlay to undefined.
+  const pl = data.PL?.[0];
+  if (pl === 'B' || pl === 'W') {
+    nextToPlay = pl;
   } else if (data.B) {
     nextToPlay = 'W';
   } else if (data.W) {

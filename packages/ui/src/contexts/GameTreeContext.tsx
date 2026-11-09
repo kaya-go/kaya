@@ -114,12 +114,13 @@ export const GameTreeProvider: React.FC<{
   } = useEditMode();
 
   // 3. Board State & Markers (needs editMode for setup stone markers)
-  const { currentBoard, currentNode, nextMoveNode, markerMap, moveNumber } = useBoardState({
-    gameTree,
-    currentNodeId,
-    gameInfo,
-    editMode,
-  });
+  const { currentBoard, currentPlayer, currentNode, nextMoveNode, markerMap, moveNumber } =
+    useBoardState({
+      gameTree,
+      currentNodeId,
+      gameInfo,
+      editMode,
+    });
 
   // 4. Navigation
   const {
@@ -298,6 +299,7 @@ export const GameTreeProvider: React.FC<{
       currentNodeId,
       rootId,
       currentBoard,
+      currentPlayer,
       currentNode,
       nextMoveNode,
       gameInfo,
@@ -454,7 +456,7 @@ export const GameTreeProvider: React.FC<{
     }),
     // prettier-ignore
     [
-      gameTree, currentNodeId, rootId, currentBoard, currentNode, nextMoveNode, gameInfo, markerMap,
+      gameTree, currentNodeId, rootId, currentBoard, currentPlayer, currentNode, nextMoveNode, gameInfo, markerMap,
       customAIModel, isModelLoaded, aiSettings, isAIConfigOpen, configInitialTab, gameSettings, modelLibrary, selectedModelId,
       moveNumber, variations, canGoBack, canGoForward,
       navigate, navigateToMove, navigateForward, navigateBackward, navigateUp, navigateDown,
