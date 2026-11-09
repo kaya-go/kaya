@@ -20,9 +20,11 @@ import {
   mapAnalysisPath,
   reconstructAnalysisState,
   reconstructBoard,
+  reconstructPosition,
 } from '../src/utils/gameCache';
 import {
   createInitialAnalysisState,
+  nextToPlayToSign,
   updateAnalysisState,
   type AnalysisState,
 } from '../src/utils/aiAnalysis';
@@ -131,6 +133,36 @@ describe('position cache', () => {
     const board = reconstructBoard(tree, mainLine(tree)[1].id, 9, 13);
     expect([board.width, board.height]).toEqual([9, 13]);
     expect(board.get([0, 10])).toBe(1);
+  });
+
+  test('reconstructPosition shares the cached board and nextToPlay', () => {
+    const tree = treeOf(GAME);
+    const id = mainLine(tree)[5].id;
+    const { board, nextToPlay } = reconstructPosition(tree, id, 9);
+    expect(board).toBe(reconstructBoard(tree, id, 9));
+    expect(nextToPlay).toBe(reconstructAnalysisState(tree, id, 9).nextToPlay);
+    expect(nextToPlayToSign(nextToPlay)).toBe(nextToPlay === 'B' ? 1 : -1);
+  });
+});
+
+describe('nextToPlay from updateAnalysisState', () => {
+  test('empty PL does not clear nextToPlay', () => {
+    const state = createInitialAnalysisState(9);
+    const node = { id: 1, parentId: null, children: [], data: { PL: [] } } as Node;
+    expect(updateAnalysisState(state, node, 0).nextToPlay).toBe('B');
+  });
+
+  test('PL then a comment-only node keeps the side to play', () => {
+    const root = {
+      id: 0,
+      parentId: null,
+      children: [],
+      data: { SZ: ['9'], PL: ['W'] },
+    } as Node;
+    const note = { id: 1, parentId: 0, children: [], data: { C: ['note'] } } as Node;
+    const afterPl = updateAnalysisState(createInitialAnalysisState(9), root, 0);
+    expect(afterPl.nextToPlay).toBe('W');
+    expect(updateAnalysisState(afterPl, note, 1).nextToPlay).toBe('W');
   });
 });
 

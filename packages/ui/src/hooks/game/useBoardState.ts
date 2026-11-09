@@ -3,7 +3,8 @@ import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { GoBoard } from '@kaya/goboard';
 import { type Marker } from '@kaya/shudan';
 import { extractMarkers, sgfToVertex, type GameInfo } from '@kaya/sgf';
-import { reconstructBoard, getPathToNode } from '../../utils/gameCache';
+import { reconstructPosition, getPathToNode } from '../../utils/gameCache';
+import { nextToPlayToSign } from '../../utils/aiAnalysis';
 import { type SGFProperty } from '../../types/game';
 import { isNodeStep } from './navigation-helpers';
 
@@ -25,25 +26,25 @@ export function useBoardState({
   // This enables downstream memoization to skip re-renders
   const lastBoardRef = useRef<GoBoard | null>(null);
 
-  // CRITICAL: Board reconstruction is the most expensive operation
-  // But it's cached aggressively in reconstructBoard() so should be fast
-  const currentBoard = useMemo(() => {
-    // Null tree/node → empty board at gameInfo size (reconstructBoard handles it).
-    const newBoard = reconstructBoard(
+  // nextToPlay comes from the same replay as AI analysis (single source of truth).
+  const { currentBoard, currentPlayer } = useMemo(() => {
+    // Null tree/node → empty board at gameInfo size (reconstruct handles it).
+    const { board: newBoard, nextToPlay } = reconstructPosition(
       gameTree,
       currentNodeId,
       gameInfo.boardSize,
       gameInfo.boardHeight
     );
+    const player = nextToPlayToSign(nextToPlay);
 
     // Reference stability: If content is identical, return the same object
     // This prevents downstream re-renders when navigating back to a visited position
     if (lastBoardRef.current && lastBoardRef.current.equals(newBoard)) {
-      return lastBoardRef.current;
+      return { currentBoard: lastBoardRef.current, currentPlayer: player };
     }
 
     lastBoardRef.current = newBoard;
-    return newBoard;
+    return { currentBoard: newBoard, currentPlayer: player };
   }, [gameTree, currentNodeId, gameInfo.boardSize, gameInfo.boardHeight]);
 
   const currentNode = useMemo(
@@ -111,6 +112,7 @@ export function useBoardState({
 
   return {
     currentBoard,
+    currentPlayer,
     currentNode,
     markerMap,
     nextMoveNode,

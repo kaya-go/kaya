@@ -32,25 +32,11 @@ import { type SoundType } from '../../services/sounds';
 // =========================
 
 export function useGameBoardState() {
-  const { currentNode, gameInfo, moveNumber } = useGameTreeBoard();
+  // Same side-to-play as AI analysis (position-cache replay), not moveNumber parity.
+  const { currentPlayer } = useGameTreeBoard();
   const { scoringMode } = useGameTreeScore();
   const { editMode, editTool } = useGameTreeEdit();
   const [lastPlacedColor, setLastPlacedColor] = useState<Sign>(-1);
-
-  const currentPlayer: Sign = useMemo(() => {
-    if (currentNode?.data.B) return -1;
-    if (currentNode?.data.W) return 1;
-
-    if (currentNode?.data.PL?.[0]) {
-      return currentNode.data.PL[0] === 'W' ? -1 : 1;
-    }
-
-    if (gameInfo.handicap && gameInfo.handicap >= 2) {
-      return moveNumber % 2 === 0 ? -1 : 1;
-    }
-
-    return moveNumber % 2 === 0 ? 1 : -1;
-  }, [currentNode, gameInfo.handicap, moveNumber]);
 
   const shouldShowGhostStone = useMemo(() => {
     if (scoringMode) return false;

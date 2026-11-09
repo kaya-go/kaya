@@ -155,6 +155,8 @@ export interface GameTreeContextValue {
 
   // Derived state
   currentBoard: GoBoard;
+  /** Side to play at currentNode — from position-cache replay (same as AI nextToPlay). */
+  currentPlayer: 1 | -1;
   currentNode: GameTreeNode<SGFProperty> | null;
   nextMoveNode: GameTreeNode<SGFProperty> | null;
   gameInfo: GameInfo;

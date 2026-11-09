@@ -115,7 +115,7 @@ function putPositionCache(key: string, state: AnalysisState): void {
  *    (matches prior reconstructBoard; cost is amortized by the cache)
  * 5. Intermediate caching - caches positions every 10 moves for faster random access
  */
-function reconstructPosition(
+export function reconstructPosition(
   tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
   boardSize: number,
