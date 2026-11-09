@@ -16,7 +16,7 @@ import type { SignMap } from '@kaya/goboard';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { SGFProperty } from '../types/game';
 import { getPathToNode, mapAnalysisPath } from '../utils/gameCache';
-import { generateAnalysisCacheKey } from '../utils/aiAnalysis';
+import { generateAnalysisCacheKey, isAbortError } from '../utils/aiAnalysis';
 import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
@@ -37,13 +37,6 @@ interface UseFullGameAnalysisParams {
   lookupCachedResult: () => boolean;
   currentNodeIdRef: MutableRefObject<number | string | null | undefined>;
   selectedQuantization: ModelQuantization | null;
-}
-
-function isAbort(err: unknown): boolean {
-  if (err instanceof Error) {
-    return err.name === 'AbortError' || /aborted|cancelled/i.test(err.message);
-  }
-  return false;
 }
 
 export function useFullGameAnalysis({
@@ -196,7 +189,7 @@ export function useFullGameAnalysis({
             }
           }
         } catch (err) {
-          if (isAbort(err)) break;
+          if (isAbortError(err)) break;
           console.error('[BatchAnalysis] Slice failed:', err);
           break;
         }
@@ -250,7 +243,7 @@ export function useFullGameAnalysis({
         runtimePrecision: runtimeInfo.inputDataType,
       });
     } catch (err) {
-      if (!isAbort(err) && !isStale()) {
+      if (!isAbortError(err) && !isStale()) {
         console.error('[BatchAnalysis] Failed:', err);
         setAllAnalyzedMessage('Analysis failed');
       }

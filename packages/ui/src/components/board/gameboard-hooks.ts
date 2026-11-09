@@ -24,6 +24,8 @@ import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { bestMoveOnBoard } from '../../utils/gtpUtils';
 import { analysisBoardSize, buildAnalysisRequest } from '../../utils/gameCache';
+import { isAbortError, signToNextToPlay } from '../../utils/aiAnalysis';
+import type { AnalysisResult } from '@kaya/ai-engine';
 import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
 
@@ -135,15 +137,14 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
     async (currentPlayer: Sign) => {
       if (!isModelLoaded) return;
       const { gameTree, currentNodeId, currentNode: nodeBefore, gameInfo } = getGameTree();
+      // playMove plays on whatever node is current when it runs, and the awaits
+      // below can outlast a navigation. Check after each one that the user is
+      // still on the position the move is for.
+      const movedAway = () => getGameTree().currentNode !== nodeBefore;
 
       setIsGeneratingMove(true);
       setPendingSuggestMove(false);
       try {
-        // playMove plays on whatever node is current when it runs, and both awaits
-        // below can outlast a navigation. Check after each one that the user is
-        // still on the position the move is for.
-        const movedAway = () => getGameTree().currentNode !== nodeBefore;
-
         if (isAnalyzingRef.current) {
           await waitForCurrentAnalysis();
           if (movedAway()) return;
@@ -161,15 +162,31 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
             gameInfo,
             overrides: {
               numVisits: aiSettings.numVisits ?? 1,
-              nextToPlay: currentPlayer ? (currentPlayer === 1 ? 'B' : 'W') : undefined,
+              nextToPlay: signToNextToPlay(currentPlayer),
             },
           });
-          // Queue submit (not engine.analyze): writes shared analysisCache so
-          // Graph / SGF / later live+batch reuse the same raw result.
-          const handle = queue.submit(request);
-          const result = await handle.result;
-          // id === '' is a cache hit; bump size only when we actually ran.
-          if (handle.id !== '') updateAnalysisCacheSize();
+          // Through the queue, not engine.analyze: one inference at a time, and the
+          // result lands in the shared cache that the graph and SGF KA persistence read.
+          const analyze = async () => {
+            const handle = queue.submit(request);
+            const result = await handle.result;
+            // An empty id is a cache hit: the cache only grew if the engine ran.
+            if (handle.id !== '') updateAnalysisCacheSize();
+            return result;
+          };
+          let result: AnalysisResult;
+          try {
+            result = await analyze();
+          } catch (error) {
+            // Suggest rides the live lane, so a live analysis submitted after it
+            // cancels it: analysis switched on, or started in the same commit as a
+            // suggest that waited for the engine. That analysis is of this position,
+            // so wait for it and ask again: the cache answers.
+            if (!isAbortError(error) || movedAway()) throw error;
+            await waitForCurrentAnalysis();
+            if (movedAway()) return;
+            result = await analyze();
+          }
           if (movedAway()) return;
           moves = result.moveSuggestions.map(s => s.move);
         }
@@ -189,6 +206,8 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
         playMove(vertex, currentPlayer);
         playSound('move');
       } catch (error) {
+        // Cancelled because the user left the position: nothing failed.
+        if (isAbortError(error) && movedAway()) return;
         console.error('Failed to generate AI move:', error);
         showToast(t('gameboardActions.failedToGenerateMove'), 'error');
       } finally {

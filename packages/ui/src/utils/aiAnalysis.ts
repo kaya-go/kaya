@@ -28,6 +28,14 @@ export function signToNextToPlay(sign: Sign): 'B' | 'W' | undefined {
   return undefined;
 }
 
+/** A request the analysis queue cancelled or preempted, or an engine run that was aborted. */
+export function isAbortError(err: unknown): boolean {
+  if (err instanceof Error) {
+    return err.name === 'AbortError' || /aborted|cancelled/i.test(err.message);
+  }
+  return false;
+}
+
 /**
  * Smooth analysis results by averaging with the previous position.
  *
