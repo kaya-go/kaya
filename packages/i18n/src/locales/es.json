@@ -550,7 +550,9 @@
     "gameLoadedFromOgs": "¡Partida cargada desde OGS ({{gameId}})!",
     "gameLoadedFromClipboard": "¡Partida cargada desde el portapapeles!",
     "failedToPaste": "Error al pegar: {{error}}",
-    "failedToLoadSgf": "Error al cargar el archivo SGF: {{error}}"
+    "invalidSgfContent": "Formato SGF no válido",
+    "failedToImportToLibrary": "Error al importar a la biblioteca: {{error}}",
+    "failedToImportZip": "Error al importar ZIP: {{error}}"
   },
   "loading": {
     "loading": "Cargando…",

@@ -61,19 +61,61 @@ export function extractSGFMetadata(content: string): SGFMetadata {
   }
 }
 
+/** Stable English identity for invalid SGF; UI localizes when displaying. */
+export const INVALID_SGF_CONTENT = 'Invalid SGF content';
+
 /**
- * Validate SGF content.
+ * Thrown when SGF content fails the library/editor game-tree gate or the
+ * parser. UI uses `instanceof` / {@link isSgfValidationError} rather than
+ * matching message strings.
+ */
+export class SgfValidationError extends Error {
+  override readonly name = 'SgfValidationError';
+
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    // Restore prototype chain when targeting ES5+ bundlers / cross-realm copies.
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export function isSgfValidationError(error: unknown): error is SgfValidationError {
+  return (
+    error instanceof SgfValidationError ||
+    (error instanceof Error && error.name === 'SgfValidationError')
+  );
+}
+
+/**
+ * Validate SGF content, throwing on failure so callers can surface the parse
+ * error (same message users see when opening a file in the editor).
  *
  * The parser is lenient enough to turn arbitrary prose into a node, so parsing
  * alone is not a real check: a truncated or garbled autosave would sail through
  * and overwrite a good game. A game tree has to start with "(;".
  */
-export function isValidSGF(content: string): boolean {
-  if (!/^\s*\(\s*;/.test(content)) return false;
+export function validateSGF(content: string): void {
+  if (!/^\s*\(\s*;/.test(content)) {
+    throw new SgfValidationError(INVALID_SGF_CONTENT);
+  }
 
   try {
     const nodes = parse(content);
-    return nodes && nodes.length > 0;
+    if (!nodes || nodes.length === 0) {
+      throw new SgfValidationError(INVALID_SGF_CONTENT);
+    }
+  } catch (error) {
+    if (isSgfValidationError(error)) throw error;
+    const message = error instanceof Error ? error.message : INVALID_SGF_CONTENT;
+    throw new SgfValidationError(message, { cause: error });
+  }
+}
+
+/** True when {@link validateSGF} would succeed. */
+export function isValidSGF(content: string): boolean {
+  try {
+    validateSGF(content);
+    return true;
   } catch {
     return false;
   }

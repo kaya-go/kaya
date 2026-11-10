@@ -550,7 +550,9 @@
     "gameLoadedFromOgs": "Spiel von OGS geladen ({{gameId}})!",
     "gameLoadedFromClipboard": "Spiel aus Zwischenablage geladen!",
     "failedToPaste": "Einfügen fehlgeschlagen: {{error}}",
-    "failedToLoadSgf": "SGF-Datei laden fehlgeschlagen: {{error}}"
+    "invalidSgfContent": "Ungültiges SGF-Format",
+    "failedToImportToLibrary": "Import in die Bibliothek fehlgeschlagen: {{error}}",
+    "failedToImportZip": "ZIP-Import fehlgeschlagen: {{error}}"
   },
   "loading": {
     "loading": "Wird geladen…",

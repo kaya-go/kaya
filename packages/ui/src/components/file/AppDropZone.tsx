@@ -22,6 +22,8 @@ import type { GameTreeContextValue } from '../../types/game';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
+import { useToast } from '../ui/Toast';
+import { formatSgfLoadError } from '../../utils/sgfAnalysis';
 import { useTauriDragDrop, usePasteHandler } from './useDropZoneEffects';
 import './AppDropZone.css';
 
@@ -46,11 +48,11 @@ const isInsideLibrary = (target: EventTarget | null): boolean => {
 export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
   ({ children, onFileDrop, onNavigateToBoard }, ref) => {
     const { t } = useTranslation();
-    const { loadSGF, loadSGFAsync, setFileName, setCustomAIModel, addSetupPosition, playMove } =
+    const { showToast } = useToast();
+    const { loadSGFAsync, setFileName, setCustomAIModel, addSetupPosition, playMove } =
       useGameTreeSelector(
         useCallback(
           (ctx: GameTreeContextValue) => ({
-            loadSGF: ctx.loadSGF,
             loadSGFAsync: ctx.loadSGFAsync,
             setFileName: ctx.setFileName,
             setCustomAIModel: ctx.setCustomAIModel,
@@ -97,13 +99,15 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
       updateDragState,
       updateLibraryState,
       isOverLibraryRef,
-      loadSGF,
+      loadSGFAsync,
       setFileName,
       setCustomAIModel,
       clearLoadedFile,
       createFile,
       importZip,
       checkUnsavedChanges,
+      showToast,
+      t,
     });
 
     // Paste and keyboard shortcut handling
@@ -138,22 +142,25 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
         const canProceed = await checkUnsavedChanges();
         if (!canProceed) return;
 
-        const reader = new FileReader();
-        reader.onload = e => {
-          const content = e.target?.result as string;
-          if (content) {
-            try {
-              loadSGF(content);
-              setFileName(file.name);
-              clearLoadedFile(); // Clear library loaded indicator
-            } catch (error) {
-              alert(`Failed to load SGF file: ${error}`);
-            }
-          }
-        };
-        reader.readAsText(file);
+        try {
+          const content = await file.text();
+          await loadSGFAsync(content);
+          setFileName(file.name);
+          clearLoadedFile(); // Clear library loaded indicator
+        } catch (error) {
+          showToast(formatSgfLoadError(error, t), 'error');
+        }
       },
-      [onFileDrop, loadSGF, setFileName, setCustomAIModel, clearLoadedFile, checkUnsavedChanges]
+      [
+        onFileDrop,
+        loadSGFAsync,
+        setFileName,
+        setCustomAIModel,
+        clearLoadedFile,
+        checkUnsavedChanges,
+        showToast,
+        t,
+      ]
     );
 
     useImperativeHandle(ref, () => ({ loadFile: handleFileLoad }), [handleFileLoad]);

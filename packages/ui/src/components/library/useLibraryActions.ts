@@ -3,10 +3,13 @@
  */
 
 import { useState, useCallback, useRef, useEffect, type DragEvent, type MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { buildSGF } from '@kaya/board-recognition';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import type { ConfirmDialogState } from './LibraryDialogs';
+import { useToast } from '../ui/Toast';
+import { formatImportResultError, formatLibraryFileImportError } from '../../utils/sgfAnalysis';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 
@@ -17,6 +20,8 @@ export interface ContextMenuState {
 }
 
 export function useLibraryActions() {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const {
     items,
     selectedId,
@@ -51,6 +56,33 @@ export function useLibraryActions() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const newFolderInputInitialized = useRef(false);
+
+  // Shared .sgf / .zip / image import used by drop and the file picker.
+  const importLibraryFiles = useCallback(
+    async (files: File[], parentId: string | null): Promise<'recognition' | void> => {
+      for (const file of files) {
+        const lowerName = file.name.toLowerCase();
+        if (IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
+          setRecognitionFile(file);
+          return 'recognition';
+        }
+        if (lowerName.endsWith('.sgf')) {
+          const content = await file.text();
+          try {
+            await createFile(file.name, content, parentId);
+          } catch (error) {
+            showToast(formatLibraryFileImportError(error, t), 'error');
+          }
+        } else if (lowerName.endsWith('.zip')) {
+          const buffer = await file.arrayBuffer();
+          const result = await importZip(buffer);
+          const message = formatImportResultError(result, t);
+          if (message) showToast(message, 'error');
+        }
+      }
+    },
+    [createFile, importZip, showToast, t]
+  );
 
   // Close the context menu on a pointer press or wheel outside it, or on Escape.
   // pointerdown precedes any drag, so react-arborist's HTML5 DnD (which fires no
@@ -96,25 +128,9 @@ export function useLibraryActions() {
         }
       }
 
-      for (const file of files) {
-        const lowerName = file.name.toLowerCase();
-        if (IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
-          setRecognitionFile(file);
-          return;
-        } else if (lowerName.endsWith('.sgf')) {
-          const content = await file.text();
-          try {
-            await createFile(file.name, content, targetFolderId);
-          } catch {
-            // Ignore invalid files
-          }
-        } else if (lowerName.endsWith('.zip')) {
-          const buffer = await file.arrayBuffer();
-          await importZip(buffer);
-        }
-      }
+      await importLibraryFiles(files, targetFolderId);
     },
-    [createFile, importZip, selectedId, items] // eslint-disable-line react-hooks/exhaustive-deps
+    [importLibraryFiles, selectedId, items]
   );
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -155,28 +171,10 @@ export function useLibraryActions() {
       const files = e.target.files;
       if (!files) return;
 
-      for (const file of Array.from(files)) {
-        const lowerName = file.name.toLowerCase();
-        if (IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
-          setRecognitionFile(file);
-          e.target.value = '';
-          return;
-        } else if (lowerName.endsWith('.sgf')) {
-          const content = await file.text();
-          try {
-            await createFile(file.name, content, null);
-          } catch {
-            // Ignore invalid files
-          }
-        } else if (lowerName.endsWith('.zip')) {
-          const buffer = await file.arrayBuffer();
-          await importZip(buffer);
-        }
-      }
-
+      await importLibraryFiles(Array.from(files), null);
       e.target.value = '';
     },
-    [createFile, importZip] // eslint-disable-line react-hooks/exhaustive-deps
+    [importLibraryFiles]
   );
 
   const handleLibraryRecognitionImport = useCallback(

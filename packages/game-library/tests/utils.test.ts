@@ -12,9 +12,37 @@ import {
   makeUniqueName,
   normalizeImportedSGFName,
   sanitizeFilename,
+  validateSGF,
+  isValidSGF,
+  INVALID_SGF_CONTENT,
+  SgfValidationError,
+  isSgfValidationError,
 } from '../src/utils';
 
 const items = (...names: string[]) => names.map((name, i) => ({ name, id: `id-${i}` }));
+
+describe('validateSGF', () => {
+  test('accepts a minimal game tree', () => {
+    expect(() => validateSGF('(;FF[4]SZ[19])')).not.toThrow();
+    expect(isValidSGF('(;FF[4]SZ[19])')).toBe(true);
+  });
+
+  test('rejects prose that is not a game tree', () => {
+    expect(() => validateSGF('hello')).toThrow(SgfValidationError);
+    expect(() => validateSGF('hello')).toThrow(INVALID_SGF_CONTENT);
+    expect(isValidSGF('hello')).toBe(false);
+  });
+
+  test('surfaces the parser error for malformed trees', () => {
+    expect(() => validateSGF('(;B[aa]])')).toThrow(SgfValidationError);
+    expect(() => validateSGF('(;B[aa]])')).toThrow(/Unexpected token/);
+    try {
+      validateSGF('(;B[aa]])');
+    } catch (error) {
+      expect(isSgfValidationError(error)).toBe(true);
+    }
+  });
+});
 
 describe('ensureSGFExtension', () => {
   test('leaves an existing .sgf name alone, whatever its case', () => {

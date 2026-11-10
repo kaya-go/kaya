@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
+import { INVALID_SGF_CONTENT, SgfValidationError } from '@kaya/game-library';
 import {
   parse as parseSGF,
   stringify as stringifySGF,
@@ -129,12 +130,23 @@ export function useGameTreeState() {
       // Small delay to allow UI to update
       setTimeout(() => {
         try {
-          const parsedSGF = parseSGF(sgfContent, {
-            onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
-          });
+          // Same gate as library import: prose without "(;" is not a game tree.
+          if (!/^\s*\(\s*;/.test(sgfContent)) {
+            throw new SgfValidationError(INVALID_SGF_CONTENT);
+          }
+
+          let parsedSGF;
+          try {
+            parsedSGF = parseSGF(sgfContent, {
+              onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
+            });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : INVALID_SGF_CONTENT;
+            throw new SgfValidationError(message, { cause: error });
+          }
 
           if (!parsedSGF || parsedSGF.length === 0) {
-            throw new Error('Invalid SGF content');
+            throw new SgfValidationError(INVALID_SGF_CONTENT);
           }
 
           setLoadingMessage('Building game tree...');
@@ -167,6 +179,8 @@ export function useGameTreeState() {
           setLoadingProgress(1);
           setLoadingMessage('Done');
         } catch (error) {
+          // Prefer loadSGFAsync so callers can toast; keep a last-resort alert for
+          // the few remaining sync call sites that do not catch.
           console.error('Error loading SGF:', error);
           alert('Failed to load SGF file');
         } finally {
@@ -188,12 +202,23 @@ export function useGameTreeState() {
 
         setTimeout(() => {
           try {
-            const parsedSGF = parseSGF(sgfContent, {
-              onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
-            });
+            // Same gate as library import: prose without "(;" is not a game tree.
+            if (!/^\s*\(\s*;/.test(sgfContent)) {
+              throw new SgfValidationError(INVALID_SGF_CONTENT);
+            }
+
+            let parsedSGF;
+            try {
+              parsedSGF = parseSGF(sgfContent, {
+                onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
+              });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : INVALID_SGF_CONTENT;
+              throw new SgfValidationError(message, { cause: error });
+            }
 
             if (!parsedSGF || parsedSGF.length === 0) {
-              throw new Error('Invalid SGF content');
+              throw new SgfValidationError(INVALID_SGF_CONTENT);
             }
 
             setLoadingMessage('Building game tree...');

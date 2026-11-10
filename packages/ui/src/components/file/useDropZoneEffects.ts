@@ -3,8 +3,16 @@
  */
 
 import { useEffect, useCallback, MutableRefObject, useRef } from 'react';
+import type { TFunction } from 'i18next';
+import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
+import type { ToastType } from '../ui/Toast';
+import {
+  formatImportResultError,
+  formatLibraryFileImportError,
+  formatSgfLoadError,
+} from '../../utils/sgfAnalysis';
 
 const isTauri = isTauriApp();
 
@@ -27,7 +35,7 @@ interface UseTauriDragDropParams {
   updateDragState: (dragging: boolean) => void;
   updateLibraryState: (over: boolean) => void;
   isOverLibraryRef: MutableRefObject<boolean>;
-  loadSGF: (sgf: string) => void;
+  loadSGFAsync: (sgf: string) => Promise<void>;
   setFileName: (name: string) => void;
   setCustomAIModel: (model: {
     data: ArrayBuffer | File;
@@ -37,21 +45,25 @@ interface UseTauriDragDropParams {
   }) => void;
   clearLoadedFile: () => void;
   createFile: (name: string, content: string, folderId: string | null) => Promise<unknown>;
-  importZip: (buffer: ArrayBuffer) => Promise<unknown>;
+  importZip: (buffer: ArrayBuffer) => Promise<ImportResult>;
   checkUnsavedChanges: () => Promise<boolean>;
+  showToast: (message: string, type: ToastType) => void;
+  t: TFunction;
 }
 
 export function useTauriDragDrop({
   updateDragState,
   updateLibraryState,
   isOverLibraryRef,
-  loadSGF,
+  loadSGFAsync,
   setFileName,
   setCustomAIModel,
   clearLoadedFile,
   createFile,
   importZip,
   checkUnsavedChanges,
+  showToast,
+  t,
 }: UseTauriDragDropParams) {
   // Guard to prevent duplicate drop processing
   const isProcessingDropRef = useRef(false);
@@ -65,7 +77,7 @@ export function useTauriDragDrop({
 
           if (filePath.endsWith('.onnx')) {
             const content = await fs.readFile(filePath);
-            const fileName = filePath.split(/[\/]/).pop() || 'model.onnx';
+            const fileName = filePath.split(/[\/\\]/).pop() || 'model.onnx';
             setCustomAIModel({
               data: content.buffer,
               name: fileName,
@@ -80,17 +92,25 @@ export function useTauriDragDrop({
           if (!canProceed) return;
 
           const content = await fs.readTextFile(filePath);
-          loadSGF(content);
-          const fileName = filePath.split(/[\/]/).pop() || 'unknown.sgf';
+          await loadSGFAsync(content);
+          const fileName = filePath.split(/[\/\\]/).pop() || 'unknown.sgf';
           setFileName(fileName);
           clearLoadedFile();
         }
       } catch (error) {
         console.error('Failed to load file:', error);
-        alert(`Failed to load file: ${error}`);
+        showToast(formatSgfLoadError(error, t), 'error');
       }
     },
-    [loadSGF, setFileName, setCustomAIModel, clearLoadedFile, checkUnsavedChanges]
+    [
+      loadSGFAsync,
+      setFileName,
+      setCustomAIModel,
+      clearLoadedFile,
+      checkUnsavedChanges,
+      showToast,
+      t,
+    ]
   );
 
   // Handle file import to library (from path - Tauri only)
@@ -102,11 +122,12 @@ export function useTauriDragDrop({
 
           if (filePath.endsWith('.sgf')) {
             const content = await fs.readTextFile(filePath);
-            const fileName = filePath.split(/[\/]/).pop() || 'unknown.sgf';
+            const fileName = filePath.split(/[\/\\]/).pop() || 'unknown.sgf';
             await createFile(fileName, content, null);
           } else if (filePath.endsWith('.zip')) {
             const buffer = await fs.readFile(filePath);
-            await importZip(buffer.buffer);
+            const message = formatImportResultError(await importZip(buffer.buffer), t);
+            if (message) showToast(message, 'error');
           } else {
             alert('Only .sgf and .zip files can be added to the library');
             return;
@@ -114,10 +135,10 @@ export function useTauriDragDrop({
         }
       } catch (error) {
         console.error('Failed to import file to library:', error);
-        alert(`Failed to import file: ${error}`);
+        showToast(formatLibraryFileImportError(error, t), 'error');
       }
     },
-    [createFile, importZip]
+    [createFile, importZip, showToast, t]
   );
 
   // Setup Tauri file drop listener using webviewWindow API

@@ -100,12 +100,21 @@ export interface RenameItemOptions {
   newName: string;
 }
 
+/**
+ * Structured ZIP/library import failure. UI branches on `kind` instead of
+ * parsing English message strings.
+ */
+export type ImportError =
+  | { kind: 'sgf'; path: string; cause: unknown }
+  | { kind: 'folder'; path: string; cause?: unknown }
+  | { kind: 'zip'; cause: unknown };
+
 /** Result of an import operation */
 export interface ImportResult {
   success: boolean;
   imported: number;
   failed: number;
-  errors: string[];
+  errors: ImportError[];
 }
 
 /** Result of an export operation */

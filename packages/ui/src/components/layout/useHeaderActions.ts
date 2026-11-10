@@ -18,6 +18,7 @@ import { saveFile } from '@kaya/platform';
 import { loadContentOrOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { readClipboardText, writeClipboardText } from '@kaya/platform';
 import { useToast } from '../ui/Toast';
+import { formatSgfLoadError } from '../../utils/sgfAnalysis';
 import { useFullscreen } from './useFullscreen';
 import { useFilenameEditor } from './useFilenameEditor';
 import { useHeaderKeyboardShortcuts } from './useHeaderKeyboardShortcuts';
@@ -96,22 +97,16 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       }
       const canProceed = await checkUnsavedChanges();
       if (!canProceed) return;
-      const reader = new FileReader();
-      reader.onload = async e => {
-        const content = e.target?.result as string;
-        if (content) {
-          try {
-            await loadSGFAsync(content);
-            setFileName(file.name);
-            clearLoadedFile();
-          } catch (error) {
-            alert(`Failed to load SGF file: ${error}`);
-          }
-        }
-      };
-      reader.readAsText(file);
+      try {
+        const content = await file.text();
+        await loadSGFAsync(content);
+        setFileName(file.name);
+        clearLoadedFile();
+      } catch (error) {
+        showToast(formatSgfLoadError(error, t), 'error');
+      }
     },
-    [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges] // eslint-disable-line react-hooks/exhaustive-deps
+    [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast, t] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const handleRecognitionImport = useCallback(
