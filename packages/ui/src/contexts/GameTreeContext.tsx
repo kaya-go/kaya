@@ -3,7 +3,7 @@
  * Logic split into hooks in ./hooks/game/ and sibling context files.
  */
 
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useMemo, useCallback, useRef } from 'react';
 
 import {
   SGFProperty,
@@ -293,6 +293,37 @@ export const GameTreeProvider: React.FC<{
     analysisCacheSize, // Triggers auto-save when analysis results are added
   });
 
+  // Stable aliases so selective subscribers do not thrash on every nav.
+  const goBack = useCallback(() => navigateBackward(1), [navigateBackward]);
+  const goForward = useCallback(() => navigateForward(1), [navigateForward]);
+  const goBackSteps = useCallback((steps: number) => navigateBackward(steps), [navigateBackward]);
+  const goForwardSteps = useCallback((steps: number) => navigateForward(steps), [navigateForward]);
+  const toggleScoringMode = useCallback(
+    () => setScoreMode((prev: boolean) => !prev),
+    [setScoreMode]
+  );
+  const toggleAnalysisMode = useCallback(
+    () => setAnalysisMode((prev: boolean) => !prev),
+    [setAnalysisMode]
+  );
+  // addMarker/addSetupStone close over the current node; removers read the latest via ref.
+  const addMarkerRef = useRef(addMarker);
+  addMarkerRef.current = addMarker;
+  const addSetupStoneRef = useRef(addSetupStone);
+  addSetupStoneRef.current = addSetupStone;
+  const removeMarker = useCallback(
+    (vertex: Parameters<typeof addMarker>[0]) => addMarkerRef.current(vertex, null),
+    []
+  );
+  const removeSetupStone = useCallback(
+    (vertex: Parameters<typeof addSetupStone>[0]) => addSetupStoneRef.current(vertex, 0),
+    []
+  );
+  const togglePatternMatching = useCallback(
+    () => setPatternMatchingEnabled((prev: boolean) => !prev),
+    [setPatternMatchingEnabled]
+  );
+
   const value: GameTreeContextValue = useMemo(
     () => ({
       gameTree,
@@ -403,23 +434,23 @@ export const GameTreeProvider: React.FC<{
       setFilename,
       isDirty,
       setIsDirty,
-      // Backward-compatibility aliases
+      // Backward-compatibility aliases (stable callbacks — see hooks below)
       gameId,
       setFileName: setFilename,
       goToNode: setCurrentNodeId,
       playMove: makeMove,
       resign,
-      goBack: () => navigateBackward(1),
-      goForward: () => navigateForward(1),
-      goBackSteps: (steps: number) => navigateBackward(steps),
-      goForwardSteps: (steps: number) => navigateForward(steps),
+      goBack,
+      goForward,
+      goBackSteps,
+      goForwardSteps,
       goToStart: navigateToStart,
       goToEnd: navigateToEnd,
       scoringMode: scoreMode,
-      toggleScoringMode: () => setScoreMode((prev: boolean) => !prev),
+      toggleScoringMode,
       autoEstimateDeadStones: autoScore,
       clearDeadStones: resetScore,
-      toggleAnalysisMode: () => setAnalysisMode((prev: boolean) => !prev),
+      toggleAnalysisMode,
       updateComment: setNodeComment,
       editPlayMode,
       setEditPlayMode,
@@ -427,7 +458,7 @@ export const GameTreeProvider: React.FC<{
       copyBranch: copyNode,
       pasteBranch: pasteNode,
       deleteBranch: deleteNode,
-      removeMarker: (vertex: any) => addMarker(vertex, null),
+      removeMarker,
       clearAllMarkersAndLabels,
       clearSetupStones,
       loadSGFAsync,
@@ -442,7 +473,7 @@ export const GameTreeProvider: React.FC<{
       loadingMessage,
       toggleDeadStones: toggleDeadStone,
       placeStoneDirect: addSetupStone,
-      removeSetupStone: (vertex: any) => addSetupStone(vertex, 0),
+      removeSetupStone,
       undo,
       redo,
       canUndo,
@@ -452,7 +483,7 @@ export const GameTreeProvider: React.FC<{
       moveUrl,
       patternMatchingEnabled,
       setPatternMatchingEnabled,
-      togglePatternMatching: () => setPatternMatchingEnabled((prev: boolean) => !prev),
+      togglePatternMatching,
     }),
     // prettier-ignore
     [
@@ -483,6 +514,8 @@ export const GameTreeProvider: React.FC<{
       analysisCache, analysisCacheSize, updateAnalysisCacheSize,
       gameId, territoryMap, totalMovesInBranch, loadSGFAsync, resign,
       downloadModel, deleteModel, uploadModel,
+      goBack, goForward, goBackSteps, goForwardSteps,
+      toggleScoringMode, toggleAnalysisMode, removeMarker, removeSetupStone, togglePatternMatching,
       // Setters are stable, but the array is exhaustive on purpose: this is what drifted.
       setCurrentNodeId, setFilename, setIsDirty, setAnalysisMode, setAnalysisResult,
       setAISettings, setCustomAIModel, setAIConfigOpen, setConfigInitialTab,
