@@ -270,7 +270,8 @@ export function useGameNavigation({
     const startId = currentNodeIdRef.current;
     if (!tree || startId === null || startId === undefined) return;
     let current = tree.get(startId);
-    while (current && current.parentId) {
+    // Root id is 0; a truthy check would stop on the root's child.
+    while (current && current.parentId != null) {
       const parent = tree.get(current.parentId);
       if (!parent) break;
       current = parent;
