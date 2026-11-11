@@ -75,7 +75,7 @@ export async function importZipToStorage(
         const folder = await storage.createFolder({ name: folderName, parentId });
         folderMap.set(folderPath, folder.id);
       } catch (error) {
-        result.errors.push(`Failed to create folder: ${folderPath}`);
+        result.errors.push({ kind: 'folder', path: folderPath, cause: error });
       }
     }
 
@@ -107,17 +107,15 @@ export async function importZipToStorage(
         result.imported++;
       } catch (error) {
         result.failed++;
-        result.errors.push(
-          `Failed to import: ${path} - ${error instanceof Error ? error.message : 'Unknown error'}`
-        );
+        // .sgf zip entry failed (validation or storage). UI branches on cause
+        // via isSgfValidationError rather than on message text.
+        result.errors.push({ kind: 'sgf', path, cause: error });
       }
     }
 
     result.success = result.imported > 0;
   } catch (error) {
-    result.errors.push(
-      `Failed to read ZIP file: ${error instanceof Error ? error.message : 'Unknown error'}`
-    );
+    result.errors.push({ kind: 'zip', cause: error });
   }
 
   return result;

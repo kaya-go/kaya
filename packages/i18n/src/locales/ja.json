@@ -550,7 +550,11 @@
     "gameLoadedFromOgs": "OGSから対局を読み込みました（{{gameId}}）！",
     "gameLoadedFromClipboard": "クリップボードから対局を読み込みました！",
     "failedToPaste": "貼り付けに失敗: {{error}}",
-    "failedToLoadSgf": "SGFファイルの読み込みに失敗: {{error}}"
+    "failedToLoadSgf": "SGFファイルの読み込みに失敗: {{error}}",
+    "invalidSgfContent": "SGF形式が不正です",
+    "invalidSgfContentDetail": "SGF形式が不正です: {{error}}",
+    "failedToImportToLibrary": "ライブラリへのインポートに失敗: {{error}}",
+    "failedToImportZip": "ZIPのインポートに失敗: {{error}}"
   },
   "loading": {
     "loading": "読み込み中…",

@@ -44,3 +44,10 @@ export {
 } from './parser';
 
 export { extractGameInfo, gameInfoToPropertyWrites, parseBoardSize } from './gameInfo';
+
+export {
+  INVALID_SGF_CONTENT,
+  SgfValidationError,
+  isSgfValidationError,
+  parseStrict,
+} from './validation';

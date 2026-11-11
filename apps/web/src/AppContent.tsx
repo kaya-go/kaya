@@ -53,7 +53,6 @@ function AppContent({
     handleOpenLibrary,
     handleGoHome,
     handleNavigateToBoard,
-    handleFileDrop,
     showHeader,
     setShowHeader,
     showSidebar,
@@ -72,7 +71,6 @@ function AppContent({
         onNewGame={handleNewGame}
         onContinue={handleContinue}
         onOpenLibrary={handleOpenLibrary}
-        onFileDrop={handleFileDrop}
         onNavigateToBoard={handleNavigateToBoard}
         version={versionData?.version}
         hasSavedGame={hasSavedGame}

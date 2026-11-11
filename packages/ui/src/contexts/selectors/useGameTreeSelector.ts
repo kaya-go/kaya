@@ -300,7 +300,6 @@ export function useGameTreeFile() {
         setFilename: ctx.setFilename,
         isDirty: ctx.isDirty,
         setIsDirty: ctx.setIsDirty,
-        loadSGF: ctx.loadSGF,
         loadSGFAsync: ctx.loadSGFAsync,
         saveSGF: ctx.saveSGF,
         createNewGame: ctx.createNewGame,

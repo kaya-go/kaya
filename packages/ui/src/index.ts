@@ -112,7 +112,7 @@ export { AnalysisChart } from './components/analysis/AnalysisChart';
 export type { AnalysisChartProps, AnalysisDataPoint } from './components/analysis/AnalysisChart';
 export { EditToolbar } from './components/editors/EditToolbar';
 export { CollapsiblePanel } from './components/layout/CollapsiblePanel';
-export { ToastContainer, useToast, ToastProvider } from './components/ui/Toast';
+export { useToast, ToastProvider } from './components/ui/Toast';
 export type { ToastMessage } from './components/ui/Toast';
 export { StatusBar } from './components/layout/StatusBar';
 export type { VersionData } from './components/layout/StatusBar';

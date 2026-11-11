@@ -15,9 +15,11 @@ import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import type { NewGameConfig } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { saveFile } from '@kaya/platform';
+import { isSgfValidationError } from '@kaya/sgf';
 import { loadContentOrOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { readClipboardText, writeClipboardText } from '@kaya/platform';
 import { useToast } from '../ui/Toast';
+import { formatSgfLoadError } from '../../utils/sgfLoadErrors';
 import { useFullscreen } from './useFullscreen';
 import { useFilenameEditor } from './useFilenameEditor';
 import { useHeaderKeyboardShortcuts } from './useHeaderKeyboardShortcuts';
@@ -66,7 +68,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
   const [isSaveToLibraryDialogOpen, setIsSaveToLibraryDialogOpen] = useState(false);
 
-  const { messages, showToast, closeToast } = useToast();
+  const { showToast } = useToast();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const { isFullscreen, toggleFullscreen } = useFullscreen();
@@ -96,22 +98,16 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       }
       const canProceed = await checkUnsavedChanges();
       if (!canProceed) return;
-      const reader = new FileReader();
-      reader.onload = async e => {
-        const content = e.target?.result as string;
-        if (content) {
-          try {
-            await loadSGFAsync(content);
-            setFileName(file.name);
-            clearLoadedFile();
-          } catch (error) {
-            alert(`Failed to load SGF file: ${error}`);
-          }
-        }
-      };
-      reader.readAsText(file);
+      try {
+        const content = await file.text();
+        await loadSGFAsync(content);
+        setFileName(file.name);
+        clearLoadedFile();
+      } catch (error) {
+        showToast(formatSgfLoadError(error, t), 'error');
+      }
     },
-    [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges] // eslint-disable-line react-hooks/exhaustive-deps
+    [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast, t] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const handleRecognitionImport = useCallback(
@@ -332,7 +328,12 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       clearLoadedFile();
     } catch (error) {
       console.error('Failed to paste:', error);
-      showToast(t('toast.failedToPaste', { error: String(error) }), 'error');
+      showToast(
+        isSgfValidationError(error)
+          ? formatSgfLoadError(error, t)
+          : t('toast.failedToPaste', { error: String(error) }),
+        'error'
+      );
     }
   }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast, t]);
 
@@ -377,8 +378,6 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     isEditingFilename: filenameEditor.isEditingFilename,
     editedFilename: filenameEditor.editedFilename,
 
-    messages,
-    closeToast,
     isFullscreen,
     isMobileMenuOpen,
     setIsMobileMenuOpen,

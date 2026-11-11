@@ -23,7 +23,7 @@ import {
   generateId,
   now,
   extractSGFMetadata,
-  isValidSGF,
+  validateSGF,
   sanitizeFilename,
   ensureSGFExtension,
   makeUniqueName,
@@ -211,9 +211,7 @@ export class IndexedDBStorage implements LibraryStorage {
     await this.ensureInitialized();
     const { name, content, parentId = null } = options;
 
-    if (!isValidSGF(content)) {
-      throw new Error('Invalid SGF content');
-    }
+    validateSGF(content);
 
     const metadata = extractSGFMetadata(content);
     const timestamp = now();
@@ -278,9 +276,7 @@ export class IndexedDBStorage implements LibraryStorage {
       throw new Error('File not found');
     }
 
-    if (!isValidSGF(content)) {
-      throw new Error('Invalid SGF content');
-    }
+    validateSGF(content);
 
     const metadata = extractSGFMetadata(content);
 

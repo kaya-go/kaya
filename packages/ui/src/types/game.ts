@@ -234,7 +234,6 @@ export interface GameTreeContextValue {
   // Game actions
   makeMove: (vertex: Vertex, sign: Sign) => void;
   createNewGame: (config?: NewGameConfig) => void;
-  loadSGF: (sgfContent: string) => void;
   saveSGF: () => string;
   updateGameInfo: (info: GameInfoPatch) => void;
 

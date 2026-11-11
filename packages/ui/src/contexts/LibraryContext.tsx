@@ -316,7 +316,9 @@ export function LibraryProvider({
         const nameWithExt = item.name.toLowerCase().endsWith('.sgf')
           ? item.name
           : `${item.name}.sgf`;
-        onFileOpen(item.content, nameWithExt);
+        // Marked as the open file only once the editor has it: a content the
+        // editor refuses leaves the game in place, under its own name.
+        await onFileOpen(item.content, nameWithExt);
         setLoadedFileId(id);
       }
     },

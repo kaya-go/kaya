@@ -111,8 +111,8 @@ function LibraryProviderWrapper({ versionData }: { versionData: VersionData | un
 
   // Callback when a file is opened from the library
   const handleFileOpen = useCallback(
-    (content: string, name: string) => {
-      loadSGFAsync(content);
+    async (content: string, name: string) => {
+      await loadSGFAsync(content);
       setFileName(name);
       // Switch to board view on mobile when a file is loaded
       setActiveMobileTab('board');

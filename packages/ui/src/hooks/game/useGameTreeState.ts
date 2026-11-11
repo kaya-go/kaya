@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import {
   parse as parseSGF,
+  parseStrict as parseSGFStrict,
   stringify as stringifySGF,
   sgfNodeToGameTreeNode,
   extractGameInfo as extractGameInfoFromSGF,
   gameInfoToPropertyWrites,
   vertexToSGF,
   type GameInfoPatch,
+  type SGFNode,
 } from '@kaya/sgf';
 import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
@@ -120,86 +122,27 @@ export function useGameTreeState() {
     setIsInitialized(true);
   }, [gameTree, isInitialized]);
 
-  const loadSGF = useCallback((sgfContent: string) => {
-    try {
-      setIsLoadingSGF(true);
-      setLoadingProgress(0);
-      setLoadingMessage('Parsing SGF...');
-
-      // Small delay to allow UI to update
-      setTimeout(() => {
-        try {
-          const parsedSGF = parseSGF(sgfContent, {
-            onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
-          });
-
-          if (!parsedSGF || parsedSGF.length === 0) {
-            throw new Error('Invalid SGF content');
-          }
-
-          setLoadingMessage('Building game tree...');
-          const idCounter = { value: 0 };
-          const rootNode = sgfNodeToGameTreeNode(parsedSGF[0], idCounter, null);
-
-          // Approximate progress for tree building since we can't track it directly
-          setLoadingProgress(0.9);
-
-          const newTree = new GameTree<SGFProperty>({ root: rootNode });
-
-          // Validate tree
-          const issues = validateTreeIntegrity(newTree, rootNode.id);
-          if (issues.length > 0) {
-            console.error('Tree integrity issues:', issues);
-            throw new Error('Tree validation failed: ' + issues[0]);
-          }
-
-          clearAllCaches();
-          setGameTree(newTree);
-          cleanTreeRef.current = newTree; // Mark as clean after load
-          setRootId(rootNode.id);
-
-          // Determine starting position based on SGF type and the Problem mode setting.
-          setCurrentNodeId(
-            determineStartNodeId(rootNode, { problemMode: loadGameSettings().problemMode })
-          );
-
-          setGameId(`game-${Date.now()}`);
-          setLoadingProgress(1);
-          setLoadingMessage('Done');
-        } catch (error) {
-          console.error('Error loading SGF:', error);
-          alert('Failed to load SGF file');
-        } finally {
-          setIsLoadingSGF(false);
-        }
-      }, 10);
-    } catch (error) {
-      console.error('Error initiating SGF load:', error);
-      setIsLoadingSGF(false);
-    }
-  }, []);
-
-  const loadSGFAsync = useCallback(async (sgfContent: string) => {
-    return new Promise<void>((resolve, reject) => {
-      try {
+  // The content is parsed and the tree built before anything of the current
+  // game is touched, so a file that fails leaves it whole. `onParsed` runs just
+  // before the new tree is committed, for state that must be replaced with it.
+  const loadSGFAsync = useCallback(
+    (sgfContent: string, onParsed?: (sgfRoot: SGFNode) => void) =>
+      new Promise<void>((resolve, reject) => {
         setIsLoadingSGF(true);
         setLoadingProgress(0);
         setLoadingMessage('Parsing SGF...');
 
+        // Small delay to let the loading overlay paint before the parse blocks
         setTimeout(() => {
           try {
-            const parsedSGF = parseSGF(sgfContent, {
+            const [sgfRoot] = parseSGFStrict(sgfContent, {
               onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
             });
 
-            if (!parsedSGF || parsedSGF.length === 0) {
-              throw new Error('Invalid SGF content');
-            }
-
             setLoadingMessage('Building game tree...');
-            const idCounter = { value: 0 };
-            const rootNode = sgfNodeToGameTreeNode(parsedSGF[0], idCounter, null);
+            const rootNode = sgfNodeToGameTreeNode(sgfRoot, { value: 0 }, null);
 
+            // Approximate progress for tree building since we can't track it directly
             setLoadingProgress(0.9);
 
             const newTree = new GameTree<SGFProperty>({ root: rootNode });
@@ -209,6 +152,7 @@ export function useGameTreeState() {
               throw new Error('Tree validation failed: ' + issues[0]);
             }
 
+            onParsed?.(sgfRoot);
             clearAllCaches();
             setGameTree(newTree);
             cleanTreeRef.current = newTree; // Mark as clean after load
@@ -222,19 +166,16 @@ export function useGameTreeState() {
             setGameId(`game-${Date.now()}`);
             setLoadingProgress(1);
             setLoadingMessage('Done');
-            resolve(); // Resolve the promise after successful load
+            resolve();
           } catch (error) {
             reject(error);
           } finally {
             setIsLoadingSGF(false);
           }
         }, 10);
-      } catch (error) {
-        setIsLoadingSGF(false);
-        reject(error);
-      }
-    });
-  }, []);
+      }),
+    []
+  );
 
   const newGame = useCallback((config?: NewGameConfig) => {
     // Format today's date as YYYY-MM-DD for SGF DT property
@@ -334,7 +275,6 @@ export function useGameTreeState() {
     isLoadingSGF,
     loadingProgress,
     loadingMessage,
-    loadSGF,
     loadSGFAsync,
     createNewGame: newGame,
     saveSGF: exportSGF,

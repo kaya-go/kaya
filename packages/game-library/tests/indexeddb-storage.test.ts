@@ -591,7 +591,9 @@ describe('ZIP export and import', () => {
     expect(imported.success).toBe(true);
     expect(imported.imported).toBe(1);
     expect(imported.failed).toBe(1);
-    expect(imported.errors.join('\n')).toContain('empty.sgf');
+    expect(imported.errors).toEqual([
+      expect.objectContaining({ kind: 'sgf', path: expect.stringContaining('empty.sgf') }),
+    ]);
     expect(await namesIn(null)).toEqual(['good.sgf']);
   });
 
@@ -601,6 +603,7 @@ describe('ZIP export and import', () => {
     expect(imported.success).toBe(false);
     expect(imported.imported).toBe(0);
     expect(imported.errors.length).toBeGreaterThan(0);
+    expect(imported.errors[0]?.kind).toBe('zip');
   });
 
   test('exports an empty library without error', async () => {

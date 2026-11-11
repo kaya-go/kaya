@@ -550,7 +550,11 @@
     "gameLoadedFromOgs": "OGS에서 대국을 불러왔습니다 ({{gameId}})!",
     "gameLoadedFromClipboard": "클립보드에서 대국을 불러왔습니다!",
     "failedToPaste": "붙여넣기 실패: {{error}}",
-    "failedToLoadSgf": "SGF 파일 불러오기 실패: {{error}}"
+    "failedToLoadSgf": "SGF 파일 불러오기 실패: {{error}}",
+    "invalidSgfContent": "잘못된 SGF 형식",
+    "invalidSgfContentDetail": "잘못된 SGF 형식: {{error}}",
+    "failedToImportToLibrary": "라이브러리로 가져오기 실패: {{error}}",
+    "failedToImportZip": "ZIP 가져오기 실패: {{error}}"
   },
   "loading": {
     "loading": "불러오는 중…",

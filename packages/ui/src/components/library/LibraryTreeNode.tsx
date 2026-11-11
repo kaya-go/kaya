@@ -18,6 +18,7 @@ import { useGameTreeFile } from '../../contexts/selectors';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import { formatFileSize } from '@kaya/game-library';
 import { LibraryRenameInput } from './LibraryRenameInput';
+import { useOpenLibraryFile } from './useOpenLibraryFile';
 
 export interface TreeNode {
   id: string;
@@ -117,8 +118,8 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     lastClickIdRef,
   } = context;
 
-  const { selectedIds, loadedFileId, selectItem, selectRange, toggleItemSelection, openFile } =
-    useLibrary();
+  const { selectedIds, loadedFileId, selectItem, selectRange, toggleItemSelection } = useLibrary();
+  const openFile = useOpenLibraryFile();
   const { isDirty } = useGameTreeFile();
   const { t } = useTranslation();
 

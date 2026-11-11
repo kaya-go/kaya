@@ -7,14 +7,34 @@
  */
 
 import { describe, test, expect } from 'bun:test';
+import { isSgfValidationError } from '@kaya/sgf';
 import {
   ensureSGFExtension,
   makeUniqueName,
   normalizeImportedSGFName,
   sanitizeFilename,
+  validateSGF,
 } from '../src/utils';
 
 const items = (...names: string[]) => names.map((name, i) => ({ name, id: `id-${i}` }));
+
+describe('validateSGF', () => {
+  test('accepts a game tree', () => {
+    expect(() => validateSGF('(;FF[4]SZ[19])')).not.toThrow();
+  });
+
+  test('refuses anything else with the error class the UI branches on', () => {
+    for (const content of ['hello', '', '(;B[aa]])']) {
+      let caught: unknown;
+      try {
+        validateSGF(content);
+      } catch (error) {
+        caught = error;
+      }
+      expect(isSgfValidationError(caught)).toBe(true);
+    }
+  });
+});
 
 describe('ensureSGFExtension', () => {
   test('leaves an existing .sgf name alone, whatever its case', () => {

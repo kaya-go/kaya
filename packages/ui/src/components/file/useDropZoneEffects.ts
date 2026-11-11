@@ -3,8 +3,17 @@
  */
 
 import { useEffect, useCallback, MutableRefObject, useRef } from 'react';
+import type { TFunction } from 'i18next';
+import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
+import { isSgfValidationError } from '@kaya/sgf';
+import type { ToastType } from '../ui/Toast';
+import {
+  formatImportResultError,
+  formatLibraryFileImportError,
+  formatSgfLoadError,
+} from '../../utils/sgfLoadErrors';
 
 const isTauri = isTauriApp();
 
@@ -27,7 +36,7 @@ interface UseTauriDragDropParams {
   updateDragState: (dragging: boolean) => void;
   updateLibraryState: (over: boolean) => void;
   isOverLibraryRef: MutableRefObject<boolean>;
-  loadSGF: (sgf: string) => void;
+  loadSGFAsync: (sgf: string) => Promise<void>;
   setFileName: (name: string) => void;
   setCustomAIModel: (model: {
     data: ArrayBuffer | File;
@@ -37,21 +46,25 @@ interface UseTauriDragDropParams {
   }) => void;
   clearLoadedFile: () => void;
   createFile: (name: string, content: string, folderId: string | null) => Promise<unknown>;
-  importZip: (buffer: ArrayBuffer) => Promise<unknown>;
+  importZip: (buffer: ArrayBuffer) => Promise<ImportResult>;
   checkUnsavedChanges: () => Promise<boolean>;
+  showToast: (message: string, type: ToastType) => void;
+  t: TFunction;
 }
 
 export function useTauriDragDrop({
   updateDragState,
   updateLibraryState,
   isOverLibraryRef,
-  loadSGF,
+  loadSGFAsync,
   setFileName,
   setCustomAIModel,
   clearLoadedFile,
   createFile,
   importZip,
   checkUnsavedChanges,
+  showToast,
+  t,
 }: UseTauriDragDropParams) {
   // Guard to prevent duplicate drop processing
   const isProcessingDropRef = useRef(false);
@@ -65,7 +78,7 @@ export function useTauriDragDrop({
 
           if (filePath.endsWith('.onnx')) {
             const content = await fs.readFile(filePath);
-            const fileName = filePath.split(/[\/]/).pop() || 'model.onnx';
+            const fileName = filePath.split(/[\/\\]/).pop() || 'model.onnx';
             setCustomAIModel({
               data: content.buffer,
               name: fileName,
@@ -80,17 +93,25 @@ export function useTauriDragDrop({
           if (!canProceed) return;
 
           const content = await fs.readTextFile(filePath);
-          loadSGF(content);
-          const fileName = filePath.split(/[\/]/).pop() || 'unknown.sgf';
+          await loadSGFAsync(content);
+          const fileName = filePath.split(/[\/\\]/).pop() || 'unknown.sgf';
           setFileName(fileName);
           clearLoadedFile();
         }
       } catch (error) {
         console.error('Failed to load file:', error);
-        alert(`Failed to load file: ${error}`);
+        showToast(formatSgfLoadError(error, t), 'error');
       }
     },
-    [loadSGF, setFileName, setCustomAIModel, clearLoadedFile, checkUnsavedChanges]
+    [
+      loadSGFAsync,
+      setFileName,
+      setCustomAIModel,
+      clearLoadedFile,
+      checkUnsavedChanges,
+      showToast,
+      t,
+    ]
   );
 
   // Handle file import to library (from path - Tauri only)
@@ -102,11 +123,12 @@ export function useTauriDragDrop({
 
           if (filePath.endsWith('.sgf')) {
             const content = await fs.readTextFile(filePath);
-            const fileName = filePath.split(/[\/]/).pop() || 'unknown.sgf';
+            const fileName = filePath.split(/[\/\\]/).pop() || 'unknown.sgf';
             await createFile(fileName, content, null);
           } else if (filePath.endsWith('.zip')) {
             const buffer = await fs.readFile(filePath);
-            await importZip(buffer.buffer);
+            const message = formatImportResultError(await importZip(buffer.buffer), t);
+            if (message) showToast(message, 'error');
           } else {
             alert('Only .sgf and .zip files can be added to the library');
             return;
@@ -114,10 +136,10 @@ export function useTauriDragDrop({
         }
       } catch (error) {
         console.error('Failed to import file to library:', error);
-        alert(`Failed to import file: ${error}`);
+        showToast(formatLibraryFileImportError(error, t), 'error');
       }
     },
-    [createFile, importZip]
+    [createFile, importZip, showToast, t]
   );
 
   // Setup Tauri file drop listener using webviewWindow API
@@ -218,6 +240,8 @@ interface UsePasteHandlerParams {
   setFileName: (name: string) => void;
   clearLoadedFile: () => void;
   checkUnsavedChanges: () => Promise<boolean>;
+  showToast: (message: string, type: ToastType) => void;
+  t: TFunction;
 }
 
 export function usePasteHandler({
@@ -225,7 +249,19 @@ export function usePasteHandler({
   setFileName,
   clearLoadedFile,
   checkUnsavedChanges,
+  showToast,
+  t,
 }: UsePasteHandlerParams) {
+  // The text looked like SGF and was refused: say so. Anything else (a denied
+  // clipboard read, a failed download) stays in the console, as before.
+  const reportPasteFailure = useCallback(
+    (error: unknown) => {
+      console.error('Failed to load pasted content:', error);
+      if (isSgfValidationError(error)) showToast(formatSgfLoadError(error, t), 'error');
+    },
+    [showToast, t]
+  );
+
   // Global paste event handler for SGF content and OGS URLs
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -261,13 +297,13 @@ export function usePasteHandler({
         setFileName(getFilenameForSGF(result));
         clearLoadedFile();
       } catch (error) {
-        console.error('Failed to load pasted content:', error);
+        reportPasteFailure(error);
       }
     };
 
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges]);
+  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, reportPasteFailure]);
 
   // Keyboard shortcut handler for Cmd+V/Ctrl+V (fallback for Tauri on macOS)
   useEffect(() => {
@@ -305,12 +341,12 @@ export function usePasteHandler({
           setFileName(getFilenameForSGF(result));
           clearLoadedFile();
         } catch (error) {
-          console.error('Failed to load pasted content:', error);
+          reportPasteFailure(error);
         }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges]);
+  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, reportPasteFailure]);
 }
