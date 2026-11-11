@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.18] - 2026-11-11
+
+Suggest move now reads the whole position, ko included, and its results feed the analysis graph. A file that fails to open or import now says so, and no longer costs the current game its analysis or undo history.
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(ui)* Send history and ko with suggest move ([#221](https://github.com/kaya-go/kaya/issues/221)) by @xifeiwu
+
+- *(ui)* Route suggest move through the analysis queue ([#222](https://github.com/kaya-go/kaya/issues/222)) by @xifeiwu
+
+- *(ai-engine)* Answer from cache only if the forced move was explored ([#224](https://github.com/kaya-go/kaya/issues/224)) by @hadim
+
+- *(ai-engine)* Give no value to a move the search never visited ([#225](https://github.com/kaya-go/kaya/issues/225)) by @hadim
+
+- *(ui)* Toast and i18n for invalid sgf and zip imports ([#226](https://github.com/kaya-go/kaya/issues/226)) by @xifeiwu
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ui)* Unify board and analysis reconstruction in one position cache ([#220](https://github.com/kaya-go/kaya/issues/220)) by @xifeiwu
+
+- *(ui)* Derive currentPlayer from position-cache nextToPlay ([#223](https://github.com/kaya-go/kaya/issues/223)) by @xifeiwu
+
+- *(ui)* Keep navigation callbacks stable ([#227](https://github.com/kaya-go/kaya/issues/227)) by @xifeiwu
+
+### 🙏 Contributors
+
+- @xifeiwu
+- @hadim
+- @github-actions[bot]
+
 ## [0.4.17] - 2026-11-04
 
 Switching between 9×9, 13×13 and 19×19 games no longer reloads the AI engine, and the analysis report and graph no longer get cut off in a short panel.
@@ -20,11 +50,15 @@ Switching between 9×9, 13×13 and 19×19 games no longer reloads the AI engine,
 
 - *(ai-engine)* Unify analysis cache key in the queue ([#217](https://github.com/kaya-go/kaya/issues/217)) by @xifeiwu
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.17 ([7c72d74](https://github.com/kaya-go/kaya/commit/7c72d743344f4090dbbc7c8f4433a14f4a660e34)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @xifeiwu
-- @github-actions[bot]
 
 ## [0.4.16] - 2026-11-03
 
