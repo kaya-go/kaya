@@ -7,12 +7,13 @@ import type { TFunction } from 'i18next';
 import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
+import { isSgfValidationError } from '@kaya/sgf';
 import type { ToastType } from '../ui/Toast';
 import {
   formatImportResultError,
   formatLibraryFileImportError,
   formatSgfLoadError,
-} from '../../utils/sgfAnalysis';
+} from '../../utils/sgfLoadErrors';
 
 const isTauri = isTauriApp();
 
@@ -239,6 +240,8 @@ interface UsePasteHandlerParams {
   setFileName: (name: string) => void;
   clearLoadedFile: () => void;
   checkUnsavedChanges: () => Promise<boolean>;
+  showToast: (message: string, type: ToastType) => void;
+  t: TFunction;
 }
 
 export function usePasteHandler({
@@ -246,7 +249,19 @@ export function usePasteHandler({
   setFileName,
   clearLoadedFile,
   checkUnsavedChanges,
+  showToast,
+  t,
 }: UsePasteHandlerParams) {
+  // The text looked like SGF and was refused: say so. Anything else (a denied
+  // clipboard read, a failed download) stays in the console, as before.
+  const reportPasteFailure = useCallback(
+    (error: unknown) => {
+      console.error('Failed to load pasted content:', error);
+      if (isSgfValidationError(error)) showToast(formatSgfLoadError(error, t), 'error');
+    },
+    [showToast, t]
+  );
+
   // Global paste event handler for SGF content and OGS URLs
   useEffect(() => {
     const handlePaste = async (e: ClipboardEvent) => {
@@ -282,13 +297,13 @@ export function usePasteHandler({
         setFileName(getFilenameForSGF(result));
         clearLoadedFile();
       } catch (error) {
-        console.error('Failed to load pasted content:', error);
+        reportPasteFailure(error);
       }
     };
 
     document.addEventListener('paste', handlePaste);
     return () => document.removeEventListener('paste', handlePaste);
-  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges]);
+  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, reportPasteFailure]);
 
   // Keyboard shortcut handler for Cmd+V/Ctrl+V (fallback for Tauri on macOS)
   useEffect(() => {
@@ -326,12 +341,12 @@ export function usePasteHandler({
           setFileName(getFilenameForSGF(result));
           clearLoadedFile();
         } catch (error) {
-          console.error('Failed to load pasted content:', error);
+          reportPasteFailure(error);
         }
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges]);
+  }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, reportPasteFailure]);
 }

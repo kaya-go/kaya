@@ -51,9 +51,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMessages(prev => prev.filter(m => m.id !== id));
   }, []);
 
+  // Rendered here, not by a screen: a toast must show wherever one can be
+  // raised, including with the header hidden and on the landing page.
   return (
     <ToastContext.Provider value={{ messages, showToast, closeToast }}>
       {children}
+      <ToastContainer messages={messages} onClose={closeToast} />
     </ToastContext.Provider>
   );
 };
@@ -71,7 +74,7 @@ interface ToastContainerProps {
   onClose: (id: string) => void;
 }
 
-export const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onClose }) => {
+const ToastContainer: React.FC<ToastContainerProps> = ({ messages, onClose }) => {
   if (messages.length === 0) return null;
 
   return (

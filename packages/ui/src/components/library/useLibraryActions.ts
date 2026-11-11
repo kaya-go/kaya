@@ -9,7 +9,8 @@ import { buildSGF } from '@kaya/board-recognition';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import type { ConfirmDialogState } from './LibraryDialogs';
 import { useToast } from '../ui/Toast';
-import { formatImportResultError, formatLibraryFileImportError } from '../../utils/sgfAnalysis';
+import { formatImportResultError, formatLibraryFileImportError } from '../../utils/sgfLoadErrors';
+import { useOpenLibraryFile } from './useOpenLibraryFile';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
 
@@ -22,6 +23,7 @@ export interface ContextMenuState {
 export function useLibraryActions() {
   const { t } = useTranslation();
   const { showToast } = useToast();
+  const openFile = useOpenLibraryFile();
   const {
     items,
     selectedId,
@@ -34,7 +36,6 @@ export function useLibraryActions() {
     renameItem,
     moveItem,
     moveItems,
-    openFile,
     importZip,
     downloadFile,
     downloadFolder,
@@ -59,12 +60,12 @@ export function useLibraryActions() {
 
   // Shared .sgf / .zip / image import used by drop and the file picker.
   const importLibraryFiles = useCallback(
-    async (files: File[], parentId: string | null): Promise<'recognition' | void> => {
+    async (files: File[], parentId: string | null) => {
       for (const file of files) {
         const lowerName = file.name.toLowerCase();
         if (IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
           setRecognitionFile(file);
-          return 'recognition';
+          return;
         }
         if (lowerName.endsWith('.sgf')) {
           const content = await file.text();

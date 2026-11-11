@@ -20,6 +20,10 @@ import {
   unescapeString,
   parseDates,
   stringifyDates,
+  parseStrict,
+  SgfValidationError,
+  isSgfValidationError,
+  INVALID_SGF_CONTENT,
 } from '../src/index';
 import type { SGFNodeData } from '../src/index';
 
@@ -49,6 +53,53 @@ describe('parse', () => {
   test('accepts a pass as an empty move property', () => {
     const [root] = parse('(;GM[1];B[];W[bb])');
     expect(root.children[0].data.B).toEqual(['']);
+  });
+});
+
+describe('parseStrict', () => {
+  // What `parse` lets through, and a loader must not: each of these used to
+  // open as an empty or half-read game.
+  const notGameTrees = {
+    prose: 'hello world',
+    empty: '',
+    'no first node': '(B[aa];W[bb])',
+    'text before the tree': 'Subject: game\n\n(;FF[4];B[aa])',
+  };
+
+  test('returns what parse returns for a game tree', () => {
+    for (const sgf of ['(;FF[4]SZ[19];B[aa];W[bb])', '  \n(;B[aa])', '\uFEFF(;B[aa])']) {
+      expect(parseStrict(sgf)).toEqual(parse(sgf));
+    }
+  });
+
+  test('refuses content that is not a game tree', () => {
+    for (const [name, content] of Object.entries(notGameTrees)) {
+      expect(() => parseStrict(content), name).toThrow(SgfValidationError);
+      expect(() => parseStrict(content), name).toThrow(INVALID_SGF_CONTENT);
+    }
+  });
+
+  test('wraps a parser error, keeping its message and the original', () => {
+    let caught: unknown;
+    try {
+      parseStrict('(;B[aa]])');
+    } catch (error) {
+      caught = error;
+    }
+    expect(isSgfValidationError(caught)).toBe(true);
+    expect((caught as Error).message).toMatch(/Unexpected token/);
+    expect((caught as Error).cause).toBeInstanceOf(Error);
+  });
+
+  test('passes parse options through', () => {
+    let created = 0;
+    parseStrict('(;B[aa];W[bb])', { onNodeCreated: () => created++ });
+    expect(created).toBe(2);
+  });
+
+  test('isSgfValidationError tells it from any other error', () => {
+    expect(isSgfValidationError(new Error(INVALID_SGF_CONTENT))).toBe(false);
+    expect(isSgfValidationError('SgfValidationError')).toBe(false);
   });
 });
 

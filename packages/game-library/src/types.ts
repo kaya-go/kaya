@@ -106,7 +106,7 @@ export interface RenameItemOptions {
  */
 export type ImportError =
   | { kind: 'sgf'; path: string; cause: unknown }
-  | { kind: 'folder'; path: string; cause?: unknown }
+  | { kind: 'folder'; path: string; cause: unknown }
   | { kind: 'zip'; cause: unknown };
 
 /** Result of an import operation */

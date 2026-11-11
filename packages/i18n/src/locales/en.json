@@ -550,7 +550,9 @@
     "gameLoadedFromOgs": "Game loaded from OGS ({{gameId}})!",
     "gameLoadedFromClipboard": "Game loaded from clipboard!",
     "failedToPaste": "Failed to paste: {{error}}",
+    "failedToLoadSgf": "Failed to load SGF file: {{error}}",
     "invalidSgfContent": "Invalid SGF format",
+    "invalidSgfContentDetail": "Invalid SGF format: {{error}}",
     "failedToImportToLibrary": "Failed to import to library: {{error}}",
     "failedToImportZip": "Failed to import ZIP: {{error}}"
   },

@@ -214,6 +214,7 @@ Keep files small for readability and maintainability. Maximum line counts per fi
 3. **Workspace Dependencies**: Always use `workspace:*` in package.json
 4. **Cache Invalidation**: Call `clearAllCaches()` when loading new game
 5. **Tauri Plugin Versions**: Bump `@tauri-apps/plugin-*` together with its `tauri-plugin-*` crate (same major.minor) — `tauriVersions.test.ts` enforces it
+6. **Lenient SGF Parser**: `parse` turns prose into a node. Content that must be a game goes through `parseStrict` (`@kaya/sgf`), which throws `SgfValidationError`; show the failure with the formatters in `packages/ui/src/utils/sgfLoadErrors.ts`
 
 ## Commit Message Format
 

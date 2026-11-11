@@ -4,7 +4,6 @@ import { MobileMenu } from './MobileMenu';
 import { NewGameDialog } from '../dialogs/NewGameDialog';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
 import { SaveToLibraryDialog } from '../dialogs/SaveToLibraryDialog';
-import { ToastContainer } from '../ui/Toast';
 import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
 import { ScanOptionsModal } from '../dialogs/ScanOptionsModal';
 import { useHeaderActions } from './useHeaderActions';
@@ -103,8 +102,6 @@ export const Header: React.FC<HeaderProps> = ({
           getBinding={actions.getBinding}
           bindingToDisplayString={actions.bindingToDisplayString}
         />
-
-        <ToastContainer messages={actions.messages} onClose={actions.closeToast} />
 
         <NewGameDialog
           isOpen={actions.isNewGameDialogOpen}

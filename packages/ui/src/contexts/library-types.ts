@@ -96,7 +96,8 @@ export interface LibraryContextValue {
 export interface LibraryProviderProps {
   children: ReactNode;
   /** Callback when a file is opened */
-  onFileOpen?: (content: string, name: string) => void;
+  /** Loads the content into the editor. A rejection means the file is not opened. */
+  onFileOpen?: (content: string, name: string) => void | Promise<void>;
   /** Get current game content for saving */
   getCurrentGameContent?: () => string | null;
   /** Check if there are unsaved changes */

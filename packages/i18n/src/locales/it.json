@@ -550,7 +550,9 @@
     "gameLoadedFromOgs": "Partita caricata da OGS ({{gameId}})!",
     "gameLoadedFromClipboard": "Partita caricata dagli appunti!",
     "failedToPaste": "Incolla fallito: {{error}}",
+    "failedToLoadSgf": "Caricamento file SGF fallito: {{error}}",
     "invalidSgfContent": "Formato SGF non valido",
+    "invalidSgfContentDetail": "Formato SGF non valido: {{error}}",
     "failedToImportToLibrary": "Importazione in libreria fallita: {{error}}",
     "failedToImportZip": "Importazione ZIP fallita: {{error}}"
   },

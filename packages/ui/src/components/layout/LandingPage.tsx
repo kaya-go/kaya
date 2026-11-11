@@ -10,7 +10,6 @@ export interface LandingPageProps {
   onNewGame: () => void;
   onContinue?: () => void;
   onOpenLibrary: () => void;
-  onFileDrop: (file: File) => void;
   onNavigateToBoard?: () => void;
   version?: string;
   hasSavedGame?: boolean;
@@ -22,7 +21,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onNewGame,
   onContinue,
   onOpenLibrary,
-  onFileDrop,
   onNavigateToBoard,
   version,
   hasSavedGame,
@@ -46,17 +44,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     openInputRef.current?.click();
   }, []);
 
-  const handleOpenChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file) onFileDrop(file);
-      e.target.value = '';
-    },
-    [onFileDrop]
-  );
+  // Same loader as a drop: it checks for unsaved changes, reports a file that
+  // fails, and moves to the board only once the game is in.
+  const handleOpenChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) dropZoneRef.current?.loadFile(file);
+    e.target.value = '';
+  }, []);
 
   return (
-    <AppDropZone ref={dropZoneRef} onFileDrop={onFileDrop} onNavigateToBoard={onNavigateToBoard}>
+    <AppDropZone ref={dropZoneRef} onNavigateToBoard={onNavigateToBoard}>
       <div className="landing-page">
         <div className="landing-content">
           <div className="landing-brand">

@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo } from 'react';
 import { GoBoard } from '@kaya/goboard';
 import {
-  parse as parseSGF,
   stringify as stringifySGF,
   extractGameInfo as extractGameInfoFromSGF,
+  type SGFNode,
 } from '@kaya/sgf';
 import { injectAnalysisToTree, extractAnalysisFromTree } from '../utils/sgfAnalysis';
 import type { GameInfo, AISettings, NewGameConfig } from '../types/game';
@@ -18,8 +18,7 @@ interface UseGameTreeSGFOperationsParams {
   analysisCacheSize: number;
   updateAnalysisCacheSize: () => void;
   coreSaveSGF: () => string;
-  coreLoadSGF: (content: string) => void;
-  coreLoadSGFAsync: (content: string) => Promise<void>;
+  coreLoadSGFAsync: (content: string, onParsed?: (sgfRoot: SGFNode) => void) => Promise<void>;
   coreCreateNewGame: (config?: NewGameConfig) => void;
   isTreeDirty: boolean;
   markTreeClean: () => void;
@@ -36,7 +35,6 @@ export function useGameTreeSGFOperations({
   analysisCacheSize,
   updateAnalysisCacheSize,
   coreSaveSGF,
-  coreLoadSGF,
   coreLoadSGFAsync,
   coreCreateNewGame,
   isTreeDirty,
@@ -78,28 +76,25 @@ export function useGameTreeSGFOperations({
     [markTreeClean, analysisCache, updateAnalysisCacheSize]
   );
 
-  // Helper: extract analysis from SGF content into cache
-  const extractAnalysisFromContent = useCallback(
-    (content: string) => {
+  // Helper: read the analysis a parsed SGF carries into the cache
+  const extractAnalysisFromRoot = useCallback(
+    (sgfRoot: SGFNode) => {
       if (!aiSettings.saveAnalysisToSgf) return;
       try {
-        const nodes = parseSGF(content);
-        if (nodes.length > 0) {
-          const info = extractGameInfoFromSGF(nodes[0]);
-          const size = info.boardSize ?? 19;
-          const komi = info.komi ?? DEFAULT_KOMI;
-          const initialBoard = GoBoard.fromDimensions(size);
+        const info = extractGameInfoFromSGF(sgfRoot);
+        const size = info.boardSize ?? 19;
+        const komi = info.komi ?? DEFAULT_KOMI;
+        const initialBoard = GoBoard.fromDimensions(size);
 
-          const extractedCount = extractAnalysisFromTree(
-            nodes[0],
-            analysisCache.current,
-            initialBoard,
-            komi
-          );
-          if (extractedCount > 0) {
-            console.log(`[SGF] Loaded ${extractedCount} analyzed positions from file`);
-            updateAnalysisCacheSize();
-          }
+        const extractedCount = extractAnalysisFromTree(
+          sgfRoot,
+          analysisCache.current,
+          initialBoard,
+          komi
+        );
+        if (extractedCount > 0) {
+          console.log(`[SGF] Loaded ${extractedCount} analyzed positions from file`);
+          updateAnalysisCacheSize();
         }
       } catch (e) {
         console.warn('[SGF] Failed to extract analysis from SGF:', e);
@@ -126,30 +121,20 @@ export function useGameTreeSGFOperations({
     return stringifySGF([injectedRoot]);
   }, [gameTree, rootId, aiSettings.saveAnalysisToSgf, analysisCache, gameInfo, coreSaveSGF]);
 
-  // Load SGF (synchronous)
-  const loadSGF = useCallback(
-    (content: string) => {
-      analysisCache.current.clear();
-      clearHistory();
-      extractAnalysisFromContent(content);
-      coreLoadSGF(content);
-      setCleanAnalysisCacheSize(analysisCache.current.size);
-      setForcedDirty(false);
-    },
-    [analysisCache, clearHistory, extractAnalysisFromContent, coreLoadSGF]
-  );
-
-  // Load SGF (async)
+  // Load SGF. The analysis cache and the undo history belong to the game being
+  // replaced, so they go only once the new content has parsed: a file that
+  // fails leaves the current game with its analysis and its history.
   const loadSGFAsync = useCallback(
     async (content: string) => {
-      analysisCache.current.clear();
-      clearHistory();
-      extractAnalysisFromContent(content);
-      await coreLoadSGFAsync(content);
+      await coreLoadSGFAsync(content, sgfRoot => {
+        analysisCache.current.clear();
+        clearHistory();
+        extractAnalysisFromRoot(sgfRoot);
+      });
       setCleanAnalysisCacheSize(analysisCache.current.size);
       setForcedDirty(false);
     },
-    [analysisCache, clearHistory, extractAnalysisFromContent, coreLoadSGFAsync]
+    [analysisCache, clearHistory, extractAnalysisFromRoot, coreLoadSGFAsync]
   );
 
   // Create new game
@@ -207,7 +192,6 @@ export function useGameTreeSGFOperations({
 
   return {
     saveSGF,
-    loadSGF,
     loadSGFAsync,
     createNewGame,
     isDirty,

@@ -550,7 +550,9 @@
     "gameLoadedFromOgs": "已从 OGS 加载对局（{{gameId}}）！",
     "gameLoadedFromClipboard": "已从剪贴板加载对局！",
     "failedToPaste": "粘贴失败：{{error}}",
+    "failedToLoadSgf": "加载 SGF 文件失败：{{error}}",
     "invalidSgfContent": "SGF 格式不合法",
+    "invalidSgfContentDetail": "SGF 格式不合法：{{error}}",
     "failedToImportToLibrary": "导入棋库失败：{{error}}",
     "failedToImportZip": "导入 ZIP 失败：{{error}}"
   },

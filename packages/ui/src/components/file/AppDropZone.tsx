@@ -23,7 +23,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
 import { useToast } from '../ui/Toast';
-import { formatSgfLoadError } from '../../utils/sgfAnalysis';
+import { formatSgfLoadError } from '../../utils/sgfLoadErrors';
 import { useTauriDragDrop, usePasteHandler } from './useDropZoneEffects';
 import './AppDropZone.css';
 
@@ -35,7 +35,6 @@ export interface AppDropZoneRef {
 
 interface AppDropZoneProps {
   children: ReactNode;
-  onFileDrop?: (file: File) => void;
   onNavigateToBoard?: () => void;
 }
 
@@ -46,7 +45,7 @@ const isInsideLibrary = (target: EventTarget | null): boolean => {
 };
 
 export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
-  ({ children, onFileDrop, onNavigateToBoard }, ref) => {
+  ({ children, onNavigateToBoard }, ref) => {
     const { t } = useTranslation();
     const { showToast } = useToast();
     const { loadSGFAsync, setFileName, setCustomAIModel, addSetupPosition, playMove } =
@@ -111,7 +110,14 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
     });
 
     // Paste and keyboard shortcut handling
-    usePasteHandler({ loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges });
+    usePasteHandler({
+      loadSGFAsync,
+      setFileName,
+      clearLoadedFile,
+      checkUnsavedChanges,
+      showToast,
+      t,
+    });
 
     const handleFileLoad = useCallback(
       async (file: File) => {
@@ -133,11 +139,6 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
           return;
         }
 
-        if (onFileDrop) {
-          onFileDrop(file);
-          return;
-        }
-
         // Check for unsaved changes first
         const canProceed = await checkUnsavedChanges();
         if (!canProceed) return;
@@ -147,17 +148,18 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
           await loadSGFAsync(content);
           setFileName(file.name);
           clearLoadedFile(); // Clear library loaded indicator
+          onNavigateToBoard?.();
         } catch (error) {
           showToast(formatSgfLoadError(error, t), 'error');
         }
       },
       [
-        onFileDrop,
         loadSGFAsync,
         setFileName,
         setCustomAIModel,
         clearLoadedFile,
         checkUnsavedChanges,
+        onNavigateToBoard,
         showToast,
         t,
       ]

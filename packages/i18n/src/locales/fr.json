@@ -550,7 +550,9 @@
     "gameLoadedFromOgs": "Partie chargée depuis OGS ({{gameId}}) !",
     "gameLoadedFromClipboard": "Partie chargée depuis le presse-papiers !",
     "failedToPaste": "Échec du collage : {{error}}",
+    "failedToLoadSgf": "Échec du chargement SGF : {{error}}",
     "invalidSgfContent": "Format SGF invalide",
+    "invalidSgfContentDetail": "Format SGF invalide : {{error}}",
     "failedToImportToLibrary": "Échec de l'import dans la bibliothèque : {{error}}",
     "failedToImportZip": "Échec de l'import ZIP : {{error}}"
   },

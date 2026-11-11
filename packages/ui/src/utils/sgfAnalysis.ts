@@ -1,18 +1,9 @@
 import { AnalysisResult, MoveSuggestion } from '@kaya/ai-engine';
-import {
-  INVALID_SGF_CONTENT,
-  isSgfValidationError,
-  type ImportError,
-  type ImportResult,
-} from '@kaya/game-library';
 import { SGFNode, SGFNodeData, sgfToVertex } from '@kaya/sgf';
 import { GameTreeNode } from '@kaya/gametree';
 import { GoBoard, Sign } from '@kaya/goboard';
-import type { TFunction } from 'i18next';
 import { generateAnalysisCacheKey, AnalysisHistoryItem } from './aiAnalysis';
 import { SGFProperty } from '../types/game';
-
-export { INVALID_SGF_CONTENT, isSgfValidationError };
 
 /**
  * Kaya Analysis Data Structure (JSON format for SGF)
@@ -389,60 +380,4 @@ export function extractAnalysisFromTree(
   }
 
   return extractedCount;
-}
-
-function errorDetail(error: unknown): string {
-  return (error instanceof Error ? error.message : String(error)).replace(/^Error:\s*/, '');
-}
-
-/** User-facing SGF load failure text: localized label + parser detail. */
-export function formatSgfLoadError(error: unknown, t: TFunction): string {
-  const detail = errorDetail(error);
-
-  if (!detail || detail === INVALID_SGF_CONTENT) {
-    return t('toast.invalidSgfContent');
-  }
-
-  return `${t('toast.invalidSgfContent')}: ${detail}`;
-}
-
-/**
- * Library single-file import failure. SGF validation uses the SGF toast;
- * anything else (DB, IO) uses the generic library-import toast.
- */
-export function formatLibraryFileImportError(error: unknown, t: TFunction): string {
-  if (isSgfValidationError(error)) {
-    return formatSgfLoadError(error, t);
-  }
-
-  const detail = errorDetail(error);
-  return t('toast.failedToImportToLibrary', { error: detail || 'unknown' });
-}
-
-/** Structured ZIP import failure from {@link ImportError}. */
-export function formatZipImportError(error: ImportError, t: TFunction): string {
-  switch (error.kind) {
-    case 'sgf': {
-      const base = formatLibraryFileImportError(error.cause, t);
-      return error.path ? `${base} (${error.path})` : base;
-    }
-    case 'folder': {
-      const detail = error.cause ? errorDetail(error.cause) : error.path;
-      return t('toast.failedToImportZip', {
-        error: detail ? `${error.path}: ${detail}` : error.path,
-      });
-    }
-    case 'zip':
-      return t('toast.failedToImportZip', {
-        error: errorDetail(error.cause) || 'unknown',
-      });
-  }
-}
-
-/** Toast text for a completed zip import, or null when nothing failed. */
-export function formatImportResultError(result: ImportResult, t: TFunction): string | null {
-  if (result.failed === 0 && result.errors.length === 0) return null;
-  const first = result.errors[0];
-  if (first) return formatZipImportError(first, t);
-  return t('toast.failedToImportZip', { error: `${result.failed} failed` });
 }

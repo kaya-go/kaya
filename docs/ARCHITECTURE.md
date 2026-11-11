@@ -351,3 +351,20 @@ A game whose SGF has no `KM` uses `DEFAULT_KOMI` (7.5, exported by
 `@kaya/ai-engine`, the engines' own default) everywhere: analysis, scoring,
 and the panel, which shows it in italics. Clearing Komi in the panel deletes
 `KM`. New games always write `KM`, 0 included.
+
+### 12. A file that fails to load costs nothing, and says so
+
+`parse` in `@kaya/sgf` is lenient: prose becomes a node. Content that must be
+a game goes through [`parseStrict`](../packages/sgf/src/validation.ts), which
+throws `SgfValidationError`; the library (`validateSGF`) and the editor
+(`loadSGFAsync`) both use it. `loadSGFAsync` parses and builds the tree before
+it touches the current game, and runs its `onParsed` callback (analysis cache,
+undo history) only then, so a refused file leaves the game, its analysis and
+its history alone.
+
+Failures surface as toasts built by
+[`sgfLoadErrors.ts`](../packages/ui/src/utils/sgfLoadErrors.ts) from the
+error's class and `ImportError.kind`, never from its message. Toasts render
+from `ToastProvider`, not from a screen, so they show with the header hidden
+and on the landing page. See
+[`specs/2026-11-10-sgf-import-error-surface.md`](../specs/2026-11-10-sgf-import-error-surface.md).

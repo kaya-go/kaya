@@ -81,7 +81,6 @@ export const GameTreeProvider: React.FC<{
     gameId,
     rootId,
     gameInfo,
-    loadSGF: coreLoadSGF,
     loadSGFAsync: coreLoadSGFAsync,
     isLoadingSGF,
     loadingProgress,
@@ -247,24 +246,22 @@ export const GameTreeProvider: React.FC<{
     usePatternMatching({ gameTree: gameTree!, currentNodeId, currentNode, gameInfo });
 
   // 9. SGF operations with analysis integration + dirty state
-  const { saveSGF, loadSGF, loadSGFAsync, createNewGame, isDirty, setIsDirty } =
-    useGameTreeSGFOperations({
-      gameTree,
-      rootId,
-      gameInfo,
-      aiSettings,
-      analysisCache,
-      analysisCacheSize,
-      updateAnalysisCacheSize,
-      coreSaveSGF,
-      coreLoadSGF,
-      coreLoadSGFAsync,
-      coreCreateNewGame,
-      isTreeDirty,
-      markTreeClean,
-      clearHistory,
-      isInitialized,
-    });
+  const { saveSGF, loadSGFAsync, createNewGame, isDirty, setIsDirty } = useGameTreeSGFOperations({
+    gameTree,
+    rootId,
+    gameInfo,
+    aiSettings,
+    analysisCache,
+    analysisCacheSize,
+    updateAnalysisCacheSize,
+    coreSaveSGF,
+    coreLoadSGFAsync,
+    coreCreateNewGame,
+    isTreeDirty,
+    markTreeClean,
+    clearHistory,
+    isInitialized,
+  });
 
   const resign = useCallback(
     (player?: string | number) => {
@@ -349,7 +346,6 @@ export const GameTreeProvider: React.FC<{
       switchToBranchIndex,
       makeMove,
       createNewGame,
-      loadSGF,
       saveSGF,
       updateGameInfo,
       editMode,
@@ -463,7 +459,7 @@ export const GameTreeProvider: React.FC<{
       navigateToStart, navigateToEnd, navigateToNextFork, navigateToPreviousFork, navigateToMainLine,
       goToPreviousSibling, goToNextSibling, goToSiblingIndex, siblingInfo,
       branchInfo, switchBranch, switchToBranchIndex,
-      makeMove, createNewGame, loadSGF, saveSGF, updateGameInfo,
+      makeMove, createNewGame, saveSGF, updateGameInfo,
       editMode, editPlayMode, editTool, stoneToolColor, addSetupStone, addSetupPosition, clearSetupStones,
       clearAllMarkersAndLabels, addMarker, setNodeName, setNodeComment,
       deleteNode, cutNode, deleteContinuation, copyNode, pasteNode, flattenVariations, makeMainVariation, shiftVariation, toggleEditMode,

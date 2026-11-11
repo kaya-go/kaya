@@ -63,8 +63,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     rootId,
     createNewGame,
     filename,
-    loadSGFAsync,
-    setFileName,
   } = useGameTreeSelector(
     useCallback(
       (ctx: GameTreeContextValue) => ({
@@ -76,8 +74,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
         rootId: ctx.rootId,
         createNewGame: ctx.createNewGame,
         filename: ctx.filename,
-        loadSGFAsync: ctx.loadSGFAsync,
-        setFileName: ctx.setFileName,
       }),
       []
     )
@@ -225,22 +221,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     }
   }, [isMobile, onMobileTabChange]);
 
-  const handleFileDrop = useCallback(
-    (file: File) => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const content = e.target?.result as string;
-        if (content) {
-          loadSGFAsync(content);
-          setFileName(file.name);
-          setHasStarted(true);
-        }
-      };
-      reader.readAsText(file);
-    },
-    [loadSGFAsync, setFileName]
-  );
-
   return {
     showAboutDialog,
     setShowAboutDialog,
@@ -263,7 +243,6 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
     handleOpenLibrary,
     handleGoHome,
     handleNavigateToBoard,
-    handleFileDrop,
     showHeader,
     setShowHeader,
     showSidebar,
