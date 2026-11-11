@@ -7,6 +7,7 @@ import {
   type UseGameNavigationProps,
   computeVariations,
   computeTotalMovesInBranch,
+  findPreviousFork,
   isNodeStep,
 } from './navigation-helpers';
 import { useBranchNavigation } from './useBranchNavigation';
@@ -269,17 +270,10 @@ export function useGameNavigation({
     const tree = gameTreeRef.current;
     const startId = currentNodeIdRef.current;
     if (!tree || startId === null || startId === undefined) return;
-    let current = tree.get(startId);
-    // Root id is 0; a truthy check would stop on the root's child.
-    while (current && current.parentId != null) {
-      const parent = tree.get(current.parentId);
-      if (!parent) break;
-      current = parent;
-      if (current.children.length > 1) break;
-    }
-    if (current && current.id !== startId) {
-      markNavigationStart('navigateToPreviousFork', current.id);
-      setCurrentNodeId(current.id);
+    const fork = findPreviousFork(tree, startId);
+    if (fork && fork.id !== startId) {
+      markNavigationStart('navigateToPreviousFork', fork.id);
+      setCurrentNodeId(fork.id);
     }
   }, [markNavigationStart, setCurrentNodeId]);
 
