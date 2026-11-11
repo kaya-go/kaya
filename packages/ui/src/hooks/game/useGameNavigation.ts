@@ -7,6 +7,7 @@ import {
   type UseGameNavigationProps,
   computeVariations,
   computeTotalMovesInBranch,
+  findPreviousFork,
   isNodeStep,
 } from './navigation-helpers';
 import { useBranchNavigation } from './useBranchNavigation';
@@ -21,6 +22,14 @@ export function useGameNavigation({
 }: UseGameNavigationProps) {
   const navigationTimingsRef = useRef<Map<number | string, NavigationTiming>>(new Map());
   const activeBranchMapRef = useRef<Map<number | string, number | string>>(new Map());
+
+  // Keep latest ids in refs so navigate callbacks stay referentially stable across nav.
+  const gameTreeRef = useRef(gameTree);
+  gameTreeRef.current = gameTree;
+  const currentNodeIdRef = useRef(currentNodeId);
+  currentNodeIdRef.current = currentNodeId;
+  const rootIdRef = useRef(rootId);
+  rootIdRef.current = rootId;
 
   const markNavigationStart = useCallback((label: string, targetNodeId: number | string) => {
     navigationTimingsRef.current.set(targetNodeId, {
@@ -63,6 +72,9 @@ export function useGameNavigation({
     [gameTree, currentNodeId]
   );
 
+  const currentNodeRef = useRef(currentNode);
+  currentNodeRef.current = currentNode;
+
   const nextMoveNode = useMemo(
     () => (currentNode ? getActiveChildForNode(currentNode) : null),
     [currentNode, getActiveChildForNode]
@@ -97,72 +109,71 @@ export function useGameNavigation({
     [currentNode]
   );
 
-  // Navigation functions
+  // Navigation functions (read latest tree/ids from refs so identities stay stable across nav)
   const goToNode = useCallback(
     (nodeId: number | string) => {
-      if (!gameTree || nodeId === currentNodeId) return;
-      const targetNode = gameTree.get(nodeId);
+      const tree = gameTreeRef.current;
+      if (!tree || nodeId === currentNodeIdRef.current) return;
+      const targetNode = tree.get(nodeId);
       if (!targetNode) return;
 
       rememberActiveBranch(targetNode.parentId, targetNode.id);
       markNavigationStart('goToNode', nodeId);
       setCurrentNodeId(nodeId);
     },
-    [gameTree, currentNodeId, markNavigationStart, rememberActiveBranch, setCurrentNodeId]
+    [markNavigationStart, rememberActiveBranch, setCurrentNodeId]
   );
 
   const goBack = useCallback(() => {
-    if (currentNode?.parentId === null || currentNode?.parentId === undefined) {
-      return;
-    }
-    const targetId = currentNode.parentId;
+    const node = currentNodeRef.current;
+    if (node?.parentId === null || node?.parentId === undefined) return;
+    const targetId = node.parentId;
     markNavigationStart('goBack', targetId);
     setCurrentNodeId(targetId);
-  }, [currentNode, markNavigationStart, setCurrentNodeId]);
+  }, [markNavigationStart, setCurrentNodeId]);
 
   const goForward = useCallback(() => {
-    if (!currentNode) return;
-    const nextNode = getActiveChildForNode(currentNode);
+    const node = currentNodeRef.current;
+    if (!node) return;
+    const nextNode = getActiveChildForNode(node);
     if (!nextNode) return;
 
-    rememberActiveBranch(currentNode.id, nextNode.id);
+    rememberActiveBranch(node.id, nextNode.id);
     markNavigationStart('goForward', nextNode.id);
     setCurrentNodeId(nextNode.id);
-  }, [
-    currentNode,
-    markNavigationStart,
-    rememberActiveBranch,
-    getActiveChildForNode,
-    setCurrentNodeId,
-  ]);
+  }, [markNavigationStart, rememberActiveBranch, getActiveChildForNode, setCurrentNodeId]);
 
   const goBackSteps = useCallback(
     (steps: number) => {
-      if (!gameTree || currentNodeId === null || steps <= 0) return;
+      const tree = gameTreeRef.current;
+      const startId = currentNodeIdRef.current;
+      if (!tree || startId === null || steps <= 0) return;
 
-      let targetId = currentNodeId;
-      let node = gameTree.get(targetId);
+      let targetId = startId;
+      let node = tree.get(targetId);
 
       for (let i = 0; i < steps; i++) {
         if (!node || node.parentId === null || node.parentId === undefined) break;
         targetId = node.parentId;
-        node = gameTree.get(targetId);
+        node = tree.get(targetId);
       }
 
-      if (targetId !== currentNodeId) {
+      if (targetId !== startId) {
         markNavigationStart(`goBackSteps(${steps})`, targetId);
         setCurrentNodeId(targetId);
       }
     },
-    [gameTree, currentNodeId, markNavigationStart, setCurrentNodeId]
+    [markNavigationStart, setCurrentNodeId]
   );
 
   const goForwardSteps = useCallback(
     (steps: number) => {
-      if (!gameTree || currentNodeId === null || steps <= 0) return;
+      const tree = gameTreeRef.current;
+      const startId = currentNodeIdRef.current;
+      if (!tree || startId === null || steps <= 0) return;
 
-      let targetId = currentNodeId;
-      let node = gameTree.get(targetId);
+      let targetId = startId;
+      let node = tree.get(targetId);
 
       for (let i = 0; i < steps; i++) {
         if (!node) break;
@@ -171,37 +182,31 @@ export function useGameNavigation({
 
         rememberActiveBranch(node.id, nextNode.id);
         targetId = nextNode.id;
-        node = gameTree.get(targetId);
+        node = tree.get(targetId);
       }
 
-      if (targetId !== currentNodeId) {
+      if (targetId !== startId) {
         markNavigationStart(`goForwardSteps(${steps})`, targetId);
         setCurrentNodeId(targetId);
       }
     },
-    [
-      gameTree,
-      currentNodeId,
-      markNavigationStart,
-      rememberActiveBranch,
-      getActiveChildForNode,
-      setCurrentNodeId,
-    ]
+    [markNavigationStart, rememberActiveBranch, getActiveChildForNode, setCurrentNodeId]
   );
 
   const goToStart = useCallback(() => {
-    if (rootId === null || currentNodeId === rootId) {
-      return;
-    }
-    markNavigationStart('goToStart', rootId);
-    setCurrentNodeId(rootId);
-  }, [rootId, currentNodeId, markNavigationStart, setCurrentNodeId]);
+    const rid = rootIdRef.current;
+    if (rid === null || currentNodeIdRef.current === rid) return;
+    markNavigationStart('goToStart', rid);
+    setCurrentNodeId(rid);
+  }, [markNavigationStart, setCurrentNodeId]);
 
   const goToEnd = useCallback(() => {
-    if (!gameTree || currentNodeId === null) return;
+    const tree = gameTreeRef.current;
+    const startId = currentNodeIdRef.current;
+    if (!tree || startId === null) return;
 
-    let nodeId = currentNodeId;
-    let node = gameTree.get(nodeId);
+    let nodeId = startId;
+    let node = tree.get(nodeId);
     const visited = new Set<number | string>();
 
     while (node && node.children.length > 0) {
@@ -212,30 +217,23 @@ export function useGameNavigation({
       visited.add(nodeId);
 
       const nextChild = getActiveChildForNode(node);
-      if (!nextChild) {
-        break;
-      }
+      if (!nextChild) break;
       rememberActiveBranch(node.id, nextChild.id);
       nodeId = nextChild.id;
-      node = gameTree.get(nodeId);
+      node = tree.get(nodeId);
     }
 
-    if (nodeId === currentNodeId) return;
+    if (nodeId === startId) return;
     markNavigationStart('goToEnd', nodeId);
     setCurrentNodeId(nodeId);
-  }, [
-    gameTree,
-    currentNodeId,
-    markNavigationStart,
-    rememberActiveBranch,
-    getActiveChildForNode,
-    setCurrentNodeId,
-  ]);
+  }, [markNavigationStart, rememberActiveBranch, getActiveChildForNode, setCurrentNodeId]);
 
   const navigateToMove = useCallback(
     (moveNumber: number) => {
-      if (!gameTree || rootId === null || rootId === undefined) return;
-      let current = gameTree.get(rootId);
+      const tree = gameTreeRef.current;
+      const rid = rootIdRef.current;
+      if (!tree || rid === null || rid === undefined) return;
+      let current = tree.get(rid);
       let count = 0;
       while (current && count < moveNumber) {
         const next = getActiveChildForNode(current);
@@ -248,44 +246,49 @@ export function useGameNavigation({
         setCurrentNodeId(current.id);
       }
     },
-    [gameTree, rootId, getActiveChildForNode, markNavigationStart, setCurrentNodeId]
+    [getActiveChildForNode, markNavigationStart, setCurrentNodeId]
   );
 
   const navigateToNextFork = useCallback(() => {
-    if (!gameTree || currentNodeId === null || currentNodeId === undefined) return;
-    let current = gameTree.get(currentNodeId);
+    const tree = gameTreeRef.current;
+    const startId = currentNodeIdRef.current;
+    if (!tree || startId === null || startId === undefined) return;
+    let current = tree.get(startId);
     while (current) {
       const next = getActiveChildForNode(current);
       if (!next) break;
       current = next;
       if (current.children.length > 1) break;
     }
-    if (current && current.id !== currentNodeId) {
+    if (current && current.id !== startId) {
       markNavigationStart('navigateToNextFork', current.id);
       setCurrentNodeId(current.id);
     }
-  }, [gameTree, currentNodeId, getActiveChildForNode, markNavigationStart, setCurrentNodeId]);
+  }, [getActiveChildForNode, markNavigationStart, setCurrentNodeId]);
 
   const navigateToPreviousFork = useCallback(() => {
-    if (!gameTree || currentNodeId === null || currentNodeId === undefined) return;
-    let current = gameTree.get(currentNodeId);
-    while (current && current.parentId) {
-      const parent = gameTree.get(current.parentId);
-      if (!parent) break;
-      current = parent;
-      if (current.children.length > 1) break;
+    const tree = gameTreeRef.current;
+    const startId = currentNodeIdRef.current;
+    if (!tree || startId === null || startId === undefined) return;
+    const fork = findPreviousFork(tree, startId);
+    if (fork && fork.id !== startId) {
+      markNavigationStart('navigateToPreviousFork', fork.id);
+      setCurrentNodeId(fork.id);
     }
-    if (current && current.id !== currentNodeId) {
-      markNavigationStart('navigateToPreviousFork', current.id);
-      setCurrentNodeId(current.id);
-    }
-  }, [gameTree, currentNodeId, markNavigationStart, setCurrentNodeId]);
+  }, [markNavigationStart, setCurrentNodeId]);
 
   const navigateToMainLine = useCallback(() => {
-    if (!gameTree || rootId === null || rootId === undefined) return;
-    markNavigationStart('navigateToMainLine', rootId);
-    setCurrentNodeId(rootId);
-  }, [gameTree, rootId, markNavigationStart, setCurrentNodeId]);
+    const tree = gameTreeRef.current;
+    const rid = rootIdRef.current;
+    if (!tree || rid === null || rid === undefined) return;
+    markNavigationStart('navigateToMainLine', rid);
+    setCurrentNodeId(rid);
+  }, [markNavigationStart, setCurrentNodeId]);
+
+  const navigateBackward = useCallback((steps = 1) => goBackSteps(steps), [goBackSteps]);
+  const navigateForward = useCallback((steps = 1) => goForwardSteps(steps), [goForwardSteps]);
+  const navigateUp = useCallback(() => goBackSteps(10), [goBackSteps]);
+  const navigateDown = useCallback(() => goForwardSteps(10), [goForwardSteps]);
 
   // Branch & sibling navigation (extracted sub-hook)
   const {
@@ -320,10 +323,10 @@ export function useGameNavigation({
     canGoForward,
     totalMovesInBranch,
     navigate: goToNode,
-    navigateBackward: (steps = 1) => goBackSteps(steps),
-    navigateForward: (steps = 1) => goForwardSteps(steps),
-    navigateUp: () => goBackSteps(10),
-    navigateDown: () => goForwardSteps(10),
+    navigateBackward,
+    navigateForward,
+    navigateUp,
+    navigateDown,
     navigateToStart: goToStart,
     navigateToEnd: goToEnd,
     navigateToMove,

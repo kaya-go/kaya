@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { SGFProperty } from '../../types/game';
 
@@ -20,21 +20,22 @@ export function useBranchNavigation({
   rememberActiveBranch,
   setCurrentNodeId,
 }: UseBranchNavigationProps) {
+  // Latest tree and node, so sibling callbacks keep one identity across navigation.
+  const gameTreeRef = useRef(gameTree);
+  gameTreeRef.current = gameTree;
+  const currentNodeRef = useRef(currentNode);
+  currentNodeRef.current = currentNode;
+
   // Navigate to previous sibling (wraps around)
   const goToPreviousSibling = useCallback(() => {
-    if (
-      !gameTree ||
-      !currentNode ||
-      currentNode.parentId === null ||
-      currentNode.parentId === undefined
-    ) {
-      return;
-    }
-    const parent = gameTree.get(currentNode.parentId);
+    const tree = gameTreeRef.current;
+    const node = currentNodeRef.current;
+    if (!tree || !node || node.parentId === null || node.parentId === undefined) return;
+    const parent = tree.get(node.parentId);
     if (!parent || parent.children.length <= 1) return;
 
     const siblings = parent.children;
-    const index = siblings.findIndex((s: { id: string | number }) => s.id === currentNode.id);
+    const index = siblings.findIndex((s: { id: string | number }) => s.id === node.id);
     if (index === -1) return;
 
     const prevIndex = (index - 1 + siblings.length) % siblings.length;
@@ -42,23 +43,18 @@ export function useBranchNavigation({
 
     markNavigationStart('goToPreviousSibling', targetId);
     setCurrentNodeId(targetId);
-  }, [gameTree, currentNode, markNavigationStart, setCurrentNodeId]);
+  }, [markNavigationStart, setCurrentNodeId]);
 
   // Navigate to next sibling (wraps around)
   const goToNextSibling = useCallback(() => {
-    if (
-      !gameTree ||
-      !currentNode ||
-      currentNode.parentId === null ||
-      currentNode.parentId === undefined
-    ) {
-      return;
-    }
-    const parent = gameTree.get(currentNode.parentId);
+    const tree = gameTreeRef.current;
+    const node = currentNodeRef.current;
+    if (!tree || !node || node.parentId === null || node.parentId === undefined) return;
+    const parent = tree.get(node.parentId);
     if (!parent || parent.children.length <= 1) return;
 
     const siblings = parent.children;
-    const index = siblings.findIndex((s: { id: string | number }) => s.id === currentNode.id);
+    const index = siblings.findIndex((s: { id: string | number }) => s.id === node.id);
     if (index === -1) return;
 
     const nextIndex = (index + 1) % siblings.length;
@@ -66,20 +62,15 @@ export function useBranchNavigation({
 
     markNavigationStart('goToNextSibling', targetId);
     setCurrentNodeId(targetId);
-  }, [gameTree, currentNode, markNavigationStart, setCurrentNodeId]);
+  }, [markNavigationStart, setCurrentNodeId]);
 
   // Navigate to a specific sibling by index (1-indexed)
   const goToSiblingIndex = useCallback(
     (targetIndex: number) => {
-      if (
-        !gameTree ||
-        !currentNode ||
-        currentNode.parentId === null ||
-        currentNode.parentId === undefined
-      ) {
-        return;
-      }
-      const parent = gameTree.get(currentNode.parentId);
+      const tree = gameTreeRef.current;
+      const node = currentNodeRef.current;
+      if (!tree || !node || node.parentId === null || node.parentId === undefined) return;
+      const parent = tree.get(node.parentId);
       if (!parent || parent.children.length <= 1) return;
 
       const siblings = parent.children;
@@ -89,7 +80,7 @@ export function useBranchNavigation({
       markNavigationStart(`goToSiblingIndex(${targetIndex})`, targetId);
       setCurrentNodeId(targetId);
     },
-    [gameTree, currentNode, markNavigationStart, setCurrentNodeId]
+    [markNavigationStart, setCurrentNodeId]
   );
 
   // Get sibling info for UI
@@ -201,6 +192,9 @@ export function useBranchNavigation({
     };
   }, [gameTree, currentNode, findBranchRoot]);
 
+  const branchInfoRef = useRef(branchInfo);
+  branchInfoRef.current = branchInfo;
+
   /**
    * Switch to a sibling branch and navigate to the same relative depth.
    * Only switches between direct siblings (same fork point).
@@ -208,13 +202,15 @@ export function useBranchNavigation({
    */
   const switchBranch = useCallback(
     (direction: 'next' | 'previous') => {
-      if (!gameTree || !branchInfo.hasBranches || branchInfo.forkNodeId === null) return;
+      const tree = gameTreeRef.current;
+      const info = branchInfoRef.current;
+      if (!tree || !info.hasBranches || info.forkNodeId === null) return;
 
-      const forkNode = gameTree.get(branchInfo.forkNodeId);
+      const forkNode = tree.get(info.forkNodeId);
       if (!forkNode || forkNode.children.length <= 1) return;
 
       const siblings = forkNode.children;
-      const currentIndex = branchInfo.currentIndex - 1;
+      const currentIndex = info.currentIndex - 1;
 
       let targetIndex: number;
       if (direction === 'next') {
@@ -226,7 +222,7 @@ export function useBranchNavigation({
       const targetBranchRoot = siblings[targetIndex];
       if (!targetBranchRoot) return;
 
-      if (branchInfo.depthFromBranchRoot === 0) {
+      if (info.depthFromBranchRoot === 0) {
         markNavigationStart(`switchBranch(${direction})`, targetBranchRoot.id);
         rememberActiveBranch(forkNode.id, targetBranchRoot.id);
         setCurrentNodeId(targetBranchRoot.id);
@@ -235,7 +231,7 @@ export function useBranchNavigation({
 
       let targetNode = targetBranchRoot;
       let currentDepth = 0;
-      const targetDepth = branchInfo.depthFromBranchRoot;
+      const targetDepth = info.depthFromBranchRoot;
 
       while (currentDepth < targetDepth && targetNode.children.length > 0) {
         const nextNode = targetNode.children[0];
@@ -250,7 +246,7 @@ export function useBranchNavigation({
       rememberActiveBranch(forkNode.id, targetBranchRoot.id);
       setCurrentNodeId(targetNode.id);
     },
-    [gameTree, branchInfo, markNavigationStart, rememberActiveBranch, setCurrentNodeId]
+    [markNavigationStart, rememberActiveBranch, setCurrentNodeId]
   );
 
   /**
@@ -259,9 +255,11 @@ export function useBranchNavigation({
    */
   const switchToBranchIndex = useCallback(
     (targetIndex: number) => {
-      if (!gameTree || !branchInfo.hasBranches || branchInfo.forkNodeId === null) return;
+      const tree = gameTreeRef.current;
+      const info = branchInfoRef.current;
+      if (!tree || !info.hasBranches || info.forkNodeId === null) return;
 
-      const forkNode = gameTree.get(branchInfo.forkNodeId);
+      const forkNode = tree.get(info.forkNodeId);
       if (!forkNode || forkNode.children.length <= 1) return;
 
       const siblings = forkNode.children;
@@ -270,7 +268,7 @@ export function useBranchNavigation({
       const targetBranchRoot = siblings[clampedIndex];
       if (!targetBranchRoot) return;
 
-      if (branchInfo.depthFromBranchRoot === 0) {
+      if (info.depthFromBranchRoot === 0) {
         markNavigationStart(`switchToBranchIndex(${targetIndex})`, targetBranchRoot.id);
         rememberActiveBranch(forkNode.id, targetBranchRoot.id);
         setCurrentNodeId(targetBranchRoot.id);
@@ -279,7 +277,7 @@ export function useBranchNavigation({
 
       let targetNode = targetBranchRoot;
       let currentDepth = 0;
-      const targetDepth = branchInfo.depthFromBranchRoot;
+      const targetDepth = info.depthFromBranchRoot;
 
       while (currentDepth < targetDepth && targetNode.children.length > 0) {
         const nextNode = targetNode.children[0];
@@ -294,7 +292,7 @@ export function useBranchNavigation({
       rememberActiveBranch(forkNode.id, targetBranchRoot.id);
       setCurrentNodeId(targetNode.id);
     },
-    [gameTree, branchInfo, markNavigationStart, rememberActiveBranch, setCurrentNodeId]
+    [markNavigationStart, rememberActiveBranch, setCurrentNodeId]
   );
 
   return {

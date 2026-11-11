@@ -83,3 +83,22 @@ export function computeTotalMovesInBranch(
 
   return count;
 }
+
+/**
+ * The nearest ancestor with more than one child, or the root when the line
+ * above has no fork. Null when `startId` is not in the tree.
+ */
+export function findPreviousFork(
+  tree: GameTree<SGFProperty>,
+  startId: number | string
+): GameTreeNode<SGFProperty> | null {
+  let current = tree.get(startId);
+  // The root's id is 0, so a truthy check on parentId stops on the root's children.
+  while (current && current.parentId != null) {
+    const parent = tree.get(current.parentId);
+    if (!parent) break;
+    current = parent;
+    if (current.children.length > 1) break;
+  }
+  return current;
+}
