@@ -3,7 +3,7 @@
  * Logic split into hooks in ./hooks/game/ and sibling context files.
  */
 
-import React, { createContext, useContext, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useMemo } from 'react';
 
 import {
   SGFProperty,
@@ -28,6 +28,7 @@ import { usePatternMatching } from '../hooks/game/usePatternMatching';
 import { useGameSettings } from '../hooks/game/useGameSettings';
 import { useGameTreeUndoRedo } from './useGameTreeUndoRedo';
 import { useGameTreeSGFOperations } from './useGameTreeSGFOperations';
+import { useGameTreeAliases } from './useGameTreeAliases';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 // Re-export types for consumers
@@ -266,19 +267,6 @@ export const GameTreeProvider: React.FC<{
       isInitialized,
     });
 
-  const resign = useCallback(
-    (player?: string | number) => {
-      let r: number;
-      if (player === 'B' || player === 1) r = 1;
-      else if (player === 'W' || player === -1) r = -1;
-      else if (currentNode?.data.B) r = -1;
-      else if (currentNode?.data.W) r = 1;
-      else r = 1;
-      updateGameInfo({ result: r === 1 ? 'W+R' : 'B+R' });
-    },
-    [currentNode, updateGameInfo]
-  );
-
   // 10. Auto Save
   const { lastSaveTime, triggerAutoSave } = useAutoSave({
     gameTree,
@@ -291,6 +279,19 @@ export const GameTreeProvider: React.FC<{
     boardSize: gameInfo.boardSize ?? 19,
     komi: gameInfo.komi ?? DEFAULT_KOMI,
     analysisCacheSize, // Triggers auto-save when analysis results are added
+  });
+
+  // 11. Derived callbacks (resign, single-step navigation, toggles, removers)
+  const aliases = useGameTreeAliases({
+    currentNode,
+    updateGameInfo,
+    navigateBackward,
+    navigateForward,
+    setScoreMode,
+    setAnalysisMode,
+    addMarker,
+    addSetupStone,
+    setPatternMatchingEnabled,
   });
 
   const value: GameTreeContextValue = useMemo(
@@ -408,18 +409,12 @@ export const GameTreeProvider: React.FC<{
       setFileName: setFilename,
       goToNode: setCurrentNodeId,
       playMove: makeMove,
-      resign,
-      goBack: () => navigateBackward(1),
-      goForward: () => navigateForward(1),
-      goBackSteps: (steps: number) => navigateBackward(steps),
-      goForwardSteps: (steps: number) => navigateForward(steps),
+      ...aliases,
       goToStart: navigateToStart,
       goToEnd: navigateToEnd,
       scoringMode: scoreMode,
-      toggleScoringMode: () => setScoreMode((prev: boolean) => !prev),
       autoEstimateDeadStones: autoScore,
       clearDeadStones: resetScore,
-      toggleAnalysisMode: () => setAnalysisMode((prev: boolean) => !prev),
       updateComment: setNodeComment,
       editPlayMode,
       setEditPlayMode,
@@ -427,7 +422,6 @@ export const GameTreeProvider: React.FC<{
       copyBranch: copyNode,
       pasteBranch: pasteNode,
       deleteBranch: deleteNode,
-      removeMarker: (vertex: any) => addMarker(vertex, null),
       clearAllMarkersAndLabels,
       clearSetupStones,
       loadSGFAsync,
@@ -442,7 +436,6 @@ export const GameTreeProvider: React.FC<{
       loadingMessage,
       toggleDeadStones: toggleDeadStone,
       placeStoneDirect: addSetupStone,
-      removeSetupStone: (vertex: any) => addSetupStone(vertex, 0),
       undo,
       redo,
       canUndo,
@@ -452,7 +445,6 @@ export const GameTreeProvider: React.FC<{
       moveUrl,
       patternMatchingEnabled,
       setPatternMatchingEnabled,
-      togglePatternMatching: () => setPatternMatchingEnabled((prev: boolean) => !prev),
     }),
     // prettier-ignore
     [
@@ -481,7 +473,7 @@ export const GameTreeProvider: React.FC<{
       showOwnership, toggleOwnership, showTopMoves, toggleTopMoves,
       showAnalysisBar, toggleShowAnalysisBar,
       analysisCache, analysisCacheSize, updateAnalysisCacheSize,
-      gameId, territoryMap, totalMovesInBranch, loadSGFAsync, resign,
+      gameId, territoryMap, totalMovesInBranch, loadSGFAsync, aliases,
       downloadModel, deleteModel, uploadModel,
       // Setters are stable, but the array is exhaustive on purpose: this is what drifted.
       setCurrentNodeId, setFilename, setIsDirty, setAnalysisMode, setAnalysisResult,
