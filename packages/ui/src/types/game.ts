@@ -53,6 +53,12 @@ export interface AISettings {
   /** Number of MCTS visits per position (1 = policy-only, >1 enables tree search) */
   numVisits: number;
   /**
+   * Optional wall-clock budget for live MCTS, in seconds.
+   * Converted to engine `maxTimeMs` at submit time; `numVisits` remains the
+   * hard cap. `undefined` means visits-only (no time stop).
+   */
+  maxTime?: number;
+  /**
    * Number of MCTS visits per position for full-game (batch) analysis.
    *
    * Decoupled from `numVisits` because the two regimes have different

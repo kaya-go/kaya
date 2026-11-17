@@ -1,12 +1,13 @@
 /**
- * MctsVisitsPopover - select MCTS search depth (numVisits)
+ * MctsVisitsPopover - select MCTS search depth (numVisits) and optional maxTime
  *
- * Three synchronized controls:
+ * Visits controls (synchronized):
  *   - 4 preset chips (Fast / Balanced / Deep / Extreme)
  *   - log-scale slider for intuitive scrubbing across the range
  *   - numeric input for exact custom values
  *
- * All three update the same setting and reflect each other.
+ * maxTime (optional, seconds): wall-clock stop converted to engine maxTimeMs;
+ * numVisits remains the hard cap. Empty = unlimited.
  */
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -33,8 +34,11 @@ export interface MctsVisitsPopoverProps {
   open: boolean;
   presets: readonly number[];
   current: number;
+  /** Optional wall-clock budget in seconds; undefined = no time stop. */
+  maxTime?: number;
   anchorRef: React.RefObject<HTMLElement | null>;
   onSelect: (visits: number) => void;
+  onMaxTimeChange: (maxTime: number | undefined) => void;
   onClose: () => void;
 }
 
@@ -42,6 +46,10 @@ type HintCategory = 'fast' | 'deep' | 'extreme';
 
 const LOG_MIN = Math.log10(MIN_VISITS);
 const LOG_MAX = Math.log10(MAX_VISITS);
+
+/** Soft bounds for the optional time budget (seconds). */
+const MIN_MAX_TIME = 0.1;
+const MAX_MAX_TIME = 600;
 
 /**
  * Round to 1–2 significant figures so slider scrubbing lands on
@@ -67,12 +75,26 @@ const categoryOf = (v: number): HintCategory => {
   return 'deep';
 };
 
+const formatMaxTimeDraft = (value: number | undefined): string =>
+  value != null && value > 0 ? String(value) : '';
+
+const parseMaxTime = (raw: string): number | undefined => {
+  const trimmed = raw.trim();
+  if (trimmed === '') return undefined;
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  const clamped = Math.min(MAX_MAX_TIME, Math.max(MIN_MAX_TIME, parsed));
+  return Math.round(clamped * 10) / 10;
+};
+
 export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
   open,
   presets,
   current,
+  maxTime,
   anchorRef,
   onSelect,
+  onMaxTimeChange,
   onClose,
 }) => {
   const { t } = useTranslation();
@@ -87,6 +109,11 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
     setInputDraft(String(current));
   }, [current]);
 
+  const [maxTimeDraft, setMaxTimeDraft] = useState<string>(() => formatMaxTimeDraft(maxTime));
+  useEffect(() => {
+    setMaxTimeDraft(formatMaxTimeDraft(maxTime));
+  }, [maxTime]);
+
   const commitInput = (raw: string) => {
     const parsed = Number.parseInt(raw, 10);
     if (!Number.isFinite(parsed)) {
@@ -96,6 +123,12 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
     const clamped = Math.min(MAX_VISITS, Math.max(MIN_VISITS, parsed));
     if (clamped !== current) onSelect(clamped);
     setInputDraft(String(clamped));
+  };
+
+  const commitMaxTime = (raw: string) => {
+    const next = parseMaxTime(raw);
+    setMaxTimeDraft(formatMaxTimeDraft(next));
+    if (next !== maxTime) onMaxTimeChange(next);
   };
 
   // Compute position from anchor rect (popover is portaled to body to escape overflow:hidden)
@@ -115,7 +148,7 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
       const popoverWidth = 360;
       // Estimate height; will be re-measured below if popover is mounted
       const measured = popoverRef.current?.getBoundingClientRect();
-      const popoverHeight = measured?.height ?? 260;
+      const popoverHeight = measured?.height ?? 320;
 
       // Horizontal: align right edge to button right edge, clamped to viewport
       let left = rect.right - popoverWidth;
@@ -151,7 +184,7 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
       window.removeEventListener('resize', compute);
       window.removeEventListener('scroll', compute, true);
     };
-  }, [open, anchorRef, current]);
+  }, [open, anchorRef, current, maxTime]);
 
   // Close on outside click and Escape
   useEffect(() => {
@@ -192,6 +225,7 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
 
   const sliderPercent = ((visitsToSlider(current) - LOG_MIN) / (LOG_MAX - LOG_MIN)) * 100;
   const isCustom = !isPresetVisits(current);
+  const mctsEnabled = current > 1;
 
   const content = (
     <div
@@ -266,6 +300,7 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
         <span>{MIN_VISITS}</span>
         <span>{MAX_VISITS.toLocaleString()}</span>
       </div>
+
       <p className="mcts-visits-popover__hint">
         {hintCategory === 'fast'
           ? t('analysisBar.visitsPopover.fastDescription')
@@ -273,6 +308,56 @@ export const MctsVisitsPopover: React.FC<MctsVisitsPopoverProps> = ({
             ? t('analysisBar.visitsPopover.extremeDescription')
             : t('analysisBar.visitsPopover.deepDescription')}
       </p>
+
+      <div className={`mcts-visits-popover__maxtime${mctsEnabled ? '' : ' is-disabled'}`}>
+        <div className="mcts-visits-popover__maxtime-row">
+          <label className="mcts-visits-popover__maxtime-label" htmlFor="mcts-max-time-input">
+            {t('analysisBar.visitsPopover.maxTime')}
+          </label>
+          <div className="mcts-visits-popover__maxtime-controls">
+            <input
+              id="mcts-max-time-input"
+              type="number"
+              className={`mcts-visits-popover__maxtime-input${maxTime != null ? ' is-set' : ''}`}
+              min={MIN_MAX_TIME}
+              max={MAX_MAX_TIME}
+              step={0.1}
+              inputMode="decimal"
+              placeholder="—"
+              value={maxTimeDraft}
+              disabled={!mctsEnabled}
+              aria-label={t('analysisBar.visitsPopover.maxTime')}
+              onChange={e => setMaxTimeDraft(e.target.value)}
+              onBlur={e => commitMaxTime(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.currentTarget.blur();
+                }
+              }}
+            />
+            <span className="mcts-visits-popover__maxtime-unit" aria-hidden>
+              {t('analysisBar.visitsPopover.maxTimeUnit')}
+            </span>
+            {maxTime != null && mctsEnabled && (
+              <button
+                type="button"
+                className="mcts-visits-popover__maxtime-clear"
+                onClick={() => {
+                  setMaxTimeDraft('');
+                  onMaxTimeChange(undefined);
+                }}
+              >
+                {t('analysisBar.visitsPopover.maxTimeClear')}
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="mcts-visits-popover__maxtime-hint">
+          {mctsEnabled
+            ? t('analysisBar.visitsPopover.maxTimeDescription')
+            : t('analysisBar.visitsPopover.maxTimeFastOnly')}
+        </p>
+      </div>
     </div>
   );
 

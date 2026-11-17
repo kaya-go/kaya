@@ -156,12 +156,18 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
           moves = cachedResult.moveSuggestions.map(s => s.move);
         } else {
           if (!queue) return;
+          const numVisits = aiSettings.numVisits ?? 1;
+          const maxTimeMs =
+            aiSettings.maxTime != null && aiSettings.maxTime > 0 && numVisits > 1
+              ? Math.round(aiSettings.maxTime * 1000)
+              : undefined;
           const request = buildAnalysisRequest({
             gameTree,
             currentNodeId,
             gameInfo,
             overrides: {
-              numVisits: aiSettings.numVisits ?? 1,
+              numVisits,
+              maxTimeMs,
               nextToPlay: signToNextToPlay(currentPlayer),
             },
           });
@@ -219,6 +225,7 @@ export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
       isModelLoaded,
       getGameTree,
       aiSettings.numVisits,
+      aiSettings.maxTime,
       updateAnalysisCacheSize,
       waitForCurrentAnalysis,
       playMove,

@@ -220,6 +220,7 @@ export class OnnxEngine extends Engine {
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
     const signal = (options as any).signal as AbortSignal | undefined;
     const includeMove = options.includeMove;
+    const maxTimeMs = options.maxTimeMs;
 
     // Cap MCTS batch size. Smaller batches = more frequent abort checks +
     // more frequent progress emission, at the cost of slightly higher
@@ -240,7 +241,8 @@ export class OnnxEngine extends Engine {
       this.debugLog.bind(this),
       onProgress,
       signal,
-      includeMove
+      includeMove,
+      maxTimeMs
     );
   }
 

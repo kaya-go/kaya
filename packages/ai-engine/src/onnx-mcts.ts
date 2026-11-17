@@ -101,7 +101,8 @@ export async function runMCTS(
   debugLogFn: (message: string, payload?: Record<string, unknown>) => void,
   onProgress?: (progress: MCTSProgress) => void,
   signal?: AbortSignal,
-  includeMove?: string
+  includeMove?: string,
+  maxTimeMs?: number
 ): Promise<AnalysisResult> {
   const CPUCT = 1.5;
 
@@ -135,9 +136,26 @@ export async function runMCTS(
     });
   }
 
+  const startMs = performance.now();
+  const deadlineMs =
+    maxTimeMs != null && maxTimeMs > 0 ? startMs + maxTimeMs : Number.POSITIVE_INFINITY;
+
+  // When a wall-clock budget is set, progress total shrinks toward the visits
+  // we still expect to finish — keeps the UI bar honest on slow machines.
+  const estimateTotalVisits = (completedVisits: number): number => {
+    if (!Number.isFinite(deadlineMs)) return numVisits;
+    const elapsed = performance.now() - startMs;
+    if (elapsed < 50) return numVisits;
+    const nps = completedVisits / elapsed;
+    const remaining = Math.max(0, deadlineMs - performance.now());
+    const estimated = Math.ceil(completedVisits + nps * remaining);
+    return Math.min(numVisits, Math.max(completedVisits, estimated));
+  };
+
   let completed = 0;
   while (completed < numVisits) {
     if (signal?.aborted) break;
+    if (performance.now() >= deadlineMs) break;
 
     const batchSize = Math.min(maxMctsBatch, maxInferenceBatch, numVisits - completed);
 
@@ -280,7 +298,7 @@ export async function runMCTS(
 
       onProgress({
         completedVisits: completed,
-        totalVisits: numVisits,
+        totalVisits: estimateTotalVisits(completed),
         bestMove,
         bestMoveVisits: bestChild.N,
         winRate: root.N > 0 ? root.W / root.N : 0.5,
@@ -296,7 +314,7 @@ export async function runMCTS(
       // main thread. Without this, synchronous backends (WASM) run the entire
       // loop in a tight microtask chain and all postMessage calls arrive at
       // once, preventing the UI from showing intermediate progress.
-      if (completed < numVisits) {
+      if (completed < numVisits && performance.now() < deadlineMs) {
         await new Promise<void>(resolve => setTimeout(resolve, 0));
       }
     }
@@ -309,7 +327,8 @@ export async function runMCTS(
     root.children &&
     root.children.has(includeMove) &&
     numVisits > 1 &&
-    !signal?.aborted
+    !signal?.aborted &&
+    performance.now() < deadlineMs
   ) {
     const minVisits = Math.max(3, Math.ceil(numVisits * 0.05));
     const includedChild = root.children.get(includeMove)!;

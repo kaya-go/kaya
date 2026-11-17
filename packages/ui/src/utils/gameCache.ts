@@ -232,7 +232,7 @@ export function analysisBoardSize(gameInfo: Pick<GameInfo, 'boardSize' | 'boardH
 
 /** The request fields a caller may set. The position always comes from the tree. */
 export type AnalysisRequestOverrides = Partial<
-  Pick<AnalysisRequest, 'nextToPlay' | 'numVisits' | 'priority' | 'extra'>
+  Pick<AnalysisRequest, 'nextToPlay' | 'numVisits' | 'maxTimeMs' | 'priority' | 'extra'>
 >;
 
 export type BuildAnalysisRequestParams = {
@@ -265,6 +265,7 @@ export function buildAnalysisRequest({
     komi: gameInfo.komi ?? DEFAULT_KOMI,
     history,
     numVisits: overrides.numVisits ?? 1,
+    maxTimeMs: overrides.maxTimeMs,
     priority: overrides.priority ?? 'live',
     extra: { koInfo: board._koInfo, ...overrides.extra },
   };

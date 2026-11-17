@@ -193,8 +193,9 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const prevKomiRef = useRef<number | undefined>(undefined);
   // Track previous loading state to detect when loading just finished
   const prevLoadingRef = useRef<boolean>(false);
-  // Track previous numVisits to clear cache when search depth changes
+  // Track previous search budget to clear cache when visits/time change
   const prevNumVisitsRef = useRef<number | undefined>(undefined);
+  const prevMaxTimeRef = useRef<number | undefined>(undefined);
 
   // Clear cache when komi changes (analysis results depend on komi)
   // Skip during SGF loading and right after loading finishes
@@ -231,18 +232,20 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
   }, [gameInfo?.komi, analysisCache, updateAnalysisCacheSize, setAnalysisResult, isLoadingSGF]);
 
-  // When numVisits changes, only invalidate the current position's cached result
-  // so it re-analyzes with the new visit count. Keep the rest of the graph intact.
-  // Note: This is intentional — clearing the full cache would force a potentially long
-  // re-analysis of all positions. The tradeoff is that users may see mixed analysis
-  // quality across the game tree until positions are revisited.
+  // When the live search budget (visits and/or maxTime) changes, only invalidate
+  // the current position's cached result so it re-analyzes. Keep the rest of the
+  // graph intact — clearing the full cache would force a long re-analysis.
   useEffect(() => {
     const currentNumVisits = aiSettings.numVisits;
+    const currentMaxTime = aiSettings.maxTime;
     if (prevNumVisitsRef.current === undefined) {
       prevNumVisitsRef.current = currentNumVisits;
+      prevMaxTimeRef.current = currentMaxTime;
       return;
     }
-    if (prevNumVisitsRef.current !== currentNumVisits) {
+    const visitsChanged = prevNumVisitsRef.current !== currentNumVisits;
+    const timeChanged = prevMaxTimeRef.current !== currentMaxTime;
+    if (visitsChanged || timeChanged) {
       // Invalidate only the current position's cache entry
       if (gameTree && currentNodeId !== null && currentNodeId !== undefined) {
         const boardSize = currentBoard.signMap.length;
@@ -260,9 +263,11 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Clear displayed result so live analysis re-triggers for the current position
       setAnalysisResult(null);
       prevNumVisitsRef.current = currentNumVisits;
+      prevMaxTimeRef.current = currentMaxTime;
     }
   }, [
     aiSettings.numVisits,
+    aiSettings.maxTime,
     analysisCache,
     updateAnalysisCacheSize,
     setAnalysisResult,

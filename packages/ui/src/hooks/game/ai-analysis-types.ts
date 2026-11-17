@@ -182,6 +182,8 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   backend: 'auto',
   saveAnalysisToSgf: true,
   numVisits: 32,
+  // Optional: leave unset so live analysis is visits-capped only by default.
+  maxTime: undefined,
   fullGameNumVisits: 10,
   webgpuBatchSize: 4,
   heatMapMetric: 'policy',
@@ -235,6 +237,14 @@ export function loadAISettings(): AISettings {
           parsed.numVisits <= MAX_VISITS
             ? Math.round(parsed.numVisits)
             : DEFAULT_AI_SETTINGS.numVisits,
+        // Optional seconds; empty/invalid → undefined (visits-only).
+        maxTime:
+          typeof parsed.maxTime === 'number' &&
+          Number.isFinite(parsed.maxTime) &&
+          parsed.maxTime > 0 &&
+          parsed.maxTime <= 600
+            ? Math.round(parsed.maxTime * 10) / 10
+            : undefined,
         fullGameNumVisits:
           typeof parsed.fullGameNumVisits === 'number' &&
           parsed.fullGameNumVisits >= 1 &&

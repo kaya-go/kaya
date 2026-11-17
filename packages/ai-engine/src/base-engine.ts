@@ -60,6 +60,12 @@ export interface EngineAnalysisOptions {
   includeMove?: string;
 
   /**
+   * Stop MCTS after this many milliseconds. `numVisits` remains a hard cap.
+   * Optional wall-clock budget for callers that want a timed stop.
+   */
+  maxTimeMs?: number;
+
+  /**
    * Additional engine-specific options
    */
   [key: string]: any;

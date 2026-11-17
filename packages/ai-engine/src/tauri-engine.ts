@@ -238,6 +238,8 @@ export class TauriEngine extends Engine {
     }
 
     const numVisits: number = (options as any).numVisits ?? 1;
+    // Live analysis may pass maxTimeMs; visits-only path leaves it undefined.
+    const maxTimeMs: number | undefined = (options as any).maxTimeMs;
     const komi = options.komi ?? DEFAULT_KOMI;
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
     const signal = (options as any).signal as AbortSignal | undefined;
@@ -297,6 +299,7 @@ export class TauriEngine extends Engine {
           nextToPlay: options.nextToPlay ?? null,
           history: this.convertHistory(options.history),
           numVisits,
+          maxTimeMs: maxTimeMs ?? null,
           includeMove: includeMove ?? null,
           koInfo: koOption ?? null,
         },

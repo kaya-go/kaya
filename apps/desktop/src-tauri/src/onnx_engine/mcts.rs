@@ -4,6 +4,7 @@
 //! that occurs when MCTS runs in JS with per-batch Tauri IPC calls.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 
@@ -48,6 +49,9 @@ pub struct MCTSAnalysisOptions {
     #[serde(default)]
     pub history: Vec<HistoryMove>,
     pub num_visits: usize,
+    /// Optional wall-clock stop; `num_visits` remains the hard cap.
+    #[serde(default)]
+    pub max_time_ms: Option<u64>,
     pub include_move: Option<String>,
     /// Ko info: sign and vertex
     pub ko_info: Option<KoInfo>,
@@ -352,7 +356,27 @@ impl OnnxEngine {
         let size = sign_map.len();
         self.board_size = size;
         let num_visits = options.num_visits;
+        let deadline = options.max_time_ms.filter(|ms| *ms > 0).map(|ms| {
+            Instant::now() + Duration::from_millis(ms)
+        });
+        let search_start = Instant::now();
         let max_batch: usize = 16;
+
+        // When a wall-clock budget is set, progress total shrinks toward the
+        // visits we still expect to finish — keeps the UI bar honest.
+        let estimate_total = |completed: usize| -> usize {
+            let Some(ms) = options.max_time_ms.filter(|t| *t > 0) else {
+                return num_visits;
+            };
+            let elapsed = search_start.elapsed().as_secs_f64();
+            if elapsed < 0.05 {
+                return num_visits;
+            }
+            let nps = completed as f64 / elapsed;
+            let remaining = (ms as f64 / 1000.0 - elapsed).max(0.0);
+            let estimated = (completed as f64 + nps * remaining).ceil() as usize;
+            estimated.max(completed).min(num_visits)
+        };
 
         let next_pla = match &options.next_to_play {
             Some(s) if s == "W" => -1i8,
@@ -395,6 +419,7 @@ impl OnnxEngine {
         let mut completed: usize = 0;
         while completed < num_visits {
             if abort_flag.load(Ordering::Relaxed) { break; }
+            if deadline.is_some_and(|d| Instant::now() >= d) { break; }
 
             let batch_size = max_batch.min(num_visits - completed);
 
@@ -631,7 +656,7 @@ impl OnnxEngine {
 
                     progress_callback(MCTSProgress {
                         completed_visits: completed,
-                        total_visits: num_visits,
+                        total_visits: estimate_total(completed),
                         best_move,
                         best_move_visits: best_child.n,
                         win_rate: if root.n > 0 { (root.w / root.n as f64) as f32 } else { 0.5 },
@@ -644,7 +669,10 @@ impl OnnxEngine {
 
         // Force additional visits through includeMove if needed
         if let Some(ref include_move) = options.include_move {
-            if num_visits > 1 && !abort_flag.load(Ordering::Relaxed) {
+            if num_visits > 1
+                && !abort_flag.load(Ordering::Relaxed)
+                && !deadline.is_some_and(|d| Instant::now() >= d)
+            {
                 if let Some(ref children) = root.children {
                     if let Some((child_idx, _)) = children.iter().enumerate()
                         .find(|(_, (m, _))| m == include_move)

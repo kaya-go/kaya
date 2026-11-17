@@ -42,6 +42,8 @@ export interface AnalysisRequest {
   tag?: string;
   /** Force-visit a specific GTP move so it has full MCTS stats. */
   includeMove?: string;
+  /** Stop MCTS after this many milliseconds. `numVisits` remains a hard cap. */
+  maxTimeMs?: number;
   /** Live progress callback. Only the latest progress is delivered. */
   onProgress?: (p: MCTSProgress) => void;
   /** Pre-computed cache key (must match the SGF persistence keygen). */
@@ -366,6 +368,7 @@ export class AnalysisQueue {
         history: req.request.history,
         numVisits: this.visitsToRun(req.request),
         includeMove: req.request.includeMove,
+        maxTimeMs: req.request.maxTimeMs,
         signal: req.controller.signal,
         onProgress: req.request.onProgress,
         skipCache: true,

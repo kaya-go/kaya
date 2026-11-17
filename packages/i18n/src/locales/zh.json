@@ -627,7 +627,12 @@
       "deepDescription": "较慢 — AI 会预读以计算精确的胜率和目数差。",
       "extremeDescription": "非常慢 — 用于关键局面的深入分析。计算时间较长。",
       "sliderLabel": "搜索深度滑块",
-      "inputLabel": "自定义搜索深度"
+      "inputLabel": "自定义搜索深度",
+      "maxTime": "最长执行时间（秒）",
+      "maxTimeUnit": "秒",
+      "maxTimeClear": "清除",
+      "maxTimeDescription": "搜索会在到达该时间或用尽探索深度时停止，以先到者为准。",
+      "maxTimeFastOnly": "仅当搜索深度大于 1 时，时间预算才会生效。"
     },
     "bestMove": "最佳",
     "metricTooltip": "切换棋子文字指标 — 颜色始终显示策略概率。策略：落子概率，Δ胜%：相对当前局面的胜率变化，Δ目数：相对当前局面的目数变化",

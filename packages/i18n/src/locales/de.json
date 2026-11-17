@@ -627,7 +627,12 @@
       "deepDescription": "Langsamer — die KI rechnet voraus, um präzise Gewinnrate und Score-Differenz zu berechnen.",
       "extremeDescription": "Sehr langsam — für tiefgehende Analyse kritischer Stellungen. Lange Rechenzeit erwartet.",
       "sliderLabel": "Suchtiefen-Schieberegler",
-      "inputLabel": "Benutzerdefinierte Suchtiefe"
+      "inputLabel": "Benutzerdefinierte Suchtiefe",
+      "maxTime": "Max. Laufzeit (s)",
+      "maxTimeUnit": "s",
+      "maxTimeClear": "Löschen",
+      "maxTimeDescription": "Die Suche stoppt bei diesem Limit oder wenn die Suchtiefe aufgebraucht ist — je nachdem, was zuerst eintritt.",
+      "maxTimeFastOnly": "Das Zeitbudget gilt nur, wenn die Suchtiefe größer als 1 ist."
     },
     "bestMove": "Bester",
     "metricTooltip": "Steintext-Metrik umschalten — Farben zeigen immer Strategie-Wahrscheinlichkeit. Strategie: Zugwahrscheinlichkeit, ΔGew%: Gewinnratenänderung vs aktuell, ΔScore: Scoreänderung vs aktuell",

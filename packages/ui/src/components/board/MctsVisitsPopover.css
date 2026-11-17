@@ -237,10 +237,96 @@
   opacity: 0.7;
 }
 
+.mcts-visits-popover__maxtime {
+  margin-top: 0.75rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.mcts-visits-popover__maxtime.is-disabled {
+  opacity: 0.55;
+}
+
+.mcts-visits-popover__maxtime-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.mcts-visits-popover__maxtime-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-primary, inherit);
+  white-space: nowrap;
+}
+
+.mcts-visits-popover__maxtime-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.mcts-visits-popover__maxtime-input {
+  width: 4.5rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--background-primary, rgba(255, 255, 255, 0.04));
+  color: var(--text-primary, inherit);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 0.375rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.mcts-visits-popover__maxtime-input.is-set {
+  border-color: var(--accent, #3b82f6);
+  color: var(--accent, #3b82f6);
+}
+
+.mcts-visits-popover__maxtime-input:focus {
+  outline: none;
+  border-color: var(--accent, #3b82f6);
+}
+
+.mcts-visits-popover__maxtime-input:disabled {
+  cursor: not-allowed;
+}
+
+.mcts-visits-popover__maxtime-unit {
+  font-size: 0.7rem;
+  color: var(--text-secondary, #9ca3af);
+  font-variant-numeric: tabular-nums;
+}
+
+.mcts-visits-popover__maxtime-clear {
+  padding: 0.2rem 0.45rem;
+  background: transparent;
+  color: var(--text-secondary, #9ca3af);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  border-radius: 0.375rem;
+  font: inherit;
+  font-size: 0.65rem;
+  cursor: pointer;
+}
+
+.mcts-visits-popover__maxtime-clear:hover {
+  color: var(--text-primary, inherit);
+  border-color: var(--border-hover, rgba(255, 255, 255, 0.25));
+}
+
+.mcts-visits-popover__maxtime-hint {
+  margin: 0.375rem 0 0;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  color: var(--text-secondary, #9ca3af);
+}
+
 .mcts-visits-popover__hint {
   margin: 0.625rem 0 0;
   padding-top: 0.5rem;
-  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
   font-size: 0.7rem;
   line-height: 1.4;
   color: var(--text-secondary, #9ca3af);

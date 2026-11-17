@@ -245,8 +245,10 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                   open={visitsPopoverOpen}
                   presets={VISITS_PRESETS}
                   current={configuredNumVisits}
+                  maxTime={aiSettings.maxTime}
                   anchorRef={visitsButtonRef}
                   onSelect={value => setAISettings({ numVisits: value })}
+                  onMaxTimeChange={value => setAISettings({ maxTime: value })}
                   onClose={() => setVisitsPopoverOpen(false)}
                 />
               </div>

@@ -498,6 +498,7 @@ mod tests {
                 next_to_play: Some("B".to_string()),
                 history: vec![],
                 num_visits: 100,
+                max_time_ms: None,
                 include_move: None,
                 ko_info: None,
             };
@@ -550,6 +551,7 @@ mod tests {
                 next_to_play: Some("B".to_string()),
                 history: vec![],
                 num_visits: 50,
+                max_time_ms: None,
                 include_move: None,
                 ko_info: None,
             };

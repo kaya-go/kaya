@@ -627,7 +627,12 @@
       "deepDescription": "Plus lent — l'IA anticipe pour calculer un taux de victoire et une différence de score précis.",
       "extremeDescription": "Très lent — pour une analyse approfondie de positions critiques. Temps de calcul élevé.",
       "sliderLabel": "Curseur de profondeur de recherche",
-      "inputLabel": "Profondeur de recherche personnalisée"
+      "inputLabel": "Profondeur de recherche personnalisée",
+      "maxTime": "Durée max (s)",
+      "maxTimeUnit": "s",
+      "maxTimeClear": "Effacer",
+      "maxTimeDescription": "La recherche s'arrête à cette limite ou quand la profondeur de recherche est épuisée, selon ce qui arrive en premier.",
+      "maxTimeFastOnly": "Le budget de temps ne s'applique que lorsque la profondeur de recherche est supérieure à 1."
     },
     "bestMove": "Meilleur",
     "metricTooltip": "Changer le texte sur les pierres — les couleurs montrent toujours la probabilité de politique. Politique : probabilité, ΔVict% : variation du taux de victoire vs actuel, ΔScore : variation du score vs actuel",

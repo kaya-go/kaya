@@ -627,7 +627,12 @@
       "deepDescription": "低速 — AIが先読みして正確な勝率と目差を計算します。",
       "extremeDescription": "非常に低速 — 重要な局面を徹底的に解析します。計算に長時間かかります。",
       "sliderLabel": "探索深さスライダー",
-      "inputLabel": "カスタム探索深さ"
+      "inputLabel": "カスタム探索深さ",
+      "maxTime": "最大実行時間（秒）",
+      "maxTimeUnit": "秒",
+      "maxTimeClear": "クリア",
+      "maxTimeDescription": "この制限か探索深度の使い切りのどちらか早い方で探索を止めます。",
+      "maxTimeFastOnly": "時間予算は探索深さが 1 より大きい場合のみ有効です。"
     },
     "bestMove": "最善",
     "metricTooltip": "石のテキスト指標切替 — 色は常にポリシー確率を表示。ポリシー: 着手確率、Δ勝%: 現在局面との勝率差、Δスコア: 現在局面とのスコア差",

@@ -627,7 +627,12 @@
       "deepDescription": "Más lento — la IA calcula con anticipación para obtener tasa de victoria y diferencia de puntos precisas.",
       "extremeDescription": "Muy lento — para análisis profundo de posiciones críticas. Espere tiempos de cómputo largos.",
       "sliderLabel": "Control deslizante de profundidad de búsqueda",
-      "inputLabel": "Profundidad de búsqueda personalizada"
+      "inputLabel": "Profundidad de búsqueda personalizada",
+      "maxTime": "Tiempo máx. (s)",
+      "maxTimeUnit": "s",
+      "maxTimeClear": "Borrar",
+      "maxTimeDescription": "La búsqueda se detiene en este límite o al agotar la profundidad de búsqueda, lo que ocurra primero.",
+      "maxTimeFastOnly": "El presupuesto de tiempo solo aplica cuando la profundidad de búsqueda es mayor que 1."
     },
     "bestMove": "Mejor",
     "metricTooltip": "Cambiar texto en piedras — los colores siempre muestran probabilidad de política. Política: probabilidad, ΔVic%: cambio en tasa de victoria vs actual, ΔPunt.: cambio en puntuación vs actual",

@@ -627,7 +627,12 @@
       "deepDescription": "느림 — AI가 미리 읽어 정확한 승률과 집 차이를 계산합니다.",
       "extremeDescription": "매우 느림 — 중요한 국면을 깊이 분석합니다. 계산 시간이 오래 걸립니다.",
       "sliderLabel": "탐색 깊이 슬라이더",
-      "inputLabel": "사용자 지정 탐색 깊이"
+      "inputLabel": "사용자 지정 탐색 깊이",
+      "maxTime": "최대 실행 시간(초)",
+      "maxTimeUnit": "초",
+      "maxTimeClear": "지우기",
+      "maxTimeDescription": "이 제한 또는 탐색 깊이 소진 중 먼저 도달하는 시점에 탐색을 멈춥니다.",
+      "maxTimeFastOnly": "시간 예산은 탐색 깊이가 1보다 클 때만 적용됩니다."
     },
     "bestMove": "최선",
     "metricTooltip": "돌 텍스트 지표 전환 — 색상은 항상 정책 확률 표시. 정책: 수 확률, Δ승%: 현재 대비 승률 변화, Δ점수: 현재 대비 점수 변화",

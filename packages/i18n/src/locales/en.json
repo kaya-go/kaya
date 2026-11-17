@@ -627,7 +627,12 @@
       "deepDescription": "Slower — the AI reads ahead to compute precise win rate and score deltas.",
       "extremeDescription": "Very slow — for deep analysis of critical positions. Expect long compute times.",
       "sliderLabel": "Search depth slider",
-      "inputLabel": "Custom search depth"
+      "inputLabel": "Custom search depth",
+      "maxTime": "Max run time (s)",
+      "maxTimeUnit": "s",
+      "maxTimeClear": "Clear",
+      "maxTimeDescription": "Search stops at this limit or when search depth is exhausted, whichever comes first.",
+      "maxTimeFastOnly": "Time budget applies only when search depth is greater than 1."
     },
     "bestMove": "Best",
     "metricTooltip": "Toggle stone text metric — colors always show policy probability. Policy: move probability, ΔWin%: win rate change vs current, ΔScore: score lead change vs current",

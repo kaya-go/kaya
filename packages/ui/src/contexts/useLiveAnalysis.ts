@@ -37,7 +37,7 @@ interface UseLiveAnalysisParams {
   moveNumber: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gameInfo: any;
-  aiSettings: { numVisits?: number };
+  aiSettings: { numVisits?: number; maxTime?: number };
   updateAnalysisCacheSize: () => void;
   setAnalysisResult: (result: AnalysisResult | null) => void;
   selectedQuantization: ModelQuantization | null;
@@ -192,6 +192,11 @@ export function useLiveAnalysis({
     }
 
     const numVisits = aiSettings.numVisits ?? 1;
+    // UI stores seconds (`maxTime`); engine takes milliseconds.
+    const maxTimeMs =
+      aiSettings.maxTime != null && aiSettings.maxTime > 0 && numVisits > 1
+        ? Math.round(aiSettings.maxTime * 1000)
+        : undefined;
     const startTime = performance.now();
     let prevResult: AnalysisResult | null = null;
     let inferences = 0;
@@ -229,6 +234,7 @@ export function useLiveAnalysis({
         komi,
         history: currentPos.history,
         numVisits,
+        maxTimeMs,
         priority: 'live',
         cacheKey: currentPos.cacheKey,
         includeMove,
@@ -296,6 +302,7 @@ export function useLiveAnalysis({
     moveNumber,
     gameInfo,
     aiSettings.numVisits,
+    aiSettings.maxTime,
     updateAnalysisCacheSize,
     setAnalysisResult,
     selectedQuantization,
