@@ -10,6 +10,8 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
     if (!currentVersion) return;
 
     const checkUpdate = async () => {
+      // Interval may fire in background; skip the fetch until visible again.
+      if (document.visibilityState !== 'visible') return;
       try {
         const baseUrl = import.meta.env.VITE_ASSET_PREFIX || '/';
         const res = await fetch(`${baseUrl}version.json?t=${Date.now()}`);
@@ -24,16 +26,20 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
       }
     };
 
-    // Check every 5 minutes
-    const interval = setInterval(checkUpdate, 5 * 60 * 1000);
+    // Check every 30 minutes
+    const interval = setInterval(checkUpdate, 30 * 60 * 1000);
 
-    // Also check on window focus (user comes back to tab)
-    const onFocus = () => checkUpdate();
-    window.addEventListener('focus', onFocus);
+    // Check when the tab becomes visible again
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void checkUpdate();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
       clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   }, [currentVersion]);
 
