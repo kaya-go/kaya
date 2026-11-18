@@ -359,24 +359,7 @@ impl OnnxEngine {
         let deadline = options.max_time_ms.filter(|ms| *ms > 0).map(|ms| {
             Instant::now() + Duration::from_millis(ms)
         });
-        let search_start = Instant::now();
         let max_batch: usize = 16;
-
-        // When a wall-clock budget is set, progress total shrinks toward the
-        // visits we still expect to finish — keeps the UI bar honest.
-        let estimate_total = |completed: usize| -> usize {
-            let Some(ms) = options.max_time_ms.filter(|t| *t > 0) else {
-                return num_visits;
-            };
-            let elapsed = search_start.elapsed().as_secs_f64();
-            if elapsed < 0.05 {
-                return num_visits;
-            }
-            let nps = completed as f64 / elapsed;
-            let remaining = (ms as f64 / 1000.0 - elapsed).max(0.0);
-            let estimated = (completed as f64 + nps * remaining).ceil() as usize;
-            estimated.max(completed).min(num_visits)
-        };
 
         let next_pla = match &options.next_to_play {
             Some(s) if s == "W" => -1i8,
@@ -654,9 +637,11 @@ impl OnnxEngine {
                         }
                     }
 
+                    // Denominator stays at num_visits even if max_time stops
+                    // early — completed < total is expected then.
                     progress_callback(MCTSProgress {
                         completed_visits: completed,
-                        total_visits: estimate_total(completed),
+                        total_visits: num_visits,
                         best_move,
                         best_move_visits: best_child.n,
                         win_rate: if root.n > 0 { (root.w / root.n as f64) as f32 } else { 0.5 },

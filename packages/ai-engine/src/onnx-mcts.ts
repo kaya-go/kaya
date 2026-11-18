@@ -140,18 +140,6 @@ export async function runMCTS(
   const deadlineMs =
     maxTimeMs != null && maxTimeMs > 0 ? startMs + maxTimeMs : Number.POSITIVE_INFINITY;
 
-  // When a wall-clock budget is set, progress total shrinks toward the visits
-  // we still expect to finish — keeps the UI bar honest on slow machines.
-  const estimateTotalVisits = (completedVisits: number): number => {
-    if (!Number.isFinite(deadlineMs)) return numVisits;
-    const elapsed = performance.now() - startMs;
-    if (elapsed < 50) return numVisits;
-    const nps = completedVisits / elapsed;
-    const remaining = Math.max(0, deadlineMs - performance.now());
-    const estimated = Math.ceil(completedVisits + nps * remaining);
-    return Math.min(numVisits, Math.max(completedVisits, estimated));
-  };
-
   let completed = 0;
   while (completed < numVisits) {
     if (signal?.aborted) break;
@@ -298,7 +286,9 @@ export async function runMCTS(
 
       onProgress({
         completedVisits: completed,
-        totalVisits: estimateTotalVisits(completed),
+        // Denominator stays at numVisits even if maxTime stops early —
+        // completedVisits < totalVisits is expected then (same as native).
+        totalVisits: numVisits,
         bestMove,
         bestMoveVisits: bestChild.N,
         winRate: root.N > 0 ? root.W / root.N : 0.5,
