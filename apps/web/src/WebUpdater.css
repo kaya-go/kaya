@@ -1,0 +1,98 @@
+.web-updater {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 360px;
+  padding: 16px;
+  background-color: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #000000);
+  border: 1px solid var(--border-color, #e5e5e5);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.web-updater-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.web-updater-icon {
+  font-size: 20px;
+}
+
+.web-updater-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.web-updater-message {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary, #666);
+}
+
+/* The primary action takes its own row; the two ways to decline share the next
+   one and wrap when a translation is too long for the banner. */
+.web-updater-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.web-updater-btn {
+  flex: 1 1 auto;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color, #ccc);
+  background: transparent;
+  color: var(--text-primary, #333);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.web-updater-btn:hover {
+  background: var(--bg-secondary, #f5f5f5);
+}
+
+.web-updater-btn.primary {
+  flex-basis: 100%;
+  border-color: var(--accent-color, #3b82f6);
+  background: var(--accent-color, #3b82f6);
+  color: white;
+  font-weight: 600;
+}
+
+.web-updater-btn.primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Below the desktop 3-pane breakpoint the mobile tab bar owns the bottom edge:
+   sit above it, across the width, like toasts do. */
+@media (max-width: 1024px) {
+  .web-updater {
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: calc(var(--mobile-nav-height, 56px) + 0.75rem + env(safe-area-inset-bottom, 0px));
+    max-width: none;
+  }
+
+  .web-updater-btn {
+    min-height: var(--touch-target-min, 44px);
+  }
+}
+
+@media (max-width: 1024px) and (max-height: 500px) and (orientation: landscape) {
+  .web-updater {
+    left: auto;
+    bottom: calc(
+      var(--mobile-nav-height-landscape, 48px) + 0.75rem + env(safe-area-inset-bottom, 0px)
+    );
+    max-width: 360px;
+  }
+}

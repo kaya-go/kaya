@@ -347,6 +347,7 @@
     "downloadedMb": "{{done}} MB",
     "skipVersion": "이 버전 건너뛰기",
     "remindLater": "나중에 알림",
+    "remindTomorrow": "내일 다시 알림",
     "dismiss": "무시",
     "updateNow": "지금 업데이트",
     "noUpdateAvailable": "업데이트 없음",

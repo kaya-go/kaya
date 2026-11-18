@@ -1,10 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { VersionData } from '@kaya/ui';
+import { createUpdatePrompt, type AnswerStorage } from './updatePrompt';
+import './WebUpdater.css';
+
+function browserStorage(): AnswerStorage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+const updatePrompt = createUpdatePrompt(browserStorage());
 
 function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefined }) {
   const { t } = useTranslation();
-  const [hasUpdate, setHasUpdate] = useState(false);
+  // Hash of the build the banner offers, null while there is nothing to offer.
+  const [offeredHash, setOfferedHash] = useState<string | null>(null);
 
   useEffect(() => {
     if (!currentVersion) return;
@@ -17,9 +30,14 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
         const res = await fetch(`${baseUrl}version.json?t=${Date.now()}`);
         if (res.ok) {
           const latest: VersionData = await res.json();
-          if (latest.gitHash !== currentVersion.gitHash) {
-            setHasUpdate(true);
-          }
+          // Recomputed on every check, so an answer given in another tab
+          // closes the banner here too.
+          const isNewBuild = latest.gitHash !== currentVersion.gitHash;
+          setOfferedHash(
+            isNewBuild && updatePrompt.shouldShow(latest.gitHash, Date.now())
+              ? latest.gitHash
+              : null
+          );
         }
       } catch (e) {
         // Silent error
@@ -43,7 +61,7 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
     };
   }, [currentVersion]);
 
-  if (!hasUpdate) return null;
+  if (!offeredHash) return null;
 
   const handleUpdate = async () => {
     // Unregister service workers to force update
@@ -57,66 +75,36 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
     window.location.reload();
   };
 
+  const handleSkip = () => {
+    updatePrompt.skip(offeredHash);
+    setOfferedHash(null);
+  };
+
+  const handleRemindTomorrow = () => {
+    updatePrompt.snooze(Date.now());
+    setOfferedHash(null);
+  };
+
   return (
-    <div
-      style={{
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        backgroundColor: 'var(--bg-primary, #ffffff)',
-        color: 'var(--text-primary, #000000)',
-        border: '1px solid var(--border-color, #e5e5e5)',
-        padding: '16px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        maxWidth: '320px',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-        <span style={{ fontSize: '20px' }}>✨</span>
+    <div className="web-updater" role="status">
+      <div className="web-updater-body">
+        <span className="web-updater-icon" aria-hidden="true">
+          ✨
+        </span>
         <div>
-          <div style={{ fontWeight: 600, marginBottom: '4px' }}>
-            {t('updater.newVersionAvailable')}
-          </div>
-          <div style={{ fontSize: '13px', color: 'var(--text-secondary, #666)', lineHeight: 1.4 }}>
-            {t('updater.newVersionMessage')}
-          </div>
+          <div className="web-updater-title">{t('updater.newVersionAvailable')}</div>
+          <div className="web-updater-message">{t('updater.newVersionMessage')}</div>
         </div>
       </div>
-      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-        <button
-          onClick={() => setHasUpdate(false)}
-          style={{
-            padding: '8px 12px',
-            borderRadius: '6px',
-            border: '1px solid var(--border-color, #ccc)',
-            background: 'transparent',
-            color: 'var(--text-primary, #333)',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 500,
-          }}
-        >
-          {t('updater.dismiss')}
-        </button>
-        <button
-          onClick={handleUpdate}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '6px',
-            border: 'none',
-            background: 'var(--accent-color, #3b82f6)',
-            color: 'white',
-            cursor: 'pointer',
-            fontSize: '13px',
-            fontWeight: 600,
-          }}
-        >
+      <div className="web-updater-actions">
+        <button className="web-updater-btn primary" onClick={handleUpdate}>
           {t('updater.updateNow')}
+        </button>
+        <button className="web-updater-btn" onClick={handleSkip}>
+          {t('updater.skipVersion')}
+        </button>
+        <button className="web-updater-btn" onClick={handleRemindTomorrow}>
+          {t('updater.remindTomorrow')}
         </button>
       </div>
     </div>
