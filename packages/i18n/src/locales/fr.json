@@ -347,6 +347,7 @@
     "downloadedMb": "{{done}} Mo",
     "skipVersion": "Ignorer cette version",
     "remindLater": "Me rappeler plus tard",
+    "remindTomorrow": "Me le rappeler demain",
     "dismiss": "Ignorer",
     "updateNow": "Mettre à jour",
     "noUpdateAvailable": "Pas de mise à jour",
