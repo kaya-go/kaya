@@ -4,11 +4,11 @@ status: shipped
 scope: ui, desktop
 ---
 
-# Pre-release review: UI and desktop defects before 0.4.19
+# Pre-release review: UI and desktop defects before 0.5.0
 
 ## Context
 
-A review before the 0.4.19 release found eight defects in the React UI and the
+A review before the 0.5.0 release found eight defects in the React UI and the
 desktop configuration. Three of them are gaps in fixes from #233 (shortcuts
 behind the Resign confirmation, a comment typed in one game, the scan import).
 Two come from #243 (the desktop CSP) and #249 (the macOS Edit menu).

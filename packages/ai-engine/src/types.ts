@@ -65,8 +65,8 @@ export interface AnalysisResult {
 /**
  * Version of what the engine computes from a position: its network inputs and
  * search. Bump it when a change makes earlier results wrong, so analysis saved
- * before it is shown but run again. 1: before 0.4.19. 2: KataGo's komi parity
- * input (0.4.19).
+ * before it is shown but run again. 1: before 0.5.0. 2: KataGo's komi parity
+ * input (0.5.0).
  */
 export const ANALYSIS_ENGINE_VERSION = 2;
 

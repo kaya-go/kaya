@@ -8,7 +8,7 @@ scope: sgf, library
 
 ## Context
 
-A pre-release review of 0.4.19 found three defects around content already in
+A pre-release review of 0.5.0 found three defects around content already in
 the library. The first two come from
 [2026-11-20-sgf-loading-defects](2026-11-20-sgf-loading-defects.md) (#236);
 the third is older.

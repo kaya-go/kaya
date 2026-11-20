@@ -8,7 +8,7 @@ scope: ai/queue
 
 ## Context
 
-The pre-release review of 0.4.19 found three ways a web analysis kept going, or
+The pre-release review of 0.5.0 found three ways a web analysis kept going, or
 kept its results, after it was stopped.
 
 - **A cancelled batch refilled the cache.** `AnalysisQueue.runBatch` cached a

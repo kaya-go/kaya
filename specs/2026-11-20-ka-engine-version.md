@@ -21,7 +21,7 @@ it kept the old values, and nothing marked them as old:
 - The graph and the report read the map directly, and autosave and SGF save
   wrote the old values back.
 
-A 9×9 KM[7.5] game analysed in 0.4.18 and opened in 0.4.19 therefore kept its
+A 9×9 KM[7.5] game analysed in 0.4.18 and opened in 0.5.0 therefore kept its
 old win rates for good. Only a position analysed deeper than it was saved got
 new values.
 
