@@ -1,11 +1,27 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+
+// Tauri attaches app.security.csp to index.html only when it serves the page
+// itself (tauri://). `tauri dev` points the webview at this server instead, so
+// send the same policy here: a source the policy lacks then fails in dev too,
+// not first in a release. HTML responses only, like Tauri: workers get none.
+type TauriCsp = string | Record<string, string | string[]> | null;
+const tauriCsp: TauriCsp = JSON.parse(
+  readFileSync(path.resolve(__dirname, 'src-tauri/tauri.conf.json'), 'utf8')
+).app.security.csp;
+const contentSecurityPolicy =
+  tauriCsp === null || typeof tauriCsp === 'string'
+    ? tauriCsp
+    : Object.entries(tauriCsp)
+        .map(([directive, sources]) => [directive, ...[sources].flat()].join(' '))
+        .join('; ');
 
 export default defineConfig({
   plugins: [pluginReact()],
@@ -66,6 +82,15 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+    setup: ({ server }) => {
+      if (!contentSecurityPolicy) return;
+      server.middlewares.use((req, res, next) => {
+        if (req.headers.accept?.includes('text/html')) {
+          res.setHeader('Content-Security-Policy', contentSecurityPolicy);
+        }
+        next();
+      });
     },
   },
   tools: {

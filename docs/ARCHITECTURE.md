@@ -416,3 +416,16 @@ an FF[3] pass `B[tt]` as `B[]` on boards up to 19x19. Readers after the load
 (board replay, analysis, setup editing, markers) take one point per value and
 an empty move as the only pass. See
 [`specs/2026-11-20-sgf-loading-defects.md`](../specs/2026-11-20-sgf-loading-defects.md).
+
+### 14. The desktop page runs under a Content-Security-Policy
+
+`app.security.csp` in
+[`tauri.conf.json`](../apps/desktop/src-tauri/tauri.conf.json) allows
+scripts from the bundle plus WASM compilation, and connections to the bundle,
+Tauri IPC, `online-go.com` and Google Analytics. A new remote host fetched
+from the page needs a `connect-src` entry. Native downloads and anything over
+IPC need none, and neither do workers, which get no policy. The desktop dev
+server sends the same policy, so a missing source fails in `bun run dev`.
+`apps/desktop/tests/csp.test.ts` refuses `'unsafe-eval'`, wildcards and a
+dropped IPC source. See
+[`specs/2026-11-20-desktop-csp.md`](../specs/2026-11-20-desktop-csp.md).
