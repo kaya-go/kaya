@@ -21,6 +21,10 @@ const BUILD_2 = [
   'static/wasm/deadstones.e5f6a7.wasm',
   'vendor/gamecontroller.min.js',
 ];
+/** index.html and the files it loads. */
+const SHELL_2 = BUILD_2.filter(file => !/^assets\/|^static\/(image|wasm|js\/async)\//.test(file));
+/** The rest: what a first install leaves to the first navigation. */
+const LAZY_2 = BUILD_2.filter(file => !SHELL_2.includes(file));
 
 type RequestLike = string | { url: string; cache?: string };
 
@@ -110,6 +114,7 @@ interface WorkerOptions {
   missing?: string[];
   buildId?: string;
   files?: string[];
+  shell?: string[];
   /** Share one server and one Cache Storage between workers of two builds. */
   network?: Network;
   caches?: FakeCaches;
@@ -136,9 +141,12 @@ function loadWorker(scope: string, options: WorkerOptions = {}) {
     buildId: options.buildId ?? 'build-2',
     ortVersion: ORT,
     precache: options.files ?? BUILD_2,
+    shell: options.shell ?? options.files?.filter(file => SHELL_2.includes(file)) ?? SHELL_2,
   });
   new Function('self', 'caches', 'fetch', 'console', code)(self, caches, network.fetch, quiet);
 
+  /** Work the fetch events go on with after their response. */
+  const background: Promise<unknown>[] = [];
   const lifecycle = async (type: 'install' | 'activate') => {
     let done: Promise<unknown> = Promise.resolve();
     listeners[type]({ waitUntil: (promise: Promise<unknown>) => (done = promise) });
@@ -155,6 +163,7 @@ function loadWorker(scope: string, options: WorkerOptions = {}) {
     listeners.fetch({
       request: { method: 'GET', mode: 'cors', destination: '', cache: 'default', ...request },
       respondWith: (r: Promise<Response>) => (response = r),
+      waitUntil: (promise: Promise<unknown>) => background.push(promise),
     });
     // undefined: the worker let the browser handle it
     return response && (await response);
@@ -165,6 +174,10 @@ function loadWorker(scope: string, options: WorkerOptions = {}) {
     calls,
     lifecycle,
     request,
+    /** Wait for what the fetch events go on with after their response. */
+    settle: () => Promise.all(background.splice(0)),
+    /** URLs held in this build's cache. */
+    cached: (name = 'kaya|/|app|build-2') => [...(caches.stores.get(name)?.keys() ?? [])].sort(),
     message: (data: unknown) => listeners.message?.({ data }),
     goOffline: () => {
       network.offline = true;
@@ -187,15 +200,17 @@ describe('renderServiceWorker', () => {
       buildId: 'abc-2026',
       ortVersion: ORT,
       precache: ['index.html', 'static/js/index.abc123.js'],
+      shell: ['index.html'],
     });
     expect(code).toContain(`const BUILD_ID = "abc-2026";`);
     expect(code).toContain(`const ORT_VERSION = "${ORT}";`);
     expect(code).toContain(`const BUILD_FILES = ["index.html","static/js/index.abc123.js"];`);
+    expect(code).toContain(`const SHELL_FILES = ["index.html"];`);
     expect(code).not.toContain('__KAYA_');
   });
 
   test('refuses a template without its placeholders or a value', () => {
-    const values = { buildId: 'a', ortVersion: ORT, precache: BUILD_2 };
+    const values = { buildId: 'a', ortVersion: ORT, precache: BUILD_2, shell: SHELL_2 };
     expect(() => renderServiceWorker('const x = 1;', values)).toThrow();
     expect(() => renderServiceWorker(TEMPLATE, { ...values, buildId: '' })).toThrow();
     expect(() => renderServiceWorker(TEMPLATE, { ...values, precache: [] })).toThrow();
@@ -241,17 +256,50 @@ describe('activate cleanup', () => {
 });
 
 describe('install', () => {
-  test('caches every file of the build, revalidating the files without a hash', async () => {
+  const urls = (scope: string, files: string[]) =>
+    ['', ...files].map(file => `${ORIGIN}${scope}${file}`).sort();
+
+  test('first install: the shell only, so the first visit reloads isolated without waiting', async () => {
+    const worker = loadWorker('/next/');
+    await worker.lifecycle('install');
+    expect(worker.cached('kaya|/next/|app|build-2')).toEqual(urls('/next/', SHELL_2));
+  });
+
+  test("first visit: the reload's navigation caches the rest, once", async () => {
     const network = new Network();
     const worker = loadWorker('/next/', { network });
     await worker.lifecycle('install');
+    await worker.lifecycle('activate');
 
-    const cached = [...worker.caches.stores.get('kaya|/next/|app|build-2')!.keys()];
-    const expected = ['', ...BUILD_2].map(file => `${ORIGIN}/next/${file}`);
-    expect(cached.sort()).toEqual(expected.sort());
+    await worker.request({ url: `${ORIGIN}/next/`, mode: 'navigate' });
+    await worker.settle();
+    expect(worker.cached('kaya|/next/|app|build-2')).toEqual(urls('/next/', BUILD_2));
+    for (const file of LAZY_2) {
+      expect(network.log.filter(url => url === `${ORIGIN}/next/${file}`).length).toBe(1);
+    }
+
+    // The next navigation finds every file cached
+    network.log.length = 0;
+    await worker.request({ url: `${ORIGIN}/next/`, mode: 'navigate' });
+    await worker.settle();
+    expect(network.log).toEqual([`${ORIGIN}/next/`]);
+  });
+
+  test('an update caches every file at install, revalidating the files without a hash', async () => {
+    const network = new Network();
+    const worker = loadWorker('/next/', { network, existing: ['kaya|/next/|app|build-1'] });
+    await worker.lifecycle('install');
+
+    expect(worker.cached('kaya|/next/|app|build-2')).toEqual(urls('/next/', BUILD_2));
     expect(network.modes.get(`${ORIGIN}/next/index.html`)).toBe('no-cache');
     expect(network.modes.get(`${ORIGIN}/next/assets/move-0.ogg`)).toBe('no-cache');
     expect(network.modes.get(`${ORIGIN}/next/static/js/index.abc123.js`)).toBe('default');
+  });
+
+  test("the other scope's caches or the legacy ones do not make it an update", async () => {
+    const worker = loadWorker('/next/', { existing: ['kaya|/|app|build-1', 'kaya-v4'] });
+    await worker.lifecycle('install');
+    expect(worker.cached('kaya|/next/|app|build-2')).toEqual(urls('/next/', SHELL_2));
   });
 
   test('offline after the visit that brought a new build: every file of it is served', async () => {
@@ -265,6 +313,7 @@ describe('install', () => {
     // The page of build 2 loads its files through build 1's worker, into
     // build 1's cache, while build 2's worker installs
     for (const file of BUILD_2) await previous.request(pageRequest('/', file));
+    await previous.settle();
     const worker = loadWorker('/', { network, caches, buildId: 'build-2' });
     network.log.length = 0;
     await worker.lifecycle('install');

@@ -46,6 +46,7 @@ export default defineConfig({
     pluginReact(),
     pluginServiceWorker({
       template: fs.readFileSync(path.join(__dirname, 'sw', 'sw.js'), 'utf-8'),
+      assetPrefix,
       values: serviceWorkerValues,
     }),
   ],

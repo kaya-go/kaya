@@ -10,14 +10,17 @@ export interface ServiceWorkerValues {
   buildId: string;
   /** The onnxruntime-web version served under wasm/<version>/. */
   ortVersion: string;
-  /** The files to cache at install, relative to the worker's scope (sw/plugin.ts). */
+  /** The files to cache, relative to the worker's scope (sw/plugin.ts). */
   precache: string[];
+  /** The part of `precache` a first install caches: index.html and what it loads. */
+  shell: string[];
 }
 
 const PLACEHOLDERS: Record<keyof ServiceWorkerValues, string> = {
   buildId: "'__KAYA_BUILD_ID__'",
   ortVersion: "'__KAYA_ORT_VERSION__'",
   precache: "'__KAYA_PRECACHE__'",
+  shell: "'__KAYA_SHELL__'",
 };
 
 /** Replace each placeholder, which must appear exactly once, by its value as a JS literal. */
@@ -38,6 +41,7 @@ export function renderServiceWorker(template: string, values: ServiceWorkerValue
     [PLACEHOLDERS.buildId]: values.buildId,
     [PLACEHOLDERS.ortVersion]: values.ortVersion,
     [PLACEHOLDERS.precache]: values.precache,
+    [PLACEHOLDERS.shell]: values.shell,
   });
 }
 

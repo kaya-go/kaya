@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { selectPrecache } from './plugin';
+import { selectPrecache, selectShell } from './plugin';
 
 describe('selectPrecache', () => {
   test('keeps what the app may ask for, not ORT, the update check or the worker', () => {
@@ -34,5 +34,37 @@ describe('selectPrecache', () => {
       'static/wasm/c09ec6166e.module.wasm',
       'vendor/gamecontroller.min.js',
     ]);
+  });
+});
+
+describe('selectShell', () => {
+  test('index.html and the files it loads under the asset prefix', () => {
+    const precache = [
+      'favicon.svg',
+      'index.html',
+      'manifest.json',
+      'static/css/index.abc.css',
+      'static/image/board.123.png',
+      'static/js/async/ai-worker.def.js',
+      'static/js/index.abc.js',
+      'vendor/gamecontroller.min.js',
+    ];
+    const html = [
+      '<link rel="icon" href="/next/favicon.svg">',
+      '<link rel="manifest" href="/next/manifest.json">',
+      '<script defer src="/next/vendor/gamecontroller.min.js"></script>',
+      '<script defer src="/next/static/js/index.abc.js"></script>',
+      '<link href="/next/static/css/index.abc.css" rel="stylesheet">',
+    ].join('');
+    expect(selectShell(precache, html, '/next/')).toEqual([
+      'favicon.svg',
+      'index.html',
+      'manifest.json',
+      'static/css/index.abc.css',
+      'static/js/index.abc.js',
+      'vendor/gamecontroller.min.js',
+    ]);
+    // The stable prefix does not match /next/'s references
+    expect(selectShell(precache, html, '/')).toEqual(['index.html']);
   });
 });

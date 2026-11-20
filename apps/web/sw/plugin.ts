@@ -42,6 +42,16 @@ export function selectPrecache(files: string[], ortCopies: ReadonlySet<string>):
   return files.filter(file => !notPrecached(file, ortCopies)).sort();
 }
 
+/**
+ * The shell: index.html and the files of `precache` it loads (scripts,
+ * styles, icons, manifest), found by their URL under `assetPrefix`.
+ */
+export function selectShell(precache: string[], indexHtml: string, assetPrefix: string): string[] {
+  return precache.filter(
+    file => file === 'index.html' || indexHtml.includes(`"${assetPrefix}${file}"`)
+  );
+}
+
 /** Every file under `dir`, relative to it, with '/' separators. */
 function listFiles(dir: string, prefix = ''): string[] {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
@@ -53,7 +63,9 @@ function listFiles(dir: string, prefix = ''): string[] {
 
 export function pluginServiceWorker(options: {
   template: string;
-  values: () => Omit<ServiceWorkerValues, 'precache'>;
+  /** Where the app is served (`/`, `/next/`), as index.html refers to its files. */
+  assetPrefix: string;
+  values: () => Omit<ServiceWorkerValues, 'precache' | 'shell'>;
 }): RsbuildPlugin {
   return {
     name: 'kaya:service-worker',
@@ -71,7 +83,13 @@ export function pluginServiceWorker(options: {
             file => file !== 'sw.js' && file !== BUILD_FILES
           );
           const precache = selectPrecache(files, ortCopies);
-          const worker = renderServiceWorker(options.template, { ...options.values(), precache });
+          const indexHtml = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
+          const shell = selectShell(precache, indexHtml, options.assetPrefix);
+          const worker = renderServiceWorker(options.template, {
+            ...options.values(),
+            precache,
+            shell,
+          });
           fs.writeFileSync(path.join(distPath, 'sw.js'), worker);
           const shipped = [...files, 'sw.js', BUILD_FILES].sort();
           fs.writeFileSync(

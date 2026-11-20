@@ -24,6 +24,8 @@ const ORT_VERSION = '__KAYA_ORT_VERSION__';
 // shell, the bundler's output (scripts, workers, styles, images, WebAssembly),
 // sounds and vendor scripts. Not ORT, version.json or this worker.
 const BUILD_FILES = '__KAYA_PRECACHE__';
+// The shell: index.html and the files it loads, which the app needs to start.
+const SHELL_FILES = '__KAYA_SHELL__';
 
 // kayago.app/ and kayago.app/next/ share one origin, so they share Cache
 // Storage. Every cache name carries the worker's scope and a delimiter after
@@ -81,35 +83,59 @@ function bestEffort(url, caching) {
 }
 
 /**
- * Put one file of this build in `cache`. A hashed file that another cache
- * holds (the previous build's, most of the time) is copied from there, so an
- * update downloads only what changed. Other files are revalidated with the
- * server: the HTTP cache may still hold the previous build's index.html.
+ * Put one file of this build in `cache`, unless it is there already. A hashed
+ * file that another cache holds (the previous build's, most of the time) is
+ * copied from there, so an update downloads only what changed. Other files
+ * are revalidated with the server: the HTTP cache may still hold the previous
+ * build's index.html.
  */
 function precacheFile(cache, url) {
   const hashed = new URL(url).pathname.startsWith(HASHED);
-  const copy = hashed ? caches.match(url) : Promise.resolve(undefined);
   return bestEffort(
     url,
-    copy.then(response =>
-      response
-        ? cache.put(url, response)
-        : cache.add(new Request(url, { cache: hashed ? 'default' : 'no-cache' }))
-    )
+    cache.match(url).then(cached => {
+      if (cached) return;
+      const copy = hashed ? caches.match(url) : Promise.resolve(undefined);
+      return copy.then(response =>
+        response
+          ? cache.put(url, response)
+          : cache.add(new Request(url, { cache: hashed ? 'default' : 'no-cache' }))
+      );
+    })
   );
 }
 
-/**
- * Cache every file of this build at install, so that the app starts and runs
- * offline after one visit. Caching what the page asks for is not enough: on
- * the visit that brings a new build, the page loads its files through the
- * previous worker, into the previous build's cache, which activate deletes.
- */
-function precacheBuild() {
-  const urls = ['./', ...BUILD_FILES].map(path => new URL(path, self.registration.scope).href);
+/** Cache these files of this build (paths relative to the scope), best effort. */
+function precache(paths) {
+  const urls = ['./', ...paths].map(path => new URL(path, self.registration.scope).href);
   return caches
     .open(APP_CACHE)
     .then(cache => Promise.all(urls.map(url => precacheFile(cache, url))));
+}
+
+/** Whether an earlier build's worker served this scope, so its pages are isolated already. */
+function isUpdate() {
+  return caches
+    .keys()
+    .then(names => names.some(name => name.startsWith(`${OWN_PREFIX}app|`) && name !== APP_CACHE));
+}
+
+let completing = null;
+
+/**
+ * Cache every file of this build, so that the app starts and runs offline
+ * after one visit. Caching what the page asks for is not enough: on the visit
+ * that brings a new build, the page loads its files through the previous
+ * worker, into the previous build's cache, which activate deletes. One run at
+ * a time; a run finds the files already cached and skips them.
+ */
+function completeCache() {
+  if (!completing) {
+    completing = precache(BUILD_FILES).finally(() => {
+      completing = null;
+    });
+  }
+  return completing;
 }
 
 /** The names of the ORT files this scope's older caches hold. */
@@ -173,12 +199,18 @@ function withIsolationHeaders(response) {
   });
 }
 
-// Install event - cache this build's files, best effort
+// Install event - cache this build's files, best effort. An update caches
+// them all: the open pages stay isolated under the previous worker meanwhile,
+// and they may never navigate under this one. A first install caches the
+// shell only, since the page waits for this worker to reload isolated (about
+// 10 MB took 5 s more at 10 Mbit/s); its reload, a navigation, caches the rest.
 self.addEventListener('install', event => {
   event.waitUntil(
-    Promise.all([precacheBuild(), precacheOrt()]).catch(error =>
-      console.warn('[SW] Precache failed:', error)
-    )
+    isUpdate()
+      .then(update =>
+        Promise.all([update ? completeCache() : precache(SHELL_FILES), precacheOrt()])
+      )
+      .catch(error => console.warn('[SW] Precache failed:', error))
   );
   // A new build takes over at once. It sends the same headers, so open pages
   // stay isolated, and index.html does not reload a page that already had a
@@ -304,4 +336,9 @@ self.addEventListener('fetch', event => {
   if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
 
   event.respondWith(respond(request).then(withIsolationHeaders));
+  // The app starts: cache whatever of this build is still missing, after a
+  // first install or a run cut short, without holding up the response
+  if (request.mode === 'navigate') {
+    event.waitUntil(completeCache().catch(error => console.warn('[SW] Precache failed:', error)));
+  }
 });
