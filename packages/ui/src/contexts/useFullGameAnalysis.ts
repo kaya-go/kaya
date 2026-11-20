@@ -11,12 +11,13 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { MutableRefObject } from 'react';
-import type { AnalysisQueue, AnalysisRequest, AnalysisResult, Engine } from '@kaya/ai-engine';
+import type { AnalysisQueue, AnalysisRequest, Engine } from '@kaya/ai-engine';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { GameInfo, SGFProperty } from '../types/game';
 import { analysisCacheKey, getPathToNode, mapAnalysisPath } from '../utils/gameCache';
 import { isAbortError } from '../utils/aiAnalysis';
 import type { ModelQuantization } from '../services/modelStorage';
+import { runFullGameSlices, type FullGameNotice } from './ai/fullGameRun';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 const TAG = 'full-game';
@@ -56,7 +57,7 @@ export function useFullGameAnalysis({
   const [fullGameCurrentMove, setFullGameCurrentMove] = useState<number>(0);
   const [fullGameTotalMoves, setFullGameTotalMoves] = useState<number>(0);
   const [fullGameETA, setFullGameETA] = useState<string | null>(null);
-  const [allAnalyzedMessage, setAllAnalyzedMessage] = useState<string | null>(null);
+  const [fullGameNotice, setFullGameNotice] = useState<FullGameNotice | null>(null);
   const [pendingFullGameAnalysis, setPendingFullGameAnalysis] = useState(false);
 
   const isFullGameAnalyzingRef = useRef(false);
@@ -86,7 +87,7 @@ export function useFullGameAnalysis({
     const isStale = () => runId !== runCounterRef.current;
 
     setPendingFullGameAnalysis(false);
-    setAllAnalyzedMessage(null);
+    setFullGameNotice(null);
 
     // Drop any previous full-game submissions.
     queue.cancelTag(TAG);
@@ -144,8 +145,10 @@ export function useFullGameAnalysis({
       );
 
       if (positions.length === 0) {
-        setAllAnalyzedMessage(`All ${fullSequence.length} positions are already analyzed`);
-        setTimeout(() => setAllAnalyzedMessage(null), 3000);
+        setFullGameNotice({ kind: 'all-analyzed', count: fullSequence.length });
+        setTimeout(() => {
+          setFullGameNotice(notice => (notice?.kind === 'all-analyzed' ? null : notice));
+        }, 3000);
         return;
       }
 
@@ -156,65 +159,52 @@ export function useFullGameAnalysis({
       // GPU-batched policy-only fast path. With MCTS (numVisits>1) batching
       // is moot — MCTS is sequential per position internally — so submit one
       // at a time and let the queue serialize.
-      const useBatch = numVisits === 1;
-      const batchSize = useBatch ? aiSettings.webgpuBatchSize || 8 : 1;
+      const batchSize = numVisits === 1 ? aiSettings.webgpuBatchSize || 8 : 1;
 
       const startTime = performance.now();
       let totalInferenceTime = 0;
       let totalInferences = 0;
 
-      for (let i = 0; i < positions.length; i += batchSize) {
-        const slice = positions.slice(i, i + batchSize);
-        const sliceStart = performance.now();
+      const outcome = await runFullGameSlices(queue, positions, {
+        batchSize,
+        onSlice: ({ positions: slice, durationMs }) => {
+          totalInferenceTime += durationMs;
+          totalInferences += slice.length;
 
-        try {
-          if (useBatch && slice.length > 1) {
-            const handles = queue.submitBatch(slice.map(p => p.request));
-            await Promise.all(handles.map(h => h.result));
+          // ETA: extrapolate from observed pace.
+          const remaining = positions.length - totalInferences;
+          if (remaining > 0 && totalInferenceTime > 0) {
+            const perPosMs = totalInferenceTime / totalInferences;
+            const etaSec = (remaining * perPosMs) / 1000;
+            const etaStr =
+              etaSec < 60
+                ? `${Math.round(etaSec)}s`
+                : `${Math.floor(etaSec / 60)}m ${Math.round(etaSec % 60)}s`;
+            setFullGameETA(etaStr);
           } else {
-            for (const p of slice) {
-              const handle = queue.submit(p.request);
-              await handle.result;
-            }
+            setFullGameETA(null);
           }
-        } catch (err) {
-          if (isAbortError(err)) break;
-          console.error('[BatchAnalysis] Slice failed:', err);
-          break;
-        }
 
-        const sliceDuration = performance.now() - sliceStart;
-        totalInferenceTime += sliceDuration;
-        totalInferences += slice.length;
+          processed += slice.length;
+          setFullGameProgress(Math.round((processed / fullSequence.length) * 100));
+          setFullGameCurrentMove(processed);
+          updateAnalysisCacheSize();
 
-        // ETA: extrapolate from observed pace.
-        const remaining = positions.length - (i + slice.length);
-        if (remaining > 0 && totalInferenceTime > 0) {
-          const perPosMs = totalInferenceTime / totalInferences;
-          const etaSec = (remaining * perPosMs) / 1000;
-          const etaStr =
-            etaSec < 60
-              ? `${Math.round(etaSec)}s`
-              : `${Math.floor(etaSec / 60)}m ${Math.round(etaSec % 60)}s`;
-          setFullGameETA(etaStr);
-        } else {
-          setFullGameETA(null);
-        }
+          // If the user is currently looking at one of the just-analyzed
+          // positions, refresh the visible result from cache.
+          const curId = currentNodeIdRef.current;
+          const curIdxInSeq = fullSequence.findIndex(
+            (n: GameTreeNode<SGFProperty>) => String(n.id) === String(curId)
+          );
+          if (slice.some(p => p.index === curIdxInSeq)) {
+            lookupCachedResult();
+          }
+        },
+      });
 
-        processed += slice.length;
-        setFullGameProgress(Math.round((processed / fullSequence.length) * 100));
-        setFullGameCurrentMove(processed);
-        updateAnalysisCacheSize();
-
-        // If the user is currently looking at one of the just-analyzed
-        // positions, refresh the visible result from cache.
-        const curId = currentNodeIdRef.current;
-        const curIdxInSeq = fullSequence.findIndex(
-          (n: GameTreeNode<SGFProperty>) => String(n.id) === String(curId)
-        );
-        if (slice.some(p => p.index === curIdxInSeq)) {
-          lookupCachedResult();
-        }
+      if (outcome.status === 'failed') {
+        if (!isStale()) setFullGameNotice({ kind: 'failed', message: outcome.message });
+        return;
       }
 
       const totalDuration = performance.now() - startTime;
@@ -222,11 +212,11 @@ export function useFullGameAnalysis({
         backend: 'unknown',
         inputDataType: 'unknown',
       };
-      console.log('[AI] Full-game analysis complete:', {
-        positions: positions.length,
+      console.log(`[AI] Full-game analysis ${outcome.status}:`, {
+        positions: totalInferences,
         cached: cachedCount,
         durationMs: Math.round(totalDuration),
-        msPerPos: positions.length > 0 ? Math.round(totalDuration / positions.length) : 0,
+        msPerPos: totalInferences > 0 ? Math.round(totalDuration / totalInferences) : 0,
         backend: runtimeInfo.backend,
         selectedPrecision: selectedQuantization ?? 'unknown',
         runtimePrecision: runtimeInfo.inputDataType,
@@ -234,7 +224,8 @@ export function useFullGameAnalysis({
     } catch (err) {
       if (!isAbortError(err) && !isStale()) {
         console.error('[BatchAnalysis] Failed:', err);
-        setAllAnalyzedMessage('Analysis failed');
+        const message = err instanceof Error ? err.message : String(err);
+        setFullGameNotice({ kind: 'failed', message });
       }
     } finally {
       // Don't clobber a newer run that started while we were unwinding.
@@ -284,6 +275,7 @@ export function useFullGameAnalysis({
     setFullGameCurrentMove(0);
     setFullGameTotalMoves(0);
     setFullGameETA(null);
+    setFullGameNotice(null);
   }, [queue]);
 
   return {
@@ -293,7 +285,7 @@ export function useFullGameAnalysis({
     fullGameCurrentMove,
     fullGameTotalMoves,
     fullGameETA,
-    allAnalyzedMessage,
+    fullGameNotice,
     pendingFullGameAnalysis,
     analyzeFullGame,
     stopFullGameAnalysis,

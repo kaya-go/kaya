@@ -278,7 +278,9 @@
     "analysisModeOff": "分析モードがオフ - クリックで有効化",
     "moveNumber": "第{{number}}手",
     "notAnalyzed": "未分析",
-    "perspectiveNote": "勝率と目差は黒番視点です"
+    "perspectiveNote": "勝率と目差は黒番視点です",
+    "allPositionsAnalyzed": "全{{count}}局面はすでに分析済みです",
+    "fullGameFailed": "全局分析に失敗しました：{{message}}"
   },
   "analysisLegend": {
     "title": "分析の凡例",

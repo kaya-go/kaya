@@ -278,7 +278,9 @@
     "analysisModeOff": "Modo análisis desactivado - Haz clic para activar",
     "moveNumber": "Movimiento {{number}}",
     "notAnalyzed": "Sin analizar",
-    "perspectiveNote": "La tasa de victoria y la puntuación son desde la perspectiva de Negro"
+    "perspectiveNote": "La tasa de victoria y la puntuación son desde la perspectiva de Negro",
+    "allPositionsAnalyzed": "Las {{count}} posiciones ya están analizadas",
+    "fullGameFailed": "Falló el análisis de la partida completa: {{message}}"
   },
   "analysisLegend": {
     "title": "Leyenda del análisis",

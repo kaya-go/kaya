@@ -278,7 +278,9 @@
     "analysisModeOff": "Analyse-Modus inaktiv - Klicken zum Aktivieren",
     "moveNumber": "Zug {{number}}",
     "notAnalyzed": "Nicht analysiert",
-    "perspectiveNote": "Gewinnrate und Punkte aus Sicht von Schwarz"
+    "perspectiveNote": "Gewinnrate und Punkte aus Sicht von Schwarz",
+    "allPositionsAnalyzed": "Alle {{count}} Positionen sind bereits analysiert",
+    "fullGameFailed": "Analyse des gesamten Spiels fehlgeschlagen: {{message}}"
   },
   "analysisLegend": {
     "title": "Analyse-Legende",

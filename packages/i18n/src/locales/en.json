@@ -278,7 +278,9 @@
     "analysisModeOff": "Analysis Mode Off - Click to enable",
     "moveNumber": "Move {{number}}",
     "notAnalyzed": "Not analyzed",
-    "perspectiveNote": "Win rate and score are from Black's perspective"
+    "perspectiveNote": "Win rate and score are from Black's perspective",
+    "allPositionsAnalyzed": "All {{count}} positions are already analyzed",
+    "fullGameFailed": "Full game analysis failed: {{message}}"
   },
   "analysisLegend": {
     "title": "Analysis Legend",

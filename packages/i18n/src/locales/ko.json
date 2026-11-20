@@ -278,7 +278,9 @@
     "analysisModeOff": "분석 모드 꺼짐 - 클릭하여 켜기",
     "moveNumber": "{{number}}번째 수",
     "notAnalyzed": "미분석",
-    "perspectiveNote": "승률과 집수는 흑 기준입니다"
+    "perspectiveNote": "승률과 집수는 흑 기준입니다",
+    "allPositionsAnalyzed": "{{count}}개 국면이 모두 이미 분석되었습니다",
+    "fullGameFailed": "전체 대국 분석 실패: {{message}}"
   },
   "analysisLegend": {
     "title": "분석 범례",

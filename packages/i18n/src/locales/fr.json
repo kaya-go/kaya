@@ -278,7 +278,9 @@
     "analysisModeOff": "Mode analyse désactivé - Cliquer pour activer",
     "moveNumber": "Coup {{number}}",
     "notAnalyzed": "Non analysé",
-    "perspectiveNote": "Le taux de victoire et le score sont du point de vue de Noir"
+    "perspectiveNote": "Le taux de victoire et le score sont du point de vue de Noir",
+    "allPositionsAnalyzed": "Les {{count}} positions sont déjà toutes analysées",
+    "fullGameFailed": "L'analyse de la partie entière a échoué : {{message}}"
   },
   "analysisLegend": {
     "title": "Légende d'analyse",

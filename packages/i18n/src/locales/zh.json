@@ -278,7 +278,9 @@
     "analysisModeOff": "分析模式已关闭 - 点击开启",
     "moveNumber": "第 {{number}} 手",
     "notAnalyzed": "未分析",
-    "perspectiveNote": "胜率和目差均以黑方视角显示"
+    "perspectiveNote": "胜率和目差均以黑方视角显示",
+    "allPositionsAnalyzed": "全部 {{count}} 个位置均已分析",
+    "fullGameFailed": "全局分析失败：{{message}}"
   },
   "analysisLegend": {
     "title": "分析图例",

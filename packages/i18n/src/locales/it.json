@@ -278,7 +278,9 @@
     "analysisModeOff": "Modalità analisi disattiva - Clicca per attivare",
     "moveNumber": "Mossa {{number}}",
     "notAnalyzed": "Non analizzato",
-    "perspectiveNote": "Tasso di vittoria e punteggio dal punto di vista di Nero"
+    "perspectiveNote": "Tasso di vittoria e punteggio dal punto di vista di Nero",
+    "allPositionsAnalyzed": "Tutte le {{count}} posizioni sono già analizzate",
+    "fullGameFailed": "Analisi della partita completa non riuscita: {{message}}"
   },
   "analysisLegend": {
     "title": "Legenda analisi",

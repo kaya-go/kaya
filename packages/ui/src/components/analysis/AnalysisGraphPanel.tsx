@@ -18,6 +18,7 @@ import { smoothAnalysisResult } from '../../utils/aiAnalysis';
 import { analysisCacheKey, getPathToNode, mapAnalysisPath } from '../../utils/gameCache';
 import { AnalysisChart, type AnalysisDataPoint } from './AnalysisChart';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
+import { formatFullGameNotice } from '../../contexts/ai/fullGameRun';
 import './AnalysisGraphPanel.css';
 import './AnalysisGraphPanelControls.css';
 import './AnalysisGraphPanelChart.css';
@@ -68,6 +69,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     isFullGameAnalyzing,
     isStopping,
     fullGameProgress,
+    fullGameNotice,
     isInitializing,
     pendingFullGameAnalysis,
     toggleOwnership,
@@ -302,6 +304,12 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
           <span className="legend-label">{t('analysis.score')}</span>
         </button>
       </div>
+
+      {fullGameNotice?.kind === 'failed' && !isFullGameAnalyzing && (
+        <div className="analysis-status-bar analysis-status-bar--error" role="alert">
+          <span>{formatFullGameNotice(fullGameNotice, t)}</span>
+        </div>
+      )}
 
       {(isInitializing || isAnalyzing) && (
         <div className="analysis-status-bar">
