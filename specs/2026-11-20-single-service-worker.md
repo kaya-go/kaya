@@ -139,7 +139,7 @@ after the reload was not isolated, which is why item 2 exists.
 ## Later
 
 [2026-11-20-service-worker-updates.md](2026-11-20-service-worker-updates.md)
-fixed four defects found before 0.4.19. A hard reload now ends isolated. The
+fixed four defects found before 0.5.0. A hard reload now ends isolated. The
 reload guard stores the request time, because Chrome's isolated page has its
 own sessionStorage. The worker caches every file of its build. Deploys keep
 the previous build's files for one more deploy.

@@ -90,7 +90,7 @@ all four.
      again.
    - The list makes a file live for one deploy only. A site deployed before the
      list existed held a single build, so its `static/` and `wasm/` folders are
-     taken whole. That covers the 0.4.19 release itself: the open 0.4.18 tabs
+     taken whole. That covers the 0.5.0 release itself: the open 0.4.18 tabs
      ask for unversioned `wasm/ort-*` files.
    - Why the server and not the worker: a worker can only serve again what it
      cached, and the ORT cache held only the two files the engine had loaded.
@@ -146,7 +146,7 @@ HTTP cache, still fresh from the first visit. It cached the previous build's
   `wasm/1.31.1/…jsep.{mjs,wasm}`. Nothing asked for the bundler's ORT copies.
 
 **What gh-pages holds.** The site is 255 MB today: stable 123 MB, next 132 MB.
-Once 0.4.19 keeps 0.4.18's `static/` (36 MB) and `wasm/` (87 MB), it will be
+Once 0.5.0 keeps 0.4.18's `static/` (36 MB) and `wasm/` (87 MB), it will be
 about 390 MB. An ORT bump on `/next/` adds about 90 MB for one deploy. The
 Pages limit is 1 GB.
 

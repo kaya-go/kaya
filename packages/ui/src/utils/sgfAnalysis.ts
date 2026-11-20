@@ -37,7 +37,7 @@ export interface KayaAnalysisData {
   o?: string;
   /**
    * ANALYSIS_ENGINE_VERSION that computed the values. Absent: 1, every KA
-   * saved before 0.4.19.
+   * saved before 0.5.0.
    */
   e?: number;
 }
