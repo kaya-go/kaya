@@ -27,7 +27,8 @@ pub use featurization::determine_next_player;
 pub use result_processing::process_raw_outputs;
 pub use types::{AnalysisOptions, AnalysisResult, HistoryMove};
 
-use boundary::{lock_or_reset, validate_batch, validate_board, validate_ko};
+pub(crate) use boundary::lock_or_reset;
+use boundary::{validate_batch, validate_board, validate_ko};
 use execution_providers::configure_execution_providers;
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};

@@ -204,7 +204,8 @@
       "fp32": "정확도 손실 없음. 다운로드와 메모리 사용량이 가장 큽니다.",
       "fp16": "다운로드와 메모리가 절반이며, 정확도는 약간 떨어집니다.",
       "uint8": "다운로드와 메모리가 가장 작고, 정확도 손실이 가장 큽니다."
-    }
+    },
+    "runningOn": "AI가 {{backend}}에서 실행 중입니다"
   },
   "kayaConfig": {
     "title": "설정",
@@ -278,7 +279,10 @@
     "analysisModeOff": "분석 모드 꺼짐 - 클릭하여 켜기",
     "moveNumber": "{{number}}번째 수",
     "notAnalyzed": "미분석",
-    "perspectiveNote": "승률과 집수는 흑 기준입니다"
+    "perspectiveNote": "승률과 집수는 흑 기준입니다",
+    "allPositionsAnalyzed": "{{count}}개 국면이 모두 이미 분석되었습니다",
+    "fullGameFailed": "전체 대국 분석 실패: {{message}}",
+    "liveFailed": "분석 실패: {{message}}"
   },
   "analysisLegend": {
     "title": "분석 범례",
@@ -333,7 +337,9 @@
     "downloadItems": "{{count}}개 다운로드",
     "deleteItems": "{{count}}개 삭제",
     "create": "생성",
-    "unsavedChangesIndicator": "저장되지 않은 변경사항"
+    "unsavedChangesIndicator": "저장되지 않은 변경사항",
+    "movingItem": "항목 이동 중…",
+    "movingItems": "항목 {{count}}개 이동 중…"
   },
   "updater": {
     "checkForUpdates": "업데이트 확인...",
@@ -559,11 +565,17 @@
   },
   "loading": {
     "loading": "불러오는 중…",
-    "loadingSgfFile": "SGF 파일 불러오는 중"
+    "loadingSgfFile": "SGF 파일 불러오는 중",
+    "parsingSgf": "SGF 읽는 중…",
+    "buildingTree": "기보 트리 생성 중…",
+    "done": "완료"
   },
   "dropzone": {
     "dropToLoad": "대국을 불러오려면 드롭하세요",
-    "dropOnLibrary": "라이브러리에 드롭하여 저장"
+    "dropOnLibrary": "라이브러리에 드롭하여 저장",
+    "unsupportedFile": ".sgf, .onnx 또는 이미지 파일을 놓으세요",
+    "unsupportedDesktopFile": ".sgf 또는 .onnx 파일을 놓으세요",
+    "unsupportedLibraryFile": "라이브러리에는 .sgf 및 .zip 파일만 추가할 수 있습니다"
   },
   "languageSwitcher": {
     "changeLanguage": "언어 변경",

@@ -158,6 +158,11 @@
   color: var(--success, #22c55e);
 }
 
+.ai-analysis-summary__progress--error {
+  color: var(--error, #ef4444);
+  white-space: normal;
+}
+
 .ai-analysis-summary__progress--warning {
   color: var(--warning, #f59e0b);
   font-size: 0.75rem;

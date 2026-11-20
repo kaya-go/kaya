@@ -1,18 +1,16 @@
 import React, { useCallback, useMemo } from 'react';
-import { GoBoard } from '@kaya/goboard';
+import type { GameTree } from '@kaya/gametree';
 import {
   stringify as stringifySGF,
   extractGameInfo as extractGameInfoFromSGF,
   withUtf8Charset,
-  type GameTreeNodeRecursive,
-  type SGFNodeData,
 } from '@kaya/sgf';
 import { injectAnalysisToTree, extractAnalysisFromTree } from '../utils/sgfAnalysis';
-import type { GameInfo, AISettings, NewGameConfig } from '../types/game';
+import type { GameInfo, AISettings, NewGameConfig, SGFProperty } from '../types/game';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface UseGameTreeSGFOperationsParams {
-  gameTree: any;
+  gameTree: GameTree<SGFProperty> | null;
   rootId: string | number | null;
   gameInfo: GameInfo;
   aiSettings: AISettings;
@@ -22,7 +20,7 @@ interface UseGameTreeSGFOperationsParams {
   coreSaveSGF: () => string;
   coreLoadSGFAsync: (
     content: string,
-    onParsed?: (root: GameTreeNodeRecursive<SGFNodeData>) => void
+    onParsed?: (tree: GameTree<SGFProperty>) => void
   ) => Promise<void>;
   coreCreateNewGame: (config?: NewGameConfig) => void;
   isTreeDirty: boolean;
@@ -81,21 +79,17 @@ export function useGameTreeSGFOperations({
     [markTreeClean, analysisCache, updateAnalysisCacheSize]
   );
 
-  // Helper: read the analysis a loaded SGF carries into the cache
-  const extractAnalysisFromRoot = useCallback(
-    (sgfRoot: GameTreeNodeRecursive<SGFNodeData>) => {
+  // Helper: read the analysis a parsed SGF carries into the cache
+  const extractAnalysisFromParsed = useCallback(
+    (tree: GameTree<SGFProperty>) => {
       if (!aiSettings.saveAnalysisToSgf) return;
       try {
-        const info = extractGameInfoFromSGF(sgfRoot);
-        const size = info.boardSize ?? 19;
-        const komi = info.komi ?? DEFAULT_KOMI;
-        const initialBoard = GoBoard.fromDimensions(size);
-
+        const info = extractGameInfoFromSGF(tree.root);
         const extractedCount = extractAnalysisFromTree(
-          sgfRoot,
+          tree,
           analysisCache.current,
-          initialBoard,
-          komi
+          info,
+          info.komi ?? DEFAULT_KOMI
         );
         if (extractedCount > 0) {
           console.log(`[SGF] Loaded ${extractedCount} analyzed positions from file`);
@@ -116,13 +110,12 @@ export function useGameTreeSGFOperations({
       return coreSaveSGF();
     }
 
-    const rootNode = gameTree.get(rootId);
-    if (!rootNode) return '';
-
-    const board = GoBoard.fromDimensions(gameInfo.boardSize);
-    const komi = gameInfo.komi ?? DEFAULT_KOMI;
-
-    const injectedRoot = injectAnalysisToTree(rootNode, analysisCache.current, board, komi);
+    const injectedRoot = injectAnalysisToTree(
+      gameTree,
+      analysisCache.current,
+      gameInfo,
+      gameInfo.komi ?? DEFAULT_KOMI
+    );
     return stringifySGF([withUtf8Charset(injectedRoot)]);
   }, [gameTree, rootId, aiSettings.saveAnalysisToSgf, analysisCache, gameInfo, coreSaveSGF]);
 
@@ -131,15 +124,15 @@ export function useGameTreeSGFOperations({
   // fails leaves the current game with its analysis and its history.
   const loadSGFAsync = useCallback(
     async (content: string) => {
-      await coreLoadSGFAsync(content, sgfRoot => {
+      await coreLoadSGFAsync(content, tree => {
         analysisCache.current.clear();
         clearHistory();
-        extractAnalysisFromRoot(sgfRoot);
+        extractAnalysisFromParsed(tree);
       });
       setCleanAnalysisCacheSize(analysisCache.current.size);
       setForcedDirty(false);
     },
-    [analysisCache, clearHistory, extractAnalysisFromRoot, coreLoadSGFAsync]
+    [analysisCache, clearHistory, extractAnalysisFromParsed, coreLoadSGFAsync]
   );
 
   // Create new game
@@ -164,18 +157,11 @@ export function useGameTreeSGFOperations({
     hasExtractedFromLocalStorage.current = true;
 
     try {
-      const rootNode = gameTree.get(rootId);
-      if (!rootNode) return;
-
-      const size = gameInfo.boardSize ?? 19;
-      const komi = gameInfo.komi ?? DEFAULT_KOMI;
-      const initialBoard = GoBoard.fromDimensions(size);
-
       const extractedCount = extractAnalysisFromTree(
-        rootNode,
+        gameTree,
         analysisCache.current,
-        initialBoard,
-        komi
+        gameInfo,
+        gameInfo.komi ?? DEFAULT_KOMI
       );
       if (extractedCount > 0) {
         console.log(`[LocalStorage] Restored ${extractedCount} analyzed positions from auto-save`);

@@ -10,16 +10,8 @@ import type {
   RecognitionResult,
   RawImage,
 } from '@kaya/board-recognition';
-import { MOKU_BUNDLED_MODEL_FILE } from '@kaya/board-recognition';
 import type { BoardRecognitionWorker } from '../../../../workers/BoardRecognitionWorker';
-import {
-  acquireSharedWorker,
-  releaseSharedWorker,
-  isSharedMokuReady,
-  setSharedMokuReady,
-} from '../../../../workers/BoardRecognitionWorker';
-import { isTauriApp } from '@kaya/platform';
-import { loadMokuCustomModel } from '../../../../services/mokuModelStorage';
+import { useRecognitionWorker } from './useRecognitionWorker';
 import {
   computeInsetDst,
   buildMokuResult,
@@ -51,9 +43,12 @@ export function useBoardRecognition(
   const [result, setResult] = useState<RecognitionResult | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [mokuReady, setMokuReady] = useState(false);
-  const [mokuLoading, setMokuLoading] = useState(false);
-  const [mokuProgress, setMokuProgress] = useState(0);
+  const workerRef = useRef<BoardRecognitionWorker | null>(null);
+  const { mokuReady, mokuLoading, mokuProgress } = useRecognitionWorker(
+    workerRef,
+    detectionModelSource,
+    setLoadError
+  );
   const [gridCorners, setGridCorners] = useState<BoardCorners | null>(null);
   const [hints, setHints] = useState<CalibrationHint[]>([]);
   const [cornersManuallySet, setCornersManuallySet] = useState(false);
@@ -62,7 +57,6 @@ export function useBoardRecognition(
   const rawDimsRef = useRef({ width: 1, height: 1 });
   const objectURLRef = useRef<string | null>(null);
   const cornersRef = useRef<BoardCorners | null>(null);
-  const workerRef = useRef<BoardRecognitionWorker | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reclassifySeqRef = useRef(0);
   const gridCornersRef = useRef<BoardCorners | null>(null);
@@ -78,21 +72,6 @@ export function useBoardRecognition(
     gridCornersRef.current = gc;
   };
 
-  // ── Worker lifecycle (shared singleton with idle timeout) ───────
-  useEffect(() => {
-    const w = acquireSharedWorker();
-    workerRef.current = w;
-    // If moku was already initialized in a previous dialog session, mark ready
-    if (isSharedMokuReady()) {
-      setMokuReady(true);
-      setMokuProgress(1);
-    }
-    return () => {
-      releaseSharedWorker();
-      workerRef.current = null;
-    };
-  }, []);
-
   // Keep refs in sync with React state
   useEffect(() => {
     cornersRef.current = corners;
@@ -103,69 +82,6 @@ export function useBoardRecognition(
   useEffect(() => {
     mokuThresholdRef.current = mokuThreshold;
   }, [mokuThreshold]);
-
-  // ── Init moku detector ─────────────────────────────
-  useEffect(() => {
-    if (!workerRef.current || mokuReady) return;
-    let cancelled = false;
-    setMokuLoading(true);
-    setMokuProgress(0);
-
-    // Compute wasmPath — match AIEngineContext pattern for Tauri compatibility
-    const envPrefix = (import.meta as any).env?.VITE_ASSET_PREFIX;
-    let wasmPath: string;
-    if (isTauriApp()) {
-      wasmPath = '/wasm/';
-    } else if (envPrefix && envPrefix !== '/') {
-      wasmPath = envPrefix.endsWith('/') ? `${envPrefix}wasm/` : `${envPrefix}/wasm/`;
-    } else {
-      wasmPath = new URL('wasm/', document.baseURI || window.location.href).href;
-    }
-
-    const initWorker = async () => {
-      let modelData: ArrayBuffer | undefined;
-      if (detectionModelSource === 'custom') {
-        const customModel = await loadMokuCustomModel();
-        if (customModel) {
-          modelData = customModel;
-        }
-      }
-
-      await workerRef.current!.mokuInit(
-        {
-          wasmPath,
-          ...(isTauriApp() &&
-            !modelData && { bundledModelUrl: `/models/${MOKU_BUNDLED_MODEL_FILE}` }),
-        },
-        progress => {
-          if (!cancelled) setMokuProgress(progress);
-        },
-        modelData
-      );
-    };
-
-    initWorker()
-      .then(() => {
-        if (!cancelled) {
-          setMokuReady(true);
-          setMokuLoading(false);
-          setMokuProgress(1);
-          setSharedMokuReady(true);
-        }
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setMokuLoading(false);
-          setMokuProgress(0);
-          const reason = err instanceof Error ? err.message : String(err);
-          console.error('[BoardRecognition] Moku init failed:', reason);
-          setLoadError(t('boardRecognition.mokuError', { reason }));
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [mokuReady, t, detectionModelSource]);
 
   // ── Load & downscale image ────────────────────────────
   useEffect(() => {

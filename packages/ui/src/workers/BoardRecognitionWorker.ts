@@ -353,9 +353,13 @@ export function isSharedMokuReady(): boolean {
   return mokuInitialized;
 }
 
-/** Mark the shared worker's moku detector as initialized. */
-export function setSharedMokuReady(ready: boolean): void {
-  mokuInitialized = ready;
+/**
+ * Record that a worker's moku detector is initialized. Only the shared worker
+ * of the moment counts: one disposed meanwhile (idle timeout, model change)
+ * took its detector with it.
+ */
+export function markSharedMokuReady(worker: BoardRecognitionWorker): void {
+  if (worker === sharedWorker) mokuInitialized = true;
 }
 
 /**

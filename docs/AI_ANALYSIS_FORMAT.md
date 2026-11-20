@@ -68,5 +68,5 @@ This feature can be enabled/disabled in the AI Settings:
 
 ## Implementation Details
 
-- **Serialization**: When saving an SGF, Kaya traverses the game tree. For each node, it reconstructs the board state, generates a cache key, and looks up analysis results in the `analysisCache`. If found, the `KA` property is injected into the node.
-- **Deserialization**: When loading an SGF, Kaya parses the `KA` properties, reconstructs the board state for each node to generate cache keys, and populates the `analysisCache`. This allows instant access to analysis results without re-running the engine.
+- **Serialization**: When saving an SGF, Kaya traverses the game tree. For each node, it rebuilds the analysis position through the position cache (`analysisCacheKeyAt`), the way live and full-game analysis build theirs, and looks up the result in the `analysisCache`. If found, the `KA` property is injected into the node.
+- **Deserialization**: When loading an SGF, Kaya builds the game tree, rebuilds the position of each node carrying `KA` the same way, and populates the `analysisCache` under that key. This allows instant access to analysis results without re-running the engine.

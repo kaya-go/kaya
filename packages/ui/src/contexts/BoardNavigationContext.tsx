@@ -92,8 +92,9 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
     )
   );
 
-  // Get dynamic board size from current board
-  const boardSize = currentBoard.signMap.length;
+  // The board's own dimensions: a rectangle has as many columns as its width.
+  const boardHeight = currentBoard.signMap.length;
+  const boardWidth = currentBoard.signMap[0]?.length ?? boardHeight;
 
   const [navigationMode, setNavigationMode] = useState(false);
   const [cursorX, setCursorX] = useState(9); // Will be adjusted on board size change
@@ -103,17 +104,16 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
   // Reset cursor to center when a new game starts (moveNumber === 0 and board is empty)
   useEffect(() => {
     if (moveNumber === 0 && currentBoard.isEmpty()) {
-      const center = Math.floor(boardSize / 2);
-      setCursorX(center);
-      setCursorY(center);
+      setCursorX(Math.floor(boardWidth / 2));
+      setCursorY(Math.floor(boardHeight / 2));
     }
-  }, [moveNumber, currentBoard, boardSize]);
+  }, [moveNumber, currentBoard, boardWidth, boardHeight]);
 
   // Adjust cursor position when board size changes
   useEffect(() => {
-    setCursorX(prev => Math.min(prev, boardSize - 1));
-    setCursorY(prev => Math.min(prev, boardSize - 1));
-  }, [boardSize]);
+    setCursorX(prev => Math.min(prev, boardWidth - 1));
+    setCursorY(prev => Math.min(prev, boardHeight - 1));
+  }, [boardWidth, boardHeight]);
 
   // Navigate multiple moves in game tree
   const goBackMultiple = useCallback(
@@ -138,20 +138,20 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
     (dx: number, dy: number) => {
       if (!navigationMode) return;
 
-      setCursorX(prev => (prev + dx + boardSize) % boardSize);
-      setCursorY(prev => (prev + dy + boardSize) % boardSize);
+      setCursorX(prev => (prev + dx + boardWidth) % boardWidth);
+      setCursorY(prev => (prev + dy + boardHeight) % boardHeight);
     },
-    [navigationMode, boardSize]
+    [navigationMode, boardWidth, boardHeight]
   );
 
   const setCursorPosition = useCallback(
     (x: number, y: number) => {
       if (!navigationMode) return;
 
-      setCursorX(Math.max(0, Math.min(boardSize - 1, x)));
-      setCursorY(Math.max(0, Math.min(boardSize - 1, y)));
+      setCursorX(Math.max(0, Math.min(boardWidth - 1, x)));
+      setCursorY(Math.max(0, Math.min(boardHeight - 1, y)));
     },
-    [navigationMode, boardSize]
+    [navigationMode, boardWidth, boardHeight]
   );
 
   const performAction = useCallback(() => {

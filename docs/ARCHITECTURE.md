@@ -192,8 +192,10 @@ that owns the ORT session, batching inference across playouts.
 A native search is aborted by request id: Rust issues the id
 (`onnx_mcts_request_id`), and `onnx_abort_mcts(id)` raises a mark that only
 grows, so an abort that reaches Rust before its search still counts. The
-frontend never starts a search whose signal is already aborted. The global
-engine lock recovers from a panic (`lock_or_reset` drops the engine), and
+frontend never starts a search whose signal is already aborted. Progress
+events carry the request id, and a search ignores any other. The global
+engine locks (ONNX and the PyTorch sidecar) recover from a panic
+(`lock_or_reset` drops the engine and the frontend builds a new one), and
 inputs that could panic are refused before the lock. See
 [`specs/2026-11-20-native-search-abort-and-lock.md`](../specs/2026-11-20-native-search-abort-and-lock.md).
 
@@ -337,12 +339,17 @@ a code path that builds a board from `GameInfo`, pass `boardHeight` through;
 if you add one that feeds a model, a square board is a precondition to check,
 not an assumption to inherit.
 
-Today analysis runs on a square board sized by height, which `analysisBoardSize`
-in `gameCache.ts` decides and `buildAnalysisRequest` applies. A row shorter
-than the row count panics the native engine with its lock held. Decode the
-engine's GTP moves with the same size, and expect points past the real edge
-of the board: Suggest move plays the best ranked move that is on it
-(`bestMoveOnBoard`).
+Today analysis runs on a square board that covers the game board, its side the
+longer of width and height. `analysisBoardSize` in `gameCache.ts` decides it,
+and the analysis helpers (`reconstructAnalysisState`, `mapAnalysisPath`,
+`analysisCacheKeyAt`, `buildAnalysisRequest`) take the game's dimensions and
+apply it themselves, so no caller picks a size of its own and misses the cache.
+A row shorter than the row count panics the native engine with its lock held.
+Decode the engine's GTP moves with the same size, and expect points past the
+real edge of the board: Suggest move plays the best ranked move that is on it
+(`bestMoveOnBoard`), and the heatmap skips the others. Maps drawn on the board
+(markers, heatmap, ownership, the keyboard cursor) have the game's own height
+rows and width columns.
 
 ### 10. `gameControl` events have exactly one owner
 

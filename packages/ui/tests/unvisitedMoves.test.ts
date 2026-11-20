@@ -30,7 +30,7 @@ describe('next-move panel', () => {
   test('an unvisited played move gets its rank but no deltas', () => {
     const info = computeNextMoveInfo({
       nextMoveVertex: playedG7,
-      currentBoard: board,
+      analysisSize: 9,
       mctsProgress: null,
       analysisResult: result,
     });
@@ -42,7 +42,7 @@ describe('next-move panel', () => {
   test('during the search, before the played move has visits', () => {
     const info = computeNextMoveInfo({
       nextMoveVertex: playedG7,
-      currentBoard: board,
+      analysisSize: 9,
       mctsProgress: {
         topMoves: [
           { move: 'E5', winRate: 0.6, scoreLead: 1 },
@@ -64,7 +64,7 @@ describe('next-move panel', () => {
     };
     const info = computeNextMoveInfo({
       nextMoveVertex: playedG7,
-      currentBoard: board,
+      analysisSize: 9,
       mctsProgress: null,
       analysisResult: visited,
     });
@@ -77,6 +77,7 @@ describe('heatmap', () => {
     const map = buildHeatmap({
       showTopMoves: true,
       currentBoard: board,
+      analysisSize: 9,
       aiSettings: { heatMapMetric: 'scoreLead', maxTopMoves: 5, minProb: 0 } as AISettings,
       mctsProgress: null,
       analysisResult: result,

@@ -34,7 +34,7 @@ export const LoadingOverlay: React.FC = () => {
             <div className="loading-progress-text">{loadingProgress}%</div>
           </div>
 
-          <div className="loading-message">{loadingMessage}</div>
+          <div className="loading-message">{loadingMessage && t(loadingMessage)}</div>
         </div>
       </div>
     </div>

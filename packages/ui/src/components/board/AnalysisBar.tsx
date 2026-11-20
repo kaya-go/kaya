@@ -22,6 +22,7 @@ import { useGameTreeAI } from '../../contexts/selectors';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { VISITS_PRESETS } from '../ai/mcts-visits-presets';
 import { MctsVisitsPopover } from './MctsVisitsPopover';
+import { formatFullGameNotice } from '../../contexts/ai/fullGameRun';
 
 interface AnalysisBarProps {
   onShowLegend: () => void;
@@ -51,7 +52,7 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
     fullGameCurrentMove,
     fullGameTotalMoves,
     fullGameETA,
-    allAnalyzedMessage,
+    fullGameNotice,
     analysisCacheSize,
     clearAnalysisCache,
     pendingFullGameAnalysis,
@@ -60,6 +61,13 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
     mctsProgress,
     nextMoveInfo,
   } = useAIAnalysis();
+
+  const noticeClass =
+    fullGameNotice?.kind === 'failed'
+      ? 'ai-analysis-summary__progress--error'
+      : fullGameNotice
+        ? 'ai-analysis-summary__progress--success'
+        : '';
 
   const formatWinRate = (value?: number | null) => {
     if (value === null || value === undefined) return '—';
@@ -303,16 +311,17 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
           </div>
           <div className="ai-analysis-summary__progress-row">
             <span
-              className={`ai-analysis-summary__progress ${allAnalyzedMessage ? 'ai-analysis-summary__progress--success' : ''}`}
+              className={`ai-analysis-summary__progress ${noticeClass}`}
+              role={fullGameNotice?.kind === 'failed' ? 'alert' : undefined}
               style={{
-                opacity: isFullGameAnalyzing || allAnalyzedMessage ? 1 : 0,
-                display: isFullGameAnalyzing || allAnalyzedMessage ? 'block' : 'none',
+                opacity: isFullGameAnalyzing || fullGameNotice ? 1 : 0,
+                display: isFullGameAnalyzing || fullGameNotice ? 'block' : 'none',
               }}
             >
               {isStopping
                 ? t('analysis.stopping')
-                : allAnalyzedMessage
-                  ? `✓ ${allAnalyzedMessage}`
+                : fullGameNotice
+                  ? formatFullGameNotice(fullGameNotice, t)
                   : isFullGameAnalyzing
                     ? `${fullGameCurrentMove}/${fullGameTotalMoves} (${fullGameProgress}%)${fullGameETA ? ` • ETA: ${fullGameETA}` : ''}`
                     : ''}

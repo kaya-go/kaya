@@ -88,6 +88,42 @@ test.describe('Auto-save', () => {
     expect(saved).toContain('B[dd]');
   });
 
+  test('a reload comes back to the node the cursor was on', async ({ page }) => {
+    await page.goto('/');
+    const vertex = (x: number, y: number) =>
+      page.locator(`.shudan-vertex[data-x="${x}"][data-y="${y}"]`);
+
+    // Undo then play: the new move takes an id the reloaded tree numbers
+    // differently, because a reload renumbers nodes in file order.
+    await vertex(3, 3).click();
+    await vertex(15, 3).click();
+    await vertex(3, 15).click();
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(vertex(3, 15)).not.toHaveClass(/shudan-sign_1/);
+    await vertex(15, 15).click();
+    await expect(vertex(15, 15)).toHaveClass(/shudan-sign_1/);
+
+    // A branch too: back to the first move, then a variation from there.
+    await page.keyboard.press('ArrowLeft');
+    await expect(vertex(15, 15)).not.toHaveClass(/shudan-sign_1/);
+    await page.keyboard.press('ArrowLeft');
+    await expect(vertex(15, 3)).not.toHaveClass(/shudan-sign_-1/);
+    await vertex(9, 9).click();
+    await expect(vertex(9, 9)).toHaveClass(/shudan-sign_-1/);
+
+    await page.waitForFunction(
+      key => localStorage.getItem(key)?.includes('W[jj]') ?? false,
+      AUTO_SAVE_KEY,
+      { timeout: 10000 }
+    );
+    await page.reload();
+
+    await expect(vertex(3, 3)).toHaveClass(/shudan-sign_1/);
+    await expect(vertex(9, 9)).toHaveClass(/shudan-sign_-1/);
+    await expect(vertex(15, 3)).not.toHaveClass(/shudan-sign_-1/);
+    await expect(vertex(15, 15)).not.toHaveClass(/shudan-sign_1/);
+  });
+
   test('still saves the game once the debounce elapses', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.shudan-goban')).toBeVisible();

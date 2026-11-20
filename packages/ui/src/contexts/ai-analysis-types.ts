@@ -4,6 +4,7 @@
 
 import { createContext, useContext } from 'react';
 import type { AnalysisResult, MCTSProgress } from '@kaya/ai-engine';
+import type { FullGameNotice } from './ai/fullGameRun';
 
 /** Info about the next move played in the game (for comparing vs AI suggestions) */
 export interface NextMoveInfo {
@@ -51,7 +52,8 @@ export interface AIAnalysisContextValue {
   fullGameCurrentMove: number;
   fullGameTotalMoves: number;
   fullGameETA: string | null;
-  allAnalyzedMessage: string | null;
+  /** How the last full-game run ended, while it is worth saying. */
+  fullGameNotice: FullGameNotice | null;
   pendingFullGameAnalysis: boolean;
 
   // Cache / Progress

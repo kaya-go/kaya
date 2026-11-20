@@ -26,6 +26,7 @@ import { useAIAnalysis } from '../hooks/game/useAIAnalysis';
 import { useAutoSave } from '../hooks/game/useAutoSave';
 import { usePatternMatching } from '../hooks/game/usePatternMatching';
 import { useGameSettings } from '../hooks/game/useGameSettings';
+import { useGameInfoUpdate } from '../hooks/game/useGameInfoUpdate';
 import { useGameTreeUndoRedo } from './useGameTreeUndoRedo';
 import { useGameTreeSGFOperations } from './useGameTreeSGFOperations';
 import { useGameTreeAliases } from './useGameTreeAliases';
@@ -88,7 +89,6 @@ export const GameTreeProvider: React.FC<{
     loadingMessage,
     createNewGame: coreCreateNewGame,
     saveSGF: coreSaveSGF,
-    updateGameInfo,
     filename,
     setFilename,
     isDirty: isTreeDirty,
@@ -99,6 +99,13 @@ export const GameTreeProvider: React.FC<{
   // 1.5. Undo/Redo History
   const { setGameTreeWithHistory, undo, redo, canUndo, canRedo, clearHistory } =
     useGameTreeUndoRedo({ gameTree, currentNodeId, setGameTree, setCurrentNodeId });
+
+  // Game info edits and resignations are undo steps like moves.
+  const updateGameInfo = useGameInfoUpdate({
+    gameTree,
+    rootId,
+    setGameTree: setGameTreeWithHistory,
+  });
 
   // 2. Edit Mode (must be before useBoardState to provide editMode flag)
   const {
@@ -273,6 +280,7 @@ export const GameTreeProvider: React.FC<{
     analysisCache,
     saveAnalysisToSgf: aiSettings.saveAnalysisToSgf,
     boardSize: gameInfo.boardSize ?? 19,
+    boardHeight: gameInfo.boardHeight,
     komi: gameInfo.komi ?? DEFAULT_KOMI,
     analysisCacheSize, // Triggers auto-save when analysis results are added
   });

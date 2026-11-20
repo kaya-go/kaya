@@ -6,17 +6,14 @@ import {
   stringify as stringifySGF,
   sgfNodeToGameTreeNode,
   extractGameInfo as extractGameInfoFromSGF,
-  gameInfoToPropertyWrites,
   vertexToSGF,
   withUtf8Charset,
-  type GameInfoPatch,
-  type GameTreeNodeRecursive,
-  type SGFNodeData,
 } from '@kaya/sgf';
 import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
 import { validateTreeIntegrity } from '../../utils/treeValidation';
 import { clearAllCaches } from '../../utils/gameCache';
+import { restoredCursorNodeId } from '../../utils/treePath';
 import { determineStartNodeId } from './determineStartNode';
 import { loadGameSettings } from './useGameSettings';
 
@@ -45,6 +42,7 @@ export function useGameTreeState() {
   // Loading states
   const [isLoadingSGF, setIsLoadingSGF] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  // A translation key: the overlay translates it.
   const [loadingMessage, setLoadingMessage] = useState('');
 
   const gameInfo = useMemo(() => {
@@ -67,7 +65,7 @@ export function useGameTreeState() {
 
         if (autoSave) {
           const parsed = JSON.parse(autoSave);
-          const { sgf, currentNodeId: savedNodeId, fileName: savedFileName } = parsed;
+          const { sgf, fileName: savedFileName } = parsed;
 
           if (sgf) {
             // Parse and restore the auto-saved game
@@ -90,7 +88,7 @@ export function useGameTreeState() {
                 setGameTree(restoredTree);
                 cleanTreeRef.current = restoredTree; // Mark as clean after restore
                 setRootId(rootNode.id);
-                setCurrentNodeId(savedNodeId ?? rootNode.id);
+                setCurrentNodeId(restoredCursorNodeId(restoredTree, parsed));
                 setFileName(savedFileName ?? null);
                 setIsInitialized(true);
                 return;
@@ -127,15 +125,15 @@ export function useGameTreeState() {
   // The content is parsed and the tree built before anything of the current
   // game is touched, so a file that fails leaves it whole. `onParsed` runs just
   // before the new tree is committed, for state that must be replaced with it.
-  // It gets the converted root, not the parsed one: the conversion is what
-  // expands compressed point lists, and analysis read from the file must be
-  // keyed on the positions the board will show.
+  // It gets the tree built from the converted root, not the parsed one: the
+  // conversion is what expands compressed point lists, and analysis read from
+  // the file must be keyed on the positions the board will show.
   const loadSGFAsync = useCallback(
-    (sgfContent: string, onParsed?: (root: GameTreeNodeRecursive<SGFNodeData>) => void) =>
+    (sgfContent: string, onParsed?: (tree: GameTree<SGFProperty>) => void) =>
       new Promise<void>((resolve, reject) => {
         setIsLoadingSGF(true);
         setLoadingProgress(0);
-        setLoadingMessage('Parsing SGF...');
+        setLoadingMessage('loading.parsingSgf');
 
         // Small delay to let the loading overlay paint before the parse blocks
         setTimeout(() => {
@@ -144,7 +142,7 @@ export function useGameTreeState() {
               onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
             });
 
-            setLoadingMessage('Building game tree...');
+            setLoadingMessage('loading.buildingTree');
             const rootNode = sgfNodeToGameTreeNode(sgfRoot, { value: 0 }, null);
 
             // Approximate progress for tree building since we can't track it directly
@@ -157,7 +155,7 @@ export function useGameTreeState() {
               throw new Error('Tree validation failed: ' + issues[0]);
             }
 
-            onParsed?.(rootNode);
+            onParsed?.(newTree);
             clearAllCaches();
             setGameTree(newTree);
             cleanTreeRef.current = newTree; // Mark as clean after load
@@ -170,7 +168,7 @@ export function useGameTreeState() {
 
             setGameId(`game-${Date.now()}`);
             setLoadingProgress(1);
-            setLoadingMessage('Done');
+            setLoadingMessage('loading.done');
             resolve();
           } catch (error) {
             reject(error);
@@ -241,31 +239,6 @@ export function useGameTreeState() {
     return stringifySGF([withUtf8Charset(rootNode)]);
   }, [gameTree, rootId]);
 
-  const updateGameInfo = useCallback(
-    (info: GameInfoPatch) => {
-      if (!gameTree || rootId === null) return;
-
-      setGameTree(prevTree => {
-        if (!prevTree) return null;
-
-        const root = prevTree.get(rootId);
-        if (!root) return prevTree;
-
-        // Any write to the root yields a new tree, and isDirty compares tree
-        // identity, so a field saved unchanged must not write at all.
-        const writes = gameInfoToPropertyWrites(info, root.data);
-        if (writes.length === 0) return prevTree;
-
-        return prevTree.mutate(draft => {
-          for (const { ident, values } of writes) {
-            draft.updateProperty(rootId, ident, values);
-          }
-        });
-      });
-    },
-    [gameTree, rootId]
-  );
-
   return {
     gameTree,
     setGameTree,
@@ -283,7 +256,6 @@ export function useGameTreeState() {
     loadSGFAsync,
     createNewGame: newGame,
     saveSGF: exportSGF,
-    updateGameInfo,
     gameInfo,
     isDirty,
     markClean,

@@ -17,6 +17,16 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import { DEFAULT_KOMI, type AnalysisResult, type MoveSuggestion } from './types';
+import { invokeReportingLoss } from './tauri-utils';
+
+/**
+ * What the sidecar commands answer once the engine is gone: dropped after a
+ * panic under its lock, or a sidecar process that died. A panic outside the
+ * lock ("Task failed ... panicked") is left out on purpose: featurization runs
+ * there, so it points at the input, and a new engine would panic on it again.
+ */
+const SIDECAR_LOST =
+  /PyTorch engine not initialized|Sidecar process closed|Failed to (?:write|read|flush)/;
 
 /**
  * Type for the Tauri invoke function
@@ -98,6 +108,8 @@ export class PyTorchTauriEngine extends Engine {
   private invoke: TauriInvokeFn | null = null;
   private onProgress?: (progress: { stage: string; progress: number; message: string }) => void;
   private providerInfo: { provider: string; device: string; fp16: boolean } | null = null;
+  /** Set by `dispose`: the sidecar slot is empty on purpose, not lost. */
+  private disposed = false;
 
   constructor(config: PyTorchEngineConfig = {}) {
     super(config);
@@ -107,6 +119,17 @@ export class PyTorchTauriEngine extends Engine {
     this.modelId = config.modelId;
     this.onProgress = config.onProgress;
     this.invoke = getTauriInvoke();
+  }
+
+  /**
+   * Run an analysis command, reporting a sidecar that is gone. Without that,
+   * every later call failed until the app restarted; on `onEngineLost` the
+   * owner builds a new engine.
+   */
+  private invokeAnalysis<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
+    return invokeReportingLoss<T>(this.invoke!, cmd, args, SIDECAR_LOST, error => {
+      if (!this.disposed) this.onEngineLost?.(error);
+    });
   }
 
   private debugLog(message: string, payload?: Record<string, unknown>): void {
@@ -236,7 +259,7 @@ export class PyTorchTauriEngine extends Engine {
       history: options.history ?? [],
     };
 
-    return await this.invoke<AnalysisResult>('pytorch_analyze', {
+    return await this.invokeAnalysis<AnalysisResult>('pytorch_analyze', {
       signMap: signMapArray,
       options: tauriOptions,
     });
@@ -287,7 +310,7 @@ export class PyTorchTauriEngine extends Engine {
     }
 
     const batchInputs = uncachedInputs.map(u => u.input);
-    const batchResults = await this.invoke<AnalysisResult[]>('pytorch_analyze_batch', {
+    const batchResults = await this.invokeAnalysis<AnalysisResult[]>('pytorch_analyze_batch', {
       inputs: batchInputs,
     });
 
@@ -310,6 +333,7 @@ export class PyTorchTauriEngine extends Engine {
   }
 
   async dispose(): Promise<void> {
+    this.disposed = true;
     if (this.invoke) {
       try {
         await this.invoke('pytorch_dispose');

@@ -18,7 +18,7 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import { DEFAULT_KOMI, type AnalysisResult } from './types';
-import { nativeKo, runNativeSearch } from './tauri-mcts';
+import { nativeKo, runNativeSearch, runNativeSearches } from './tauri-mcts';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -31,6 +31,7 @@ import {
   type TauriListenFn,
   getTauriInvoke,
   getTauriListen,
+  invokeReportingLoss,
   CHUNK_SIZE,
   chunkToBase64,
   yieldToUI,
@@ -81,16 +82,16 @@ export class TauriEngine extends Engine {
    * panic, or an `onnx_dispose` from the engine this one replaced. Every later
    * call fails until the owner builds a new engine on `onEngineLost`.
    */
-  private async invokeAnalysis<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
-    try {
-      return await this.invoke!<T>(cmd, args);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      if (!this.disposed && /Engine not initialized|panicked/.test(message)) {
-        this.onEngineLost?.(new Error(message));
+  private invokeAnalysis<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
+    return invokeReportingLoss<T>(
+      this.invoke!,
+      cmd,
+      args,
+      /Engine not initialized|panicked/,
+      error => {
+        if (!this.disposed) this.onEngineLost?.(error);
       }
-      throw e;
-    }
+    );
   }
 
   private reportProgress(stage: UploadProgress['stage'], progress: number, message: string): void {
@@ -280,11 +281,7 @@ export class TauriEngine extends Engine {
     // per-move statistics. Mirrors OnnxEngine.analyzeBatch behavior.
     const hasMultiVisit = inputs.some(i => ((i.options as any)?.numVisits ?? 1) > 1);
     if (hasMultiVisit) {
-      const results: AnalysisResult[] = [];
-      for (const input of inputs) {
-        results.push(await this.analyze(input.signMap, input.options));
-      }
-      return results;
+      return runNativeSearches(inputs, (signMap, options) => this.analyze(signMap, options));
     }
 
     const batchStart = performance.now();
