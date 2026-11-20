@@ -707,3 +707,37 @@ describe('ZIP export of folders', () => {
     expect(await namesIn(null)).toEqual(['EmptyDir', 'HasFile']);
   });
 });
+
+// ============================================================================
+// A write is reported only once it is committed
+// ============================================================================
+
+describe('writes that the browser aborts after the request succeeded', () => {
+  /**
+   * What a quota error looks like: the put succeeds, then the transaction
+   * aborts. Patches `put` so every write in `run` ends that way.
+   */
+  async function withAbortedPuts<T>(run: () => Promise<T>): Promise<T> {
+    const realPut = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (this: IDBObjectStore, ...args) {
+      const request = realPut.apply(this, args as Parameters<typeof realPut>);
+      request.addEventListener('success', () => this.transaction.abort());
+      return request;
+    } as typeof realPut;
+    try {
+      return await run();
+    } finally {
+      IDBObjectStore.prototype.put = realPut;
+    }
+  }
+
+  test('updateFile rejects, and the stored game keeps its previous content', async () => {
+    const created = await storage.createFile({ name: 'game.sgf', content: sgf(['B[aa]']) });
+
+    await withAbortedPuts(async () => {
+      await expect(storage.updateFile(created.id, sgf(['B[aa]', 'W[bb]']))).rejects.toBeDefined();
+    });
+
+    expect((await file(created.id)).content).toBe(sgf(['B[aa]']));
+  });
+});

@@ -28,7 +28,13 @@ import {
   ensureSGFExtension,
   makeUniqueName,
 } from './utils';
-import { openDatabase, migrateSgfExtensions, getStore, idbRequest } from './indexeddb-db-init';
+import {
+  openDatabase,
+  migrateSgfExtensions,
+  getStore,
+  idbRequest,
+  transactionDone,
+} from './indexeddb-db-init';
 import { importZipToStorage, exportStorageToZip } from './indexeddb-zip-operations';
 
 export class IndexedDBStorage implements LibraryStorage {
@@ -133,6 +139,7 @@ export class IndexedDBStorage implements LibraryStorage {
     build: (uniqueName: string) => T
   ): Promise<T> {
     const store = this.getStoreFromDb('readwrite');
+    const committed = transactionDone(store.transaction);
 
     let siblings: LibraryItem[];
     if (parentId === null) {
@@ -145,6 +152,7 @@ export class IndexedDBStorage implements LibraryStorage {
     const item = build(makeUniqueName(desiredName, siblings));
     // Same `store`, so the add rides the transaction the read was issued on.
     await idbRequest(store.add(item));
+    await committed;
     return item;
   }
 
@@ -161,6 +169,7 @@ export class IndexedDBStorage implements LibraryStorage {
     transform: (current: LibraryItem) => T
   ): Promise<T> {
     const store = this.getStoreFromDb('readwrite');
+    const committed = transactionDone(store.transaction);
     const current = await idbRequest<LibraryItem | null>(store.get(id));
     if (!current) {
       throw new Error('Item not found');
@@ -168,6 +177,7 @@ export class IndexedDBStorage implements LibraryStorage {
     const updated = transform(current);
     // Same `store`, so the put rides the transaction the get was issued on.
     await idbRequest(store.put(updated));
+    await committed;
     return updated;
   }
 
@@ -369,7 +379,9 @@ export class IndexedDBStorage implements LibraryStorage {
     }
 
     const store = this.getStoreFromDb('readwrite');
+    const committed = transactionDone(store.transaction);
     await idbRequest(store.delete(id));
+    await committed;
 
     // Update parent folder's item count
     if (parentId) {
@@ -410,7 +422,9 @@ export class IndexedDBStorage implements LibraryStorage {
   async clear(): Promise<void> {
     await this.ensureInitialized();
     const store = this.getStoreFromDb('readwrite');
+    const committed = transactionDone(store.transaction);
     await idbRequest(store.clear());
+    await committed;
   }
 
   // Private helper methods
