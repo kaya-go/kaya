@@ -555,8 +555,11 @@
     "failedToLoadSgf": "SGF 파일 불러오기 실패: {{error}}",
     "invalidSgfContent": "잘못된 SGF 형식",
     "invalidSgfContentDetail": "잘못된 SGF 형식: {{error}}",
+    "openedWithDefects": "이 파일의 일부를 읽을 수 없어 제외했습니다: {{error}}",
     "failedToImportToLibrary": "라이브러리로 가져오기 실패: {{error}}",
-    "failedToImportZip": "ZIP 가져오기 실패: {{error}}"
+    "failedToImportZip": "ZIP 가져오기 실패: {{error}}",
+    "importedWithDefects": "{{path}}의 일부를 읽을 수 없습니다: 가져왔으며, 열 때 그 부분은 제외됩니다",
+    "failedToDuplicate": "{{name}} 복제 실패: {{error}}"
   },
   "loading": {
     "loading": "불러오는 중…",

@@ -75,11 +75,28 @@ export interface LibraryFile extends LibraryItemBase {
 /** Union type for any library item */
 export type LibraryItem = LibraryFolder | LibraryFile;
 
+/**
+ * How content entering the library is checked: `strict` for a new file (it
+ * must read whole, `parseStrict`), `tolerant` for content that was already in
+ * a library (a copy, a ZIP backup, a save that keeps the other games of a
+ * collection), which v0.4.18 and earlier stored with parts `parseStrict`
+ * refuses (`parseTolerant`). Neither lets in content that is not a game tree.
+ */
+export type SgfValidation = 'strict' | 'tolerant';
+
 /** Options for creating a new file */
 export interface CreateFileOptions {
   name: string;
   content: string;
   parentId?: LibraryItemId | null;
+  /** `strict` unless the content was already in a library. */
+  validation?: SgfValidation;
+}
+
+/** Options for updating a file's content */
+export interface UpdateFileOptions {
+  /** `strict` unless the content keeps parts already stored. */
+  validation?: SgfValidation;
 }
 
 /** Options for creating a new folder */
@@ -115,6 +132,11 @@ export interface ImportResult {
   imported: number;
   failed: number;
   errors: ImportError[];
+  /**
+   * Paths of entries imported (and counted in `imported`) with parts that
+   * cannot be read: stored as written, they open without those parts.
+   */
+  withDefects: string[];
 }
 
 /** Result of an export operation */
@@ -152,7 +174,7 @@ export interface LibraryStorage {
   createFolder(options: CreateFolderOptions): Promise<LibraryFolder>;
 
   /** Update a file's content */
-  updateFile(id: LibraryItemId, content: string): Promise<LibraryFile>;
+  updateFile(id: LibraryItemId, content: string, options?: UpdateFileOptions): Promise<LibraryFile>;
 
   /** Rename an item */
   renameItem(options: RenameItemOptions): Promise<LibraryItem>;

@@ -19,6 +19,7 @@ export type {
   GameInfoPatch,
   SGFPropertyWrite,
   SGFMarker,
+  SgfDefect,
 } from './types';
 
 export {
@@ -38,7 +39,9 @@ export { tokenizeIter, tokenize, parseTokens, parse, stringify } from './parser'
 
 export { sgfNodeToGameTreeNode } from './load';
 
-export { decodeSgf, withUtf8Charset } from './charset';
+export { decodeSgf, labelUtf8, withUtf8Charset } from './charset';
+
+export { replaceFirstGame } from './collection';
 
 export { extractGameInfo, gameInfoToPropertyWrites, parseBoardSize } from './gameInfo';
 
@@ -47,4 +50,6 @@ export {
   SgfValidationError,
   isSgfValidationError,
   parseStrict,
+  parseTolerant,
+  type TolerantParse,
 } from './validation';

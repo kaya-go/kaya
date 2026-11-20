@@ -555,8 +555,11 @@
     "failedToLoadSgf": "SGFファイルの読み込みに失敗: {{error}}",
     "invalidSgfContent": "SGF形式が不正です",
     "invalidSgfContentDetail": "SGF形式が不正です: {{error}}",
+    "openedWithDefects": "このファイルの一部を読み取れなかったため、除外しました: {{error}}",
     "failedToImportToLibrary": "ライブラリへのインポートに失敗: {{error}}",
-    "failedToImportZip": "ZIPのインポートに失敗: {{error}}"
+    "failedToImportZip": "ZIPのインポートに失敗: {{error}}",
+    "importedWithDefects": "{{path}} の一部を読み取れません: インポートしましたが、開くとその部分は除外されます",
+    "failedToDuplicate": "{{name}} を複製できませんでした: {{error}}"
   },
   "loading": {
     "loading": "読み込み中…",

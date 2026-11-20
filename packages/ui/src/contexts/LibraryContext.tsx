@@ -15,6 +15,7 @@ import React, {
 } from 'react';
 import type { LibraryItemId } from '@kaya/game-library';
 import { getLibraryStorage } from '@kaya/game-library';
+import type { SgfDefect } from '@kaya/sgf';
 import {
   UnsavedChangesDialog,
   type UnsavedChangesAction,
@@ -25,6 +26,7 @@ import { useLibraryFileOps } from './useLibraryFileOps';
 import { useLibraryItems } from './useLibraryItems';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/Toast';
+import { openStoredGame, storedGameSave } from '../utils/storedGame';
 
 export type { LibraryContextValue, LibraryProviderProps };
 
@@ -222,7 +224,11 @@ export function LibraryProvider({
       return false;
     }
 
-    await storage.updateFile(loadedFileId, content);
+    // A collection keeps its other games as stored, damaged or not, so the
+    // text is checked as stored content.
+    await storage.updateFile(loadedFileId, storedGameSave(existingFile.content, content), {
+      validation: 'tolerant',
+    });
     await refresh();
     onSaveComplete?.();
     return true;
@@ -280,27 +286,28 @@ export function LibraryProvider({
 
   // File open/save operations
   const openFile = useCallback(
-    async (id: LibraryItemId) => {
+    async (id: LibraryItemId): Promise<SgfDefect[]> => {
       if (id === loadedFileId) {
-        return;
+        return [];
       }
 
       const canProceed = await checkUnsavedChanges();
       if (!canProceed) {
-        return;
+        return [];
       }
 
       const storage = getLibraryStorage();
       const item = await storage.getItem(id);
-      if (item && item.type === 'file' && onFileOpen) {
-        const nameWithExt = item.name.toLowerCase().endsWith('.sgf')
-          ? item.name
-          : `${item.name}.sgf`;
-        // Marked as the open file only once the editor has it: a content the
-        // editor refuses leaves the game in place, under its own name.
-        await onFileOpen(item.content, nameWithExt);
-        setLoadedFileId(id);
-      }
+      if (!item || item.type !== 'file' || !onFileOpen) return [];
+
+      const nameWithExt = item.name.toLowerCase().endsWith('.sgf') ? item.name : `${item.name}.sgf`;
+      // Marked as the open file only once the editor has it: a content the
+      // editor refuses leaves the game in place, under its own name.
+      const defects = await openStoredGame(item.content, content =>
+        onFileOpen(content, nameWithExt)
+      );
+      setLoadedFileId(id);
+      return defects;
     },
     [onFileOpen, loadedFileId, checkUnsavedChanges, setLoadedFileId]
   );

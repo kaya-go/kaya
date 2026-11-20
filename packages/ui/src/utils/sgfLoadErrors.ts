@@ -1,5 +1,6 @@
 /**
- * Toast text for a game file that failed to open or to enter the library.
+ * Toast text for a game file that failed to open or to enter the library, or
+ * that a stored file opened or entered it without parts that cannot be read.
  *
  * The text follows the error's class and `ImportError.kind`, never its
  * message: parser and storage messages are English and can change. A message
@@ -7,8 +8,14 @@
  */
 
 import type { TFunction } from 'i18next';
-import { INVALID_SGF_CONTENT, isSgfValidationError } from '@kaya/sgf';
+import { INVALID_SGF_CONTENT, isSgfValidationError, type SgfDefect } from '@kaya/sgf';
 import type { ImportError, ImportResult } from '@kaya/game-library';
+import type { DuplicateResult } from '../contexts/library-types';
+
+/** The first of a list named, the others counted. */
+function withOthers(message: string, others: unknown[]): string {
+  return others.length > 0 ? `${message} (+${others.length})` : message;
+}
 
 function errorDetail(error: unknown): string {
   const detail = error instanceof Error ? error.message || error.name : String(error);
@@ -55,6 +62,36 @@ export function formatZipImportError(error: ImportError, t: TFunction): string {
 export function formatImportResultError(result: ImportResult, t: TFunction): string | null {
   const [first, ...others] = result.errors;
   if (!first) return null;
-  const message = formatZipImportError(first, t);
-  return others.length > 0 ? `${message} (+${others.length})` : message;
+  return withOthers(formatZipImportError(first, t), others);
+}
+
+/**
+ * Warning for a finished ZIP import that stored entries with parts that
+ * cannot be read, or null when there were none.
+ */
+export function formatImportResultWarning(result: ImportResult, t: TFunction): string | null {
+  const [first, ...others] = result.withDefects;
+  if (!first) return null;
+  return withOthers(t('toast.importedWithDefects', { path: first }), others);
+}
+
+/**
+ * Warning for a stored file that opened without parts that cannot be read,
+ * or null when it opened as it is.
+ */
+export function formatOpenedWithDefects(defects: SgfDefect[], t: TFunction): string | null {
+  const [first, ...others] = defects;
+  if (!first) return null;
+  return withOthers(t('toast.openedWithDefects', { error: first.message }), others);
+}
+
+/** Error for the items a duplication could not copy, or null when it copied all. */
+export function formatDuplicateError(result: DuplicateResult, t: TFunction): string | null {
+  const [first, ...others] = result.failures;
+  if (!first) return null;
+  const message = t('toast.failedToDuplicate', {
+    name: first.name,
+    error: errorDetail(first.cause),
+  });
+  return withOthers(message, others);
 }

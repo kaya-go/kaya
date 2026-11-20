@@ -90,3 +90,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Remove the PyTorch sidecar backend](2026-11-20-remove-pytorch-backend.md)                                  | shipped    |
 | 2026-11-20 | [The engine sees the real board](2026-11-20-analysis-real-board.md)                                         | shipped    |
 | 2026-11-20 | [The network gets KataGo's komi parity input](2026-11-20-komi-parity-input.md)                              | shipped    |
+| 2026-11-20 | [Stored library games open, copy, restore; saves keep a collection](2026-11-20-library-stored-content.md)   | shipped    |

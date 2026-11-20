@@ -157,6 +157,35 @@ describe('files', () => {
     expect((await file(created.id)).content).toBe(sgf());
   });
 
+  test('a new file must read whole; content already in a library may not', async () => {
+    // What v0.4.18 stored and opened: a game cut inside a value, and content
+    // after a variation. A copy or a restore of it must not be refused.
+    const stored = ['(;GM[1];B[aa];W[bb', '(;GM[1](;B[aa])(;B[bb]);W[cc])'];
+    for (const content of stored) {
+      await expect(storage.createFile({ name: 'new.sgf', content }), content).rejects.toThrow(
+        /Unterminated property value|Unexpected content after a variation/
+      );
+      const kept = await storage.createFile({ name: 'kept.sgf', content, validation: 'tolerant' });
+      expect((await file(kept.id)).content).toBe(content);
+    }
+    await expect(
+      storage.createFile({ name: 'junk.sgf', content: 'not a game', validation: 'tolerant' })
+    ).rejects.toThrow('Invalid SGF content');
+  });
+
+  test('an update that keeps a damaged game of a collection is checked as stored content', async () => {
+    // Saving the first game of a collection writes the other games back as they
+    // are stored, damaged or not.
+    const created = await storage.createFile({ name: 'set.sgf', content: sgf() });
+    const saved = `${sgf(['B[cc]'])}(;GM[1](;B[aa])(;B[bb]);W[cc])`;
+
+    await expect(storage.updateFile(created.id, saved)).rejects.toThrow(
+      /Unexpected content after a variation/
+    );
+    await storage.updateFile(created.id, saved, { validation: 'tolerant' });
+    expect((await file(created.id)).content).toBe(saved);
+  });
+
   test('deletes a file', async () => {
     const created = await storage.createFile({ name: 'game.sgf', content: sgf() });
     await storage.deleteItem(created.id);
@@ -524,7 +553,13 @@ describe('ZIP export and import', () => {
     await storage.clear();
     const imported = await storage.importZip(archive);
 
-    expect(imported).toEqual({ success: true, imported: 3, failed: 0, errors: [] });
+    expect(imported).toEqual({
+      success: true,
+      imported: 3,
+      failed: 0,
+      errors: [],
+      withDefects: [],
+    });
 
     const rootItems = await storage.getItems(null);
     expect(rootItems.map(i => i.name)).toEqual(['Joseki', 'root.sgf']);
@@ -596,6 +631,42 @@ describe('ZIP export and import', () => {
     expect(stored.content).toContain('PB[柯洁]');
     expect(stored.content).toContain('CA[UTF-8]');
     expect(stored.content).not.toContain('\uFFFD');
+  });
+
+  test('restores a backup holding games v0.4.18 stored, as written, and names them', async () => {
+    // Records as v0.4.18 left them: it stored and opened these files.
+    const cut = '(;GM[1]SZ[19];B[pd];W[dp';
+    const afterVariation = '(;GM[1](;B[aa])(;B[bb]);W[cc])';
+    const good = sgf();
+    const at = Date.now();
+    const record = (id: string, name: string, content: string): LibraryFile => ({
+      id,
+      name,
+      type: 'file',
+      parentId: null,
+      createdAt: at,
+      updatedAt: at,
+      content,
+      metadata: {},
+      size: content.length,
+    });
+    await writeRawItem(record('cut', 'cut.sgf', cut));
+    await writeRawItem(record('variation', 'variation.sgf', afterVariation));
+    await writeRawItem(record('good', 'good.sgf', good));
+
+    const archive = await exportedArchive();
+    await storage.clear();
+    const imported = await storage.importZip(archive);
+
+    expect(imported.imported).toBe(3);
+    expect(imported.failed).toBe(0);
+    expect(imported.withDefects.sort()).toEqual(['cut.sgf', 'variation.sgf']);
+    const restored = (await storage.getItems(null)) as LibraryFile[];
+    expect(Object.fromEntries(restored.map(item => [item.name, item.content]))).toEqual({
+      'cut.sgf': cut,
+      'good.sgf': good,
+      'variation.sgf': afterVariation,
+    });
   });
 
   test('ignores non-SGF entries and reports the ones it cannot store', async () => {
