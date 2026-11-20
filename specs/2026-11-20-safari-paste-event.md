@@ -34,12 +34,12 @@ It does. No code change.
 - Safari fired `beforepaste` twice at load and twice before each `paste`, most
   likely from validating its Edit › Paste menu item. The page did not cancel
   `beforepaste`, and `paste` still fired: no handler is needed for it.
-- Why the desktop app differs, untested: the macOS menu built in
-  `apps/desktop/src-tauri/src/lib.rs` has only the Kaya submenu, no Edit
-  submenu, so Cmd+V has no `paste:` menu item to trigger and WKWebView never
-  runs the Paste command. A predefined Edit menu (`PredefinedMenuItem::paste`
-  and siblings) might make the Tauri keydown fallback unnecessary; that needs a
-  check in the built app before anyone removes the fallback.
+- Why the desktop app differs, confirmed in the real desktop app: the macOS
+  menu built in `apps/desktop/src-tauri/src/lib.rs` had only the Kaya submenu,
+  so Cmd+V had no Paste item to trigger and no `paste` event fired. The same
+  gap broke Cmd+V, Cmd+C and Cmd+A in every text field. PR #249 adds the Edit
+  menu and keeps the Tauri keydown handler, which still runs first on the
+  board. See `2026-11-20-macos-edit-menu.md` once #249 is merged.
 
 ## Links
 
