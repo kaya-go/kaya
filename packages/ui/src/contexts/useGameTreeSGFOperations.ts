@@ -3,6 +3,7 @@ import { GoBoard } from '@kaya/goboard';
 import {
   stringify as stringifySGF,
   extractGameInfo as extractGameInfoFromSGF,
+  withUtf8Charset,
   type GameTreeNodeRecursive,
   type SGFNodeData,
 } from '@kaya/sgf';
@@ -122,7 +123,7 @@ export function useGameTreeSGFOperations({
     const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
     const injectedRoot = injectAnalysisToTree(rootNode, analysisCache.current, board, komi);
-    return stringifySGF([injectedRoot]);
+    return stringifySGF([withUtf8Charset(injectedRoot)]);
   }, [gameTree, rootId, aiSettings.saveAnalysisToSgf, analysisCache, gameInfo, coreSaveSGF]);
 
   // Load SGF. The analysis cache and the undo history belong to the game being

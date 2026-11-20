@@ -19,6 +19,7 @@ import React, {
 import { useTranslation } from 'react-i18next';
 import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
+import { decodeSgf } from '@kaya/sgf';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
@@ -136,7 +137,7 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
         if (!canProceed) return;
 
         try {
-          const content = await file.text();
+          const content = decodeSgf(await file.arrayBuffer());
           await loadSGFAsync(content);
           setFileName(file.name);
           clearLoadedFile(); // Clear library loaded indicator

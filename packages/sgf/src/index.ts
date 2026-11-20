@@ -38,6 +38,8 @@ export { tokenizeIter, tokenize, parseTokens, parse, stringify } from './parser'
 
 export { expandPointList, sgfNodeToGameTreeNode } from './load';
 
+export { decodeSgf, withUtf8Charset } from './charset';
+
 export { extractGameInfo, gameInfoToPropertyWrites, parseBoardSize } from './gameInfo';
 
 export {

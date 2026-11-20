@@ -14,7 +14,7 @@ import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import type { NewGameConfig } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { saveFile } from '@kaya/platform';
-import { isSgfValidationError } from '@kaya/sgf';
+import { decodeSgf, isSgfValidationError } from '@kaya/sgf';
 import { loadContentOrOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { readClipboardText, writeClipboardText } from '@kaya/platform';
 import { useToast } from '../ui/Toast';
@@ -97,7 +97,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       const canProceed = await checkUnsavedChanges();
       if (!canProceed) return;
       try {
-        const content = await file.text();
+        const content = decodeSgf(await file.arrayBuffer());
         await loadSGFAsync(content);
         setFileName(file.name);
         clearLoadedFile();

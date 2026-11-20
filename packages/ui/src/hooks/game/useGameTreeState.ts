@@ -8,6 +8,7 @@ import {
   extractGameInfo as extractGameInfoFromSGF,
   gameInfoToPropertyWrites,
   vertexToSGF,
+  withUtf8Charset,
   type GameInfoPatch,
   type GameTreeNodeRecursive,
   type SGFNodeData,
@@ -237,7 +238,7 @@ export function useGameTreeState() {
     if (!gameTree || rootId === null) return '';
     const rootNode = gameTree.get(rootId);
     if (!rootNode) return '';
-    return stringifySGF([rootNode]);
+    return stringifySGF([withUtf8Charset(rootNode)]);
   }, [gameTree, rootId]);
 
   const updateGameInfo = useCallback(

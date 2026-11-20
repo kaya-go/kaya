@@ -7,7 +7,7 @@ import type { TFunction } from 'i18next';
 import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
-import { isSgfValidationError } from '@kaya/sgf';
+import { decodeSgf, isSgfValidationError } from '@kaya/sgf';
 import type { ToastType } from '../ui/Toast';
 import {
   formatImportResultError,
@@ -101,7 +101,7 @@ export function useTauriDragDrop({
           const canProceed = await checkUnsavedChanges();
           if (!canProceed) return;
 
-          const content = await fs.readTextFile(filePath);
+          const content = decodeSgf(await fs.readFile(filePath));
           await loadSGFAsync(content);
           const fileName = filePath.split(/[\/\\]/).pop() || 'unknown.sgf';
           setFileName(fileName);
@@ -123,7 +123,7 @@ export function useTauriDragDrop({
           const fs = await import('@tauri-apps/plugin-fs');
 
           if (filePath.endsWith('.sgf')) {
-            const content = await fs.readTextFile(filePath);
+            const content = decodeSgf(await fs.readFile(filePath));
             const fileName = filePath.split(/[\/\\]/).pop() || 'unknown.sgf';
             await createFile(fileName, content, null);
           } else if (filePath.endsWith('.zip')) {
