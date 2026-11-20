@@ -242,6 +242,26 @@ describe('a game whose setup stones are a compressed point list', () => {
   });
 });
 
+describe('a pass written as tt', () => {
+  // The engine reads "the last move was a pass" from history entries with a
+  // negative x, and the search stops on two passes. B[tt] used to reach it as
+  // the off-board point [19, 19].
+  test('reaches the analysis history as a pass on a 19x19 board', () => {
+    const tree = treeOf('(;GM[1]SZ[19];B[pd];W[tt];B[tt])');
+    const { history } = buildAnalysisRequest({
+      gameTree: tree,
+      currentNodeId: mainLine(tree)[3].id,
+      gameInfo: { boardSize: 19 },
+    });
+
+    expect(history).toEqual([
+      { color: 1, x: 15, y: 3 },
+      { color: -1, x: -1, y: -1 },
+      { color: 1, x: -1, y: -1 },
+    ]);
+  });
+});
+
 describe('buildAnalysisRequest', () => {
   // GAME's W[bb] captures at cb and leaves black a ko it may not retake at once.
   const KO_NODE = 8;

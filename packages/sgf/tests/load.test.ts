@@ -54,3 +54,31 @@ describe('loading expands compressed point lists', () => {
     expect(dataOf(load('(;AB[a:cc][aa:][dd])')).AB).toEqual(['a:cc', 'aa:', 'dd']);
   });
 });
+
+describe('loading reads B[tt] and W[tt] as a pass on boards up to 19x19', () => {
+  // FF[3] wrote a pass as "tt", which is off the board up to 19x19 and a real
+  // point beyond. FF[4] readers must take it as a pass where it cannot be a point.
+  const moves = (sgf: string) => {
+    const root = load(sgf);
+    const first = root.children[0];
+    return [dataOf(first).B, dataOf(first.children[0]).W];
+  };
+
+  test('19x19, smaller boards, and a game with no SZ', () => {
+    for (const size of ['SZ[19]', 'SZ[13]', 'SZ[9:13]', '']) {
+      expect(moves(`(;GM[1]${size};B[tt];W[tt])`), size).toEqual([[''], ['']]);
+    }
+  });
+
+  test('a board larger than 19 keeps tt as the point it is', () => {
+    for (const size of ['SZ[21]', 'SZ[19:21]', 'SZ[25]']) {
+      expect(moves(`(;GM[1]${size};B[tt];W[tt])`), size).toEqual([['tt'], ['tt']]);
+    }
+  });
+
+  test('only moves: a setup stone or a marker at tt is not a pass', () => {
+    const root = dataOf(load('(;GM[1]SZ[19]AB[tt]TR[tt])'));
+    expect(root.AB).toEqual(['tt']);
+    expect(root.TR).toEqual(['tt']);
+  });
+});
