@@ -39,7 +39,7 @@ It does. No code change.
   so Cmd+V had no Paste item to trigger and no `paste` event fired. The same
   gap broke Cmd+V, Cmd+C and Cmd+A in every text field. PR #249 adds the Edit
   menu and keeps the Tauri keydown handler, which still runs first on the
-  board. See `2026-11-20-macos-edit-menu.md` once #249 is merged.
+  board. See [macOS: an Edit menu](2026-11-20-macos-edit-menu.md).
 
 ## Links
 
