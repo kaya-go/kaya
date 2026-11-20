@@ -1,20 +1,25 @@
 /**
- * Writes sw.js into dist/ once the build is complete.
+ * Writes sw.js and build-files.json into dist/ once the build is complete.
  *
  * sw.js precaches the files of its own build at install, so it needs the
  * final list of what dist/ holds: the bundler's output, index.html, and the
- * public/ files rsbuild copies outside the compilation.
+ * public/ files rsbuild copies outside the compilation. build-files.json
+ * lists every file the build ships, for the deploy step that keeps the
+ * previous build's files online for one more deploy
+ * (scripts/keep-previous-build.ts).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import type { RsbuildPlugin } from '@rsbuild/core';
+import { BUILD_FILES } from '../../../scripts/keep-previous-build';
 import { renderServiceWorker, type ServiceWorkerValues } from './render';
 
 /** Built files the service worker leaves out of its install-time cache. */
 function notPrecached(file: string, ortCopies: ReadonlySet<string>): boolean {
   return (
-    // The worker itself
+    // The worker itself, and the list only the deploy step reads
     file === 'sw.js' ||
+    file === BUILD_FILES ||
     // The update banner must read the server's
     file === 'version.json' ||
     // ONNX Runtime: about 90 MB, in its own cache, kept across builds
@@ -62,10 +67,17 @@ export function pluginServiceWorker(options: {
 
       api.onAfterBuild(({ environments }) => {
         for (const { distPath } of Object.values(environments)) {
-          const files = listFiles(distPath).filter(file => file !== 'sw.js');
+          const files = listFiles(distPath).filter(
+            file => file !== 'sw.js' && file !== BUILD_FILES
+          );
           const precache = selectPrecache(files, ortCopies);
           const worker = renderServiceWorker(options.template, { ...options.values(), precache });
           fs.writeFileSync(path.join(distPath, 'sw.js'), worker);
+          const shipped = [...files, 'sw.js', BUILD_FILES].sort();
+          fs.writeFileSync(
+            path.join(distPath, BUILD_FILES),
+            `${JSON.stringify(shipped, null, 1)}\n`
+          );
         }
       });
     },

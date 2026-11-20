@@ -20,6 +20,7 @@ describe('selectPrecache', () => {
       'wasm/1.31.1/ort-wasm-simd-threaded.jsep.wasm',
       'version.json',
       'sw.js',
+      'build-files.json',
     ];
     const ortCopies = new Set([ortCopy, 'static/assets/ort.bundle.min.456.mjs']);
     expect(selectPrecache(files, ortCopies)).toEqual([
