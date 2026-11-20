@@ -141,6 +141,32 @@ pub async fn onnx_get_cached_model(model_id: String, app_handle: tauri::AppHandl
 pub struct CacheResult {
     pub path: String,
     pub size: u64,
+    /// SHA-256 of the cached bytes, base64url without padding. Matches `sha256Base64Url`.
+    pub hash: String,
+}
+
+/// SHA-256 of a file, encoded as base64url without padding.
+fn sha256_base64url(path: &std::path::Path) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+    use std::io::Read;
+
+    let mut file = std::fs::File::open(path)
+        .map_err(|e| format!("Failed to open cached model: {}", e))?;
+    let mut hasher = Sha256::new();
+    let mut buf = [0u8; 1024 * 1024];
+    loop {
+        let n = file
+            .read(&mut buf)
+            .map_err(|e| format!("Failed to hash cached model: {}", e))?;
+        if n == 0 {
+            break;
+        }
+        hasher.update(&buf[..n]);
+    }
+    Ok(Base64Engine::encode(
+        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+        hasher.finalize(),
+    ))
 }
 
 /// Cache a downloaded temp file directly to the models directory.
@@ -180,9 +206,12 @@ pub async fn onnx_cache_downloaded_file(
         })
         .map_err(|e| format!("Failed to cache model: {}", e))?;
 
+    let hash = sha256_base64url(&cached_path)?;
+
     Ok(CacheResult {
         path: cached_path.to_string_lossy().to_string(),
         size: file_size,
+        hash,
     })
 }
 

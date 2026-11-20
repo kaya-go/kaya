@@ -38,6 +38,15 @@ export function parseModelFilename(
   return { name: stem || base };
 }
 
+/** SHA-256 of `buffer`, encoded as base64url without padding. */
+export async function sha256Base64Url(buffer: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 export interface StoredModelMetadata {
   id: string;
   /**
@@ -60,6 +69,8 @@ export interface StoredModelMetadata {
   date?: number;
   isUserModel?: boolean;
   url?: string;
+  /** SHA-256 of the file bytes, base64url. Set for uploads and downloads so a second copy is rejected. */
+  hash?: string;
 }
 
 /**

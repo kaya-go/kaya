@@ -123,14 +123,12 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
     const handleFileLoad = useCallback(
       async (file: File) => {
         if (file.name.endsWith('.onnx')) {
-          const { name, quantization } = parseModelFilename(file.name);
+          const { name } = parseModelFilename(file.name);
+          /** The final model meta is set in upload model process */
           setCustomAIModel({
             data: file,
-            id: quantization ? name + '.' + quantization : name,
+            id: '',
             name,
-            quantization,
-            date: file.lastModified,
-            size: file.size,
           });
           alert(`Loaded AI model: ${file.name}`);
           return;
