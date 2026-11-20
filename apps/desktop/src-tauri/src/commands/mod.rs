@@ -16,6 +16,7 @@ pub use upload::*;
 use crate::onnx_engine::{self, AnalysisOptions, AnalysisResult, ExecutionProviderInfo, ExecutionProviderPreference};
 use crate::onnx_engine::mcts::{MCTSAnalysisOptions, MCTSAnalysisResult, MCTSProgress};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as Base64Engine};
+use serde::Serialize;
 use tauri::Emitter;
 
 /// Initialize the ONNX engine with model bytes (raw Vec<u8>)
@@ -79,6 +80,17 @@ pub fn onnx_mcts_request_id() -> u64 {
     onnx_engine::next_mcts_request()
 }
 
+/// An "mcts-progress" event. Every search emits on that one event name, so a
+/// search's listener keeps the events of its own `request_id`: one that an
+/// earlier search emitted can still be on its way.
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SearchProgress<'a> {
+    request_id: u64,
+    #[serde(flatten)]
+    progress: &'a MCTSProgress,
+}
+
 /// Run full MCTS search in Rust (eliminates per-batch IPC overhead).
 /// Progress updates are sent via the Tauri event system.
 #[tauri::command]
@@ -90,7 +102,7 @@ pub async fn onnx_analyze_mcts(
 ) -> Result<MCTSAnalysisResult, String> {
     tokio::task::spawn_blocking(move || {
         let mut progress_cb = |progress: MCTSProgress| {
-            let _ = app.emit("mcts-progress", &progress);
+            let _ = app.emit("mcts-progress", SearchProgress { request_id, progress: &progress });
         };
         onnx_engine::run_mcts_analysis(request_id, sign_map, options, &mut progress_cb)
     })
@@ -150,4 +162,29 @@ pub fn onnx_set_provider_preference(preference: String) -> Result<(), String> {
 #[tauri::command]
 pub fn onnx_get_provider_preference() -> String {
     onnx_engine::preference_to_name(onnx_engine::get_execution_provider_preference())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `runNativeSearch` keeps an event only when its `requestId` names the
+    /// search, and reads the progress fields next to it.
+    #[test]
+    fn a_progress_event_names_its_search() {
+        let progress = MCTSProgress {
+            completed_visits: 3,
+            total_visits: 10,
+            best_move: "D4".to_string(),
+            best_move_visits: 2,
+            win_rate: 0.5,
+            score_lead: 1.5,
+            top_moves: vec![],
+        };
+        let event = serde_json::to_value(SearchProgress { request_id: 7, progress: &progress }).unwrap();
+
+        assert_eq!(event["requestId"], 7);
+        assert_eq!(event["completedVisits"], 3);
+        assert_eq!(event["bestMove"], "D4");
+    }
 }

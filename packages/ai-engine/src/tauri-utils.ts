@@ -202,3 +202,25 @@ export function chunkToBase64(chunk: Uint8Array): string {
 export function yieldToUI(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 0));
 }
+
+/**
+ * Run a native analysis command. When it fails because the native engine is
+ * gone (`lost` matches the error), report that through `onLost` before
+ * rethrowing: every later call would fail the same way until the owner builds
+ * a new engine.
+ */
+export async function invokeReportingLoss<T>(
+  invoke: TauriInvokeFn,
+  cmd: string,
+  args: Record<string, unknown>,
+  lost: RegExp,
+  onLost: (error: Error) => void
+): Promise<T> {
+  try {
+    return await invoke<T>(cmd, args);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (lost.test(message)) onLost(new Error(message));
+    throw e;
+  }
+}

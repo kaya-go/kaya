@@ -135,6 +135,40 @@ describe('TauriEngine search abort', () => {
     expect(calls).toContainEqual(['onnx_abort_mcts', { requestId: 42 }]);
   });
 
+  // Every search emits on one event name: a late event from the search before
+  // showed that search's moves as this one's progress.
+  test('progress from another search is ignored', async () => {
+    const progress = (requestId: number, bestMove: string) => ({
+      requestId,
+      completedVisits: 1,
+      totalVisits: 10,
+      bestMove,
+      bestMoveVisits: 1,
+      winRate: 0.5,
+      scoreLead: 0,
+      topMoves: [],
+    });
+    let deliver: (event: { payload: unknown }) => void = () => {};
+    const { engine } = recordingEngine(async () => {
+      deliver({ payload: progress(41, 'Q16') });
+      deliver({ payload: progress(42, 'D4') });
+      return searched;
+    });
+    (engine as unknown as Record<string, unknown>).listen = async (
+      _event: string,
+      handler: (event: { payload: unknown }) => void
+    ) => {
+      deliver = handler;
+      return () => {};
+    };
+    const onProgress = mock((_p: unknown) => {});
+
+    await engine.analyze(board, { numVisits: 10, onProgress } as never);
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress.mock.calls[0][0]).toMatchObject({ bestMove: 'D4' });
+  });
+
   test('a search left alone returns its result', async () => {
     const { engine } = recordingEngine(async () => searched);
     const controller = new AbortController();
@@ -145,6 +179,84 @@ describe('TauriEngine search abort', () => {
     } as never);
 
     expect(result.winRate).toBe(0.5);
+  });
+});
+
+/**
+ * A full-game batch with more than one visit runs one native search per
+ * position. When live analysis preempts it, the queue caches what the error
+ * carries, so the re-queued batch does not search those positions again.
+ */
+describe('TauriEngine.analyzeBatch multi-visit preemption', () => {
+  const searched = (visits: number, winRate: number) => ({
+    moveSuggestions: [],
+    winRate,
+    scoreLead: 0,
+    currentTurn: 'B',
+    visits,
+  });
+
+  /** Search n answers `answers[n]`, which may abort the batch first. */
+  function batchEngine(answers: ((controller: AbortController) => unknown)[]) {
+    const controller = new AbortController();
+    let searches = 0;
+    let ids = 0;
+    const { engine } = engineWith(async cmd => {
+      if (cmd === 'onnx_mcts_request_id') return ++ids;
+      if (cmd === 'onnx_analyze_mcts') return answers[searches++](controller);
+      return undefined;
+    });
+    const inputs = [0, 1, 2].map(() => ({
+      signMap: board,
+      options: { numVisits: 10, signal: controller.signal, skipCache: true } as never,
+    }));
+    return { engine, inputs, searches: () => searches };
+  }
+
+  test('hands back the positions finished before the preemption', async () => {
+    const { engine, inputs, searches } = batchEngine([
+      () => searched(10, 0.1),
+      controller => {
+        controller.abort();
+        // What Rust answers for a search the abort stopped early.
+        return searched(3, 0.2);
+      },
+      () => searched(10, 0.3),
+    ]);
+
+    const error = await engine.analyzeBatch(inputs).catch(e => e);
+
+    expect(error.name).toBe('AbortError');
+    expect(error.partialResults.map((r: any) => r?.winRate ?? null)).toEqual([0.1, null, null]);
+    expect(searches()).toBe(2);
+  });
+
+  test('keeps a search that finished before the abort reached it', async () => {
+    const { engine, inputs, searches } = batchEngine([
+      () => searched(10, 0.1),
+      controller => {
+        controller.abort();
+        return searched(10, 0.2);
+      },
+      () => searched(10, 0.3),
+    ]);
+
+    const error = await engine.analyzeBatch(inputs).catch(e => e);
+
+    expect(error.partialResults.map((r: any) => r?.winRate ?? null)).toEqual([0.1, 0.2, null]);
+    expect(searches()).toBe(2);
+  });
+
+  test('a batch left alone searches every position', async () => {
+    const { engine, inputs } = batchEngine([
+      () => searched(10, 0.1),
+      () => searched(10, 0.2),
+      () => searched(10, 0.3),
+    ]);
+
+    const results = await engine.analyzeBatch(inputs);
+
+    expect(results.map(r => r.winRate)).toEqual([0.1, 0.2, 0.3]);
   });
 });
 
