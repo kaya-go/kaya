@@ -316,23 +316,34 @@ The web app has a single service worker, a template at
 
 - **Cross-origin isolation.** It adds COOP/COEP (`require-corp`) to every
   response it serves, because GitHub Pages cannot send them and ORT's
-  multi-threaded WASM needs `SharedArrayBuffer`. The inline script in
-  `apps/web/index.html` registers it (production builds only) and reloads a
-  page that loaded without the headers once the worker controls it, at most
-  once per session. An isolated page never reloads.
-- **Caching.** The app shell and the hashed `static/` files go in a cache per
-  build, so the app starts offline after one visit. The ORT files go in a
-  cache per ORT version.
+  multi-threaded WASM needs `SharedArrayBuffer`.
+  [`apps/web/sw/register.js`](../apps/web/sw/register.js), inlined into
+  `index.html` in production builds, registers it. It reloads a page that
+  loaded without the headers once a worker can serve it: when the worker takes
+  control, or at once when an active worker does not control the page (a hard
+  reload). One guard covers both: a load that follows the script's own reload
+  does not reload again. An isolated page never reloads.
+- **Caching.** Every file of the build the app may ask for goes in a cache per
+  build: about 10 MB, the list written into `sw.js` after the build
+  ([`apps/web/sw/plugin.ts`](../apps/web/sw/plugin.ts)). An update caches it
+  all at install. A first install caches the shell, and every navigation then
+  caches what is missing, in the background. The ORT files go in a cache per
+  ORT version.
 
-The build fills in a build id and the ORT version. Every build therefore
-installs a new worker, which takes over at once (`skipWaiting`, `claim`), and
-its activate step deletes the caches the previous build left. Cache names
-carry the worker's scope (`kaya|/next/|ort|1.31.1`), because kayago.app/ and
-kayago.app/next/ share one Cache Storage. A worker deletes only its own
-caches, never `kaya-moku-models`. See
-[specs/2026-11-20-ort-wasm-versioned-path.md](../specs/2026-11-20-ort-wasm-versioned-path.md)
+The build fills in a build id, the ORT version and the file lists. Every build
+therefore installs a new worker, which takes over at once (`skipWaiting`,
+`claim`), and its activate step deletes the caches the previous build left.
+Cache names carry the worker's scope (`kaya|/next/|ort|1.31.1`), because
+kayago.app/ and kayago.app/next/ share one Cache Storage. A worker deletes
+only its own caches, never `kaya-moku-models`. Tabs still running the
+previous build load its files from the server: each deploy keeps that build's
+`static/` and `wasm/` files for one more deploy
+([`scripts/keep-previous-build.ts`](../scripts/keep-previous-build.ts), driven
+by the `build-files.json` each build writes). See
+[specs/2026-11-20-ort-wasm-versioned-path.md](../specs/2026-11-20-ort-wasm-versioned-path.md),
+[specs/2026-11-20-single-service-worker.md](../specs/2026-11-20-single-service-worker.md)
 and
-[specs/2026-11-20-single-service-worker.md](../specs/2026-11-20-single-service-worker.md).
+[specs/2026-11-20-service-worker-updates.md](../specs/2026-11-20-service-worker-updates.md).
 
 To add an asset: drop it in `public/` (or the owning package), update
 `scripts/copy-assets.ts`, run `bun run copy-assets`. If you see "file
