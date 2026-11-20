@@ -180,7 +180,10 @@ already finished, which the queue caches. So a live request cuts in front of a
 full-game analysis without that analysis losing its progress. The desktop path
 hands a whole batch to one native call, so there it can only abort before
 dispatching, and the web worker cannot stop a batch at all: a preempted batch
-that comes back complete is cached too.
+that comes back complete is cached too. A cancelled one is not, wherever it
+stopped: cancelling (Stop, Clear analysis, a model switch disposing the queue)
+means the caller no longer wants the result, and may have just emptied the
+cache, whose key does not name the model.
 
 `useLiveAnalysis` and `useFullGameAnalysis` are thin submitters — they
 no longer carry their own coordination state. They use independent
