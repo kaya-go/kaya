@@ -8,8 +8,9 @@
  */
 
 import { parseBoardSize } from './gameInfo';
-import { parseCompressedVertices, parseVertex, stringifyVertex } from './helpers';
-import type { GameTreeNodeRecursive, SGFNode, SGFNodeData } from './types';
+import { parseVertex, stringifyVertex } from './helpers';
+import type { GameTreeNodeRecursive, SGFNode, SGFNodeData, Vertex } from './types';
+import { SgfValidationError } from './validation';
 
 /**
  * Properties whose value is a list of points, which FF[4] lets a writer
@@ -32,24 +33,70 @@ const POINT_LIST_PROPERTIES = new Set([
   'VW',
 ]);
 
+/**
+ * Points the ranges of one file may expand to. A range is a few bytes and up
+ * to 52x52 points, so without a bound a crafted file of a megabyte expanded to
+ * hundreds of millions of values. Far above any real game or collection.
+ */
+const MAX_RANGE_POINTS = 1_000_000;
+
+/** What the conversion of one file needs to know, read from its root. */
+interface LoadContext {
+  width: number;
+  height: number;
+  /** FF[3] wrote a pass as "tt": off the board up to 19x19, a point beyond. */
+  ttIsPass: boolean;
+  /** Points ranges may still expand to (see {@link MAX_RANGE_POINTS}). */
+  rangeBudget: number;
+}
+
 const isPoint = (value: string) => value.length === 2 && parseVertex(value).every(c => c >= 0);
 
 /**
- * One value per point: "aa:cc" becomes the nine points of that rectangle. A
- * range whose corners are not two points each is kept as written, and a point
- * listed twice is kept once.
+ * The part of a range ("aa:cc") on the board, as its two corners. Null when
+ * the value is not two points joined by a colon, or no point of it is on the
+ * board.
  */
-export function expandPointList(values: string[]): string[] {
+function rangeOnBoard(value: string, { width, height }: LoadContext): [Vertex, Vertex] | null {
+  const colon = value.indexOf(':');
+  const [from, to] = [value.slice(0, colon), value.slice(colon + 1)];
+  if (colon < 0 || !isPoint(from) || !isPoint(to)) return null;
+
+  const [[ax, ay], [bx, by]] = [parseVertex(from), parseVertex(to)];
+  const [x1, x2] = [Math.min(ax, bx), Math.min(Math.max(ax, bx), width - 1)];
+  const [y1, y2] = [Math.min(ay, by), Math.min(Math.max(ay, by), height - 1)];
+  return x1 <= x2 && y1 <= y2
+    ? [
+        [x1, y1],
+        [x2, y2],
+      ]
+    : null;
+}
+
+/**
+ * One value per point: "aa:cc" becomes the nine points of that rectangle, cut
+ * to the board. A value that is not such a range is kept as written, and a
+ * point listed twice is kept once.
+ */
+function expandPointList(values: string[], context: LoadContext): string[] {
   const points = new Set<string>();
 
   for (const value of values) {
-    const colon = value.indexOf(':');
-    if (colon < 0 || !isPoint(value.slice(0, colon)) || !isPoint(value.slice(colon + 1))) {
+    const range = rangeOnBoard(value, context);
+    if (range === null) {
       points.add(value);
       continue;
     }
-    for (const vertex of parseCompressedVertices(value)) {
-      points.add(stringifyVertex(vertex));
+
+    const [[x1, y1], [x2, y2]] = range;
+    context.rangeBudget -= (x2 - x1 + 1) * (y2 - y1 + 1);
+    if (context.rangeBudget < 0) {
+      throw new SgfValidationError(
+        `Too many points in compressed point lists (over ${MAX_RANGE_POINTS})`
+      );
+    }
+    for (let x = x1; x <= x2; x++) {
+      for (let y = y1; y <= y2; y++) points.add(stringifyVertex([x, y]));
     }
   }
 
@@ -57,21 +104,13 @@ export function expandPointList(values: string[]): string[] {
 }
 
 /**
- * FF[3] wrote a pass as "tt". Up to 19x19 that point is off the board, so
- * FF[4] readers take it as a pass; on a larger board it is the point it names.
- */
-function isTtPass(sz: string | undefined): boolean {
-  const { boardSize, boardHeight = boardSize } = parseBoardSize(sz);
-  return boardSize <= 19 && boardHeight <= 19;
-}
-
-/**
  * Convert SGFNode to GameTreeNode format (for @kaya/gametree compatibility).
  *
  * Cleans up [object Object] strings in comments, ensures IDs are not null,
  * expands compressed point lists (see {@link expandPointList}), and writes a
- * B[tt] / W[tt] pass as B[] / W[] (see {@link isTtPass}). The node passed is
- * taken as the root: its SZ decides what tt is.
+ * B[tt] / W[tt] pass as B[] / W[] on boards up to 19x19. The node passed is
+ * taken as the root: its SZ decides the board. Throws SgfValidationError when
+ * the ranges of the file expand past {@link MAX_RANGE_POINTS}.
  */
 export function sgfNodeToGameTreeNode<T = SGFNodeData>(
   sgfNode: SGFNode,
@@ -79,8 +118,14 @@ export function sgfNodeToGameTreeNode<T = SGFNodeData>(
   parentId: number | string | null = null,
   visited: Set<SGFNode> = new Set()
 ): GameTreeNodeRecursive<T> {
-  const ttIsPass = isTtPass(sgfNode.data.SZ?.[0]);
-  return convertNode<T>(sgfNode, idCounter, parentId, visited, ttIsPass);
+  const { boardSize: width, boardHeight: height = width } = parseBoardSize(sgfNode.data.SZ?.[0]);
+  const context: LoadContext = {
+    width,
+    height,
+    ttIsPass: width <= 19 && height <= 19,
+    rangeBudget: MAX_RANGE_POINTS,
+  };
+  return convertNode<T>(sgfNode, idCounter, parentId, visited, context);
 }
 
 function convertNode<T>(
@@ -88,7 +133,7 @@ function convertNode<T>(
   idCounter: { value: number },
   parentId: number | string | null,
   visited: Set<SGFNode>,
-  ttIsPass: boolean
+  context: LoadContext
 ): GameTreeNodeRecursive<T> {
   // Prevent infinite recursion from circular references
   if (visited.has(sgfNode)) {
@@ -103,8 +148,8 @@ function convertNode<T>(
     if (!Array.isArray(values)) continue;
     const cleaned = cleanValues(key, values);
     if (POINT_LIST_PROPERTIES.has(key)) {
-      data[key] = expandPointList(cleaned);
-    } else if ((key === 'B' || key === 'W') && ttIsPass) {
+      data[key] = expandPointList(cleaned, context);
+    } else if ((key === 'B' || key === 'W') && context.ttIsPass) {
       data[key] = cleaned.map(value => (value === 'tt' ? '' : value));
     } else {
       data[key] = cleaned;
@@ -116,7 +161,7 @@ function convertNode<T>(
     data: data as T,
     parentId,
     children: sgfNode.children.map((child: SGFNode) =>
-      convertNode<T>(child, idCounter, id, visited, ttIsPass)
+      convertNode<T>(child, idCounter, id, visited, context)
     ),
   };
 }

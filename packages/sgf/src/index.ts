@@ -36,7 +36,7 @@ export {
 
 export { tokenizeIter, tokenize, parseTokens, parse, stringify } from './parser';
 
-export { expandPointList, sgfNodeToGameTreeNode } from './load';
+export { sgfNodeToGameTreeNode } from './load';
 
 export { decodeSgf, withUtf8Charset } from './charset';
 

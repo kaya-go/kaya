@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { parse, sgfNodeToGameTreeNode, type SGFNodeData } from '../src/index';
+import { parse, sgfNodeToGameTreeNode, SgfValidationError, type SGFNodeData } from '../src/index';
 
 const load = (sgf: string) => sgfNodeToGameTreeNode(parse(sgf)[0]);
 const dataOf = (node: { data: unknown }) => node.data as SGFNodeData;
@@ -52,6 +52,27 @@ describe('loading expands compressed point lists', () => {
 
   test('a range that is not two points is kept as written', () => {
     expect(dataOf(load('(;AB[a:cc][aa:][dd])')).AB).toEqual(['a:cc', 'aa:', 'dd']);
+  });
+});
+
+describe('expanding a range is bounded', () => {
+  // A range is a few bytes and up to 52x52 points, on twelve properties per
+  // node: a crafted file of a megabyte expanded to hundreds of millions.
+  test('a range is cut to the board', () => {
+    const square = ['aa', 'ab', 'ac', 'ba', 'bb', 'bc', 'ca', 'cb', 'cc'];
+    expect(dataOf(load('(;SZ[3]AB[aa:zz])')).AB).toEqual(square);
+    expect(dataOf(load('(;GM[1]AB[ss:zz])')).AB).toEqual(['ss']);
+  });
+
+  test('a range with no point on the board is kept as written', () => {
+    expect(dataOf(load('(;SZ[9]AB[jj:kk][aa])')).AB).toEqual(['jj:kk', 'aa']);
+  });
+
+  test('a file whose ranges expand past a million points is refused', () => {
+    // 130 nodes of three full 52x52 ranges: about 1.05 million points.
+    const sgf = `(;GM[1]SZ[52]${';AB[aa:ZZ]AW[aa:ZZ]AE[aa:ZZ]'.repeat(130)})`;
+    expect(() => load(sgf)).toThrow(SgfValidationError);
+    expect(() => load(sgf)).toThrow(/^Too many points in compressed point lists/);
   });
 });
 

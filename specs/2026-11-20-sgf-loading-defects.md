@@ -32,6 +32,11 @@ through (`loadSGFAsync`, autosave restore), now writes:
   Not `AR`, `LN` or `LB`: their colon joins two things, not a rectangle. A
   range whose corners are not two points each is kept as written; a point
   listed twice is kept once.
+- **Bounded.** A range is cut to the board (one with no point on it is kept
+  as written), and the ranges of one file may expand to a million points at
+  most; past that the load is refused (`SgfValidationError`). A range is a
+  few bytes and up to 52x52 points on twelve properties per node, so a crafted
+  file of a megabyte otherwise expanded to hundreds of millions of values.
 - **`B[tt]` / `W[tt]` as `B[]` / `W[]`** when the root `SZ` is at most 19 both
   ways (no `SZ` means 19). On a larger board `tt` is a real point. Setup
   stones and markers are not moves and are left alone. A save writes the
