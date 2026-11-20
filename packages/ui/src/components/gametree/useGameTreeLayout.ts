@@ -45,10 +45,11 @@ export function useGameTreeLayout(
   controlledHorizontal: boolean | undefined,
   showMinimap: boolean
 ): UseGameTreeLayoutResult {
-  const { gameTree, rootId, currentNodeId, goToNode } = useGameTreeSelector(
+  const { gameTree, gameId, rootId, currentNodeId, goToNode } = useGameTreeSelector(
     useCallback(
       (ctx: GameTreeContextValue) => ({
         gameTree: ctx.gameTree,
+        gameId: ctx.gameId,
         rootId: ctx.rootId,
         currentNodeId: ctx.currentNodeId,
         goToNode: ctx.goToNode,
@@ -71,6 +72,7 @@ export function useGameTreeLayout(
   const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const prevCurrentNodeId = useRef<string | number | null>(null);
   const hasInitializedView = useRef(false);
+  const hasShownViewRef = useRef(false);
   const visibleNodeIdsRef = useRef<Set<string>>(new Set());
   const panFrameRef = useRef<number | null>(null);
   const persistedZoomRef = useRef<number | null>(null);
@@ -265,7 +267,11 @@ export function useGameTreeLayout(
 
             const targetNodeId = currentNodeIdRef.current;
             const currentNode = layoutedNodes.find((n: Node) => n.id === String(targetNodeId));
-            const zoom = persistedZoomRef.current ?? 1;
+            // The saved zoom opens the first view; another game keeps the live one.
+            const zoom = hasShownViewRef.current
+              ? reactFlowInstance.current.getZoom()
+              : (persistedZoomRef.current ?? 1);
+            hasShownViewRef.current = true;
 
             if (currentNode) {
               reactFlowInstance.current.setCenter(
@@ -273,6 +279,7 @@ export function useGameTreeLayout(
                 currentNode.position.y + 12,
                 { zoom, duration: 0 }
               );
+              prevCurrentNodeId.current = targetNodeId;
             } else if (persistedZoomRef.current) {
               const viewport = reactFlowInstance.current.getViewport();
               reactFlowInstance.current.setViewport(
@@ -287,7 +294,14 @@ export function useGameTreeLayout(
               });
             }
           }, 50);
-        } else if (centerAfterLayoutRef.current) {
+        } else if (
+          centerAfterLayoutRef.current ||
+          prevCurrentNodeId.current !== currentNodeIdRef.current
+        ) {
+          // The direction changed, or the current node was not in the layout
+          // the pan effect looked in (a new move, or a node past the nodes
+          // the last layout held): centre it now, at the zoom the user has.
+          const animate = centerAfterLayoutRef.current;
           centerAfterLayoutRef.current = false;
           setTimeout(() => {
             if (!reactFlowInstance.current) return;
@@ -296,12 +310,12 @@ export function useGameTreeLayout(
             const currentNode = layoutedNodes.find((n: Node) => n.id === String(targetNodeId));
 
             if (currentNode) {
-              const viewport = reactFlowInstance.current.getViewport();
               reactFlowInstance.current.setCenter(
                 currentNode.position.x + 12,
                 currentNode.position.y + 12,
-                { zoom: viewport.zoom, duration: 200 }
+                { zoom: reactFlowInstance.current.getZoom(), duration: animate ? 200 : 0 }
               );
+              prevCurrentNodeId.current = targetNodeId;
             }
           }, 50);
         }
@@ -391,11 +405,12 @@ export function useGameTreeLayout(
     };
   }, []);
 
-  // Reset initialization flag when file changes
+  // Reset the view when another game is loaded. Not on edits: each edit makes
+  // a new tree, and resetting then snapped the zoom back on every move.
   React.useEffect(() => {
     hasInitializedView.current = false;
     prevCurrentNodeId.current = null;
-  }, [gameTree, rootId]);
+  }, [gameId]);
 
   // Re-center on the current node after layout direction toggle
   React.useEffect(() => {

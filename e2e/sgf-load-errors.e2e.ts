@@ -79,18 +79,22 @@ test.describe('SGF load errors', () => {
 
   test('paste of text that only looks like SGF: a toast, and the game stays', async ({
     page,
-    context,
     baseURL,
   }) => {
-    // Tauri reads the clipboard through its own plugin, not navigator.clipboard.
+    // Tauri reads the clipboard through its own plugin, not a paste event.
     test.skip(baseURL?.includes(':1420') ?? false, 'Clipboard API not available in Tauri');
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await page.goto('/');
     await vertex(page, 3, 3).click();
     await expect(vertex(page, 3, 3)).toHaveClass(/shudan-sign_1/);
 
-    await page.evaluate(text => navigator.clipboard.writeText(text), '(see you on Tuesday)');
-    await page.keyboard.press('Control+v');
+    // What the browser fires for Ctrl+V / Cmd+V outside a text field.
+    await page.evaluate(text => {
+      const data = new DataTransfer();
+      data.setData('text/plain', text);
+      document.body.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true })
+      );
+    }, '(see you on Tuesday)');
     await page.locator('.unsaved-changes-btn.discard').click();
 
     await expect(errorToast(page)).toHaveText(/Invalid SGF format/);

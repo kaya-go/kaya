@@ -105,6 +105,10 @@
   color: var(--text-secondary);
 }
 
+.analysis-status-bar--error {
+  color: var(--error, #ef4444);
+}
+
 .analysis-spinner {
   color: var(--accent-color, #4a9eff);
   animation: spin 1s linear infinite;

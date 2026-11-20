@@ -3,7 +3,8 @@ import { GameTree } from '@kaya/gametree';
 import { stringify as stringifySGF } from '@kaya/sgf';
 import { type SGFProperty } from '../../types/game';
 import { injectAnalysisToTree } from '../../utils/sgfAnalysis';
-import { GoBoard } from '@kaya/goboard';
+import type { BoardDimensions } from '../../utils/gameCache';
+import { childIndexPath } from '../../utils/treePath';
 import type { AnalysisResult } from '@kaya/ai-engine';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
@@ -22,7 +23,7 @@ export function autoSaveCurrentGame(
   currentNodeId: number | string | null,
   analysisCache?: MutableRefObject<Map<string, AnalysisResult>> | null,
   saveAnalysisToSgf?: boolean,
-  boardSize?: number,
+  dimensions: BoardDimensions = { boardSize: 19 },
   komi?: number
 ): boolean | 'too-large' {
   if (!gameTree || rootId === null) return false;
@@ -31,21 +32,20 @@ export function autoSaveCurrentGame(
     let rootNode = gameTree.get(rootId);
     if (!rootNode) return false;
 
-    // Inject analysis data if enabled
-    // We strictly use injectAnalysisToTree when enabled to ensuring any stale analysis
-    // in the game tree is stripped out (since injectAnalysisToTree now handles stripping).
+    // With analysis saved to SGF, injectAnalysisToTree also strips stale KA
+    // from nodes the cache holds nothing for.
     if (saveAnalysisToSgf) {
-      const board = GoBoard.fromDimensions(boardSize ?? 19);
-      // Use cache or empty map
       const cache = analysisCache?.current ?? new Map();
-      rootNode = injectAnalysisToTree(rootNode, cache, board, komi ?? DEFAULT_KOMI);
+      rootNode = injectAnalysisToTree(gameTree, cache, dimensions, komi ?? DEFAULT_KOMI);
     }
 
     const sgfContent = stringifySGF([rootNode]);
     const saveData = {
       sgf: sgfContent,
       fileName: fileName || 'untitled.sgf',
+      // The id alone does not survive the reload, which renumbers the nodes.
       currentNodeId: currentNodeId,
+      currentPath: childIndexPath(gameTree, currentNodeId) ?? [],
       timestamp: new Date().toISOString(),
     };
 
@@ -101,6 +101,7 @@ export function getAutoSavedGame(): {
   sgf: string;
   fileName: string;
   currentNodeId: number | string | null;
+  currentPath?: number[];
   timestamp: string;
 } | null {
   if (typeof window === 'undefined') return null;
@@ -134,6 +135,7 @@ interface UseAutoSaveProps {
   analysisCache?: MutableRefObject<Map<string, AnalysisResult>> | null;
   saveAnalysisToSgf?: boolean;
   boardSize?: number;
+  boardHeight?: number;
   komi?: number;
   analysisCacheSize?: number; // Triggers auto-save when analysis results are added
 }
@@ -146,7 +148,8 @@ export function useAutoSave({
   onAutoSaveDisabled,
   analysisCache,
   saveAnalysisToSgf,
-  boardSize,
+  boardSize = 19,
+  boardHeight,
   komi,
   analysisCacheSize,
 }: UseAutoSaveProps) {
@@ -204,7 +207,7 @@ export function useAutoSave({
         currentNodeId,
         analysisCache,
         saveAnalysisToSgf,
-        boardSize,
+        { boardSize, boardHeight },
         komi
       );
       if (result === true) {
@@ -232,6 +235,7 @@ export function useAutoSave({
     analysisCache,
     saveAnalysisToSgf,
     boardSize,
+    boardHeight,
     komi,
     analysisCacheSize,
   ]);
@@ -253,7 +257,7 @@ export function useAutoSave({
         currentNodeId,
         analysisCache,
         saveAnalysisToSgf,
-        boardSize,
+        { boardSize, boardHeight },
         komi
       );
       if (result === 'too-large' && onAutoSaveDisabled) {
@@ -284,7 +288,7 @@ export function useAutoSave({
       currentNodeId,
       analysisCache,
       saveAnalysisToSgf,
-      boardSize,
+      { boardSize, boardHeight },
       komi
     );
     if (result === true) {
@@ -307,6 +311,7 @@ export function useAutoSave({
     analysisCache,
     saveAnalysisToSgf,
     boardSize,
+    boardHeight,
     komi,
     analysisCacheSize,
     onAutoSaveDisabled,

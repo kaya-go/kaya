@@ -59,6 +59,17 @@ export const ShortcutsTab: React.FC<ShortcutsTabProps> = () => {
     if (!recording) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // While the conflict dialog asks, a key is not a new binding: only
+      // Escape is ours (cancel), and Tab / Enter / Space reach its buttons.
+      if (recording.collision) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+          setRecording(null);
+        }
+        return;
+      }
+
       e.preventDefault();
       e.stopPropagation();
 

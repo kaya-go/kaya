@@ -125,3 +125,42 @@ test.describe('Board Recognition Dialog — mobile layout', () => {
     await expect(photoPanel).toHaveClass(/brd-mobile-hidden/);
   });
 });
+
+// Downloads the Moku model from Hugging Face, so it runs only on request:
+// KAYA_E2E_MOKU=1 bun run test:e2e e2e/board-recognition.e2e.ts
+test.describe('Board Recognition Dialog — Moku model', () => {
+  test.skip(!process.env.KAYA_E2E_MOKU, 'downloads the Moku model; set KAYA_E2E_MOKU=1');
+  test.setTimeout(240000);
+  test.use({ locale: 'en-US' });
+
+  test('a reopened dialog uses the detector already loaded', async ({ page }) => {
+    // A slow worker: its answers land after React re-renders. A detector known
+    // to be ready only from an effect then started a load it abandoned, and
+    // "Loading AI model…" stayed for good.
+    await page.addInitScript(() => {
+      const desc = Object.getOwnPropertyDescriptor(Worker.prototype, 'onmessage')!;
+      Object.defineProperty(Worker.prototype, 'onmessage', {
+        configurable: true,
+        get() {
+          return desc.get!.call(this);
+        },
+        set(fn: (e: MessageEvent) => void) {
+          desc.set!.call(this, (e: MessageEvent) => setTimeout(() => fn.call(this, e), 300));
+        },
+      });
+    });
+
+    await openDialog(page);
+    const loading = page.getByText('Loading AI model…');
+    await expect(loading.first()).toBeVisible();
+    await expect(loading).toHaveCount(0, { timeout: 200000 });
+    await page.locator('.brd-btn-cancel').click();
+    await expect(page.locator('.brd-dialog')).toHaveCount(0);
+
+    const scanInput = page.locator('input[type="file"][accept=".jpg,.jpeg,.png,.webp,.bmp"]');
+    await scanInput.setInputFiles({ name: 'again.png', mimeType: 'image/png', buffer: TINY_PNG });
+    await expect(page.locator('.brd-dialog')).toBeVisible();
+    await page.waitForTimeout(2000);
+    await expect(loading).toHaveCount(0);
+  });
+});

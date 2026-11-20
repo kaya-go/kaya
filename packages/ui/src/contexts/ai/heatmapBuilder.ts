@@ -22,6 +22,8 @@ interface AnalysisResultLike {
 interface BuildHeatmapArgs {
   showTopMoves: boolean;
   currentBoard: GoBoard;
+  /** Side of the square board the analysis ran on (analysisBoardSize). */
+  analysisSize: number;
   aiSettings: AISettings;
   mctsProgress: MCTSProgressLike | null | undefined;
   analysisResult: AnalysisResultLike | null | undefined;
@@ -46,15 +48,27 @@ function visitShare(listed: MoveSuggestion[]): (s: MoveSuggestion) => number {
  * Returns `null` when nothing should be shown.
  */
 export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
-  const { showTopMoves, currentBoard, aiSettings, mctsProgress, analysisResult, nextMoveInfo } =
-    args;
+  const {
+    showTopMoves,
+    currentBoard,
+    analysisSize,
+    aiSettings,
+    mctsProgress,
+    analysisResult,
+    nextMoveInfo,
+  } = args;
   if (!showTopMoves) return null;
 
-  const boardSize = currentBoard.signMap.length;
   const metric = aiSettings.heatMapMetric ?? 'policy';
-  const map: HeatMap = Array(boardSize)
-    .fill(null)
-    .map(() => Array(boardSize).fill(null));
+  const map: HeatMap = currentBoard.signMap.map(row => row.map(() => null));
+  // A move decoded on the analysis square, kept when it is a free point of the
+  // game board: on a rectangle the square reaches past the short edge.
+  const freeVertex = (move: string): [number, number] | null => {
+    const vertex = gtpToVertex(move, analysisSize);
+    if (!vertex) return null;
+    const [x, y] = vertex;
+    return currentBoard.signMap[y]?.[x] === 0 ? vertex : null;
+  };
 
   // Current position metrics used as baseline for delta display
   const currentWinRate = mctsProgress?.winRate ?? analysisResult?.winRate;
@@ -84,12 +98,9 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
     for (const topMove of mctsProgress.topMoves) {
       if (displayedCount >= aiSettings.maxTopMoves) break;
 
-      const vertex = gtpToVertex(topMove.move, boardSize);
+      const vertex = freeVertex(topMove.move);
       if (!vertex) continue;
-
       const [x, y] = vertex;
-      if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) continue;
-      if (currentBoard.signMap[y]?.[x] !== 0) continue;
 
       const visitShare = totalVisits > 0 ? topMove.visits / totalVisits : 0;
       const strength = normalizeStrength(visitShare);
@@ -105,14 +116,7 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
       displayedCount++;
     }
 
-    overlayNextMoveMarker(
-      map,
-      boardSize,
-      currentBoard,
-      nextMoveInfo,
-      analysisResult,
-      formatMoveText
-    );
+    overlayNextMoveMarker(map, currentBoard, nextMoveInfo, analysisResult, formatMoveText);
     return map;
   }
 
@@ -129,12 +133,9 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
     for (const suggestion of suggestions) {
       if (displayedCount >= aiSettings.maxTopMoves) break;
 
-      const vertex = gtpToVertex(suggestion.move, boardSize);
+      const vertex = freeVertex(suggestion.move);
       if (!vertex) continue;
-
       const [x, y] = vertex;
-      if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) continue;
-      if (currentBoard.signMap[y]?.[x] !== 0) continue;
 
       const strength = normalizeStrength(share(suggestion));
       const text = formatMoveText(share(suggestion), suggestion.winRate, suggestion.scoreLead);
@@ -143,14 +144,7 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
       displayedCount++;
     }
 
-    overlayNextMoveMarker(
-      map,
-      boardSize,
-      currentBoard,
-      nextMoveInfo,
-      analysisResult,
-      formatMoveText
-    );
+    overlayNextMoveMarker(map, currentBoard, nextMoveInfo, analysisResult, formatMoveText);
   }
 
   return map;
@@ -158,7 +152,6 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
 
 function overlayNextMoveMarker(
   map: HeatMap,
-  boardSize: number,
   currentBoard: GoBoard,
   nextMoveInfo: NextMoveInfo | null,
   analysisResult: AnalysisResultLike | null | undefined,
@@ -166,7 +159,6 @@ function overlayNextMoveMarker(
 ): void {
   if (!nextMoveInfo) return;
   const [x, y] = nextMoveInfo.vertex;
-  if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) return;
   if (currentBoard.signMap[y]?.[x] !== 0) return;
 
   const existing = map[y][x];

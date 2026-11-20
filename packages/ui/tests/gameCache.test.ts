@@ -64,6 +64,8 @@ const GAME =
   '(;SZ[9];B[ba];W[ca];B[ab];W[db];B[bc];W[cc];B[cb];W[bb];B[ee];W[cb];B[];W[fe]' +
   ';AB[aa][hh]AE[ee];C[note];B[gg])';
 
+const NINE = { boardSize: 9 };
+
 beforeEach(clearAllCaches);
 
 describe('position cache', () => {
@@ -79,7 +81,7 @@ describe('position cache', () => {
     const order = [...nodes.keys(), ...[...nodes.keys()].reverse()];
     for (const i of order) {
       const expected = replay(nodes.slice(0, i + 1), 9);
-      expectSamePosition(reconstructAnalysisState(tree, nodes[i].id, 9), expected);
+      expectSamePosition(reconstructAnalysisState(tree, nodes[i].id, NINE), expected);
       expect(reconstructBoard(tree, nodes[i].id, 9).equals(expected.board)).toBe(true);
     }
   });
@@ -103,13 +105,13 @@ describe('position cache', () => {
       tree,
       nodes,
       (state, i) => expectSamePosition(state, replay(nodes.slice(0, i + 1), 9)),
-      9
+      NINE
     );
 
     // The walk keeps mutating its working state after writing an entry.
     for (let i = 0; i < nodes.length; i++) {
       expectSamePosition(
-        reconstructAnalysisState(tree, nodes[i].id, 9),
+        reconstructAnalysisState(tree, nodes[i].id, NINE),
         replay(nodes.slice(0, i + 1), 9)
       );
     }
@@ -118,14 +120,14 @@ describe('position cache', () => {
   test('a caller can change the state it gets without touching the cache', () => {
     const tree = treeOf(GAME);
     const id = mainLine(tree)[5].id;
-    const expected = reconstructAnalysisState(tree, id, 9);
+    const expected = reconstructAnalysisState(tree, id, NINE);
 
-    const owned = reconstructAnalysisState(tree, id, 9);
+    const owned = reconstructAnalysisState(tree, id, NINE);
     owned.board.makeMove(1, [8, 8], { mutate: true });
     owned.history.push({ color: 1, x: 8, y: 8 });
     owned.nextToPlay = owned.nextToPlay === 'B' ? 'W' : 'B';
 
-    expectSamePosition(reconstructAnalysisState(tree, id, 9), expected);
+    expectSamePosition(reconstructAnalysisState(tree, id, NINE), expected);
   });
 
   test('a rectangular board keeps its width and height', () => {
@@ -140,7 +142,7 @@ describe('position cache', () => {
     const id = mainLine(tree)[5].id;
     const { board, nextToPlay } = reconstructPosition(tree, id, 9);
     expect(board).toBe(reconstructBoard(tree, id, 9));
-    expect(nextToPlay).toBe(reconstructAnalysisState(tree, id, 9).nextToPlay);
+    expect(nextToPlay).toBe(reconstructAnalysisState(tree, id, NINE).nextToPlay);
     expect(nextToPlayToSign(nextToPlay)).toBe(nextToPlay === 'B' ? 1 : -1);
   });
 });
@@ -189,10 +191,10 @@ describe('position cache across trees', () => {
   test('a handicap edit on the root changes who plays next', () => {
     const before = treeOf('(;SZ[9];B[aa])');
     const rootId = before.root.id;
-    expect(reconstructAnalysisState(before, rootId, 9).nextToPlay).toBe('B');
+    expect(reconstructAnalysisState(before, rootId, NINE).nextToPlay).toBe('B');
 
     const after = before.mutate(draft => draft.updateProperty(rootId, 'HA', ['2']));
-    expect(reconstructAnalysisState(after, rootId, 9).nextToPlay).toBe('W');
+    expect(reconstructAnalysisState(after, rootId, NINE).nextToPlay).toBe('W');
   });
 
   test('a walk over another tree leaves no entries for the current one', () => {
@@ -200,7 +202,7 @@ describe('position cache across trees', () => {
     const id = before.root.children[0].id;
     const after = before.mutate(draft => draft.updateProperty(id, 'AB', ['ee']));
 
-    mapAnalysisPath(after, mainLine(after), () => undefined, 9);
+    mapAnalysisPath(after, mainLine(after), () => undefined, NINE);
     expect(reconstructBoard(before, id, 9).get([4, 4])).toBe(0);
   });
 
@@ -309,20 +311,27 @@ describe('buildAnalysisRequest', () => {
     expect(request.extra).toEqual({ koInfo: { sign: 1, vertex: [2, 1] }, tag: 1 });
   });
 
-  test('a rectangular game is analysed on a square board sized by height', () => {
+  test('a rectangular game is analysed on a square board that covers it', () => {
     // A row shorter than the row count panics the native engine.
-    const gameInfo = { boardSize: 9, boardHeight: 13 };
-    const tree = treeOf('(;SZ[9:13];B[am])');
-    const request = buildAnalysisRequest({
-      gameTree: tree,
-      currentNodeId: tree.root.children[0].id,
-      gameInfo,
-    });
+    for (const [sgf, gameInfo, stone] of [
+      ['(;SZ[9:13];B[am])', { boardSize: 9, boardHeight: 13 }, [0, 12]],
+      // Wider than tall: a square sized by height cut off the last four columns.
+      ['(;SZ[13:9];B[ma])', { boardSize: 13, boardHeight: 9 }, [12, 0]],
+    ] as const) {
+      clearAllCaches();
+      const tree = treeOf(sgf);
+      const request = buildAnalysisRequest({
+        gameTree: tree,
+        currentNodeId: tree.root.children[0].id,
+        gameInfo,
+      });
 
-    expect(analysisBoardSize(gameInfo)).toBe(13);
-    expect(request.signMap).toHaveLength(13);
-    expect(request.signMap.every(row => row.length === 13)).toBe(true);
-    expect(request.signMap[12][0]).toBe(1);
+      expect(analysisBoardSize(gameInfo)).toBe(13);
+      expect(request.signMap).toHaveLength(13);
+      expect(request.signMap.every(row => row.length === 13)).toBe(true);
+      expect(request.signMap[stone[1]][stone[0]]).toBe(1);
+      expect(request.history).toEqual([{ color: 1, x: stone[0], y: stone[1] }]);
+    }
   });
 
   test('with no tree, an empty board of the game size', () => {

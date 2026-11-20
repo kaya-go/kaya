@@ -1,9 +1,13 @@
-import { AnalysisResult, MoveSuggestion } from '@kaya/ai-engine';
-import { SGFNode, SGFNodeData, sgfToVertex } from '@kaya/sgf';
-import { GameTreeNode } from '@kaya/gametree';
-import { GoBoard, Sign } from '@kaya/goboard';
-import { generateAnalysisCacheKey, AnalysisHistoryItem } from './aiAnalysis';
-import { SGFProperty } from '../types/game';
+import type { AnalysisResult, MoveSuggestion } from '@kaya/ai-engine';
+import type { SGFNodeData } from '@kaya/sgf';
+import type { GameTree, GameTreeNode } from '@kaya/gametree';
+import {
+  analysisCacheKey,
+  analysisCacheKeyAt,
+  reconstructAnalysisState,
+  type BoardDimensions,
+} from './gameCache';
+import type { SGFProperty } from '../types/game';
 
 /**
  * Kaya Analysis Data Structure (JSON format for SGF)
@@ -155,228 +159,55 @@ export function injectAnalysisToNodeData(data: SGFNodeData, analysis: AnalysisRe
 }
 
 /**
- * Recursively traverse the tree, reconstruct board state, and inject analysis data if found in cache.
- * Returns a new tree structure (cloned).
+ * Copy of the tree with each node's `KA` taken from the analysis cache, or
+ * dropped when the cache holds nothing for its position, so stale analysis in
+ * the tree is never written back.
+ *
+ * Every position comes from the position cache, as live and full-game analysis
+ * build theirs: the key a result was stored under is the key it is looked up
+ * by, whatever the board shape, the setup nodes or the side to play.
  */
 export function injectAnalysisToTree(
-  node: GameTreeNode<SGFProperty>,
+  tree: GameTree<SGFProperty>,
   cache: Map<string, AnalysisResult>,
-  board: GoBoard,
-  komi: number,
-  history: AnalysisHistoryItem[] = []
+  dimensions: BoardDimensions,
+  komi: number
 ): GameTreeNode<SGFProperty> {
-  // 1. Apply current node's move/setup to get new board state
-  let newBoard = board;
-  let newHistory = [...history];
-  let color: Sign = 0;
+  const inject = (node: GameTreeNode<SGFProperty>): GameTreeNode<SGFProperty> => {
+    let data: SGFNodeData = { ...node.data };
+    delete data[KAYA_ANALYSIS_PROPERTY];
 
-  // Handle setup stones first (AB, AW, AE)
-  // Setup stones change the board but don't add to move history
-  // This must match updateAnalysisState behavior for cache key consistency
-  if (node.data.AB || node.data.AW || node.data.AE) {
-    // Clone board before modifying since we're using immutable pattern
-    newBoard = newBoard.clone();
-    for (const sgf of node.data.AE || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, 0);
-    }
-    for (const sgf of node.data.AB || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, 1);
-    }
-    for (const sgf of node.data.AW || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, -1);
-    }
-  }
+    const analysis = cache.get(analysisCacheKeyAt(tree, node.id, dimensions, komi));
+    if (analysis) data = injectAnalysisToNodeData(data, analysis);
 
-  // Handle moves (including pass moves)
-  if (node.data.B) {
-    const vertex = sgfToVertex(node.data.B[0]);
-    if (vertex) {
-      // Regular move - use consistent options with updateAnalysisState
-      try {
-        newBoard = newBoard.makeMove(1, vertex, { disableKoCheck: false });
-        newHistory.push({ color: 1, x: vertex[0], y: vertex[1] });
-      } catch {
-        // Ignore invalid moves
-      }
-    } else if (node.data.B[0] !== undefined) {
-      // Pass move (empty string -> null from sgfToVertex)
-      newHistory.push({ color: 1, x: -1, y: -1 });
-    }
-    color = 1;
-  } else if (node.data.W) {
-    const vertex = sgfToVertex(node.data.W[0]);
-    if (vertex) {
-      // Regular move - use consistent options with updateAnalysisState
-      try {
-        newBoard = newBoard.makeMove(-1, vertex, { disableKoCheck: false });
-        newHistory.push({ color: -1, x: vertex[0], y: vertex[1] });
-      } catch {
-        // Ignore invalid moves
-      }
-    } else if (node.data.W[0] !== undefined) {
-      // Pass move (empty string -> null from sgfToVertex)
-      newHistory.push({ color: -1, x: -1, y: -1 });
-    }
-    color = -1;
-  }
-
-  // 2. Determine next player
-  // If Black played, next is White (-1). If White played, next is Black (1).
-  // If no move (setup or root), default to Black (1) unless specified?
-  // KataGo usually assumes Black to play if not specified, or we can infer.
-  // For analysis cache key, we need to match what was used during analysis.
-  // In `AIAnalysisOverlay`, `nextToPlay` is derived from `currentBoard` and `gameInfo`.
-
-  let nextToPlay: 'B' | 'W' = 'B';
-  if (color === 1) nextToPlay = 'W';
-  else if (color === -1) nextToPlay = 'B';
-  else {
-    // If no move, check PL property first
-    if (node.data.PL && node.data.PL[0]) {
-      nextToPlay = node.data.PL[0] === 'W' ? 'W' : 'B';
-    } else if (node.data.HA && parseInt(node.data.HA[0]) >= 2) {
-      // Handicap game: White plays first after Black setup stones
-      nextToPlay = 'W';
-    }
-    // Else default to Black
-  }
-
-  // 3. Generate cache key and look up analysis
-  const cacheKey = generateAnalysisCacheKey(newBoard.signMap, nextToPlay, komi, newHistory);
-  const analysis = cache.get(cacheKey);
-
-  // 4. Clone node data and inject analysis if found
-  let newData = { ...node.data };
-
-  // Always remove existing analysis property to ensure we don't persist stale data
-  // from the original tree (which serves as the "clean" state)
-  delete newData[KAYA_ANALYSIS_PROPERTY];
-
-  if (analysis) {
-    newData = injectAnalysisToNodeData(newData, analysis);
-  }
-
-  // 5. Recurse for children
-  const newChildren = node.children.map(child =>
-    injectAnalysisToTree(child, cache, newBoard, komi, newHistory)
-  );
-
-  return {
-    ...node,
-    data: newData,
-    children: newChildren,
+    return { ...node, data, children: node.children.map(inject) };
   };
+  return inject(tree.root);
 }
 
 /**
- * Generic tree node interface for extraction (compatible with both SGFNode and GameTreeNode)
- */
-interface ExtractableNode {
-  data: SGFNodeData;
-  children: ExtractableNode[];
-}
-
-/**
- * Recursively traverse the SGF tree, reconstruct board state, extract analysis data, and populate cache.
- * Returns the number of positions with analysis data found.
- * Works with both SGFNode and GameTreeNode<SGFProperty> since they have the same structure.
+ * Read the `KA` analysis stored in a tree into the analysis cache, under the
+ * key of each node's position (see injectAnalysisToTree). Returns the number of
+ * positions read.
  */
 export function extractAnalysisFromTree(
-  node: ExtractableNode,
+  tree: GameTree<SGFProperty>,
   cache: Map<string, AnalysisResult>,
-  board: GoBoard,
-  komi: number,
-  history: AnalysisHistoryItem[] = []
+  dimensions: BoardDimensions,
+  komi: number
 ): number {
   let extractedCount = 0;
 
-  // 1. Apply current node's move/setup (including pass moves)
-  let newBoard = board;
-  let newHistory = [...history];
-  let color: Sign = 0;
+  for (const node of tree.listNodes()) {
+    const json = node.data[KAYA_ANALYSIS_PROPERTY]?.[0];
+    if (!json) continue;
 
-  // Handle setup stones first (AE first, then AB, AW)
-  // Setup stones change the board but don't add to move history
-  // This must match updateAnalysisState behavior for cache key consistency
-  if (node.data.AB || node.data.AW || node.data.AE) {
-    // Clone board before modifying since we're using immutable pattern
-    newBoard = newBoard.clone();
-    for (const sgf of node.data.AE || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, 0);
-    }
-    for (const sgf of node.data.AB || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, 1);
-    }
-    for (const sgf of node.data.AW || []) {
-      const v = sgfToVertex(sgf);
-      if (v) newBoard.set(v, -1);
-    }
-  }
+    const state = reconstructAnalysisState(tree, node.id, dimensions);
+    const analysis = parseAnalysis(json, state.nextToPlay);
+    if (!analysis) continue;
 
-  if (node.data.B) {
-    const vertex = sgfToVertex(node.data.B[0]);
-    if (vertex) {
-      // Regular move - use consistent options with updateAnalysisState
-      try {
-        newBoard = newBoard.makeMove(1, vertex, { disableKoCheck: false });
-        newHistory.push({ color: 1, x: vertex[0], y: vertex[1] });
-      } catch {
-        // Ignore invalid moves
-      }
-    } else if (node.data.B[0] !== undefined) {
-      // Pass move (empty string -> null from sgfToVertex)
-      newHistory.push({ color: 1, x: -1, y: -1 });
-    }
-    color = 1;
-  } else if (node.data.W) {
-    const vertex = sgfToVertex(node.data.W[0]);
-    if (vertex) {
-      // Regular move - use consistent options with updateAnalysisState
-      try {
-        newBoard = newBoard.makeMove(-1, vertex, { disableKoCheck: false });
-        newHistory.push({ color: -1, x: vertex[0], y: vertex[1] });
-      } catch {
-        // Ignore invalid moves
-      }
-    } else if (node.data.W[0] !== undefined) {
-      // Pass move (empty string -> null from sgfToVertex)
-      newHistory.push({ color: -1, x: -1, y: -1 });
-    }
-    color = -1;
-  }
-
-  // 2. Determine next player
-  // Match the logic in updateAnalysisState for cache key consistency
-  let nextToPlay: 'B' | 'W' = 'B';
-  if (color === 1) nextToPlay = 'W';
-  else if (color === -1) nextToPlay = 'B';
-  else if (node.data.PL && node.data.PL[0]) {
-    nextToPlay = node.data.PL[0] === 'W' ? 'W' : 'B';
-  } else if (node.data.HA && parseInt(node.data.HA[0]) >= 2) {
-    // Handicap game: White plays first after Black setup stones
-    nextToPlay = 'W';
-  }
-
-  // 3. Check for analysis property
-  if (node.data[KAYA_ANALYSIS_PROPERTY] && node.data[KAYA_ANALYSIS_PROPERTY][0]) {
-    const json = node.data[KAYA_ANALYSIS_PROPERTY][0];
-    const analysis = parseAnalysis(json, nextToPlay);
-
-    if (analysis) {
-      const cacheKey = generateAnalysisCacheKey(newBoard.signMap, nextToPlay, komi, newHistory);
-      cache.set(cacheKey, analysis);
-      extractedCount++;
-    }
-  }
-
-  // 4. Recurse
-  for (const child of node.children) {
-    extractedCount += extractAnalysisFromTree(child, cache, newBoard, komi, newHistory);
+    cache.set(analysisCacheKey(state, komi), analysis);
+    extractedCount++;
   }
 
   return extractedCount;

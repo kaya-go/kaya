@@ -10,33 +10,28 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AnalysisQueue, AnalysisResult, MCTSProgress } from '@kaya/ai-engine';
 import type { Engine } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
 import { sgfToVertex } from '@kaya/sgf';
-import { reconstructAnalysisState } from '../utils/gameCache';
-import {
-  generateAnalysisCacheKey,
-  isAbortError,
-  smoothAnalysisResult,
-  type AnalysisHistoryItem,
-} from '../utils/aiAnalysis';
+import { analysisBoardSize, analysisCacheKey, reconstructAnalysisState } from '../utils/gameCache';
+import { isAbortError, smoothAnalysisResult, type AnalysisHistoryItem } from '../utils/aiAnalysis';
 import { vertexToGTP } from '../utils/gtpUtils';
 import type { ModelQuantization } from '../services/modelStorage';
+import type { GameInfo } from '../types/game';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface UseLiveAnalysisParams {
   queue: AnalysisQueue | null;
   engine: Engine | null;
   analysisMode: boolean;
-  currentBoard: { signMap: SignMap };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   gameTree: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   currentNodeId: any;
   moveNumber: number;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  gameInfo: any;
+  gameInfo: GameInfo;
   aiSettings: { numVisits?: number };
   updateAnalysisCacheSize: () => void;
   setAnalysisResult: (result: AnalysisResult | null) => void;
@@ -47,7 +42,6 @@ export function useLiveAnalysis({
   queue,
   engine,
   analysisMode,
-  currentBoard,
   gameTree,
   currentNodeId,
   moveNumber,
@@ -57,6 +51,7 @@ export function useLiveAnalysis({
   setAnalysisResult,
   selectedQuantization,
 }: UseLiveAnalysisParams) {
+  const { t } = useTranslation();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mctsProgress, setMctsProgress] = useState<MCTSProgress | null>(null);
@@ -90,18 +85,10 @@ export function useLiveAnalysis({
 
   const lookupCachedResult = useCallback((): boolean => {
     if (!queue || !gameTree || currentNodeId === null || currentNodeId === undefined) return false;
-    // Engines take a board as square, sized by signMap.length: a shorter row panics
-    // the native engine and poisons its lock. Keep analysis square, as it always was.
-    const boardSize = currentBoard.signMap.length;
     const komi = gameInfo?.komi ?? DEFAULT_KOMI;
 
-    const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize);
-    const currentKey = generateAnalysisCacheKey(
-      state.board.signMap,
-      state.nextToPlay,
-      komi,
-      state.history
-    );
+    const state = reconstructAnalysisState(gameTree, currentNodeId, gameInfo);
+    const currentKey = analysisCacheKey(state, komi);
 
     const required = aiSettings.numVisits ?? 1;
     const cur = queue.peek({
@@ -119,13 +106,8 @@ export function useLiveAnalysis({
     let prev: AnalysisResult | null = null;
     const parentId = gameTree.get(currentNodeId)?.parentId ?? null;
     if (parentId !== null && parentId !== undefined) {
-      const prevState = reconstructAnalysisState(gameTree, parentId, boardSize);
-      const prevKey = generateAnalysisCacheKey(
-        prevState.board.signMap,
-        prevState.nextToPlay,
-        komi,
-        prevState.history
-      );
+      const prevState = reconstructAnalysisState(gameTree, parentId, gameInfo);
+      const prevKey = analysisCacheKey(prevState, komi);
       prev = queue.peek({
         signMap: prevState.board.signMap,
         nextToPlay: prevState.nextToPlay,
@@ -139,15 +121,7 @@ export function useLiveAnalysis({
 
     setAnalysisResult(smoothAnalysisResult(cur, prev));
     return true;
-  }, [
-    queue,
-    gameTree,
-    currentNodeId,
-    currentBoard,
-    gameInfo,
-    aiSettings.numVisits,
-    setAnalysisResult,
-  ]);
+  }, [queue, gameTree, currentNodeId, gameInfo, aiSettings.numVisits, setAnalysisResult]);
 
   const runAnalysis = useCallback(async () => {
     if (!queue || !analysisMode) return;
@@ -171,9 +145,6 @@ export function useLiveAnalysis({
     handOver?.(sameNode ? waiterRef.current : undefined);
     setError(null);
 
-    // Engines take a board as square, sized by signMap.length: a shorter row panics
-    // the native engine and poisons its lock. Keep analysis square, as it always was.
-    const boardSize = currentBoard.signMap.length;
     const komi = gameInfo?.komi ?? DEFAULT_KOMI;
 
     type Pos = {
@@ -185,12 +156,12 @@ export function useLiveAnalysis({
     };
 
     const toPos = (nodeId: number | string): Pos => {
-      const s = reconstructAnalysisState(gameTree, nodeId, boardSize);
+      const s = reconstructAnalysisState(gameTree, nodeId, gameInfo);
       return {
         signMap: s.board.signMap,
         nextToPlay: s.nextToPlay,
         history: s.history,
-        cacheKey: generateAnalysisCacheKey(s.board.signMap, s.nextToPlay, komi, s.history),
+        cacheKey: analysisCacheKey(s, komi),
         koInfo: s.board._koInfo,
       };
     };
@@ -209,7 +180,7 @@ export function useLiveAnalysis({
         if (moveData) {
           const v = sgfToVertex(moveData);
           if (v && v[0] >= 0) {
-            const gtp = vertexToGTP(v as [number, number], boardSize);
+            const gtp = vertexToGTP(v as [number, number], analysisBoardSize(gameInfo));
             includeMove = gtp === 'PASS' ? undefined : gtp;
           }
         }
@@ -301,7 +272,7 @@ export function useLiveAnalysis({
       if (isAbortError(err)) return;
       if (isStale()) return;
       const message = err instanceof Error ? err.message : String(err);
-      setError(`Analysis failed: ${message}`);
+      setError(t('analysis.liveFailed', { message }));
       console.error('[AI] Analysis failed:', err);
     } finally {
       // Only clear UI state if a newer run hasn't already taken over.
@@ -317,7 +288,6 @@ export function useLiveAnalysis({
     queue,
     engine,
     analysisMode,
-    currentBoard,
     gameTree,
     currentNodeId,
     moveNumber,
@@ -326,6 +296,7 @@ export function useLiveAnalysis({
     updateAnalysisCacheSize,
     setAnalysisResult,
     selectedQuantization,
+    t,
   ]);
 
   return {

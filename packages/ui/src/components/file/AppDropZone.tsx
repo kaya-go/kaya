@@ -230,10 +230,10 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
         ) {
           handleFileLoad(file);
         } else if (file) {
-          alert('Please drop a .sgf, .onnx, or image file');
+          showToast(t('dropzone.unsupportedFile'), 'error');
         }
       },
-      [handleFileLoad, resetDragState]
+      [handleFileLoad, resetDragState, showToast, t]
     );
 
     return (

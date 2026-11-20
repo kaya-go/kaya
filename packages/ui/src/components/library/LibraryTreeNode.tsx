@@ -28,6 +28,7 @@ export interface TreeNode {
 }
 
 export const DragPreview: React.FC<DragPreviewProps> = ({ mouse, isDragging, dragIds }) => {
+  const { t } = useTranslation();
   if (!isDragging || !mouse) return null;
 
   return (
@@ -42,7 +43,10 @@ export const DragPreview: React.FC<DragPreviewProps> = ({ mouse, isDragging, dra
         transform: 'translateY(-50%)',
       }}
     >
-      {dragIds.length === 1 ? '📄 Moving item...' : `📄 Moving ${dragIds.length} items...`}
+      📄{' '}
+      {dragIds.length === 1
+        ? t('library.movingItem')
+        : t('library.movingItems', { count: dragIds.length })}
     </div>
   );
 };

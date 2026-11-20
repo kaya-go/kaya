@@ -1,5 +1,4 @@
 import type { MoveSuggestion } from '@kaya/ai-engine';
-import type { GoBoard } from '@kaya/goboard';
 import { sgfToVertex } from '@kaya/sgf';
 import { vertexToGTP } from '../../utils/gtpUtils';
 import type { NextMoveInfo } from '../ai-analysis-types';
@@ -54,14 +53,14 @@ export function computeNextMoveVertex(
  */
 export function computeNextMoveInfo(args: {
   nextMoveVertex: { vertex: [number, number]; player: 1 | -1 } | null;
-  currentBoard: GoBoard;
+  /** Side of the square board the analysis ran on (analysisBoardSize). */
+  analysisSize: number;
   mctsProgress: MCTSProgressLike | null | undefined;
   analysisResult: AnalysisResultLike | null | undefined;
 }): NextMoveInfo | null {
-  const { nextMoveVertex, currentBoard, mctsProgress, analysisResult } = args;
+  const { nextMoveVertex, analysisSize, mctsProgress, analysisResult } = args;
   if (!nextMoveVertex) return null;
-  const boardSize = currentBoard.signMap.length;
-  const gtp = vertexToGTP(nextMoveVertex.vertex, boardSize);
+  const gtp = vertexToGTP(nextMoveVertex.vertex, analysisSize);
   if (gtp === 'PASS') return null;
 
   // Check in MCTS progress topMoves (during live analysis)

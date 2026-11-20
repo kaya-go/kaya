@@ -204,7 +204,8 @@
       "fp32": "Nessuna perdita di precisione. Download e memoria massimi.",
       "fp16": "Metà del download e della memoria, con una lieve perdita di precisione.",
       "uint8": "Download e memoria minimi, con la maggiore perdita di precisione."
-    }
+    },
+    "runningOn": "IA in esecuzione su {{backend}}"
   },
   "kayaConfig": {
     "title": "Impostazioni",
@@ -278,7 +279,10 @@
     "analysisModeOff": "Modalità analisi disattiva - Clicca per attivare",
     "moveNumber": "Mossa {{number}}",
     "notAnalyzed": "Non analizzato",
-    "perspectiveNote": "Tasso di vittoria e punteggio dal punto di vista di Nero"
+    "perspectiveNote": "Tasso di vittoria e punteggio dal punto di vista di Nero",
+    "allPositionsAnalyzed": "Tutte le {{count}} posizioni sono già analizzate",
+    "fullGameFailed": "Analisi della partita completa non riuscita: {{message}}",
+    "liveFailed": "Analisi non riuscita: {{message}}"
   },
   "analysisLegend": {
     "title": "Legenda analisi",
@@ -333,7 +337,9 @@
     "downloadItems": "Scarica {{count}}",
     "deleteItems": "Elimina {{count}}",
     "create": "Crea",
-    "unsavedChangesIndicator": "Modifiche non salvate"
+    "unsavedChangesIndicator": "Modifiche non salvate",
+    "movingItem": "Spostamento dell'elemento…",
+    "movingItems": "Spostamento di {{count}} elementi…"
   },
   "updater": {
     "checkForUpdates": "Controlla aggiornamenti...",
@@ -559,11 +565,17 @@
   },
   "loading": {
     "loading": "Caricamento…",
-    "loadingSgfFile": "Caricamento file SGF"
+    "loadingSgfFile": "Caricamento file SGF",
+    "parsingSgf": "Lettura dell'SGF…",
+    "buildingTree": "Costruzione dell'albero di gioco…",
+    "done": "Fatto"
   },
   "dropzone": {
     "dropToLoad": "Rilascia per caricare la partita",
-    "dropOnLibrary": "Rilascia sulla Libreria per salvare"
+    "dropOnLibrary": "Rilascia sulla Libreria per salvare",
+    "unsupportedFile": "Rilascia un file .sgf, .onnx o un'immagine",
+    "unsupportedDesktopFile": "Rilascia un file .sgf o .onnx",
+    "unsupportedLibraryFile": "Solo i file .sgf e .zip possono essere aggiunti alla libreria"
   },
   "languageSwitcher": {
     "changeLanguage": "Cambia lingua",

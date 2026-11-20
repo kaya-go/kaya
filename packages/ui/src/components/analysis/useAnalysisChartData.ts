@@ -9,7 +9,7 @@ import {
 } from 'react';
 
 export interface AnalysisDataPoint {
-  /** Move number in the branch (0 = root, 1 = first move, etc.) */
+  /** Index of the position in the branch (0 = root): every node counts, moves or not. */
   moveNumber: number;
   /** Node ID for navigation */
   nodeId: number | string;
@@ -103,8 +103,7 @@ interface UseAnalysisChartDataParams {
   data: AnalysisDataPoint[];
   currentMoveNumber: number;
   totalMoves: number;
-  onNavigate?: (nodeId: number | string) => void;
-  onNavigateToMove?: (moveNumber: number) => void;
+  onSelectPosition?: (index: number) => void;
   showWinRate: boolean;
   showScoreLead: boolean;
 }
@@ -113,8 +112,7 @@ export function useAnalysisChartData({
   data,
   currentMoveNumber,
   totalMoves,
-  onNavigate,
-  onNavigateToMove,
+  onSelectPosition,
   showWinRate,
   showScoreLead,
 }: UseAnalysisChartDataParams) {
@@ -208,21 +206,22 @@ export function useAnalysisChartData({
       .join(' ');
   }, [data, showScoreLead, xScale, scoreYScale]);
 
-  // Handle mouse events - use actual pixel coordinates
+  // The position under a pointer: inverse of xScale, clamped and rounded.
+  const positionAt = useCallback(
+    (clientX: number): number | null => {
+      if (!svgRef.current) return null;
+      const rect = svgRef.current.getBoundingClientRect();
+      const innerX = clientX - rect.left - CHART_PADDING.left;
+      const raw = (innerX / chartConfig.innerWidth) * chartConfig.maxMove;
+      return Math.max(0, Math.min(totalMoves, Math.round(raw)));
+    },
+    [chartConfig.innerWidth, chartConfig.maxMove, totalMoves]
+  );
+
   const handleMouseMove = useCallback(
     (e: MouseEvent<SVGSVGElement>) => {
-      if (!svgRef.current) return;
-
-      const rect = svgRef.current.getBoundingClientRect();
-      // Direct pixel coordinates (no scaling needed)
-      const mouseX = e.clientX - rect.left;
-
-      // Calculate move number from X position (inverse of xScale)
-      const innerX = mouseX - CHART_PADDING.left;
-      const rawMoveNumber = (innerX / chartConfig.innerWidth) * chartConfig.maxMove;
-
-      // Clamp to valid range and round to nearest integer
-      const targetMoveNumber = Math.max(0, Math.min(totalMoves, Math.round(rawMoveNumber)));
+      const targetMoveNumber = positionAt(e.clientX);
+      if (targetMoveNumber === null) return;
 
       // Find if there's a data point at this move number
       const dataPoint = data.find(d => d.moveNumber === targetMoveNumber) ?? null;
@@ -234,25 +233,22 @@ export function useAnalysisChartData({
         dataPoint,
       });
     },
-    [data, xScale, chartConfig.innerWidth, chartConfig.maxMove, totalMoves]
+    [data, xScale, positionAt]
   );
 
   const handleMouseLeave = useCallback(() => {
     setHoverInfo(null);
   }, []);
 
-  const handleClick = useCallback(() => {
-    if (!hoverInfo) return;
-
-    // If we have a data point with nodeId and onNavigate callback, use it
-    if (hoverInfo.dataPoint && onNavigate) {
-      onNavigate(hoverInfo.dataPoint.nodeId);
-    }
-    // Otherwise, use onNavigateToMove with the move number
-    else if (onNavigateToMove) {
-      onNavigateToMove(hoverInfo.moveNumber);
-    }
-  }, [hoverInfo, onNavigate, onNavigateToMove]);
+  // The position under the click itself: a tap has no hover before it, and
+  // the hover state can lag the pointer.
+  const handleClick = useCallback(
+    (e: MouseEvent<SVGSVGElement>) => {
+      const index = positionAt(e.clientX);
+      if (index !== null) onSelectPosition?.(index);
+    },
+    [positionAt, onSelectPosition]
+  );
 
   const xTicks = useMemo(() => generateMoveNumberTicks(chartConfig.maxMove), [chartConfig.maxMove]);
 
