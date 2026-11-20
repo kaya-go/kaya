@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import type * as ort from 'onnxruntime-web/all';
-import { processBatchResults } from '../src/onnx-utils';
+import { float32ToFloat16, processBatchResults } from '../src/onnx-utils';
 
 const fakeTensor = (data: number[], dims: number[]) =>
   ({ data: Float32Array.from(data), dims }) as unknown as ort.Tensor;
@@ -27,5 +27,24 @@ describe('processBatchResults ownership', () => {
   test('flips to Black perspective when White is to play', async () => {
     const [result] = await processBatchResults(rawOutputs(raw), [-1], 2, 1);
     result.ownership!.forEach((v, i) => expect(v).toBeCloseTo(-Math.tanh(raw[i]), 6));
+  });
+});
+
+describe('float32ToFloat16', () => {
+  const half = (v: number) => float32ToFloat16(Float32Array.of(v))[0];
+
+  test('keeps values below the smallest normal half as subnormals', () => {
+    expect(half(2 ** -15)).toBe(0x0200);
+    expect(half(2 ** -24)).toBe(0x0001); // smallest subnormal
+    expect(half(3 * 2 ** -16)).toBe(0x0300); // 768 * 2^-24
+    expect(half(-(2 ** -15))).toBe(0x8200);
+  });
+
+  test('still encodes normals, zero and values too small for a half', () => {
+    expect(half(2 ** -14)).toBe(0x0400); // smallest normal
+    expect(half(1)).toBe(0x3c00);
+    expect(half(0.375)).toBe(0x3600); // komi 7.5 / 20
+    expect(half(0)).toBe(0);
+    expect(half(2 ** -26)).toBe(0);
   });
 });
