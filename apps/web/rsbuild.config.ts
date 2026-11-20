@@ -1,11 +1,29 @@
 import { defineConfig } from '@rsbuild/core';
 import { pluginReact } from '@rsbuild/plugin-react';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { resolveOrtWeb } from '../../scripts/ort-web';
+import { renderServiceWorker } from './sw/render';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
+const rootDir = path.resolve(__dirname, '../..');
+
+/** Build id and ORT version for sw.js, checked against what this build ships. */
+function serviceWorkerValues() {
+  const versionFile = path.join(rootDir, 'version.json');
+  if (!fs.existsSync(versionFile)) {
+    throw new Error('version.json is missing: run `bun run generate-version-info`');
+  }
+  const { gitHash, buildDate } = JSON.parse(fs.readFileSync(versionFile, 'utf-8'));
+  const { version: ortVersion } = resolveOrtWeb(rootDir);
+  if (!fs.existsSync(path.join(__dirname, 'public', 'wasm', ortVersion))) {
+    throw new Error(`public/wasm/${ortVersion} is missing: run \`bun run copy-assets\``);
+  }
+  return { buildId: `${gitHash}-${buildDate}`, ortVersion };
+}
 
 // Resolve coi-serviceworker path (handles monorepo hoisting)
 const coiServiceWorkerPath = path.dirname(require.resolve('coi-serviceworker/package.json'));
@@ -44,8 +62,9 @@ export default defineConfig({
         to: '.',
       },
       {
-        from: 'public/sw.js',
+        from: 'sw/sw.js',
         to: '.',
+        transform: input => renderServiceWorker(input.toString(), serviceWorkerValues()),
       },
       {
         from: 'public/vendor',

@@ -48,7 +48,7 @@ export interface OnnxEngineConfig extends BaseEngineConfig {
   /** Number of threads for WASM backend (default: 4) */
   numThreads?: number;
 
-  /** Path to WASM files (default: '/wasm/') */
+  /** Root of the ORT WASM files; they are read from its `<ort version>/` folder (default: '/wasm/') */
   wasmPath?: string;
 
   /** Enable verbose debug logging */

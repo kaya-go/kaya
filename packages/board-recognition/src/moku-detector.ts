@@ -47,7 +47,7 @@ export interface MokuDetectorConfig {
   modelUrl?: string;
   /** Pre-loaded model data — when provided, URL fetching is skipped entirely */
   modelData?: ArrayBuffer;
-  /** Path to ONNX Runtime WASM files (default: '/wasm/') */
+  /** Root of the ONNX Runtime WASM files; read from its `<ort version>/` folder (default: '/wasm/') */
   wasmPath?: string;
   /** Progress callback for model download (0..1) */
   onProgress?: ProgressCallback;
@@ -84,9 +84,12 @@ export class MokuDetector {
   async init(): Promise<void> {
     const ort = await getOrt();
 
-    // Configure WASM paths so the runtime finds its .wasm files
-    const wasmPath = this.config.wasmPath ?? '/wasm/';
-    ort.env.wasm.wasmPaths = wasmPath;
+    // The apps serve ORT's .wasm files under <root>/<version>/ (scripts/ort-web.ts),
+    // so a new ORT never runs against an old .wasm cached under the same URL.
+    const root = this.config.wasmPath ?? '/wasm/';
+    const version = ort.env.versions.web;
+    if (!version) throw new Error('onnxruntime-web did not report its version');
+    ort.env.wasm.wasmPaths = `${root.endsWith('/') ? root : `${root}/`}${version}/`;
     ort.env.wasm.numThreads = 1;
     mokuLog('Initializing…');
 

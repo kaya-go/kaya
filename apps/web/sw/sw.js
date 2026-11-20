@@ -5,12 +5,31 @@
 // IMPORTANT: This SW must NOT interfere with:
 // - IndexedDB/blob URLs (for cached models)
 // - The coi-serviceworker (handles CORS isolation)
+//
+// This file is a template: sw/render.ts fills in the two values below when
+// the build copies it to dist/sw.js.
 
-const CACHE_NAME = 'kaya-v4';
-const RUNTIME_CACHE = 'kaya-runtime-v4';
+// Different for every build, so the browser sees new bytes and installs this
+// worker again, and its activate step drops the previous build's caches.
+const BUILD_ID = '__KAYA_BUILD_ID__';
+// The onnxruntime-web version the app is built with. Its files are served
+// under wasm/<version>/ (scripts/ort-web.ts).
+const ORT_VERSION = '__KAYA_ORT_VERSION__';
 
-// Caches managed by other parts of the app (not by this SW) that must survive updates
-const PRESERVED_CACHES = new Set([CACHE_NAME, RUNTIME_CACHE, 'kaya-moku-models']);
+// kayago.app/ and kayago.app/next/ share one origin, so they share Cache
+// Storage. Every cache name carries the worker's scope and a delimiter after
+// it ('/' is a prefix of '/next/'), and a worker only deletes its own caches.
+const SCOPE = new URL(self.registration.scope).pathname;
+const OWN_PREFIX = `kaya|${SCOPE}|`;
+// App shell, fonts, images and sounds: small, so one cache per build.
+const APP_CACHE = `${OWN_PREFIX}app|${BUILD_ID}`;
+// ONNX Runtime files: about 25 MB each, kept across builds until ORT changes.
+const ORT_CACHE = `${OWN_PREFIX}ort|${ORT_VERSION}`;
+const WASM_ROOT = `${SCOPE}wasm/`;
+const ORT_PATH = `${WASM_ROOT}${ORT_VERSION}/`;
+// Names used before caches were scoped: shared by every scope, and they held
+// ORT files under unversioned URLs.
+const LEGACY_CACHE = /^kaya-(runtime-)?v\d+$/;
 
 // Assets to precache (critical for app shell)
 const PRECACHE_ASSETS = [
@@ -22,10 +41,31 @@ const PRECACHE_ASSETS = [
   './icon-512.png',
 ];
 
+/** Caches this worker owns and no longer uses. Other caches (kaya-moku-models) are the app's. */
+function isStaleCache(name) {
+  if (name.startsWith(OWN_PREFIX)) return name !== APP_CACHE && name !== ORT_CACHE;
+  return LEGACY_CACHE.test(name);
+}
+
+/** Serve from the cache, else from the network, keeping what `keep` accepts. */
+function cacheFirst(cacheName, request, keep = response => response.ok) {
+  return caches.open(cacheName).then(cache =>
+    cache.match(request).then(cached => {
+      if (cached) return cached;
+      return fetch(request).then(response => {
+        if (keep(response)) {
+          cache.put(request, response.clone());
+        }
+        return response;
+      });
+    })
+  );
+}
+
 // Install event - cache critical assets
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
+    caches.open(APP_CACHE).then(cache => {
       console.log('[SW] Precaching app shell');
       return cache.addAll(PRECACHE_ASSETS);
     })
@@ -40,12 +80,10 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames
-          .filter(name => !PRESERVED_CACHES.has(name))
-          .map(name => {
-            console.log('[SW] Deleting old cache:', name);
-            return caches.delete(name);
-          })
+        cacheNames.filter(isStaleCache).map(name => {
+          console.log('[SW] Deleting old cache:', name);
+          return caches.delete(name);
+        })
       );
     })
   );
@@ -66,51 +104,34 @@ self.addEventListener('fetch', event => {
 
   // Skip cross-origin requests (except fonts)
   if (url.origin !== self.location.origin) {
-    // Only cache Google Fonts
+    // Only cache Google Fonts (font files can come back opaque)
     if (
       url.origin === 'https://fonts.googleapis.com' ||
       url.origin === 'https://fonts.gstatic.com'
     ) {
       event.respondWith(
-        caches.open(RUNTIME_CACHE).then(cache =>
-          cache.match(request).then(cached => {
-            if (cached) return cached;
-            return fetch(request).then(response => {
-              cache.put(request, response.clone());
-              return response;
-            });
-          })
-        )
+        cacheFirst(APP_CACHE, request, response => response.ok || response.type === 'opaque')
       );
     }
     return;
   }
 
-  // WASM/MJS files: cache-first for same-origin ONNX Runtime assets.
-  // These files are large (~15 MB) and rarely change, so caching avoids
-  // slow re-downloads on throttled connections. The response is cloned with
+  // ONNX Runtime files: cache-first, since they are large and only change
+  // with the ORT version, which is in the URL. The response is cached with
   // all headers preserved (including CORS headers needed for SharedArrayBuffer).
-  // .onnx model files are NOT cached here (they use their own Cache API store).
-  if (
-    (url.pathname.endsWith('.wasm') ||
-      url.pathname.endsWith('.mjs') ||
-      url.pathname.includes('/wasm/') ||
-      url.pathname.includes('/static/wasm/')) &&
-    !url.pathname.endsWith('.onnx')
-  ) {
-    event.respondWith(
-      caches.open(RUNTIME_CACHE).then(cache =>
-        cache.match(request).then(cached => {
-          if (cached) return cached;
-          return fetch(request).then(response => {
-            if (response.ok) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          });
-        })
-      )
-    );
+  if (url.pathname.startsWith(ORT_PATH)) {
+    event.respondWith(cacheFirst(ORT_CACHE, request));
+    return;
+  }
+
+  // ORT files of another version are asked for by a page of another build
+  // (a tab opened before an update): let the network serve them, uncached.
+  if (url.pathname.startsWith(WASM_ROOT)) return;
+
+  // Other WebAssembly (hashed bundler output). .onnx model files are NOT
+  // cached here (they use their own Cache API store).
+  if (url.pathname.endsWith('.wasm') || url.pathname.endsWith('.mjs')) {
+    event.respondWith(cacheFirst(APP_CACHE, request));
     return;
   }
 
@@ -129,19 +150,7 @@ self.addEventListener('fetch', event => {
     request.destination === 'image' &&
     !url.pathname.includes('/static/') // Skip hashed static assets
   ) {
-    event.respondWith(
-      caches.open(RUNTIME_CACHE).then(cache =>
-        cache.match(request).then(cached => {
-          if (cached) return cached;
-          return fetch(request).then(response => {
-            if (response.ok) {
-              cache.put(request, response.clone());
-            }
-            return response;
-          });
-        })
-      )
-    );
+    event.respondWith(cacheFirst(APP_CACHE, request));
     return;
   }
 
@@ -158,14 +167,14 @@ self.addEventListener('fetch', event => {
           const contentType = response.headers.get('content-type') || '';
           if (response.ok && contentType.includes('audio')) {
             const responseClone = response.clone();
-            caches.open(RUNTIME_CACHE).then(cache => {
+            caches.open(APP_CACHE).then(cache => {
               cache.put(request, responseClone);
             });
           }
           return response;
         })
         .catch(() => {
-          return caches.open(RUNTIME_CACHE).then(cache => cache.match(request));
+          return caches.open(APP_CACHE).then(cache => cache.match(request));
         })
     );
     return;
@@ -176,15 +185,21 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request)
         .then(response => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(request, responseClone);
-          });
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(APP_CACHE).then(cache => {
+              cache.put(request, responseClone);
+            });
+          }
           return response;
         })
-        .catch(() => {
-          return caches.match(request).then(cached => cached || caches.match('./index.html'));
-        })
+        .catch(() =>
+          caches
+            .open(APP_CACHE)
+            .then(cache =>
+              cache.match(request).then(cached => cached || cache.match('./index.html'))
+            )
+        )
     );
     return;
   }

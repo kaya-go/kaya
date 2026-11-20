@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import type * as ort from 'onnxruntime-web/all';
-import { float32ToFloat16, processBatchResults } from '../src/onnx-utils';
+import { float32ToFloat16, processBatchResults, versionedWasmPath } from '../src/onnx-utils';
 
 const fakeTensor = (data: number[], dims: number[]) =>
   ({ data: Float32Array.from(data), dims }) as unknown as ort.Tensor;
@@ -46,5 +46,18 @@ describe('float32ToFloat16', () => {
     expect(half(0.375)).toBe(0x3600); // komi 7.5 / 20
     expect(half(0)).toBe(0);
     expect(half(2 ** -26)).toBe(0);
+  });
+});
+
+describe('versionedWasmPath', () => {
+  test('appends the ORT version folder to the root, with or without a slash', () => {
+    expect(versionedWasmPath('/wasm/', '1.31.1')).toBe('/wasm/1.31.1/');
+    expect(versionedWasmPath('https://kayago.app/next/wasm', '1.31.1')).toBe(
+      'https://kayago.app/next/wasm/1.31.1/'
+    );
+  });
+
+  test('throws rather than fall back to an unversioned path', () => {
+    expect(() => versionedWasmPath('/wasm/', undefined)).toThrow();
   });
 });

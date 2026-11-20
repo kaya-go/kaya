@@ -280,9 +280,25 @@ in GitHub Actions artifact uploads. We copy.
 TypeScript script that runs automatically as part of `bun run dev`,
 `bun run build`, and `bun run build:web`. It copies:
 
-- Sounds (`public/sounds/*.mp3`) → `apps/{web,desktop}/public/assets/`
-- AI models (`packages/ai-engine/models/*`) → `apps/{web,desktop}/public/models/`
+- Sounds (`public/sounds/*.ogg`) → `apps/{web,desktop}/public/assets/`
+- onnxruntime-web's runtime files → `apps/{web,desktop}/public/wasm/<ort version>/`
+  ([`scripts/ort-web.ts`](../scripts/ort-web.ts)). The folder is replaced on
+  every run, and the step fails if the two ORT consumers resolve different
+  versions. The engines ask for the folder of the ORT they bundle
+  (`ort.env.versions.web`), so a new ORT never meets an old `.wasm` cached
+  under the same URL.
+- The Moku detection model, desktop only (`--with-model`) →
+  `apps/desktop/public/models/`
 - Web assets (`public/manifest.json`, icons) → `apps/web/public/`
+
+The web service worker is a template,
+[`apps/web/sw/sw.js`](../apps/web/sw/sw.js). The build fills in a build id
+and the ORT version, so every build installs a new worker, and its activate
+step deletes the caches the previous build left. Cache names carry the
+worker's scope (`kaya|/next/|ort|1.31.1`), because kayago.app/ and
+kayago.app/next/ share one Cache Storage. A worker deletes only its own
+caches, never `kaya-moku-models`. See
+[specs/2026-11-20-ort-wasm-versioned-path.md](../specs/2026-11-20-ort-wasm-versioned-path.md).
 
 To add an asset: drop it in `public/` (or the owning package), update
 `scripts/copy-assets.ts`, run `bun run copy-assets`. If you see "file
