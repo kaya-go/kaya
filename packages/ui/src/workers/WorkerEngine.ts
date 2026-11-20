@@ -16,6 +16,9 @@ export class AbortedError extends Error {
   }
 }
 
+/** How long dispose() waits for the worker to release its session. */
+const DISPOSE_TIMEOUT_MS = 5000;
+
 export class WorkerEngine extends Engine {
   private worker: Worker;
   private pendingRequests: Map<
@@ -29,6 +32,9 @@ export class WorkerEngine extends Engine {
   >;
   private nextRequestId: number = 0;
   private initPromise: Promise<void> | null = null;
+  private rejectInit: ((error: Error) => void) | null = null;
+  /** Set once the worker itself failed: nothing it was asked will ever answer. */
+  private failure: Error | null = null;
   private debugEnabled = false;
   private runtimeInfo: EngineRuntimeInfo | null = null;
 
@@ -37,6 +43,17 @@ export class WorkerEngine extends Engine {
     this.worker = worker;
     this.pendingRequests = new Map();
     this.debugEnabled = Boolean(config.debug);
+
+    // A worker whose script fails to load (a hashed chunk gone after a deploy)
+    // or throws at its top level fires `error`, never a message. Without these,
+    // initialize() and every pending request would wait forever.
+    this.worker.onerror = e => {
+      e.preventDefault();
+      this.fail(new Error(`AI worker failed: ${e.message || 'the worker script did not load'}`));
+    };
+    this.worker.onmessageerror = () => {
+      this.fail(new Error('AI worker sent a message that could not be read'));
+    };
 
     this.worker.onmessage = e => {
       const msg = e.data;
@@ -88,6 +105,18 @@ export class WorkerEngine extends Engine {
     };
   }
 
+  /** Rejects initialization and every pending request with the worker's failure. */
+  private fail(error: Error) {
+    this.failure = error;
+    this.rejectInit?.(error);
+    this.rejectInit = null;
+    for (const req of this.pendingRequests.values()) {
+      clearTimeout(req.timeout);
+      req.reject(error);
+    }
+    this.pendingRequests.clear();
+  }
+
   private debugLog(event: string, payload?: Record<string, unknown>) {
     if (!this.debugEnabled) return;
     if (payload) {
@@ -101,9 +130,15 @@ export class WorkerEngine extends Engine {
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = new Promise((resolve, reject) => {
+      if (this.failure) {
+        reject(this.failure);
+        return;
+      }
+      this.rejectInit = reject;
       const handler = (e: MessageEvent) => {
         if (e.data.type === 'init_success') {
           this.worker.removeEventListener('message', handler);
+          this.rejectInit = null;
           this.initialized = true;
           // Store runtime info from worker
           if (e.data.runtimeInfo) {
@@ -113,6 +148,7 @@ export class WorkerEngine extends Engine {
           resolve();
         } else if (e.data.type === 'error' && !e.data.id) {
           this.worker.removeEventListener('message', handler);
+          this.rejectInit = null;
           reject(new Error(e.data.error));
         }
       };
@@ -152,6 +188,7 @@ export class WorkerEngine extends Engine {
     signMap: SignMap,
     options: EngineAnalysisOptions
   ): Promise<AnalysisResult> {
+    if (this.failure) throw this.failure;
     return new Promise((resolve, reject) => {
       const id = this.nextRequestId++;
       this.debugLog('analyze-request', { id });
@@ -195,6 +232,7 @@ export class WorkerEngine extends Engine {
   async analyzeBatch(
     inputs: { signMap: SignMap; options?: EngineAnalysisOptions }[]
   ): Promise<AnalysisResult[]> {
+    if (this.failure) throw this.failure;
     return new Promise((resolve, reject) => {
       const id = this.nextRequestId++;
       this.debugLog('batch-request', { id, batchSize: inputs.length });
@@ -226,18 +264,25 @@ export class WorkerEngine extends Engine {
   }
 
   async dispose(): Promise<void> {
-    return new Promise(resolve => {
-      const handler = (e: MessageEvent) => {
-        if (e.data.type === 'dispose_success') {
+    // Let the worker release its session, but do not wait on a worker that
+    // failed or stopped answering: terminating it frees everything anyway.
+    if (!this.failure) {
+      await new Promise<void>(resolve => {
+        const done = () => {
+          clearTimeout(timer);
           this.worker.removeEventListener('message', handler);
-          this.worker.terminate();
-          this.initialized = false;
           resolve();
-        }
-      };
-      this.worker.addEventListener('message', handler);
-      this.worker.postMessage({ type: 'dispose' });
-    });
+        };
+        const handler = (e: MessageEvent) => {
+          if (e.data.type === 'dispose_success') done();
+        };
+        const timer = setTimeout(done, DISPOSE_TIMEOUT_MS);
+        this.worker.addEventListener('message', handler);
+        this.worker.postMessage({ type: 'dispose' });
+      });
+    }
+    this.worker.terminate();
+    this.initialized = false;
   }
 
   /**
