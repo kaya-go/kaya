@@ -5,6 +5,8 @@ import type { SGFProperty } from '../../types/game';
 interface UseBranchNavigationProps {
   gameTree: GameTree<SGFProperty> | null;
   currentNode: GameTreeNode<SGFProperty> | null;
+  /** The current node as of the last move, which may not have rendered yet. */
+  getCurrentNode: () => GameTreeNode<SGFProperty> | null;
   markNavigationStart: (label: string, targetNodeId: number | string) => void;
   rememberActiveBranch: (
     parentId: number | string | null | undefined,
@@ -16,20 +18,19 @@ interface UseBranchNavigationProps {
 export function useBranchNavigation({
   gameTree,
   currentNode,
+  getCurrentNode,
   markNavigationStart,
   rememberActiveBranch,
   setCurrentNodeId,
 }: UseBranchNavigationProps) {
-  // Latest tree and node, so sibling callbacks keep one identity across navigation.
+  // Latest tree, so sibling callbacks keep one identity across navigation.
   const gameTreeRef = useRef(gameTree);
   gameTreeRef.current = gameTree;
-  const currentNodeRef = useRef(currentNode);
-  currentNodeRef.current = currentNode;
 
   // Navigate to previous sibling (wraps around)
   const goToPreviousSibling = useCallback(() => {
     const tree = gameTreeRef.current;
-    const node = currentNodeRef.current;
+    const node = getCurrentNode();
     if (!tree || !node || node.parentId === null || node.parentId === undefined) return;
     const parent = tree.get(node.parentId);
     if (!parent || parent.children.length <= 1) return;
@@ -43,12 +44,12 @@ export function useBranchNavigation({
 
     markNavigationStart('goToPreviousSibling', targetId);
     setCurrentNodeId(targetId);
-  }, [markNavigationStart, setCurrentNodeId]);
+  }, [getCurrentNode, markNavigationStart, setCurrentNodeId]);
 
   // Navigate to next sibling (wraps around)
   const goToNextSibling = useCallback(() => {
     const tree = gameTreeRef.current;
-    const node = currentNodeRef.current;
+    const node = getCurrentNode();
     if (!tree || !node || node.parentId === null || node.parentId === undefined) return;
     const parent = tree.get(node.parentId);
     if (!parent || parent.children.length <= 1) return;
@@ -62,13 +63,13 @@ export function useBranchNavigation({
 
     markNavigationStart('goToNextSibling', targetId);
     setCurrentNodeId(targetId);
-  }, [markNavigationStart, setCurrentNodeId]);
+  }, [getCurrentNode, markNavigationStart, setCurrentNodeId]);
 
   // Navigate to a specific sibling by index (1-indexed)
   const goToSiblingIndex = useCallback(
     (targetIndex: number) => {
       const tree = gameTreeRef.current;
-      const node = currentNodeRef.current;
+      const node = getCurrentNode();
       if (!tree || !node || node.parentId === null || node.parentId === undefined) return;
       const parent = tree.get(node.parentId);
       if (!parent || parent.children.length <= 1) return;
@@ -80,7 +81,7 @@ export function useBranchNavigation({
       markNavigationStart(`goToSiblingIndex(${targetIndex})`, targetId);
       setCurrentNodeId(targetId);
     },
-    [markNavigationStart, setCurrentNodeId]
+    [getCurrentNode, markNavigationStart, setCurrentNodeId]
   );
 
   // Get sibling info for UI

@@ -108,6 +108,11 @@ a value only an event handler needs, `useGameTreeGetter()` reads it without
 subscribing. See
 [`specs/2026-11-01-game-tree-selector-store.md`](../specs/2026-11-01-game-tree-selector-store.md).
 
+Navigation calls compose without a render in between: `useGameNavigation`
+moves its current-node ref with the state (`moveTo`), so `Home` then `End`
+handled in one animation frame ends on the last move. See
+[`specs/2026-11-20-navigation-composes-within-a-frame.md`](../specs/2026-11-20-navigation-composes-within-a-frame.md).
+
 ### 2. Board reconstruction goes through an LRU cache
 
 Without the cache, jumping to move 300 in a long game requires replaying
