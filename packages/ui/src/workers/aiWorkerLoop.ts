@@ -152,6 +152,16 @@ export function createAIWorkerLoop({ post, createEngine }: WorkerLoopDeps) {
       if (ac) {
         ac.abort();
         activeAbortControllers.delete(data.id);
+        return;
+      }
+      // Not started yet: drop it from the queue, so it never runs, and answer
+      // for it now. An abort for a request already answered finds nothing.
+      const queued = messageQueue.findIndex(
+        m => (m.type === 'analyze' || m.type === 'analyzeBatch') && m.id === data.id
+      );
+      if (queued !== -1) {
+        messageQueue.splice(queued, 1);
+        post({ type: 'error', id: data.id, error: 'aborted' });
       }
       return;
     }

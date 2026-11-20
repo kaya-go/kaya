@@ -19,6 +19,13 @@ export class AbortedError extends Error {
 /** How long dispose() waits for the worker to release its session. */
 const DISPOSE_TIMEOUT_MS = 5000;
 
+/**
+ * How long the worker may stay silent while it owes an answer. The worker runs
+ * one request at a time and a search reports progress after every batch, so
+ * silence means it is stuck, however deep the search or long the queue.
+ */
+const STALL_TIMEOUT_MS = 60_000;
+
 export class WorkerEngine extends Engine {
   private worker: Worker;
   private pendingRequests: Map<
@@ -26,10 +33,11 @@ export class WorkerEngine extends Engine {
     {
       resolve: (val: any) => void;
       reject: (err: any) => void;
-      timeout: ReturnType<typeof setTimeout>;
       onProgress?: (progress: any) => void;
     }
   >;
+  /** Armed while a request is pending; any message from the worker restarts it. */
+  private watchdog: ReturnType<typeof setTimeout> | null = null;
   private nextRequestId: number = 0;
   private initPromise: Promise<void> | null = null;
   private rejectInit: ((error: Error) => void) | null = null;
@@ -67,7 +75,6 @@ export class WorkerEngine extends Engine {
       } else if (msg.type === 'analyze_success') {
         const req = this.pendingRequests.get(msg.id);
         if (req) {
-          clearTimeout(req.timeout);
           req.resolve(msg.result);
           this.pendingRequests.delete(msg.id);
           this.debugLog('analyze-resolve', { id: msg.id });
@@ -75,7 +82,6 @@ export class WorkerEngine extends Engine {
       } else if (msg.type === 'analyzeBatch_success') {
         const req = this.pendingRequests.get(msg.id);
         if (req) {
-          clearTimeout(req.timeout);
           req.resolve(msg.results);
           this.pendingRequests.delete(msg.id);
           this.debugLog('batch-resolve', { id: msg.id, batchSize: msg.results?.length });
@@ -93,7 +99,6 @@ export class WorkerEngine extends Engine {
         if (msg.id !== undefined) {
           const req = this.pendingRequests.get(msg.id);
           if (req) {
-            clearTimeout(req.timeout);
             req.reject(new Error(msg.error));
             this.pendingRequests.delete(msg.id);
             this.debugLog('request-error', { id: msg.id, error: msg.error });
@@ -102,6 +107,9 @@ export class WorkerEngine extends Engine {
           console.error('[AI:Worker] Error:', msg.error);
         }
       }
+
+      // The worker spoke, so it is still working through its queue.
+      this.restartWatchdog();
     };
   }
 
@@ -111,8 +119,44 @@ export class WorkerEngine extends Engine {
     this.rejectInit?.(error);
     this.rejectInit = null;
     for (const req of this.pendingRequests.values()) {
-      clearTimeout(req.timeout);
       req.reject(error);
+    }
+    this.pendingRequests.clear();
+    this.restartWatchdog();
+  }
+
+  /** Arms the watchdog for a new request, unless it is already running. */
+  private track(
+    id: number,
+    request: {
+      resolve: (val: any) => void;
+      reject: (err: any) => void;
+      onProgress?: (progress: any) => void;
+    }
+  ) {
+    this.pendingRequests.set(id, request);
+    if (!this.watchdog) this.restartWatchdog();
+  }
+
+  private restartWatchdog() {
+    if (this.watchdog) clearTimeout(this.watchdog);
+    this.watchdog =
+      this.pendingRequests.size > 0 ? setTimeout(() => this.stalled(), STALL_TIMEOUT_MS) : null;
+  }
+
+  /**
+   * The worker owes answers and has said nothing for STALL_TIMEOUT_MS. Abort
+   * every pending request in the worker as well: a search left running there
+   * would hold up every request sent after it.
+   */
+  private stalled() {
+    this.watchdog = null;
+    for (const [id, req] of this.pendingRequests) {
+      this.worker.postMessage({ type: 'abort', id });
+      req.reject(
+        new Error(`Analysis timed out: the AI worker sent nothing for ${STALL_TIMEOUT_MS / 1000} s`)
+      );
+      this.debugLog('request-timeout', { id });
     }
     this.pendingRequests.clear();
   }
@@ -198,33 +242,24 @@ export class WorkerEngine extends Engine {
       const signal = (options as any).signal as AbortSignal | undefined;
       const { onProgress: _p, signal: _s, ...serializableOptions } = options as any;
 
-      const timeout = setTimeout(() => {
-        if (this.pendingRequests.has(id)) {
-          this.pendingRequests.delete(id);
-          reject(new Error('Analysis timed out'));
-          this.debugLog('analyze-timeout', { id });
-        }
-      }, 60000);
-
-      this.pendingRequests.set(id, { resolve, reject, timeout, onProgress });
-
-      // Listen for abort signal and forward to worker
-      if (signal) {
-        if (signal.aborted) {
-          clearTimeout(timeout);
-          this.pendingRequests.delete(id);
-          reject(new AbortedError());
-          return;
-        }
-        signal.addEventListener(
-          'abort',
-          () => {
-            this.worker.postMessage({ type: 'abort', id });
-          },
-          { once: true }
-        );
+      if (signal?.aborted) {
+        reject(new AbortedError());
+        return;
       }
+      // Stop the search in the worker, or drop it from the worker's queue, and
+      // answer the caller now: the worker can take a whole batch to stop.
+      signal?.addEventListener(
+        'abort',
+        () => {
+          if (!this.pendingRequests.delete(id)) return;
+          this.worker.postMessage({ type: 'abort', id });
+          reject(new AbortedError());
+          this.restartWatchdog();
+        },
+        { once: true }
+      );
 
+      this.track(id, { resolve, reject, onProgress });
       this.worker.postMessage({ type: 'analyze', id, signMap, options: serializableOptions });
     });
   }
@@ -236,15 +271,7 @@ export class WorkerEngine extends Engine {
     return new Promise((resolve, reject) => {
       const id = this.nextRequestId++;
       this.debugLog('batch-request', { id, batchSize: inputs.length });
-      const timeout = setTimeout(() => {
-        if (this.pendingRequests.has(id)) {
-          this.pendingRequests.delete(id);
-          reject(new Error('Batch analysis timed out'));
-          this.debugLog('batch-timeout', { id });
-        }
-      }, 60000);
-
-      this.pendingRequests.set(id, { resolve, reject, timeout });
+      this.track(id, { resolve, reject });
 
       // Strip non-cloneable props (signal, onProgress) from each input's options
       const serializableInputs = inputs.map(input => {
@@ -283,20 +310,5 @@ export class WorkerEngine extends Engine {
     }
     this.worker.terminate();
     this.initialized = false;
-  }
-
-  /**
-   * Abort all pending analysis requests immediately.
-   * This doesn't stop the worker, but rejects all pending promises so callers can exit early.
-   * The worker will continue processing but results will be ignored.
-   */
-  abortPendingRequests(): void {
-    this.debugLog('abort-all', { pending: this.pendingRequests.size });
-    for (const [id, req] of this.pendingRequests) {
-      clearTimeout(req.timeout);
-      req.reject(new AbortedError());
-      this.debugLog('abort-request', { id });
-    }
-    this.pendingRequests.clear();
   }
 }
