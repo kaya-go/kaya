@@ -83,3 +83,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Library: a change made before the database opens is listed](2026-11-20-library-refresh-before-open.md)     | shipped    |
 | 2026-11-20 | [One analysis board size, from the game's dimensions](2026-11-20-analysis-board-size.md)                    | shipped    |
 | 2026-11-20 | [Desktop Content-Security-Policy](2026-11-20-desktop-csp.md)                                                | shipped    |
+| 2026-11-20 | [One service worker: isolation headers and caching](2026-11-20-single-service-worker.md)                    | shipped    |

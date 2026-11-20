@@ -39,7 +39,6 @@
         "@tauri-apps/plugin-process": "^2.4.0",
         "@tauri-apps/plugin-shell": "^2.6.0",
         "@tauri-apps/plugin-updater": "^2.14.1",
-        "coi-serviceworker": "^0.1.7",
         "i18next": "^27.2.2",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
@@ -69,7 +68,6 @@
         "@kaya/sgf": "workspace:*",
         "@kaya/shudan": "workspace:*",
         "@kaya/ui": "workspace:*",
-        "coi-serviceworker": "^0.1.7",
         "i18next": "^27.2.2",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",
@@ -693,8 +691,6 @@
     "chownr": ["chownr@3.0.0", "", {}, "sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g=="],
 
     "classcat": ["classcat@5.0.5", "", {}, "sha512-JhZUT7JFcQy/EzW605k/ktHtncoo9vnyW/2GspNYwFlN1C/WmjuV/xtS04e9SOkL2sTdw0VAZ2UGCcQ9lR6p6w=="],
-
-    "coi-serviceworker": ["coi-serviceworker@0.1.7", "", {}, "sha512-bjSUqEngCPOkErY2vbyWsaIGCNRODYzlNycaREVw5s12/C8SM+RnRUUeX6pZbTtov6C52ZLY/+tvHK+BDxuUuA=="],
 
     "comma-separated-tokens": ["comma-separated-tokens@2.0.3", "", {}, "sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg=="],
 

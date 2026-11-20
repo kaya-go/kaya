@@ -293,14 +293,28 @@ TypeScript script that runs automatically as part of `bun run dev`,
   `apps/desktop/public/models/`
 - Web assets (`public/manifest.json`, icons) → `apps/web/public/`
 
-The web service worker is a template,
-[`apps/web/sw/sw.js`](../apps/web/sw/sw.js). The build fills in a build id
-and the ORT version, so every build installs a new worker, and its activate
-step deletes the caches the previous build left. Cache names carry the
-worker's scope (`kaya|/next/|ort|1.31.1`), because kayago.app/ and
+The web app has a single service worker, a template at
+[`apps/web/sw/sw.js`](../apps/web/sw/sw.js). Its two jobs:
+
+- **Cross-origin isolation.** It adds COOP/COEP (`require-corp`) to every
+  response it serves, because GitHub Pages cannot send them and ORT's
+  multi-threaded WASM needs `SharedArrayBuffer`. The inline script in
+  `apps/web/index.html` registers it (production builds only) and reloads a
+  page that loaded without the headers once the worker controls it, at most
+  once per session. An isolated page never reloads.
+- **Caching.** The app shell and the hashed `static/` files go in a cache per
+  build, so the app starts offline after one visit. The ORT files go in a
+  cache per ORT version.
+
+The build fills in a build id and the ORT version. Every build therefore
+installs a new worker, which takes over at once (`skipWaiting`, `claim`), and
+its activate step deletes the caches the previous build left. Cache names
+carry the worker's scope (`kaya|/next/|ort|1.31.1`), because kayago.app/ and
 kayago.app/next/ share one Cache Storage. A worker deletes only its own
 caches, never `kaya-moku-models`. See
-[specs/2026-11-20-ort-wasm-versioned-path.md](../specs/2026-11-20-ort-wasm-versioned-path.md).
+[specs/2026-11-20-ort-wasm-versioned-path.md](../specs/2026-11-20-ort-wasm-versioned-path.md)
+and
+[specs/2026-11-20-single-service-worker.md](../specs/2026-11-20-single-service-worker.md).
 
 To add an asset: drop it in `public/` (or the owning package), update
 `scripts/copy-assets.ts`, run `bun run copy-assets`. If you see "file

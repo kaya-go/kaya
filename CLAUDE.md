@@ -141,7 +141,7 @@ bun run copy-assets  # Runs automatically in build
 ```
 
 - onnxruntime-web's `.wasm` files ship under `wasm/<ort version>/` ([`scripts/ort-web.ts`](scripts/ort-web.ts)) and the engines append `ort.env.versions.web` to the wasm root, so bumping ORT is a range change plus a root `bun install`, nothing else
-- The web service worker is a template ([`apps/web/sw/sw.js`](apps/web/sw/sw.js)) filled per build. Cache names carry the scope (`kaya|<scope>|…`) because `/` and `/next/` share Cache Storage. Never delete caches outside that prefix (`kaya-moku-models` holds the 80 MB Moku model)
+- The web app has one service worker, a template ([`apps/web/sw/sw.js`](apps/web/sw/sw.js)) filled per build and registered by an inline script in `apps/web/index.html`. It adds the COOP/COEP headers GitHub Pages cannot send (no more `coi-serviceworker`), so any response path must go through `withIsolationHeaders`. Cache names carry the scope (`kaya|<scope>|…`) because `/` and `/next/` share Cache Storage. Never delete caches outside that prefix (`kaya-moku-models` holds the 80 MB Moku model)
 
 **4. Keyboard Shortcuts System** (`packages/ui/src/hooks/useKeyboardShortcuts.ts`)
 

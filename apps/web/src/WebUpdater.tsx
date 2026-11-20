@@ -64,14 +64,16 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
   if (!offeredHash) return null;
 
   const handleUpdate = async () => {
-    // Unregister service workers to force update
-    if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const registration of registrations) {
-        await registration.unregister();
-      }
+    // The page is fetched from the network on reload, so it is the new build
+    // either way. Asking the worker to update first lets the new worker take
+    // over before the reload. Unregistering it would load the page without
+    // the COOP/COEP headers it adds, and cost a second reload.
+    try {
+      const registration = await navigator.serviceWorker?.getRegistration();
+      await registration?.update();
+    } catch {
+      // Offline or no worker: the reload still asks for the new page
     }
-    // Force reload
     window.location.reload();
   };
 
