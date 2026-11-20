@@ -7,10 +7,68 @@
 //! `MixerDeviceSink` manages audio output internally (`Send + Sync`).
 
 use std::collections::HashMap;
+use std::error::Error;
 use std::io::Cursor;
 
-use rodio::{Decoder, DeviceSinkBuilder, MixerDeviceSink};
+use rodio::cpal::traits::HostTrait;
+use rodio::cpal::{BufferSize, SupportedBufferSize};
+use rodio::stream::DeviceSinkError;
+use rodio::{Decoder, DeviceSinkBuilder, DeviceTrait, MixerDeviceSink};
 use tauri::Manager;
+
+/// The buffer rodio asks for: about 50 ms of frames, rounded to the nearest
+/// power of two (`DeviceSinkBuilder::from_device`), clamped to the range the
+/// device accepts. cpal 0.18 rejects a fixed size outside that range instead of
+/// letting CoreAudio clamp it, and a Bluetooth output on macOS caps it at 1024
+/// frames while rodio asks 2048 at 44.1 kHz. `None` when the device does not
+/// report a range: rodio's own size is then kept.
+fn clamped_buffer_frames(sample_rate: u32, range: &SupportedBufferSize) -> Option<u32> {
+    let SupportedBufferSize::Range { min, max } = *range else {
+        return None;
+    };
+    let target = (sample_rate / 20).max(1);
+    let next = target.next_power_of_two();
+    let prev = next >> 1;
+    let rodio_frames = if prev > 0 && target - prev <= next - target {
+        prev
+    } else {
+        next
+    };
+    Some(rodio_frames.clamp(min, max.max(min)))
+}
+
+/// Open the default output with rodio's buffer clamped to the device's range,
+/// falling back to rodio's other stream configs. If that fails, rodio's own
+/// `open_default_sink` gets a go (it keeps its fallback to other devices on
+/// Linux), and the first error is the one returned.
+fn open_default_output() -> Result<MixerDeviceSink, DeviceSinkError> {
+    let clamped = || {
+        let device = rodio::cpal::default_host()
+            .default_output_device()
+            .ok_or(DeviceSinkError::NoDevice)?;
+        let config = device
+            .default_output_config()
+            .map_err(DeviceSinkError::DefaultSinkConfigError)?;
+        let mut builder = DeviceSinkBuilder::from_device(device)?;
+        if let Some(frames) = clamped_buffer_frames(config.sample_rate(), config.buffer_size()) {
+            builder = builder.with_buffer_size(BufferSize::Fixed(frames));
+        }
+        builder.open_sink_or_fallback()
+    };
+    clamped().or_else(|first| DeviceSinkBuilder::open_default_sink().map_err(|_| first))
+}
+
+/// An error and its causes, outermost first: rodio's message alone ("Error
+/// opening the stream with the OS") hides the cpal reason underneath.
+fn error_chain(e: &dyn Error) -> String {
+    let mut msg = e.to_string();
+    let mut cause = e.source();
+    while let Some(c) = cause {
+        msg.push_str(&format!(": {c}"));
+        cause = c.source();
+    }
+    msg
+}
 
 /// Manages native audio playback via rodio's mixer.
 pub struct AudioManager {
@@ -22,8 +80,8 @@ impl AudioManager {
     /// Create a new AudioManager. Opens the default audio output device.
     /// Returns an error string if the device cannot be opened.
     pub fn new() -> Result<Self, String> {
-        let sink = DeviceSinkBuilder::open_default_sink().map_err(|e| {
-            let msg = format!("Failed to open audio device: {e}");
+        let sink = open_default_output().map_err(|e| {
+            let msg = format!("Failed to open audio device: {}", error_chain(&e));
             // Mirror to stderr — Linux AppImage users debugging silent audio
             // can capture this by launching from a terminal.
             eprintln!("[Audio] {msg}");
@@ -184,4 +242,46 @@ pub fn audio_check(state: tauri::State<'_, AudioState>) -> Result<bool, String> 
         .lock()
         .map_err(|e| format!("Failed to lock audio state: {e}"))?;
     Ok(guard.is_some())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn keeps_rodio_size_when_in_range() {
+        // MacBook Pro speakers: 48 kHz, 15..=4096 frames.
+        let range = SupportedBufferSize::Range { min: 15, max: 4096 };
+        assert_eq!(clamped_buffer_frames(48_000, &range), Some(2048));
+        assert_eq!(clamped_buffer_frames(44_100, &range), Some(2048));
+        assert_eq!(clamped_buffer_frames(96_000, &range), Some(4096));
+    }
+
+    #[test]
+    fn clamps_to_a_bluetooth_output_range() {
+        // Pixel Buds Pro 2 on macOS: 44.1 kHz, 14..=1024 frames.
+        let range = SupportedBufferSize::Range { min: 14, max: 1024 };
+        assert_eq!(clamped_buffer_frames(44_100, &range), Some(1024));
+        assert_eq!(clamped_buffer_frames(16_000, &range), Some(1024));
+    }
+
+    #[test]
+    fn clamps_up_to_the_minimum() {
+        let range = SupportedBufferSize::Range { min: 4096, max: 8192 };
+        assert_eq!(clamped_buffer_frames(8_000, &range), Some(4096));
+    }
+
+    #[test]
+    fn leaves_an_unknown_range_to_rodio() {
+        assert_eq!(clamped_buffer_frames(48_000, &SupportedBufferSize::Unknown), None);
+    }
+
+    /// Opens the real default output: `cargo test audio -- --ignored`.
+    #[test]
+    #[ignore = "needs an audio output device"]
+    fn opens_the_default_output() {
+        if let Err(e) = open_default_output() {
+            panic!("{}", error_chain(&e));
+        }
+    }
 }

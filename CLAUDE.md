@@ -158,6 +158,7 @@ bun run copy-assets  # Runs automatically in build
 - Platform-native backends: ALSA/PulseAudio (Linux), CoreAudio (macOS), WASAPI (Windows)
 - Tauri commands: `audio_init`, `audio_play_sound`, `audio_check`
 - Android: stub implementation (`audio_stub.rs`)
+- The output opens with rodio's ~50 ms buffer clamped to the device's range: cpal 0.18 rejects an out-of-range size, and Bluetooth outputs on macOS cap it at 1024 frames. See [`specs/2026-11-20-audio-buffer-range.md`](specs/2026-11-20-audio-buffer-range.md)
 
 **6. Tauri v2 Imports**
 
