@@ -1,0 +1,40 @@
+{
+  "id": "/",
+  "name": "Kaya — Play, Study & Analyze Go",
+  "short_name": "Kaya",
+  "description": "Free, open-source Go (Baduk/Weiqi) app with AI analysis, board recognition from photos, SGF support, and game tree navigation.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f0",
+  "theme_color": "#2d5016",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["games", "education", "entertainment"],
+  "screenshots": [
+    {
+      "src": "og-image.png",
+      "sizes": "1280x640",
+      "type": "image/png"
+    }
+  ]
+}
