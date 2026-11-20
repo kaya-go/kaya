@@ -16,7 +16,8 @@
  *   - Caller may pass a `cacheKey` (computed by the same generator the
  *     SGF persistence layer uses); otherwise the queue computes its own.
  *   - Caller may pass a `cacheRef` Map at construction so the cache is
- *     shared with other subsystems (e.g. SGF save/load).
+ *     shared with other subsystems (e.g. SGF save/load). The queue never
+ *     evicts from it; only its own cache is bounded (`cacheSize`).
  */
 
 import type { SignMap } from '@kaya/goboard';
@@ -59,11 +60,17 @@ export interface CacheRef {
 }
 
 export interface AnalysisQueueOptions {
-  /** Max cache entries (LRU). Default 1000. Ignored if cacheRef is provided. */
+  /**
+   * Max entries of the queue's own cache (LRU). Default 1000. Not used with
+   * `cacheRef`: the queue never evicts from a map it does not own.
+   */
   cacheSize?: number;
   /**
    * Shared cache. When provided, the queue reads/writes against this Map
    * instead of an internal one — used to share state with SGF persistence.
+   * Its owner decides what it holds and when it is cleared: the map is the
+   * analysis an SGF save writes, so an eviction here would drop analysis from
+   * the user's file.
    */
   cacheRef?: CacheRef;
 }
@@ -106,10 +113,9 @@ export class AnalysisQueue {
 
   constructor(engine: Engine, opts: AnalysisQueueOptions = {}) {
     this.engine = engine;
-    this.cache = new AnalysisCache(
-      opts.cacheRef ? opts.cacheRef.current : new Map(),
-      opts.cacheSize ?? 1000
-    );
+    this.cache = opts.cacheRef
+      ? new AnalysisCache(opts.cacheRef.current, Infinity)
+      : new AnalysisCache(new Map(), opts.cacheSize ?? 1000);
   }
 
   /** Replace the engine handle (e.g. after a backend fallback). */

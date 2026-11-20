@@ -290,6 +290,33 @@ describe('AnalysisQueue cache and the forced move', () => {
   });
 });
 
+describe('AnalysisQueue cache size', () => {
+  const analyseThree = async (queue: AnalysisQueue) => {
+    for (const x of [0, 1, 2]) await queue.submit(request(x, 'live')).result;
+  };
+  const engine = { analyze: async () => result(0) } as unknown as Engine;
+
+  test('never evicts a shared map: it is the analysis an SGF save writes', async () => {
+    const shared = { current: new Map<string, AnalysisResult>() };
+    const queue = new AnalysisQueue(engine, { cacheRef: shared, cacheSize: 2 });
+
+    await analyseThree(queue);
+
+    // Evicting here would drop the oldest analysis from the next saved file.
+    expect(shared.current.size).toBe(3);
+    expect(queue.peek(request(0, 'live'))).not.toBeNull();
+  });
+
+  test('keeps its own cache to cacheSize entries', async () => {
+    const queue = new AnalysisQueue(engine, { cacheSize: 2 });
+
+    await analyseThree(queue);
+
+    expect(queue.cacheStats().size).toBe(2);
+    expect(queue.peek(request(0, 'live'))).toBeNull();
+  });
+});
+
 describe('generateAnalysisCacheKey', () => {
   test('stable format for empty board', () => {
     const signMap: SignMap = Array.from({ length: 9 }, () => Array(9).fill(0));

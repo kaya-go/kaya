@@ -124,7 +124,7 @@ kaya/
 
 **2b. AI Analysis & MCTS** (`packages/ui/src/contexts/AIAnalysisContext.tsx`)
 
-- All analysis goes through one [`AnalysisQueue`](packages/ai-engine/src/queue.ts): priority lanes (live preempts batch transparently), monotonic LRU cache shared with `GameTreeContext.analysisCache` (so SGF `KA` persistence keeps working), unified cancellation via `cancel(id)` / `cancelTag('full-game')`
+- All analysis goes through one [`AnalysisQueue`](packages/ai-engine/src/queue.ts): priority lanes (live preempts batch transparently), monotonic cache shared with `GameTreeContext.analysisCache` (so SGF `KA` persistence keeps working; the queue never evicts from it, its owner clears it per game), unified cancellation via `cancel(id)` / `cancelTag('full-game')`
 - A cached result answers a request only if it searched as deep and, when the request forces a move (`includeMove`), explored that move: engines list their top policy moves visited or not, and one with `visits: 0` has no win rate or score of its own (engines leave them out). The rule lives in one place, `AnalysisQueue.answers`. See [`specs/2026-11-09-cache-explored-move.md`](specs/2026-11-09-cache-explored-move.md)
 - `useLiveAnalysis` and `useFullGameAnalysis` are thin queue submitters — no module-level guard state
 - Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts` command) — zero IPC overhead. A search is aborted by a request id Rust issues, never by a shared flag, and is not started once its signal is aborted. The `ENGINE` lock recovers from a panic through `lock_or_reset`; validate command inputs before taking it. See [`specs/2026-11-20-native-search-abort-and-lock.md`](specs/2026-11-20-native-search-abort-and-lock.md)

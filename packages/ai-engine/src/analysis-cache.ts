@@ -47,7 +47,8 @@ export class AnalysisCache {
 
   /**
    * @param map - the entries, in least recently used order
-   * @param limit - entries kept before the least recently used goes
+   * @param limit - entries kept before the least recently used goes;
+   *   Infinity for a map someone else owns (AnalysisQueue `cacheRef`)
    */
   constructor(
     private readonly map: Map<string, AnalysisResult>,
