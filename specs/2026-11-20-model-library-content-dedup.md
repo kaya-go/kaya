@@ -41,17 +41,13 @@ back out of the storage id (`parseModelId`) or guessed from the name
   files on Hugging Face, where the upload section points, carry the catalog
   network's name, and the catalog group renders one row per precision, so an
   upload grouped there was not listed at all.
-- **Every drop goes through `uploadModel`.** A web drop used to set an
-  in-memory model with an empty id; a desktop drop held the bytes in React
-  state, never stored and never selected. Both now store, deduplicate and
-  select like the settings picker, with a localized toast instead of
-  `alert`. `setCustomAIModel` is gone: `customAIModel` is always derived
-  from `selectedModelId`.
-- **Desktop drop hands over its bytes.** `uploadModel` takes a `ModelUpload`
-  (the part of `File` it reads), so the bytes `readFile` returned are hashed
-  and stored as they are, not copied into a `File` and back. See
-  [2026-06-09](2026-06-09-lazy-model-buffer-native-path.md) for what one
-  extra copy of a model costs the WebView.
+- **Every drop goes through `uploadModel`.** A drop used to set an
+  in-memory model with an empty id and showed an `alert`. It now stores,
+  deduplicates and selects like the settings picker, with a localized toast.
+  `setCustomAIModel` is gone: `customAIModel` is always derived from
+  `selectedModelId`. This covers the desktop app too: `dragDropEnabled` is
+  false in `tauri.conf.json`, so desktop drops reach the same HTML5 handler,
+  and the Tauri path listener in `useDropZoneEffects` is never registered.
 
 ## Learnings
 

@@ -8,7 +8,6 @@ import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
 import { isSgfValidationError } from '@kaya/sgf';
-import type { ModelUpload } from '../../services/modelStorage';
 import type { ToastType } from '../ui/Toast';
 import {
   formatImportResultError,
@@ -37,8 +36,8 @@ const isPositionInsideLibrary = (x: number, y: number): boolean => {
  * the file is deduplicated, persisted and selected.
  */
 export async function uploadDroppedModel(
-  file: ModelUpload,
-  uploadModel: (file: ModelUpload) => Promise<void>,
+  file: File,
+  uploadModel: (file: File) => Promise<void>,
   showToast: (message: string, type: ToastType) => void,
   t: TFunction
 ): Promise<void> {
@@ -59,7 +58,7 @@ interface UseTauriDragDropParams {
   isOverLibraryRef: MutableRefObject<boolean>;
   loadSGFAsync: (sgf: string) => Promise<void>;
   setFileName: (name: string) => void;
-  uploadModel: (file: ModelUpload) => Promise<void>;
+  uploadModel: (file: File) => Promise<void>;
   clearLoadedFile: () => void;
   createFile: (name: string, content: string, folderId: string | null) => Promise<unknown>;
   importZip: (buffer: ArrayBuffer) => Promise<ImportResult>;
@@ -95,18 +94,7 @@ export function useTauriDragDrop({
           if (filePath.endsWith('.onnx')) {
             const content = await fs.readFile(filePath);
             const fileName = filePath.split(/[\/\\]/).pop() || 'model.onnx';
-            // The bytes are already in memory: hand them over as they are.
-            const bytes =
-              content.byteOffset === 0 && content.byteLength === content.buffer.byteLength
-                ? (content.buffer as ArrayBuffer)
-                : (content.slice().buffer as ArrayBuffer);
-            const upload: ModelUpload = {
-              name: fileName,
-              size: bytes.byteLength,
-              lastModified: Date.now(),
-              arrayBuffer: async () => bytes,
-            };
-            await uploadDroppedModel(upload, uploadModel, showToast, t);
+            await uploadDroppedModel(new File([content], fileName), uploadModel, showToast, t);
             return;
           }
 

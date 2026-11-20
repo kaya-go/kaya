@@ -9,7 +9,6 @@ import {
   getStoredModelIds,
   parseModelFilename,
   sha256Base64Url,
-  type ModelUpload,
   type StoredModelMetadata,
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
@@ -382,7 +381,7 @@ export function useModelLibrary() {
   );
 
   // Upload a model. A second drop of the same file, or of the same bytes, selects the copy already stored.
-  const uploadModel = useCallback(async (file: ModelUpload) => {
+  const uploadModel = useCallback(async (file: File) => {
     const fingerprint = `${file.name}\0${file.size}\0${file.lastModified}`;
     const pendingFile = uploadInflightRef.current.byFile.get(fingerprint);
     if (pendingFile) return pendingFile;

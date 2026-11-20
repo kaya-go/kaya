@@ -5,7 +5,7 @@ import { GameInfo as SGFGameInfo, type GameInfoPatch } from '@kaya/sgf';
 import { AnalysisResult } from '@kaya/ai-engine';
 
 import type { ConfigTab } from '../components/ai/useKayaConfig';
-import type { ModelUpload, StoredModelMetadata } from '../services/modelStorage';
+import type { StoredModelMetadata } from '../services/modelStorage';
 
 export interface SGFProperty {
   [key: string]: string[];
@@ -161,7 +161,7 @@ export interface GameTreeContextValue {
   setSelectedModelId: (id: string | null) => void;
   downloadModel: (id: string) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
-  uploadModel: (file: ModelUpload) => Promise<void>;
+  uploadModel: (file: File) => Promise<void>;
 
   // Position in tree
   moveNumber: number;

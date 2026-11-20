@@ -20,13 +20,6 @@ const LEGACY_MODEL_KEY = 'custom_katago_model';
 export type ModelQuantization = 'fp32' | 'fp16' | 'uint8';
 
 /**
- * What storing a model needs from a file. A browser `File` is one; a desktop
- * drop builds one around the bytes it already read, so they are not copied
- * into a `File` and back (a model is 70 to 280 MB of WebView heap).
- */
-export type ModelUpload = Pick<File, 'name' | 'size' | 'lastModified' | 'arrayBuffer'>;
-
-/**
  * `{name}.{quantization}.onnx` → network name, precision and label.
  * A file with no precision token keeps the stem as `name` and leaves
  * `quantization` unset. `displayName` is the filename without `.onnx`.
