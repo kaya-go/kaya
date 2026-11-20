@@ -1,5 +1,4 @@
 import type { AutoPick, AutoPickReason, BackendId } from '@kaya/ai-engine';
-import type { ModelQuantization } from '../../hooks/game/ai-analysis-types';
 import type { AISettings } from '../../types/game';
 import type { EngineStatus } from './engineStatus';
 import { runtimeBackendToSetting, settingToChainBackend } from './backendVocabulary';
@@ -64,13 +63,6 @@ export function readyReason(
   // The runtime label is not the chain vocabulary (`native` vs `native-gpu`).
   const landedOn = settingToChainBackend(runtimeBackendToSetting(activeBackend));
   return landedOn === autoPick.backendChain[0] ? autoPick.reason : undefined;
-}
-
-/** Quantization label inferred from a model name (best effort). */
-export function quantFromModelName(name: string): ModelQuantization {
-  if (/\.fp16\.|-fp16/i.test(name)) return 'fp16';
-  if (/\.uint8\.|-quant/i.test(name)) return 'uint8';
-  return 'fp32';
 }
 
 /**

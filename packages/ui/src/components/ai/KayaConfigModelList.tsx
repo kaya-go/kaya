@@ -22,8 +22,8 @@ type KayaConfigModelListProps = Pick<
   | 'recommendedModel'
   | 'recommendedQuantization'
   | 'handleDownloadRecommended'
-  | 'modelsByBase'
-  | 'expandedModelIndex'
+  | 'modelsByName'
+  | 'expandedModelName'
   | 'handleToggleExpand'
   | 'selectedModelId'
   | 'handleSelect'
@@ -40,8 +40,8 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
   recommendedModel,
   recommendedQuantization,
   handleDownloadRecommended,
-  modelsByBase,
-  expandedModelIndex,
+  modelsByName,
+  expandedModelName,
   handleToggleExpand,
   selectedModelId,
   handleSelect,
@@ -98,19 +98,19 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
 
       <div className="model-library-list">
         {/* Base Models with Quantization Options */}
-        {BASE_MODELS.map((baseModel, baseIndex) => {
-          const variants = modelsByBase.get(baseIndex) || [];
-          const isExpanded = expandedModelIndex === baseIndex;
+        {BASE_MODELS.map(baseModel => {
+          const variants = modelsByName.get(baseModel.name) || [];
+          const isExpanded = expandedModelName === baseModel.name;
           const hasDownloaded = variants.some(v => v.isDownloaded);
           const hasSelected = variants.some(v => v.id === selectedModelId);
           const downloadedCount = variants.filter(v => v.isDownloaded).length;
 
           return (
-            <div key={baseIndex} className="model-base-group">
+            <div key={baseModel.name} className="model-base-group">
               {/* Base Model Header */}
               <div
                 className={`model-base-header ${isExpanded ? 'expanded' : ''} ${hasSelected ? 'has-selected' : ''}`}
-                onClick={() => handleToggleExpand(baseIndex)}
+                onClick={() => handleToggleExpand(baseModel.name)}
                 role="button"
                 tabIndex={0}
               >
@@ -237,7 +237,7 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                 >
                   <div className="model-variant-info">
                     <div className="model-variant-name">
-                      {model.name}
+                      {model.displayName}
                       {selectedModelId === model.id && (
                         <span className="model-active-badge">
                           <LuCheck size={12} /> {t('aiConfig.active')}

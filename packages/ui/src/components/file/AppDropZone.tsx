@@ -24,6 +24,7 @@ import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
 import { useToast } from '../ui/Toast';
 import { formatSgfLoadError } from '../../utils/sgfLoadErrors';
+import { parseModelFilename } from '../../services/modelStorage';
 import { useTauriDragDrop, usePasteHandler } from './useDropZoneEffects';
 import './AppDropZone.css';
 
@@ -122,9 +123,12 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
     const handleFileLoad = useCallback(
       async (file: File) => {
         if (file.name.endsWith('.onnx')) {
+          const { name, quantization } = parseModelFilename(file.name);
           setCustomAIModel({
             data: file,
-            name: file.name,
+            id: quantization ? name + '.' + quantization : name,
+            name,
+            quantization,
             date: file.lastModified,
             size: file.size,
           });

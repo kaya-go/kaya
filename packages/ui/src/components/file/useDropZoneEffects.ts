@@ -7,6 +7,8 @@ import type { TFunction } from 'i18next';
 import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
+import { parseModelFilename } from '../../services/modelStorage';
+import type { ModelQuantization } from '../../services/modelStorage';
 import { isSgfValidationError } from '@kaya/sgf';
 import type { ToastType } from '../ui/Toast';
 import {
@@ -40,7 +42,9 @@ interface UseTauriDragDropParams {
   setFileName: (name: string) => void;
   setCustomAIModel: (model: {
     data: ArrayBuffer | File;
+    id: string;
     name: string;
+    quantization?: ModelQuantization;
     date: number;
     size: number;
   }) => void;
@@ -79,9 +83,12 @@ export function useTauriDragDrop({
           if (filePath.endsWith('.onnx')) {
             const content = await fs.readFile(filePath);
             const fileName = filePath.split(/[\/\\]/).pop() || 'model.onnx';
+            const { name, quantization } = parseModelFilename(fileName);
             setCustomAIModel({
               data: content.buffer,
-              name: fileName,
+              id: quantization ? name + '.' + quantization : name,
+              name: name,
+              quantization: quantization,
               date: Date.now(),
               size: content.buffer.byteLength,
             });

@@ -18,8 +18,8 @@ type KayaConfigAnalysisTabProps = Pick<
   | 'recommendedModel'
   | 'recommendedQuantization'
   | 'handleDownloadRecommended'
-  | 'modelsByBase'
-  | 'expandedModelIndex'
+  | 'modelsByName'
+  | 'expandedModelName'
   | 'handleToggleExpand'
   | 'selectedModelId'
   | 'handleSelect'
@@ -41,8 +41,8 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
   recommendedModel,
   recommendedQuantization,
   handleDownloadRecommended,
-  modelsByBase,
-  expandedModelIndex,
+  modelsByName,
+  expandedModelName,
   handleToggleExpand,
   selectedModelId,
   handleSelect,
@@ -73,8 +73,8 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
         recommendedModel={recommendedModel}
         recommendedQuantization={recommendedQuantization}
         handleDownloadRecommended={handleDownloadRecommended}
-        modelsByBase={modelsByBase}
-        expandedModelIndex={expandedModelIndex}
+        modelsByName={modelsByName}
+        expandedModelName={expandedModelName}
         handleToggleExpand={handleToggleExpand}
         selectedModelId={selectedModelId}
         handleSelect={handleSelect}

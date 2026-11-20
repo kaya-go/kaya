@@ -8,6 +8,7 @@ import {
   loadSelectedModelId,
   saveSelectedModelId,
   getStoredModelIds,
+  parseModelFilename,
   type StoredModelMetadata,
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
@@ -56,15 +57,7 @@ export function useModelLibrary() {
           const isDownloaded = storedIds.includes(preset.id) || disk !== undefined;
 
           library.push({
-            id: preset.id,
-            name: preset.name,
-            description: preset.description,
-            url: preset.url,
-            predefinedId: preset.predefinedId,
-            recommended: preset.recommended,
-            isDefault: preset.isDefault,
-            baseModelIndex: preset.baseModelIndex,
-            quantization: preset.quantization,
+            ...preset,
             isDownloaded,
             size: storedMeta?.size ?? disk?.size,
             date: storedMeta?.date ?? disk?.modified,
@@ -78,9 +71,9 @@ export function useModelLibrary() {
           const isDownloaded = storedIds.includes(userModel.id) || disk !== undefined;
           if (isDownloaded) {
             library.push({
-              id: userModel.id,
-              name: userModel.name,
-              description: userModel.description,
+              ...userModel,
+              // Records saved before displayName existed only have `name`.
+              displayName: userModel.displayName || userModel.name,
               size: userModel.size ?? disk?.size,
               date: userModel.date ?? disk?.modified,
               isDownloaded: true,
@@ -96,6 +89,7 @@ export function useModelLibrary() {
           library.push({
             id: cacheId,
             name: cacheId,
+            displayName: cacheId,
             description: '',
             size: disk.size,
             date: disk.modified,
@@ -148,7 +142,9 @@ export function useModelLibrary() {
       // Only store metadata - NOT the actual ArrayBuffer data
       setCustomAIModel({
         data: selectedModelId,
+        id: model.id,
         name: model.name,
+        quantization: model.quantization,
         size: model.size,
         date: model.date,
       });
@@ -263,11 +259,12 @@ export function useModelLibrary() {
         const newMetadata: StoredModelMetadata = {
           id,
           name: model.name,
+          displayName: model.displayName,
           description: model.description,
           size: downloadedSize,
           date: Date.now(),
-          predefinedId: model.predefinedId,
           url: model.url,
+          quantization: model.quantization,
         };
 
         const existingIndex = storedMetadata.findIndex(m => m.id === id);
@@ -371,7 +368,9 @@ export function useModelLibrary() {
 
   // Upload a model
   const uploadModel = useCallback(async (file: File) => {
-    const id = `user-${Date.now()}-${file.name}`;
+    const { name, quantization } = parseModelFilename(file.name);
+    const basename = quantization ? name + quantization : name;
+    const id = basename;
     const buffer = await file.arrayBuffer();
 
     // Save to storage
@@ -381,8 +380,10 @@ export function useModelLibrary() {
     const storedMetadata = await loadModelLibrary();
     const newMetadata: StoredModelMetadata = {
       id,
-      name: file.name,
+      name: name,
+      displayName: basename,
       description: 'User uploaded model',
+      quantization,
       size: file.size,
       date: Date.now(),
       isUserModel: true,
@@ -393,8 +394,10 @@ export function useModelLibrary() {
     // Add to library
     const newEntry: AIModelEntry = {
       id,
-      name: file.name,
+      name: name,
+      displayName: basename,
       description: 'User uploaded model',
+      quantization,
       size: file.size,
       date: Date.now(),
       isDownloaded: true,
@@ -423,6 +426,10 @@ export function useModelLibrary() {
         setSelectedModelIdState(null);
         await saveSelectedModelId(null);
         setCustomAIModel(null);
+      } else {
+        // Bytes already in memory (a path drop). The library effect only
+        // rebuilds customAIModel for a selected id, so keep this one as given.
+        setCustomAIModel(model);
       }
     },
     [uploadModel]

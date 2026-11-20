@@ -17,14 +17,48 @@ const DB_VERSION = 2; // Bumped for new structure
 // Legacy key for migration
 const LEGACY_MODEL_KEY = 'custom_katago_model';
 
+export type ModelQuantization = 'fp32' | 'fp16' | 'uint8';
+
+/**
+ * `{name}.{quantization}.onnx` → network name plus precision.
+ * A file with no precision token keeps the stem as `name` and leaves
+ * `quantization` unset. Call once, when the file enters the library.
+ */
+export function parseModelFilename(
+  filename: string
+): Pick<StoredModelMetadata, 'name' | 'quantization'> {
+  const base = filename.split(/[/\\]/).pop() ?? filename;
+  const stem = base.replace(/\.onnx$/i, '');
+  const match = stem.match(/^(.*)\.(fp32|fp16|uint8)$/i);
+  if (!match?.[1]) return { name: stem || base };
+  const token = match[2].toLowerCase();
+  if (token === 'fp16' || token === 'fp32' || token === 'uint8') {
+    return { name: match[1], quantization: token };
+  }
+  return { name: stem || base };
+}
+
 export interface StoredModelMetadata {
   id: string;
+  /**
+   * KataGo network name (`kata1-…` on katagotraining.org), or the filename
+   * of a user upload. Every precision of one network shares this name.
+   * Not include quantization and suffix, like `kata1-b28c512nbt-s12043015936-d5616446734`
+   */
   name: string;
+  /**
+   * Which ONNX precision this row is. A standard filename is
+   * `{name}.{quantization}.onnx`; user uploads set this from that token
+   * when it is present, and leave it unset otherwise.
+   */
+  quantization?: ModelQuantization;
+  /** Short label. Precision variants append FP16 / INT8; user uploads repeat `name`. */
+  displayName: string;
   description: string;
+  /** Byte size once the file is on disk. The catalog leaves this unset. */
   size?: number;
   date?: number;
   isUserModel?: boolean;
-  predefinedId?: string;
   url?: string;
 }
 
