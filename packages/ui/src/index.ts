@@ -152,10 +152,14 @@ export type {
   SwipeHandlers,
 } from './hooks/useSwipeGesture';
 
+// Whether a dialog or menu is open: shortcuts wait behind one
+export { hasOpenOverlay } from './hooks/useCloseOnBack';
+
 // External links (opens URLs in default browser in Tauri)
 export { useExternalLinks } from './hooks/useExternalLinks';
 export { isExternalLinkTarget } from './hooks/useExternalLinks';
 export { externalLinkComponents } from './components/markdown/externalLinkComponents';
+export { remarkImagesAsLinks } from './components/markdown/remarkImagesAsLinks';
 
 // PWA install prompt
 export { useAutoPick } from './hooks/useAutoPick';

@@ -1,5 +1,18 @@
 import { useEffect } from 'react';
-import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
+import { useKeyboardShortcuts, type ShortcutId } from '../../contexts/KeyboardShortcutsContext';
+import { hasOpenOverlay } from '../../hooks/useCloseOnBack';
+import { isTextEntryTarget } from '../../utils/shortcutGuard';
+
+/** The header shortcuts that wait while a dialog or menu is open: all but fullscreen. */
+const WAIT_BEHIND_DIALOG: ShortcutId[] = [
+  'file.save',
+  'file.saveAs',
+  'edit.makeMainBranch',
+  'edit.undo',
+  'edit.redo',
+  'view.openSettings',
+  'board.toggleSound',
+];
 
 export function useHeaderKeyboardShortcuts(handlers: {
   handleSaveClick: () => void;
@@ -29,7 +42,25 @@ export function useHeaderKeyboardShortcuts(handlers: {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      if (isTextEntryTarget(e.target)) return;
+
+      // Fullscreen is a window command, like the browser's own F11: it changes
+      // neither the game nor what an open dialog asks, so it works everywhere.
+      if (matchesShortcut(e, 'view.toggleFullscreen')) {
+        // preventDefault matters for F11 on Linux/Wayland — some compositors
+        // would otherwise consume it for their own window fullscreen action.
+        e.preventDefault();
+        toggleFullscreen();
+        return;
+      }
+
+      // Behind a dialog or menu the others wait: undo, redo and reordering
+      // would change the game the dialog asks about (Ctrl+Z behind Resign
+      // changed the side that resigned), save and settings would open a second
+      // dialog. They still claim their keys, so that the browser or the macOS
+      // Edit menu does not run its own Save Page or Undo instead.
+      if (hasOpenOverlay()) {
+        if (WAIT_BEHIND_DIALOG.some(id => matchesShortcut(e, id))) e.preventDefault();
         return;
       }
 
@@ -61,13 +92,6 @@ export function useHeaderKeyboardShortcuts(handlers: {
       if (matchesShortcut(e, 'view.openSettings')) {
         e.preventDefault();
         setAIConfigOpen(true);
-        return;
-      }
-      if (matchesShortcut(e, 'view.toggleFullscreen')) {
-        // preventDefault matters for F11 on Linux/Wayland — some compositors
-        // would otherwise consume it for their own window fullscreen action.
-        e.preventDefault();
-        toggleFullscreen();
         return;
       }
       if (matchesShortcut(e, 'board.toggleSound')) {

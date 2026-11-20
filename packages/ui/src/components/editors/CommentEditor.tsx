@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { externalLinkComponents } from '../markdown/externalLinkComponents';
+import { remarkImagesAsLinks } from '../markdown/remarkImagesAsLinks';
 import { useGameTreeBoard, useGameTreeEdit } from '../../contexts/GameTreeContext';
 import {
   COMMENT_FONT_SCALE_MAX,
@@ -47,7 +48,7 @@ const CommentEditorContext = createContext<CommentEditorContextValue | null>(nul
  */
 export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentNode, moveNumber, gameId, gameSettings, setGameSettings } = useGameTreeBoard();
-  const { setNodeComment: updateComment } = useGameTreeEdit();
+  const { setNodeComment: updateComment, setUnsavedCommentSource } = useGameTreeEdit();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const prevNodeIdRef = useRef<string | number | null>(null);
@@ -69,21 +70,39 @@ export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({
   const currentNodeId = currentNode?.id ?? null;
 
   // Leaving a node mid-edit (a move played, a tree click, the mouse wheel)
-  // saves what was typed to the node it was typed for. Not when a new game
-  // replaced the tree: the old node id can exist in the new game too.
+  // saves what was typed to the node it was typed for. A new game closes the
+  // editor without saving, also when it opens on the same node id as the old
+  // one (every game starts at root 0): the text belongs to the old game.
   useEffect(() => {
-    if (prevNodeIdRef.current !== currentNodeId) {
-      const leftNodeId = prevNodeIdRef.current;
-      const sameGame = prevGameIdRef.current === gameId;
-      if (isEditing && sameGame && leftNodeId !== null && editText !== editStartRef.current) {
-        updateComment(editText, leftNodeId);
-      }
-      setEditText(currentComment);
-      setIsEditing(false);
-      prevNodeIdRef.current = currentNodeId;
+    const sameGame = prevGameIdRef.current === gameId;
+    if (sameGame && prevNodeIdRef.current === currentNodeId) return;
+    const leftNodeId = prevNodeIdRef.current;
+    if (isEditing && sameGame && leftNodeId !== null && editText !== editStartRef.current) {
+      updateComment(editText, leftNodeId);
     }
+    setEditText(currentComment);
+    setIsEditing(false);
+    prevNodeIdRef.current = currentNodeId;
     prevGameIdRef.current = gameId;
   }, [currentNodeId, currentComment, gameId, isEditing, editText, updateComment]);
+
+  // Undo and redo take the text being typed with them (useGameTreeUndoRedo):
+  // saved after the fact, it was a new edit that cleared the redo history.
+  // They ask from an event handler, so the draft is read through a ref.
+  const draftRef = useRef({ isEditing, editText, nodeId: currentNodeId });
+  useEffect(() => {
+    draftRef.current = { isEditing, editText, nodeId: currentNodeId };
+  });
+  useEffect(() => {
+    setUnsavedCommentSource(() => {
+      const { isEditing: editing, editText: text, nodeId } = draftRef.current;
+      if (!editing || nodeId === null || text === editStartRef.current) return null;
+      // Handed over: the editor closes, so leaving the node does not save it again.
+      setIsEditing(false);
+      return { nodeId, text };
+    });
+    return () => setUnsavedCommentSource(null);
+  }, [setUnsavedCommentSource]);
 
   // Update edit text when comment changes externally (but not while editing)
   useEffect(() => {
@@ -320,8 +339,11 @@ export const CommentEditor: React.FC = () => {
       ) : (
         <div className="comment-display" onClick={handleEdit}>
           {currentComment ? (
-            <div className="comment-markdown">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={externalLinkComponents}>
+            <div className="comment-markdown" data-selectable-text>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkImagesAsLinks]}
+                components={externalLinkComponents}
+              >
                 {currentComment}
               </ReactMarkdown>
             </div>

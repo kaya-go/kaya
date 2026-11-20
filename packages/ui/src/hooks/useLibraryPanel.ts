@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useKeyboardShortcuts } from '../contexts/KeyboardShortcutsContext';
+import { hasOpenOverlay } from './useCloseOnBack';
 
 const STORAGE_KEY = 'kaya-show-library';
 
@@ -38,7 +39,8 @@ export function useLibraryPanel() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (matchesShortcut(e, 'view.toggleLibrary')) {
         e.preventDefault();
-        toggleLibrary();
+        // The layout stays put behind a dialog, like every shortcut but fullscreen.
+        if (!hasOpenOverlay()) toggleLibrary();
       }
     };
     window.addEventListener('keydown', handleKeyDown);

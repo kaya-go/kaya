@@ -211,6 +211,7 @@ export function useGameTreeEdit() {
         redo: ctx.redo,
         canUndo: ctx.canUndo,
         canRedo: ctx.canRedo,
+        setUnsavedCommentSource: ctx.setUnsavedCommentSource,
       }),
       []
     )

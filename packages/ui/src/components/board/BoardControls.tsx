@@ -4,16 +4,15 @@
  * Displays:
  * - Captures for both players
  * - Player names and ranks
- * - Pass button
- * - Resign button
  * - Navigation controls
  * - Current player indicator
+ *
+ * Pass and Resign are in GameBoardActionBar.
  */
 
-import React, { useCallback, memo, useState } from 'react';
+import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useGameTreeBoard, useGameTreeActions } from '../../contexts/selectors';
-import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
+import { useGameTreeBoard } from '../../contexts/selectors';
 import { BoardControlsNavigation } from './BoardControlsNavigation';
 import './BoardControls.css';
 
@@ -21,8 +20,6 @@ export const BoardControls: React.FC = memo(() => {
   const { t } = useTranslation();
 
   const { currentBoard, currentPlayer, gameInfo } = useGameTreeBoard();
-  const { playMove, resign } = useGameTreeActions();
-  const [showResignConfirm, setShowResignConfirm] = useState(false);
 
   // Get captures from current board
   const capturesBlack = currentBoard.getCaptures(1);
@@ -33,25 +30,6 @@ export const BoardControls: React.FC = memo(() => {
   const playerWhite = gameInfo.playerWhite || t('gameInfo.white');
   const rankBlack = gameInfo.rankBlack;
   const rankWhite = gameInfo.rankWhite;
-
-  const handlePass = useCallback(() => {
-    // Pass is represented by empty coordinate
-    const passVertex: [number, number] = [-1, -1];
-    playMove(passVertex, currentPlayer);
-  }, [playMove, currentPlayer]);
-
-  const handleResign = useCallback(() => {
-    setShowResignConfirm(true);
-  }, []);
-
-  const handleResignConfirm = useCallback(() => {
-    resign(currentPlayer);
-    setShowResignConfirm(false);
-  }, [currentPlayer, resign]);
-
-  const handleResignCancel = useCallback(() => {
-    setShowResignConfirm(false);
-  }, []);
 
   return (
     <div className="board-controls">
@@ -98,19 +76,6 @@ export const BoardControls: React.FC = memo(() => {
           }}
         />
       </div>
-
-      {/* Resign Confirmation Dialog */}
-      <ConfirmationDialog
-        isOpen={showResignConfirm}
-        title={t('boardControls.resignGame')}
-        message={t('boardControls.resignConfirm', {
-          player: currentPlayer === 1 ? t('gameInfo.black') : t('gameInfo.white'),
-        })}
-        confirmLabel={t('boardControls.resign')}
-        cancelLabel={t('cancel')}
-        onConfirm={handleResignConfirm}
-        onCancel={handleResignCancel}
-      />
     </div>
   );
 });
