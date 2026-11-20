@@ -18,7 +18,7 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import { DEFAULT_KOMI, type AnalysisResult } from './types';
-import { nativeKo, runNativeSearch } from './tauri-mcts';
+import { nativeKo, runNativeSearch, runNativeSearches } from './tauri-mcts';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -281,11 +281,7 @@ export class TauriEngine extends Engine {
     // per-move statistics. Mirrors OnnxEngine.analyzeBatch behavior.
     const hasMultiVisit = inputs.some(i => ((i.options as any)?.numVisits ?? 1) > 1);
     if (hasMultiVisit) {
-      const results: AnalysisResult[] = [];
-      for (const input of inputs) {
-        results.push(await this.analyze(input.signMap, input.options));
-      }
-      return results;
+      return runNativeSearches(inputs, (signMap, options) => this.analyze(signMap, options));
     }
 
     const batchStart = performance.now();

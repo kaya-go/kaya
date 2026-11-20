@@ -1,6 +1,6 @@
 /**
- * One native MCTS search over IPC (`onnx_analyze_mcts`), cancellable with an
- * AbortSignal.
+ * Native MCTS searches over IPC (`onnx_analyze_mcts`), cancellable with an
+ * AbortSignal: one position, or a batch searched one position at a time.
  *
  * An abort names its search by an id Rust hands out (`onnx_mcts_request_id`):
  * Rust keeps an abort that arrives before the search does, and its ids keep
@@ -48,6 +48,50 @@ function abortError(): Error {
   const error = new Error('MCTS search aborted');
   error.name = 'AbortError';
   return error;
+}
+
+/** The preemption of a batch, carrying what it finished: one entry per input. */
+function batchAbortError(partialResults: (AnalysisResult | null)[]): Error {
+  const error = new Error('Batch analysis aborted') as Error & {
+    partialResults?: (AnalysisResult | null)[];
+  };
+  error.name = 'AbortError';
+  error.partialResults = partialResults;
+  return error;
+}
+
+/**
+ * One search per position, for a batch that asks for more than one visit.
+ *
+ * A preemption (the batch's signal) stops it before the next search, with an
+ * AbortError whose `partialResults` hold each finished position and null for
+ * the rest: the queue caches them, and the re-queued batch skips them. The
+ * search the abort cut short came back shallower than asked, and is left out.
+ */
+export async function runNativeSearches(
+  inputs: { signMap: SignMap; options?: EngineAnalysisOptions }[],
+  search: (signMap: SignMap, options?: EngineAnalysisOptions) => Promise<AnalysisResult>
+): Promise<AnalysisResult[]> {
+  const signal = inputs[0]?.options?.signal as AbortSignal | undefined;
+  const results: (AnalysisResult | null)[] = inputs.map(() => null);
+
+  for (let i = 0; i < inputs.length; i++) {
+    if (signal?.aborted) throw batchAbortError(results);
+    const { signMap, options } = inputs[i];
+    let result: AnalysisResult;
+    try {
+      result = await search(signMap, options);
+    } catch (e) {
+      if (signal?.aborted) throw batchAbortError(results);
+      throw e;
+    }
+    // An abort during the search stops it early, unless it had already done
+    // every visit it was asked for.
+    const wanted = options?.numVisits ?? 1;
+    if (signal?.aborted && (result.visits ?? wanted) < wanted) throw batchAbortError(results);
+    results[i] = result;
+  }
+  return results as AnalysisResult[];
 }
 
 export async function runNativeSearch(

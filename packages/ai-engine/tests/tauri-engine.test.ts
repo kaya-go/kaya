@@ -149,6 +149,84 @@ describe('TauriEngine search abort', () => {
 });
 
 /**
+ * A full-game batch with more than one visit runs one native search per
+ * position. When live analysis preempts it, the queue caches what the error
+ * carries, so the re-queued batch does not search those positions again.
+ */
+describe('TauriEngine.analyzeBatch multi-visit preemption', () => {
+  const searched = (visits: number, winRate: number) => ({
+    moveSuggestions: [],
+    winRate,
+    scoreLead: 0,
+    currentTurn: 'B',
+    visits,
+  });
+
+  /** Search n answers `answers[n]`, which may abort the batch first. */
+  function batchEngine(answers: ((controller: AbortController) => unknown)[]) {
+    const controller = new AbortController();
+    let searches = 0;
+    let ids = 0;
+    const { engine } = engineWith(async cmd => {
+      if (cmd === 'onnx_mcts_request_id') return ++ids;
+      if (cmd === 'onnx_analyze_mcts') return answers[searches++](controller);
+      return undefined;
+    });
+    const inputs = [0, 1, 2].map(() => ({
+      signMap: board,
+      options: { numVisits: 10, signal: controller.signal, skipCache: true } as never,
+    }));
+    return { engine, inputs, searches: () => searches };
+  }
+
+  test('hands back the positions finished before the preemption', async () => {
+    const { engine, inputs, searches } = batchEngine([
+      () => searched(10, 0.1),
+      controller => {
+        controller.abort();
+        // What Rust answers for a search the abort stopped early.
+        return searched(3, 0.2);
+      },
+      () => searched(10, 0.3),
+    ]);
+
+    const error = await engine.analyzeBatch(inputs).catch(e => e);
+
+    expect(error.name).toBe('AbortError');
+    expect(error.partialResults.map((r: any) => r?.winRate ?? null)).toEqual([0.1, null, null]);
+    expect(searches()).toBe(2);
+  });
+
+  test('keeps a search that finished before the abort reached it', async () => {
+    const { engine, inputs, searches } = batchEngine([
+      () => searched(10, 0.1),
+      controller => {
+        controller.abort();
+        return searched(10, 0.2);
+      },
+      () => searched(10, 0.3),
+    ]);
+
+    const error = await engine.analyzeBatch(inputs).catch(e => e);
+
+    expect(error.partialResults.map((r: any) => r?.winRate ?? null)).toEqual([0.1, 0.2, null]);
+    expect(searches()).toBe(2);
+  });
+
+  test('a batch left alone searches every position', async () => {
+    const { engine, inputs } = batchEngine([
+      () => searched(10, 0.1),
+      () => searched(10, 0.2),
+      () => searched(10, 0.3),
+    ]);
+
+    const results = await engine.analyzeBatch(inputs);
+
+    expect(results.map(r => r.winRate)).toEqual([0.1, 0.2, 0.3]);
+  });
+});
+
+/**
  * Desktop full-game analysis sends whole batches to the native engine. The
  * native side can only ban the ko recapture (input plane 6, and the move
  * list) if each position carries its ko.
