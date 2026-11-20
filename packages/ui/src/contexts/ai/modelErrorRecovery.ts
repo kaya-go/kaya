@@ -1,4 +1,5 @@
 import type { ModelQuantization } from '../../services/modelStorage';
+import type { TFunction } from 'i18next';
 import { QUANT_LABELS } from './engineHelpers';
 
 interface ModelLibraryEntry {
@@ -14,8 +15,6 @@ type ToastFn = (
   action?: { label: string; onClick: () => void }
 ) => void;
 
-type TFn = (key: string, opts?: Record<string, string>) => string;
-
 /**
  * When all backends fail for a model, surface a recovery toast that
  * either suggests an alternative quantization (downloaded if possible,
@@ -29,7 +28,7 @@ export function showModelErrorRecoveryToast(
   downloadModel: (id: string) => Promise<void>,
   setAIConfigOpen: (open: boolean) => void,
   showToast: ToastFn,
-  t: TFn
+  t: TFunction
 ): void {
   const isFp16Error = /float16|fp16|Float16/.test(errorMessage);
 
