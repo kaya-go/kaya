@@ -407,12 +407,18 @@ export class AnalysisQueue {
 
     try {
       const results = await this.engine.analyzeBatch(inputs);
+      // Cache before the preemption check: an engine that cannot stop a batch
+      // (the web worker) finishes it anyway, and the re-queued copy then finds
+      // every position here instead of running them all again. A search the
+      // abort did cut short came back shallower than asked, and is not kept.
+      for (let k = 0; k < stillPending.length; k++) {
+        const req = batch.requests[stillPending[k]];
+        const r = results[k];
+        if ((r.visits ?? req.numVisits) >= req.numVisits) this.cacheStore(req, r);
+      }
       if (batch.preempted) return;
       for (let k = 0; k < stillPending.length; k++) {
-        const idx = stillPending[k];
-        const r = results[k];
-        this.cacheStore(batch.requests[idx], r);
-        batch.resolvers[idx](r);
+        batch.resolvers[stillPending[k]](results[k]);
       }
     } catch (err) {
       // A preempted batch can still hand back the positions it finished before
