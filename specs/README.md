@@ -82,3 +82,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [ORT files under `wasm/<version>/`, and a service worker per build](2026-11-20-ort-wasm-versioned-path.md)  | shipped    |
 | 2026-11-20 | [Library: a change made before the database opens is listed](2026-11-20-library-refresh-before-open.md)     | shipped    |
 | 2026-11-20 | [One analysis board size, from the game's dimensions](2026-11-20-analysis-board-size.md)                    | shipped    |
+| 2026-11-20 | [Desktop Content-Security-Policy](2026-11-20-desktop-csp.md)                                                | shipped    |
