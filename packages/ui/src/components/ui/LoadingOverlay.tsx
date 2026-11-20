@@ -7,6 +7,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameTreeFile } from '../../contexts/GameTreeContext';
+import { loadingPercent } from '../../utils/loadingProgress';
 import './LoadingOverlay.css';
 
 export const LoadingOverlay: React.FC = () => {
@@ -16,6 +17,8 @@ export const LoadingOverlay: React.FC = () => {
   if (!isLoadingSGF) {
     return null;
   }
+
+  const percent = loadingPercent(loadingProgress);
 
   return (
     <div className="loading-overlay">
@@ -29,9 +32,9 @@ export const LoadingOverlay: React.FC = () => {
 
           <div className="loading-progress-container">
             <div className="loading-progress-bar">
-              <div className="loading-progress-fill" style={{ width: `${loadingProgress}%` }}></div>
+              <div className="loading-progress-fill" style={{ width: `${percent}%` }}></div>
             </div>
-            <div className="loading-progress-text">{loadingProgress}%</div>
+            <div className="loading-progress-text">{percent}%</div>
           </div>
 
           <div className="loading-message">{loadingMessage && t(loadingMessage)}</div>

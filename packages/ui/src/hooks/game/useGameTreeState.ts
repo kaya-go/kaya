@@ -41,6 +41,7 @@ export function useGameTreeState() {
 
   // Loading states
   const [isLoadingSGF, setIsLoadingSGF] = useState(false);
+  // A fraction from 0 to 1, like the parser's own progress.
   const [loadingProgress, setLoadingProgress] = useState(0);
   // A translation key: the overlay translates it.
   const [loadingMessage, setLoadingMessage] = useState('');
