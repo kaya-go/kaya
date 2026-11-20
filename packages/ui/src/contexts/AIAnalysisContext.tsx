@@ -174,7 +174,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Clear cache only when the AI model itself changes (not backend, not toggle)
   useEffect(() => {
-    const currentModelId = customAIModel?.name ?? null;
+    const currentModelId = customAIModel?.id ?? null;
 
     // Skip on initial mount
     if (prevModelRef.current === null) {

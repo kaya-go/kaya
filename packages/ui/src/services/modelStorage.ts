@@ -17,15 +17,61 @@ const DB_VERSION = 2; // Bumped for new structure
 // Legacy key for migration
 const LEGACY_MODEL_KEY = 'custom_katago_model';
 
+export type ModelQuantization = 'fp32' | 'fp16' | 'uint8';
+
+/**
+ * `{name}.{quantization}.onnx` → network name, precision and label.
+ * A file with no precision token keeps the stem as `name` and leaves
+ * `quantization` unset. `displayName` is the filename without `.onnx`.
+ * Call once, when the file enters the library.
+ */
+export function parseModelFilename(
+  filename: string
+): Pick<StoredModelMetadata, 'name' | 'quantization' | 'displayName'> {
+  const base = filename.split(/[/\\]/).pop() ?? filename;
+  const stem = base.replace(/\.onnx$/i, '') || base;
+  const match = stem.match(/^(.+)\.(fp32|fp16|uint8)$/i);
+  if (!match) return { name: stem, displayName: stem };
+  return {
+    name: match[1],
+    quantization: match[2].toLowerCase() as ModelQuantization,
+    displayName: stem,
+  };
+}
+
+/** SHA-256 of `buffer`, encoded as base64url without padding. */
+export async function sha256Base64Url(buffer: ArrayBuffer): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', buffer);
+  const bytes = new Uint8Array(digest);
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
 export interface StoredModelMetadata {
   id: string;
+  /**
+   * KataGo network name (`kata1-…` on katagotraining.org), or the filename
+   * of a user upload. Every precision of one network shares this name.
+   * Not include quantization and suffix, like `kata1-b28c512nbt-s12043015936-d5616446734`
+   */
   name: string;
+  /**
+   * Which ONNX precision this row is. A standard filename is
+   * `{name}.{quantization}.onnx`; user uploads set this from that token
+   * when it is present, and leave it unset otherwise.
+   */
+  quantization?: ModelQuantization;
+  /** Short label. Precision variants append FP16 / INT8; a user upload shows its filename without `.onnx`. */
+  displayName: string;
   description: string;
+  /** Byte size once the file is on disk. The catalog leaves this unset. */
   size?: number;
   date?: number;
   isUserModel?: boolean;
-  predefinedId?: string;
   url?: string;
+  /** SHA-256 of the file bytes, base64url. Set for uploads and downloads so a second copy is rejected. */
+  hash?: string;
 }
 
 /**

@@ -264,7 +264,6 @@ export function useGameTreeAI() {
         aiSettings: ctx.aiSettings,
         setAISettings: ctx.setAISettings,
         customAIModel: ctx.customAIModel,
-        setCustomAIModel: ctx.setCustomAIModel,
         isModelLoaded: ctx.isModelLoaded,
         isAIConfigOpen: ctx.isAIConfigOpen,
         setAIConfigOpen: ctx.setAIConfigOpen,

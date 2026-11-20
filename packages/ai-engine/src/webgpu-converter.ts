@@ -57,10 +57,12 @@ export function checkModelNeedsConversion(modelBuffer: ArrayBuffer): string[] {
 }
 
 /**
- * Check if a model filename indicates it's already WebGPU-optimized.
+ * Whether a model name carries the `.webgpu` marker of an already converted
+ * file (`model.static-b1.webgpu.onnx`). Callers pass either the filename or
+ * the stored name, which has lost `.onnx`, so the marker may come last.
  */
 export function isWebGPUOptimized(modelName: string): boolean {
-  return modelName.includes('.webgpu.');
+  return /\.webgpu(\.|$)/.test(modelName);
 }
 
 /**

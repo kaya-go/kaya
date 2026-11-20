@@ -24,7 +24,7 @@ import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/CurrentBoardRecognitionDialog';
 import { useToast } from '../ui/Toast';
 import { formatSgfLoadError } from '../../utils/sgfLoadErrors';
-import { useTauriDragDrop, usePasteHandler } from './useDropZoneEffects';
+import { useTauriDragDrop, usePasteHandler, uploadDroppedModel } from './useDropZoneEffects';
 import './AppDropZone.css';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
@@ -48,13 +48,13 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
   ({ children, onNavigateToBoard }, ref) => {
     const { t } = useTranslation();
     const { showToast } = useToast();
-    const { loadSGFAsync, setFileName, setCustomAIModel, addSetupPosition, playMove } =
+    const { loadSGFAsync, setFileName, uploadModel, addSetupPosition, playMove } =
       useGameTreeSelector(
         useCallback(
           (ctx: GameTreeContextValue) => ({
             loadSGFAsync: ctx.loadSGFAsync,
             setFileName: ctx.setFileName,
-            setCustomAIModel: ctx.setCustomAIModel,
+            uploadModel: ctx.uploadModel,
             addSetupPosition: ctx.addSetupPosition,
             playMove: ctx.playMove,
           }),
@@ -100,7 +100,7 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
       isOverLibraryRef,
       loadSGFAsync,
       setFileName,
-      setCustomAIModel,
+      uploadModel,
       clearLoadedFile,
       createFile,
       importZip,
@@ -121,19 +121,14 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
 
     const handleFileLoad = useCallback(
       async (file: File) => {
-        if (file.name.endsWith('.onnx')) {
-          setCustomAIModel({
-            data: file,
-            name: file.name,
-            date: file.lastModified,
-            size: file.size,
-          });
-          alert(`Loaded AI model: ${file.name}`);
+        // `handleDrop` accepts extensions in any case, so match them the same way here.
+        const lowerName = file.name.toLowerCase();
+        if (lowerName.endsWith('.onnx')) {
+          await uploadDroppedModel(file, uploadModel, showToast, t);
           return;
         }
 
         // Route image files to the recognition dialog
-        const lowerName = file.name.toLowerCase();
         if (IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
           setRecognitionFile(file);
           return;
@@ -156,7 +151,7 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
       [
         loadSGFAsync,
         setFileName,
-        setCustomAIModel,
+        uploadModel,
         clearLoadedFile,
         checkUnsavedChanges,
         onNavigateToBoard,

@@ -141,6 +141,27 @@ pub async fn onnx_get_cached_model(model_id: String, app_handle: tauri::AppHandl
 pub struct CacheResult {
     pub path: String,
     pub size: u64,
+    /// SHA-256 of the cached bytes, base64url without padding. Matches `sha256Base64Url`.
+    pub hash: String,
+}
+
+/// SHA-256 of a file, encoded as base64url without padding.
+///
+/// Blocking: a model is 70 to 280 MB, so call it from `spawn_blocking`.
+fn sha256_base64url(path: &std::path::Path) -> Result<String, String> {
+    use sha2::{Digest, Sha256};
+
+    let file = File::open(path).map_err(|e| format!("Failed to open cached model: {}", e))?;
+    // The read buffer lives on the heap: a megabyte on the stack is half of a
+    // runtime worker's.
+    let mut reader = std::io::BufReader::with_capacity(1024 * 1024, file);
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut reader, &mut hasher)
+        .map_err(|e| format!("Failed to hash cached model: {}", e))?;
+    Ok(Base64Engine::encode(
+        &base64::engine::general_purpose::URL_SAFE_NO_PAD,
+        hasher.finalize(),
+    ))
 }
 
 /// Cache a downloaded temp file directly to the models directory.
@@ -173,17 +194,48 @@ pub async fn onnx_cache_downloaded_file(
 
     let cached_path = models_dir.join(format!("{}.onnx", model_id));
 
-    std::fs::rename(src, &cached_path)
-        .or_else(|_| {
-            std::fs::copy(src, &cached_path)?;
-            std::fs::remove_file(src)
-        })
-        .map_err(|e| format!("Failed to cache model: {}", e))?;
+    // Moving across filesystems copies the file, and hashing reads all of it:
+    // both stay off the async runtime.
+    let src = src.to_path_buf();
+    tokio::task::spawn_blocking(move || {
+        std::fs::rename(&src, &cached_path)
+            .or_else(|_| {
+                std::fs::copy(&src, &cached_path)?;
+                std::fs::remove_file(&src)
+            })
+            .map_err(|e| format!("Failed to cache model: {}", e))?;
 
-    Ok(CacheResult {
-        path: cached_path.to_string_lossy().to_string(),
-        size: file_size,
+        let hash = sha256_base64url(&cached_path)?;
+
+        Ok(CacheResult {
+            path: cached_path.to_string_lossy().to_string(),
+            size: file_size,
+            hash,
+        })
     })
+    .await
+    .map_err(|e| format!("Task failed: {}", e))?
+}
+
+#[cfg(test)]
+mod tests {
+    use super::sha256_base64url;
+
+    /// Same vector as `modelStorageHash.test.ts`: both sides must agree, or an
+    /// upload never matches the copy a download stored.
+    #[test]
+    fn sha256_base64url_matches_the_js_encoding() {
+        let path = std::env::temp_dir().join(format!("kaya-hash-{}.bin", std::process::id()));
+
+        std::fs::write(&path, b"").unwrap();
+        let empty = sha256_base64url(&path);
+        std::fs::write(&path, b"abc").unwrap();
+        let abc = sha256_base64url(&path);
+        std::fs::remove_file(&path).unwrap();
+
+        assert_eq!(empty.unwrap(), "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
+        assert_eq!(abc.unwrap(), "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+    }
 }
 
 /// A model found in the on-disk cache.

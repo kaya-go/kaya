@@ -26,8 +26,7 @@ import { isTauriApp, writeClipboardText } from '@kaya/platform';
 import { useGameTreeSelector } from './GameTreeContext';
 import type { GameTreeContextValue } from '../types/game';
 import { useToast } from '../components/ui/Toast';
-import { parseModelId } from '../hooks/game/useAIAnalysis';
-import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
+import type { ModelQuantization } from '../services/modelStorage';
 import {
   getTauriCachedModelPath,
   loadModelBuffer,
@@ -42,7 +41,6 @@ import {
   QUANT_LABELS,
   backendDisplayName,
   buildReadyStatus,
-  quantFromModelName,
   readyReason,
   resolveBackendChain,
 } from './ai/engineHelpers';
@@ -148,11 +146,11 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const buildKey = useCallback((): string => {
     return JSON.stringify({
-      modelName: customAIModel?.name || 'default',
+      modelName: customAIModel?.id ?? 'default',
       backend: aiSettings.backend ?? 'auto',
       webgpuBatchSize: aiSettings.webgpuBatchSize,
     });
-  }, [customAIModel?.name, aiSettings.backend, aiSettings.webgpuBatchSize]);
+  }, [customAIModel?.id, aiSettings.backend, aiSettings.webgpuBatchSize]);
 
   const disposeEngine = useCallback(async () => {
     setEngine(null);
@@ -238,8 +236,10 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const autoPick = pickConfig(probe);
           const chain = resolveBackendChain(aiSettings, autoPick);
           const modelName = customAIModel?.name || '';
-          const quant = quantFromModelName(modelName);
           const modelData = customAIModel.data;
+          // Status requires a precision. An unknown file is reported as fp32;
+          // the mismatch check below stays quiet unless the model recorded one.
+          const quant = customAIModel.quantization ?? 'fp32';
           const modelId =
             typeof modelData === 'string'
               ? modelCacheIdFromStorageId(modelData)
@@ -324,23 +324,22 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             setAISettings({ backend: activeSetting });
           }
 
-          // Precision sanity check.
-          if (selectedModelId) {
-            const parsed = parseModelId(selectedModelId);
-            if (parsed) {
-              const expected = parsed.quantization === 'fp16' ? 'float16' : 'float32';
-              if (result.inputDataType !== expected) {
-                console.warn(
-                  `[AIEngine] Precision mismatch — selected ${parsed.quantization}, got ${result.inputDataType}`
-                );
-                showToast(
-                  t('aiConfig.precisionMismatch', {
-                    expected: QUANT_LABELS[parsed.quantization],
-                    actual: result.inputDataType,
-                  }),
-                  'info'
-                );
-              }
+          // Precision sanity check. Only when the model recorded a precision;
+          // a filename with no token is not a claim that the weights are fp32.
+          const expectedQuant = customAIModel.quantization;
+          if (expectedQuant) {
+            const expected = expectedQuant === 'fp16' ? 'float16' : 'float32';
+            if (result.inputDataType !== expected) {
+              console.warn(
+                `[AIEngine] Precision mismatch — selected ${expectedQuant}, got ${result.inputDataType}`
+              );
+              showToast(
+                t('aiConfig.precisionMismatch', {
+                  expected: QUANT_LABELS[expectedQuant],
+                  actual: result.inputDataType,
+                }),
+                'info'
+              );
             }
           }
 
@@ -443,9 +442,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [buildKey, engine, status.phase, initializeEngine]);
 
-  const selectedQuantization: ModelQuantization | null = selectedModelId
-    ? (parseModelId(selectedModelId)?.quantization ?? null)
-    : null;
+  const selectedQuantization: ModelQuantization | null = customAIModel?.quantization ?? null;
 
   const value: AIEngineContextValue = {
     queue,

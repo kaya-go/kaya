@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  loadModelData,
   saveModelData,
   deleteModelData,
   loadModelLibrary,
@@ -8,6 +7,8 @@ import {
   loadSelectedModelId,
   saveSelectedModelId,
   getStoredModelIds,
+  parseModelFilename,
+  sha256Base64Url,
   type StoredModelMetadata,
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
@@ -17,7 +18,8 @@ import { listDiskCachedModels, type DiskCachedModel } from '../../services/model
 import { PREDEFINED_MODELS } from './ai-analysis-types';
 
 export function useModelLibrary() {
-  // Legacy model state (for backward compatibility with AIAnalysisOverlay)
+  // The selected library model, as the engine reads it. Always derived from
+  // `selectedModelId` by the effect below; nothing else sets it.
   const [customAIModel, setCustomAIModel] = useState<AIModel | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
 
@@ -25,6 +27,13 @@ export function useModelLibrary() {
   const [modelLibrary, setModelLibrary] = useState<AIModelEntry[]>([]);
   const [selectedModelId, setSelectedModelIdState] = useState<string | null>(null);
   const downloadingRef = useRef<Set<string>>(new Set());
+  // Same file dropped twice shares one upload before the bytes are hashed.
+  // Same bytes under two names share one upload once the digest is known.
+  // Lookup and insert stay synchronous so the second caller cannot miss the first.
+  const uploadInflightRef = useRef({
+    byFile: new Map<string, Promise<void>>(),
+    byHash: new Map<string, Promise<void>>(),
+  });
 
   // Initialize model library on mount
   useEffect(() => {
@@ -56,18 +65,11 @@ export function useModelLibrary() {
           const isDownloaded = storedIds.includes(preset.id) || disk !== undefined;
 
           library.push({
-            id: preset.id,
-            name: preset.name,
-            description: preset.description,
-            url: preset.url,
-            predefinedId: preset.predefinedId,
-            recommended: preset.recommended,
-            isDefault: preset.isDefault,
-            baseModelIndex: preset.baseModelIndex,
-            quantization: preset.quantization,
+            ...preset,
             isDownloaded,
             size: storedMeta?.size ?? disk?.size,
             date: storedMeta?.date ?? disk?.modified,
+            hash: storedMeta?.hash,
           });
         }
 
@@ -78,9 +80,9 @@ export function useModelLibrary() {
           const isDownloaded = storedIds.includes(userModel.id) || disk !== undefined;
           if (isDownloaded) {
             library.push({
-              id: userModel.id,
-              name: userModel.name,
-              description: userModel.description,
+              ...userModel,
+              // A row saved before displayName existed kept the whole filename in `name`.
+              ...(userModel.displayName ? {} : parseModelFilename(userModel.name)),
               size: userModel.size ?? disk?.size,
               date: userModel.date ?? disk?.modified,
               isDownloaded: true,
@@ -96,6 +98,7 @@ export function useModelLibrary() {
           library.push({
             id: cacheId,
             name: cacheId,
+            displayName: cacheId,
             description: '',
             size: disk.size,
             date: disk.modified,
@@ -148,7 +151,9 @@ export function useModelLibrary() {
       // Only store metadata - NOT the actual ArrayBuffer data
       setCustomAIModel({
         data: selectedModelId,
+        id: model.id,
         name: model.name,
+        quantization: model.quantization,
         size: model.size,
         date: model.date,
       });
@@ -172,6 +177,7 @@ export function useModelLibrary() {
 
       try {
         let downloadedSize: number;
+        let hash: string;
 
         if (isTauriApp()) {
           // Use Rust-side download for reliable streaming + progress on all platforms
@@ -199,11 +205,12 @@ export function useModelLibrary() {
             // Disk cache is the source of truth on Tauri — skip the IndexedDB
             // mirror (would re-read $APPDATA via plugin-fs, rejected on Linux, #103).
             const modelCacheId = modelCacheIdFromStorageId(id);
-            const cacheResult = await invoke<{ path: string; size: number }>(
+            const cacheResult = await invoke<{ path: string; size: number; hash: string }>(
               'onnx_cache_downloaded_file',
               { tempPath, modelId: modelCacheId }
             );
             downloadedSize = cacheResult.size;
+            hash = cacheResult.hash;
           } finally {
             unlisten();
           }
@@ -254,6 +261,7 @@ export function useModelLibrary() {
           }
           chunks.length = 0;
 
+          hash = await sha256Base64Url(buffer);
           await saveModelData(id, buffer);
           downloadedSize = buffer.byteLength;
         }
@@ -263,11 +271,13 @@ export function useModelLibrary() {
         const newMetadata: StoredModelMetadata = {
           id,
           name: model.name,
+          displayName: model.displayName,
           description: model.description,
           size: downloadedSize,
           date: Date.now(),
-          predefinedId: model.predefinedId,
           url: model.url,
+          quantization: model.quantization,
+          hash,
         };
 
         const existingIndex = storedMetadata.findIndex(m => m.id === id);
@@ -289,6 +299,7 @@ export function useModelLibrary() {
                   downloadProgress: undefined,
                   size: downloadedSize,
                   date: Date.now(),
+                  hash,
                 }
               : m
           )
@@ -335,22 +346,22 @@ export function useModelLibrary() {
           }
         }
 
-        // Update metadata
+        // The stored row describes the bytes that are now gone (size, date,
+        // hash), so it goes for a catalog model too: a hash left behind would
+        // make a later upload of the same file select a model that is not there.
         const storedMetadata = await loadModelLibrary();
+        await saveModelLibrary(storedMetadata.filter(m => m.id !== id));
+
         const model = modelLibrary.find(m => m.id === id);
-
         if (model?.isUserModel) {
-          // Remove user model entirely from metadata
-          const filtered = storedMetadata.filter(m => m.id !== id);
-          await saveModelLibrary(filtered);
-
-          // Remove from library
           setModelLibrary(prev => prev.filter(m => m.id !== id));
         } else {
-          // Keep predefined model in library but mark as not downloaded
+          // A catalog model stays listed, ready to download again.
           setModelLibrary(prev =>
             prev.map(m =>
-              m.id === id ? { ...m, isDownloaded: false, size: undefined, date: undefined } : m
+              m.id === id
+                ? { ...m, isDownloaded: false, size: undefined, date: undefined, hash: undefined }
+                : m
             )
           );
         }
@@ -369,43 +380,83 @@ export function useModelLibrary() {
     [modelLibrary, selectedModelId]
   );
 
-  // Upload a model
+  // Upload a model. A second drop of the same file, or of the same bytes, selects the copy already stored.
   const uploadModel = useCallback(async (file: File) => {
-    const id = `user-${Date.now()}-${file.name}`;
-    const buffer = await file.arrayBuffer();
+    const fingerprint = `${file.name}\0${file.size}\0${file.lastModified}`;
+    const pendingFile = uploadInflightRef.current.byFile.get(fingerprint);
+    if (pendingFile) return pendingFile;
 
-    // Save to storage
-    await saveModelData(id, buffer);
+    let task!: Promise<void>;
+    task = (async () => {
+      const buffer = await file.arrayBuffer();
+      const hash = await sha256Base64Url(buffer);
 
-    // Update metadata
-    const storedMetadata = await loadModelLibrary();
-    const newMetadata: StoredModelMetadata = {
-      id,
-      name: file.name,
-      description: 'User uploaded model',
-      size: file.size,
-      date: Date.now(),
-      isUserModel: true,
-    };
-    storedMetadata.push(newMetadata);
-    await saveModelLibrary(storedMetadata);
+      const pendingHash = uploadInflightRef.current.byHash.get(hash);
+      if (pendingHash && pendingHash !== task) {
+        await pendingHash;
+      } else {
+        uploadInflightRef.current.byHash.set(hash, task);
+      }
 
-    // Add to library
-    const newEntry: AIModelEntry = {
-      id,
-      name: file.name,
-      description: 'User uploaded model',
-      size: file.size,
-      date: Date.now(),
-      isDownloaded: true,
-      isUserModel: true,
-    };
+      try {
+        const [storedMetadata, storedIds, diskModels] = await Promise.all([
+          loadModelLibrary(),
+          getStoredModelIds(),
+          listDiskCachedModels(),
+        ]);
+        // A stored row can outlive its bytes (the browser evicted them, the
+        // file left the models directory). Only a row that still has its bytes
+        // is the copy already stored; `initModelLibrary` applies the same test.
+        const hasBytes = (id: string) =>
+          storedIds.includes(id) || diskModels.has(modelCacheIdFromStorageId(id));
+        const existing = storedMetadata.find(m => m.hash === hash && hasBytes(m.id));
+        if (existing) {
+          setSelectedModelIdState(existing.id);
+          await saveSelectedModelId(existing.id);
+          return;
+        }
 
-    setModelLibrary(prev => [...prev, newEntry]);
+        const parsed = parseModelFilename(file.name);
+        const id = `${parsed.displayName}-${hash.slice(0, 12)}`;
 
-    // Auto-select the uploaded model
-    setSelectedModelIdState(id);
-    await saveSelectedModelId(id);
+        await saveModelData(id, buffer);
+
+        const newMetadata: StoredModelMetadata = {
+          id,
+          ...parsed,
+          description: 'User uploaded model',
+          size: file.size,
+          date: Date.now(),
+          isUserModel: true,
+          hash,
+        };
+        // Replace a row left under the same id by bytes that are gone.
+        await saveModelLibrary([...storedMetadata.filter(m => m.id !== id), newMetadata]);
+
+        const newEntry: AIModelEntry = {
+          ...newMetadata,
+          isDownloaded: true,
+        };
+        setModelLibrary(prev => [...prev.filter(m => m.id !== id), newEntry]);
+        setSelectedModelIdState(id);
+        await saveSelectedModelId(id);
+      } finally {
+        if (uploadInflightRef.current.byHash.get(hash) === task) {
+          uploadInflightRef.current.byHash.delete(hash);
+        }
+      }
+    })();
+
+    // Register before this function awaits. The async body has already yielded
+    // on arrayBuffer(), so a second drop in a later turn sees this promise.
+    uploadInflightRef.current.byFile.set(fingerprint, task);
+    try {
+      await task;
+    } finally {
+      if (uploadInflightRef.current.byFile.get(fingerprint) === task) {
+        uploadInflightRef.current.byFile.delete(fingerprint);
+      }
+    }
   }, []);
 
   // Set selected model ID with persistence
@@ -414,23 +465,8 @@ export function useModelLibrary() {
     await saveSelectedModelId(id);
   }, []);
 
-  // Legacy wrapper for setCustomAIModel (for backward compatibility)
-  const handleSetCustomAIModel = useCallback(
-    async (model: AIModel | null) => {
-      if (model && model.data instanceof File) {
-        await uploadModel(model.data);
-      } else if (!model) {
-        setSelectedModelIdState(null);
-        await saveSelectedModelId(null);
-        setCustomAIModel(null);
-      }
-    },
-    [uploadModel]
-  );
-
   return {
     customAIModel,
-    setCustomAIModel: handleSetCustomAIModel,
     isModelLoaded,
     modelLibrary,
     selectedModelId,

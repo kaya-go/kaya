@@ -2,6 +2,7 @@ import { type AISettings } from '../../types/game';
 import { MAX_VISITS } from '../../components/ai/mcts-visits-presets';
 import { Vertex } from '@kaya/goboard';
 import { isTauriApp } from '@kaya/platform';
+import type { ModelQuantization, StoredModelMetadata } from '../../services/modelStorage';
 
 const AI_SETTINGS_STORAGE_KEY = 'kaya-ai-settings';
 
@@ -10,9 +11,6 @@ const AI_SETTINGS_STORAGE_KEY = 'kaya-ai-settings';
 // Update this when releasing new model versions
 const HF_MODEL_REVISION = '0.2.2'; // Use tag name for readability
 const HF_REPO_BASE = `https://huggingface.co/kaya-go/kaya/resolve/${HF_MODEL_REVISION}`;
-
-// Model quantization types - exported for UI components
-export type ModelQuantization = 'fp32' | 'fp16' | 'uint8';
 
 // Helper to generate model URL from name and quantization
 function getModelUrl(modelName: string, quantization: ModelQuantization): string {
@@ -60,9 +58,8 @@ export interface QuantizationVariant {
 // Base model definitions - exported for UI components.
 // Single canonical model — picked at refactor 2026-05-04. The previously
 // shipped "strongest" variant (kata1-b28c512nbt-adam-s11165M) is no longer
-// listed; getModelId/parseModelId still understand its IDs so users with
-// stored model selections continue to work, but they're guided toward the
-// latest by recommended/isDefault.
+// listed. Stored `katago-strongest-*` selections are migrated to
+// `katago-latest-*`. recommended/isDefault still point at this network.
 export const BASE_MODELS: BaseModelDefinition[] = [
   {
     name: 'kata1-b28c512nbt-s12043015936-d5616446734',
@@ -103,62 +100,29 @@ export const QUANTIZATION_OPTIONS: QuantizationVariant[] = [
   },
 ];
 
-// Helper to generate model ID from base model index and quantization.
-// The single canonical model uses the 'latest' prefix. The legacy
-// 'strongest' prefix still parses (for back-compat with stored
-// selectedModelId values), and resolves to the same baseModelIndex=0.
-export function getModelId(baseModelIndex: number, quantization: ModelQuantization): string {
-  // baseModelIndex is always 0 in the current single-model lineup.
+// Storage id for one precision of the canonical network.
+// `katago-latest`, `katago-latest-fp16`, `katago-latest-quant`.
+export function getModelId(quantization: ModelQuantization): string {
   const suffix = quantization === 'fp32' ? '' : quantization === 'fp16' ? '-fp16' : '-quant';
   return `katago-latest${suffix}`;
 }
 
-// Helper to parse model ID back to base model index and quantization.
-// Accepts the legacy 'strongest' prefix; both map to baseModelIndex=0.
-export function parseModelId(
-  modelId: string
-): { baseModelIndex: number; quantization: ModelQuantization } | null {
-  const match = modelId.match(/^katago-(strongest|latest)(-fp16|-quant)?$/);
-  if (!match) return null;
-
-  const baseModelIndex = 0;
-  const quantization: ModelQuantization =
-    match[2] === '-fp16' ? 'fp16' : match[2] === '-quant' ? 'uint8' : 'fp32';
-
-  return { baseModelIndex, quantization };
-}
-
-// Generate predefined models from base definitions and quantization variants
-export const PREDEFINED_MODELS: Array<{
-  id: string;
-  name: string;
-  description: string;
-  url: string;
-  size: string;
-  predefinedId: string;
-  baseModelIndex: number;
-  quantization: ModelQuantization;
-  recommended?: boolean;
-  isDefault?: boolean;
-}> = BASE_MODELS.flatMap((model, modelIndex) =>
+// One catalog row per precision. `name` is the KataGo network name so it
+// lines up with katagotraining.org; `displayName` is the short label, with a
+// precision suffix on fp16 / uint8. Which precision to prefer is a property
+// of the host, decided at runtime (`useAutoPick` / `pickQuantization`).
+export const PREDEFINED_MODELS: StoredModelMetadata[] = BASE_MODELS.flatMap(model =>
   QUANTIZATION_OPTIONS.map(variant => {
-    const id = getModelId(modelIndex, variant.quantization);
+    const id = getModelId(variant.quantization);
+    const precision =
+      variant.quantization === 'fp32' ? '' : ` (${QUANT_DISPLAY_NAMES[variant.quantization]})`;
     return {
       id,
-      name: `${model.displayName}${
-        variant.quantization === 'fp32' ? '' : ` (${QUANT_DISPLAY_NAMES[variant.quantization]})`
-      }`,
+      name: model.name,
+      displayName: `${model.displayName}${precision}`,
       description: model.description,
       url: getModelUrl(model.name, variant.quantization),
-      size: variant.size,
-      predefinedId: id,
-      baseModelIndex: modelIndex,
       quantization: variant.quantization,
-      // No per-variant recommended/isDefault flag. Which precision to prefer
-      // is a property of the host, not of the variant, so it is decided at
-      // runtime from the probe (see `useAutoPick` / `pickQuantization`). The
-      // static flag this used to carry hardcoded fp16 and, like the value
-      // `pickQuantization` returned, was read by nobody.
     };
   })
 );

@@ -6,7 +6,7 @@ import type { GameTreeContextValue } from '../../types/game';
 import { useBoardTheme } from '@kaya/themes';
 import { useToast } from '../ui/Toast';
 import { isTauriApp } from '@kaya/platform';
-import { BASE_MODELS, parseModelId, getModelId } from '../../hooks/game/useAIAnalysis';
+import { BASE_MODELS, getModelId } from '../../hooks/game/useAIAnalysis';
 import { useAutoPick } from '../../hooks/useAutoPick';
 
 export type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts' | 'detection';
@@ -14,7 +14,7 @@ export type ConfigTab = 'analysis' | 'game' | 'theme' | 'shortcuts' | 'detection
 export function useKayaConfig() {
   const { t } = useTranslation();
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const [expandedModelIndex, setExpandedModelIndex] = useState<number | null>(null);
+  const [expandedModelName, setExpandedModelName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ConfigTab>('analysis');
   const {
     aiSettings,
@@ -56,24 +56,21 @@ export function useKayaConfig() {
   const { boardTheme, setBoardTheme, availableThemes } = useBoardTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Group models by base model index for hierarchical display
-  const modelsByBase = useMemo(() => {
-    const grouped = new Map<number, typeof modelLibrary>();
+  // Catalog rows, grouped by network. A user file is never grouped here, even
+  // when it carries a catalog network's name (the files on Hugging Face do):
+  // the group renders one row per precision, so it would not be listed at all.
+  const modelsByName = useMemo(() => {
+    const grouped = new Map<string, typeof modelLibrary>();
     for (const model of modelLibrary) {
-      if (model.baseModelIndex !== undefined) {
-        const existing = grouped.get(model.baseModelIndex) || [];
-        existing.push(model);
-        grouped.set(model.baseModelIndex, existing);
-      }
+      if (model.isUserModel) continue;
+      const existing = grouped.get(model.name) ?? [];
+      existing.push(model);
+      grouped.set(model.name, existing);
     }
     return grouped;
   }, [modelLibrary]);
 
-  // Get user-uploaded models (those without baseModelIndex)
-  const userModels = useMemo(
-    () => modelLibrary.filter(m => m.baseModelIndex === undefined),
-    [modelLibrary]
-  );
+  const userModels = useMemo(() => modelLibrary.filter(m => m.isUserModel), [modelLibrary]);
 
   // Detect Linux desktop for showing PyTorch option
   const isLinuxDesktop =
@@ -107,17 +104,17 @@ export function useKayaConfig() {
 
   // Expand the model that contains the selected variant on initial mount only
   useEffect(() => {
-    if (selectedModelId && expandedModelIndex === null && !hasUserInteracted.current) {
-      const parsed = parseModelId(selectedModelId);
-      if (parsed) {
-        setExpandedModelIndex(parsed.baseModelIndex);
+    if (selectedModelId && expandedModelName === null && !hasUserInteracted.current) {
+      const selected = modelLibrary.find(m => m.id === selectedModelId);
+      if (selected && !selected.isUserModel) {
+        setExpandedModelName(selected.name);
       }
     }
-  }, [selectedModelId, expandedModelIndex]);
+  }, [selectedModelId, expandedModelName, modelLibrary]);
 
-  const handleToggleExpand = (baseIndex: number) => {
+  const handleToggleExpand = (name: string) => {
     hasUserInteracted.current = true;
-    setExpandedModelIndex(expandedModelIndex === baseIndex ? null : baseIndex);
+    setExpandedModelName(expandedModelName === name ? null : name);
   };
 
   // Resolve portal container after mount to avoid SSR issues
@@ -207,11 +204,8 @@ export function useKayaConfig() {
   const recommendedQuantization = autoPick?.quantization ?? 'fp32';
 
   const recommendedModelId = useMemo(() => {
-    const recommendedBase = BASE_MODELS.findIndex(m => m.recommended);
-    if (recommendedBase >= 0) {
-      return getModelId(recommendedBase, recommendedQuantization);
-    }
-    return null;
+    if (!BASE_MODELS.some(m => m.recommended)) return null;
+    return getModelId(recommendedQuantization);
   }, [recommendedQuantization]);
 
   const recommendedModel = useMemo(() => {
@@ -235,9 +229,9 @@ export function useKayaConfig() {
     activeTab,
     setActiveTab,
     closeModal,
-    expandedModelIndex,
+    expandedModelName,
     handleToggleExpand,
-    modelsByBase,
+    modelsByName,
     userModels,
     isAnyDownloading,
     hasAnyDownloaded,

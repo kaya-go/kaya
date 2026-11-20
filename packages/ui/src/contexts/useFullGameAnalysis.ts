@@ -17,7 +17,7 @@ import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import type { SGFProperty } from '../types/game';
 import { getPathToNode, mapAnalysisPath } from '../utils/gameCache';
 import { generateAnalysisCacheKey, isAbortError } from '../utils/aiAnalysis';
-import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
+import type { ModelQuantization } from '../services/modelStorage';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 const TAG = 'full-game';

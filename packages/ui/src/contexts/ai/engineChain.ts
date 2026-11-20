@@ -31,7 +31,10 @@ export interface EngineChainConfig {
   modelBuffer?: ArrayBuffer;
   /** Native desktop backends can initialize directly from disk. */
   modelPath?: string;
-  /** User-visible model name; used to detect static-batch / .webgpu. variants. */
+  /**
+   * The model's stored `name`: a network name, or a user file's name without
+   * `.onnx`. Read for the `static-b<N>` and `.webgpu` markers of a converted file.
+   */
   modelName: string;
   /** Stable ID for the model (Tauri caching key). */
   modelId: string;
@@ -114,8 +117,9 @@ async function initOneBackend(backend: BackendId, cfg: EngineChainConfig): Promi
         throw new Error('Model bytes are required for the WebGPU backend');
       }
       executionProviders = ['webgpu'];
-      const needsConversion = !cfg.isTauri && !isWebGPUOptimized(cfg.modelName);
-      if (cfg.modelName.includes('.webgpu.') || needsConversion) {
+      const optimized = isWebGPUOptimized(cfg.modelName);
+      const needsConversion = !cfg.isTauri && !optimized;
+      if (optimized || needsConversion) {
         enableGraphCapture = true;
       }
       if (needsConversion) {
@@ -177,7 +181,7 @@ async function initOneBackend(backend: BackendId, cfg: EngineChainConfig): Promi
 function detectStaticBatchSize(modelName: string): number | undefined {
   const m = modelName.match(/static-b(\d+)/);
   if (m) return parseInt(m[1], 10);
-  if (modelName.includes('.webgpu.')) return 1;
+  if (isWebGPUOptimized(modelName)) return 1;
   return undefined;
 }
 

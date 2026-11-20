@@ -1,11 +1,10 @@
-import type { ModelQuantization } from '../../hooks/game/ai-analysis-types';
-import { parseModelId, getModelId } from '../../hooks/game/useAIAnalysis';
+import type { ModelQuantization } from '../../services/modelStorage';
 import { QUANT_LABELS } from './engineHelpers';
 
 interface ModelLibraryEntry {
   id: string;
+  name: string;
   isDownloaded: boolean;
-  baseModelIndex?: number;
   quantization?: ModelQuantization;
 }
 
@@ -34,54 +33,54 @@ export function showModelErrorRecoveryToast(
 ): void {
   const isFp16Error = /float16|fp16|Float16/.test(errorMessage);
 
-  if (selectedModelId) {
-    const parsed = parseModelId(selectedModelId);
-    if (parsed) {
-      const currentQuant = parsed.quantization;
-      const alternatives: ModelQuantization[] = (
-        ['fp32', 'uint8', 'fp16'] as ModelQuantization[]
-      ).filter(q => q !== currentQuant);
+  const current = selectedModelId ? modelLibrary.find(m => m.id === selectedModelId) : undefined;
+  if (current?.quantization) {
+    const currentQuant = current.quantization;
+    const alternatives: ModelQuantization[] = (
+      ['fp32', 'uint8', 'fp16'] as ModelQuantization[]
+    ).filter(q => q !== currentQuant);
 
-      for (const alt of alternatives) {
-        const altId = getModelId(parsed.baseModelIndex, alt);
-        const altModel = modelLibrary.find(m => m.id === altId);
-        if (altModel?.isDownloaded) {
-          showToast(
-            isFp16Error
-              ? t('aiConfig.modelIncompatible', { quant: QUANT_LABELS[currentQuant] })
-              : t('aiConfig.allBackendsFailed'),
-            'error',
-            {
-              label: t('aiConfig.switchToModel', { quant: QUANT_LABELS[alt] }),
-              onClick: () => setSelectedModelId(altId),
-            }
-          );
-          return;
-        }
-      }
-
-      const fp32Id = getModelId(parsed.baseModelIndex, 'fp32');
-      const fp32Model = modelLibrary.find(m => m.id === fp32Id);
-      if (fp32Model && !fp32Model.isDownloaded) {
+    for (const alt of alternatives) {
+      const altModel = modelLibrary.find(
+        m => m.name === current.name && m.quantization === alt && m.isDownloaded
+      );
+      if (altModel) {
         showToast(
           isFp16Error
             ? t('aiConfig.modelIncompatible', { quant: QUANT_LABELS[currentQuant] })
             : t('aiConfig.allBackendsFailed'),
           'error',
           {
-            label: t('aiConfig.downloadAndSwitch', { quant: QUANT_LABELS['fp32'] }),
-            onClick: async () => {
-              try {
-                await downloadModel(fp32Id);
-                setSelectedModelId(fp32Id);
-              } catch {
-                showToast(t('aiConfig.modelDownloadFailed'), 'error');
-              }
-            },
+            label: t('aiConfig.switchToModel', { quant: QUANT_LABELS[alt] }),
+            onClick: () => setSelectedModelId(altModel.id),
           }
         );
         return;
       }
+    }
+
+    const fp32Model = modelLibrary.find(
+      m => m.name === current.name && m.quantization === 'fp32' && !m.isDownloaded
+    );
+    if (fp32Model) {
+      showToast(
+        isFp16Error
+          ? t('aiConfig.modelIncompatible', { quant: QUANT_LABELS[currentQuant] })
+          : t('aiConfig.allBackendsFailed'),
+        'error',
+        {
+          label: t('aiConfig.downloadAndSwitch', { quant: QUANT_LABELS['fp32'] }),
+          onClick: async () => {
+            try {
+              await downloadModel(fp32Model.id);
+              setSelectedModelId(fp32Model.id);
+            } catch {
+              showToast(t('aiConfig.modelDownloadFailed'), 'error');
+            }
+          },
+        }
+      );
+      return;
     }
   }
 

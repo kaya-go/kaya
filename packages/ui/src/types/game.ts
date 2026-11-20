@@ -5,6 +5,7 @@ import { GameInfo as SGFGameInfo, type GameInfoPatch } from '@kaya/sgf';
 import { AnalysisResult } from '@kaya/ai-engine';
 
 import type { ConfigTab } from '../components/ai/useKayaConfig';
+import type { StoredModelMetadata } from '../services/modelStorage';
 
 export interface SGFProperty {
   [key: string]: string[];
@@ -100,51 +101,26 @@ export interface GameSettings {
   customDetectionModelName?: string;
 }
 
-export interface AIModel {
+export interface AIModel extends Pick<
+  StoredModelMetadata,
+  'id' | 'name' | 'quantization' | 'date' | 'size'
+> {
+  /**
+   * Model payload or a lazy-load key:
+   * - User-uploaded: `File` (browser) or `ArrayBuffer` (Tauri).
+   * - Library model: storage id (`string`); bytes are loaded on demand.
+   */
   data: File | ArrayBuffer | string;
-  name?: string;
-  date?: number;
-  size?: number;
 }
 
-/** Predefined model identifiers */
-export type PredefinedModelId = string;
-
-/** Model quantization types */
-export type ModelQuantization = 'fp32' | 'fp16' | 'uint8';
-
-/** An entry in the model library (either predefined or user-uploaded) */
-export interface AIModelEntry {
-  /** Unique identifier for the model */
-  id: string;
-  /** Display name for the model */
-  name: string;
-  /** Short description */
-  description: string;
-  /** Size in bytes (if known/downloaded) */
-  size?: number;
-  /** Date added/downloaded */
-  date?: number;
+/** Runtime library row: persisted metadata plus download progress. */
+export interface AIModelEntry extends StoredModelMetadata {
   /** Whether the model is downloaded and available locally */
   isDownloaded: boolean;
   /** Whether this is currently downloading */
   isDownloading?: boolean;
   /** Download progress (0-100) */
   downloadProgress?: number;
-  /** For predefined models, the download URL */
-  url?: string;
-  /** For user models, whether it was uploaded by user */
-  isUserModel?: boolean;
-  /** Predefined model ID if applicable */
-  predefinedId?: PredefinedModelId;
-  /** Whether this is the recommended model */
-  recommended?: boolean;
-  /** Whether this is the default model */
-  isDefault?: boolean;
-  /** Index of the base model (for predefined models) */
-  baseModelIndex?: number;
-  /** Quantization type (for predefined models) */
-  quantization?: ModelQuantization;
 }
 
 export interface GameTreeContextValue {
@@ -164,7 +140,6 @@ export interface GameTreeContextValue {
 
   // AI Model
   customAIModel: AIModel | null;
-  setCustomAIModel: (model: AIModel | null) => void;
   isModelLoaded: boolean;
   aiSettings: AISettings;
   setAISettings: (settings: Partial<AISettings>) => void;

@@ -22,7 +22,7 @@ import {
   type AnalysisHistoryItem,
 } from '../utils/aiAnalysis';
 import { vertexToGTP } from '../utils/gtpUtils';
-import type { ModelQuantization } from '../hooks/game/ai-analysis-types';
+import type { ModelQuantization } from '../services/modelStorage';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface UseLiveAnalysisParams {

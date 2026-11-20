@@ -12,18 +12,13 @@ import {
 } from './ai-analysis-types';
 
 // Re-export types and constants for backward compatibility
-export type {
-  ModelQuantization,
-  BaseModelDefinition,
-  QuantizationVariant,
-} from './ai-analysis-types';
-export { BASE_MODELS, QUANTIZATION_OPTIONS, getModelId, parseModelId } from './ai-analysis-types';
+export type { BaseModelDefinition, QuantizationVariant } from './ai-analysis-types';
+export { BASE_MODELS, QUANTIZATION_OPTIONS, getModelId } from './ai-analysis-types';
 
 export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
   // Delegate model library management to sub-hook
   const {
     customAIModel,
-    setCustomAIModel: handleSetCustomAIModel,
     isModelLoaded,
     modelLibrary,
     selectedModelId,
@@ -200,7 +195,6 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
 
   return {
     customAIModel,
-    setCustomAIModel: handleSetCustomAIModel,
     isModelLoaded,
     isAIConfigOpen,
     setAIConfigOpen,
