@@ -56,6 +56,8 @@ export class TauriEngine extends Engine {
   private executionProvider: ExecutionProviderPreference;
   private providerIsGpu = false;
   private modelIsFp16 = false;
+  /** Set by `dispose`: the native slot is empty on purpose, not lost. */
+  private disposed = false;
 
   constructor(config: TauriEngineConfig = {}) {
     super(config);
@@ -84,7 +86,7 @@ export class TauriEngine extends Engine {
       return await this.invoke!<T>(cmd, args);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
-      if (/Engine not initialized|panicked/.test(message)) {
+      if (!this.disposed && /Engine not initialized|panicked/.test(message)) {
         this.onEngineLost?.(new Error(message));
       }
       throw e;
@@ -377,6 +379,7 @@ export class TauriEngine extends Engine {
   }
 
   async dispose(): Promise<void> {
+    this.disposed = true;
     if (this.invoke) {
       try {
         await this.invoke('onnx_dispose');

@@ -45,6 +45,28 @@ describe('TauriEngine engine loss', () => {
     expect(lost).toHaveBeenCalledTimes(1);
   });
 
+  // Its own `onnx_dispose` empties the native slot, so a request still in
+  // flight comes back "Engine not initialized". The owner's handler would then
+  // dispose the engine that replaced this one.
+  test('a disposed engine does not report itself lost', async () => {
+    let reject: (reason: unknown) => void = () => {};
+    const { engine, lost } = engineWith(cmd =>
+      cmd === 'onnx_analyze_batch'
+        ? new Promise((_, r) => {
+            reject = r;
+          })
+        : Promise.resolve(undefined)
+    );
+
+    const pending = engine.analyzeBatch([{ signMap: board }]);
+    await Promise.resolve();
+    await engine.dispose();
+    reject('Engine not initialized');
+
+    await expect(pending).rejects.toBe('Engine not initialized');
+    expect(lost).not.toHaveBeenCalled();
+  });
+
   test('an ordinary error leaves the engine in place (search)', async () => {
     const { engine, lost } = engineWith(async cmd => {
       if (cmd === 'onnx_mcts_request_id') return 1;
