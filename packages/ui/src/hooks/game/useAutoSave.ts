@@ -4,6 +4,7 @@ import { stringify as stringifySGF } from '@kaya/sgf';
 import { type SGFProperty } from '../../types/game';
 import { injectAnalysisToTree } from '../../utils/sgfAnalysis';
 import type { BoardDimensions } from '../../utils/gameCache';
+import { childIndexPath } from '../../utils/treePath';
 import type { AnalysisResult } from '@kaya/ai-engine';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
@@ -42,7 +43,9 @@ export function autoSaveCurrentGame(
     const saveData = {
       sgf: sgfContent,
       fileName: fileName || 'untitled.sgf',
+      // The id alone does not survive the reload, which renumbers the nodes.
       currentNodeId: currentNodeId,
+      currentPath: childIndexPath(gameTree, currentNodeId) ?? [],
       timestamp: new Date().toISOString(),
     };
 
@@ -98,6 +101,7 @@ export function getAutoSavedGame(): {
   sgf: string;
   fileName: string;
   currentNodeId: number | string | null;
+  currentPath?: number[];
   timestamp: string;
 } | null {
   if (typeof window === 'undefined') return null;

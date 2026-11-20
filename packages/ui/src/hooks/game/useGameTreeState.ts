@@ -13,6 +13,7 @@ import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
 import { validateTreeIntegrity } from '../../utils/treeValidation';
 import { clearAllCaches } from '../../utils/gameCache';
+import { restoredCursorNodeId } from '../../utils/treePath';
 import { determineStartNodeId } from './determineStartNode';
 import { loadGameSettings } from './useGameSettings';
 
@@ -63,7 +64,7 @@ export function useGameTreeState() {
 
         if (autoSave) {
           const parsed = JSON.parse(autoSave);
-          const { sgf, currentNodeId: savedNodeId, fileName: savedFileName } = parsed;
+          const { sgf, fileName: savedFileName } = parsed;
 
           if (sgf) {
             // Parse and restore the auto-saved game
@@ -86,7 +87,7 @@ export function useGameTreeState() {
                 setGameTree(restoredTree);
                 cleanTreeRef.current = restoredTree; // Mark as clean after restore
                 setRootId(rootNode.id);
-                setCurrentNodeId(savedNodeId ?? rootNode.id);
+                setCurrentNodeId(restoredCursorNodeId(restoredTree, parsed));
                 setFileName(savedFileName ?? null);
                 setIsInitialized(true);
                 return;
