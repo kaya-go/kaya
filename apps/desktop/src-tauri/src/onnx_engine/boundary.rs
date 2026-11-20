@@ -10,16 +10,17 @@ use super::mcts::KoInfo;
 use super::types::AnalysisOptions;
 
 /// Lock a global engine slot, recovering it when an earlier call panicked
-/// while holding it.
+/// while holding it. The ONNX engine and the PyTorch sidecar both use it.
 ///
 /// std never clears a poisoned mutex by itself, so without this every later
 /// call, a fresh initialization included, failed until the app restarted. The
 /// panic may have left the engine halfway through a run, so it is dropped: the
-/// next analysis reports "Engine not initialized" and the frontend builds a
-/// new one.
-pub(super) fn lock_or_reset<T>(slot: &Mutex<Option<T>>) -> MutexGuard<'_, Option<T>> {
+/// next analysis reports that the engine is not initialized and the frontend
+/// builds a new one.
+pub(crate) fn lock_or_reset<T>(slot: &Mutex<Option<T>>) -> MutexGuard<'_, Option<T>> {
     slot.lock().unwrap_or_else(|poisoned| {
-        eprintln!("[OnnxEngine] A call panicked while holding the engine; dropping it");
+        let engine = std::any::type_name::<T>().rsplit("::").next().unwrap_or("Engine");
+        eprintln!("[{}] A call panicked while holding the engine; dropping it", engine);
         let mut guard = poisoned.into_inner();
         *guard = None;
         slot.clear_poison();

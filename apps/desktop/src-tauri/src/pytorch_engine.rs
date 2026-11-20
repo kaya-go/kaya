@@ -5,6 +5,7 @@
 //! Falls back gracefully when Python/PyTorch is not available.
 
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as Base64Engine};
+use crate::onnx_engine::lock_or_reset;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, Command, Stdio};
@@ -17,6 +18,16 @@ pub struct PyTorchEngine {
     stdout: BufReader<std::process::ChildStdout>,
 }
 
+/// Dropping the engine stops its sidecar. A reset after a panic, a new
+/// initialization and `dispose_engine` all drop one, and a dropped `Child`
+/// would otherwise go on running, then stay unreaped.
+impl Drop for PyTorchEngine {
+    fn drop(&mut self) {
+        let _ = self.process.kill();
+        let _ = self.process.wait();
+    }
+}
+
 /// Info about the PyTorch engine
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PyTorchInfo {
@@ -26,7 +37,9 @@ pub struct PyTorchInfo {
     pub params: u64,
 }
 
-/// Global engine instance
+/// Global engine instance. Every lock goes through `lock_or_reset`: a panic
+/// under the lock drops the engine instead of disabling the sidecar until the
+/// app restarts.
 static ENGINE: Mutex<Option<PyTorchEngine>> = Mutex::new(None);
 
 /// Check if PyTorch with GPU support is available on this system
@@ -183,8 +196,7 @@ pub fn initialize_engine(model_path: &str) -> Result<PyTorchInfo, String> {
         info.provider, info.device, info.fp16, info.params
     );
 
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
-    *global = Some(engine);
+    *lock_or_reset(&ENGINE) = Some(engine);
 
     Ok(info)
 }
@@ -221,7 +233,7 @@ pub fn run_inference(
     global_input: &[f32],
     batch_size: usize,
 ) -> Result<InferenceResult, String> {
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut global = lock_or_reset(&ENGINE);
     let engine = global
         .as_mut()
         .ok_or("PyTorch engine not initialized")?;
@@ -300,7 +312,7 @@ pub struct InferenceResult {
 
 /// Run a benchmark
 pub fn benchmark(iterations: usize) -> Result<BenchmarkResult, String> {
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut global = lock_or_reset(&ENGINE);
     let engine = global
         .as_mut()
         .ok_or("PyTorch engine not initialized")?;
@@ -347,10 +359,30 @@ pub struct BenchmarkResult {
 
 /// Dispose the engine
 pub fn dispose_engine() -> Result<(), String> {
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
-    if let Some(mut engine) = global.take() {
-        let _ = engine.process.kill();
-        let _ = engine.process.wait();
-    }
+    let engine = lock_or_reset(&ENGINE).take();
+    drop(engine);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A panic while a call held the sidecar lock poisoned it, and every later
+    /// call, a new initialization included, failed until the app restarted.
+    /// Linux only, and CI only runs `cargo check`, which skips tests.
+    #[test]
+    fn a_panic_under_the_sidecar_lock_does_not_outlive_the_call() {
+        let _ = std::thread::spawn(|| {
+            let _guard = ENGINE.lock();
+            panic!("simulated panic under the sidecar lock");
+        })
+        .join();
+        assert!(ENGINE.is_poisoned());
+
+        let err = run_inference(&[], &[], 1).err();
+        assert_eq!(err.as_deref(), Some("PyTorch engine not initialized"));
+        assert!(!ENGINE.is_poisoned());
+        assert_eq!(dispose_engine(), Ok(()));
+    }
 }
