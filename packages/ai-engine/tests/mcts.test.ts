@@ -69,6 +69,49 @@ describe('runMCTS per-move evaluation', () => {
 });
 
 /**
+ * The web worker's watchdog takes a silent worker for a stuck one, so a search
+ * reports between evaluations. The forced visits of the played move used not
+ * to: one evaluation at a time, max(3, 5% of the visits) of them, so 125 at
+ * 2500 visits, close to a minute on WASM, and the watchdog killed the search.
+ */
+describe('runMCTS progress', () => {
+  test('is reported between any two evaluations, forced visits included', async () => {
+    const events: string[] = [];
+    const recording: MCTSBatchEvaluator = async leaves => {
+      events.push('evaluate');
+      return evaluate(leaves);
+    };
+    const progress: MCTSProgress[] = [];
+    const result = await runMCTS(
+      GoBoard.fromDimensions(9),
+      1,
+      7.5,
+      [],
+      8,
+      9,
+      1,
+      1,
+      recording,
+      () => {},
+      p => {
+        events.push('progress');
+        progress.push(p);
+      },
+      undefined,
+      'G7'
+    );
+
+    // The forced visits ran: G7 has none from the search itself.
+    expect(result.moveSuggestions.find(s => s.move === 'G7')!.visits).toBe(3);
+    expect(events.join(' ')).not.toContain('evaluate evaluate');
+    // The count goes past the visits asked for, up to the visits made.
+    const last = progress[progress.length - 1];
+    expect(last.completedVisits).toBe(result.visits!);
+    expect(last.totalVisits).toBe(result.visits!);
+  });
+});
+
+/**
  * `probability` is the policy prior, searched or not: what the search thinks is
  * in `visits`. Writing the visit share for visited moves and the prior for the
  * others put two units in one field.

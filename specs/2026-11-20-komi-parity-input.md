@@ -80,4 +80,7 @@ the score lead moves less than 0.4 points on average.
 - The values move with half-integer komi only, and most on small boards, where
   the margin is a few points.
 - Analysis saved in `KA` before this change keeps its old values for a game
-  with a half-integer komi; running the analysis again refreshes them.
+  with a half-integer komi. As first shipped, running the analysis again did
+  not refresh them: the cache answered every request from them. They are now
+  marked as an older engine version and run again, see
+  [the engine version in KA](2026-11-20-ka-engine-version.md).

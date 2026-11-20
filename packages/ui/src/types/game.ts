@@ -148,6 +148,11 @@ export interface GameTreeContextValue {
   setConfigInitialTab: (tab: ConfigTab) => void;
   analysisCache: React.MutableRefObject<Map<string, AnalysisResult>>;
   analysisCacheSize: number;
+  /**
+   * Bumped whenever results land in or leave `analysisCache`, which is mutated
+   * in place. A result that replaces another under its key changes no size.
+   */
+  analysisRevision: number;
   updateAnalysisCacheSize: () => void;
 
   // Game Settings (non-AI)
