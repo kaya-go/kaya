@@ -3,16 +3,25 @@
  * when a stored result answers a request, at what depth to run one it does
  * not, and which of two results to keep.
  *
- *   - A cached result answers a request when it searched at least as deep
- *     and, for a request that forces a move, it explored that move (see
- *     `answers`). Visit count is the only depth: the key omits it.
+ *   - A cached result answers a request when this engine version computed it,
+ *     it searched at least as deep and, for a request that forces a move, it
+ *     explored that move (see `answers`). Visit count is the only depth: the
+ *     key omits it.
  *   - The cache never loses depth: a result that misses only for the
  *     unexplored move is redone at its own depth, then replaced.
+ *   - Analysis from another engine version (`KA` saved before the current
+ *     ANALYSIS_ENGINE_VERSION) stays until a new result replaces it, so it is
+ *     shown and saved again as it was, but it answers nothing.
  */
 
 import type { SignMap } from '@kaya/goboard';
 import type { AnalysisRequest } from './queue';
-import type { AnalysisResult, HistoryMove } from './types';
+import { ANALYSIS_ENGINE_VERSION, type AnalysisResult, type HistoryMove } from './types';
+
+/** Whether this engine version computed `entry` (see AnalysisResult.engineVersion). */
+function fromThisEngine(entry: AnalysisResult): boolean {
+  return (entry.engineVersion ?? ANALYSIS_ENGINE_VERSION) === ANALYSIS_ENGINE_VERSION;
+}
 
 /**
  * Shared analysis cache key — single source of truth for AnalysisQueue,
@@ -64,8 +73,10 @@ export class AnalysisCache {
   }
 
   /**
-   * Whether a cached result can stand in for running `req`. It must have searched
-   * at least as deep. A request that forces a move (`includeMove`, which engines
+   * Whether a cached result can stand in for running `req`. This engine version
+   * must have computed it: older versions had other network inputs, so their
+   * values are not this engine's. It must have searched at least as deep. A
+   * request that forces a move (`includeMove`, which engines
    * honour only with search, so above 1 visit) also needs that move explored:
    * engines list their top policy moves whether the search visited them or not,
    * and one it never visited (`visits: 0`) has no evaluation of its own. Counted
@@ -76,7 +87,7 @@ export class AnalysisCache {
    * lookup.
    */
   answers(entry: AnalysisResult, req: CacheRequest): boolean {
-    if ((entry.visits ?? 1) < req.numVisits) return false;
+    if (!fromThisEngine(entry) || (entry.visits ?? 1) < req.numVisits) return false;
     const move = req.includeMove;
     if (!move || req.numVisits <= 1 || this.ranFor.get(entry) === move) return true;
     return entry.moveSuggestions.find(s => s.move === move)?.visits !== 0;
@@ -95,10 +106,14 @@ export class AnalysisCache {
   /**
    * Visits to run `req` at. When the cached entry missed only because it did not
    * explore the forced move, redo it at the entry's own depth: the replacement then
-   * loses nothing, and still answers every request the old entry answered.
+   * loses nothing, and still answers every request the old entry answered. An
+   * entry from another engine version answered nothing, so its depth is no
+   * reason to search deeper than asked.
    */
   visitsToRun(req: CacheRequest): number {
-    return Math.max(req.numVisits, this.map.get(this.key(req))?.visits ?? 0);
+    const entry = this.map.get(this.key(req));
+    const keep = entry && fromThisEngine(entry) ? (entry.visits ?? 0) : 0;
+    return Math.max(req.numVisits, keep);
   }
 
   store(req: CacheRequest, result: AnalysisResult): void {

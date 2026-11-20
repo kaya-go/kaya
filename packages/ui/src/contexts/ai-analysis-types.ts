@@ -12,8 +12,10 @@ export interface NextMoveInfo {
   vertex: [number, number];
   /** Player who played the move (1 = Black, -1 = White) */
   player: 1 | -1;
-  /** GTP format (e.g., "D4") */
+  /** As the engine names it (e.g., "D4"), to match its moves */
   gtp: string;
+  /** As the board labels the point, to show; differs from `gtp` on a board wider than tall */
+  label: string;
   /** Whether this move is among the AI's top suggestions */
   isTopMove: boolean;
   /** Rank in AI suggestions (0 = best, -1 = not in suggestions) */

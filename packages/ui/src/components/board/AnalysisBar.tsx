@@ -191,7 +191,8 @@ export const AnalysisBar: React.FC<AnalysisBarProps> = ({ onShowLegend }) => {
                         : `${nextMoveInfo.deltaScoreLead >= 0 ? '+' : ''}${nextMoveInfo.deltaScoreLead.toFixed(1)}`}
                     </span>
                     <span className="ai-analysis-summary__metric-label">
-                      {nextMoveInfo.gtp} {nextMoveInfo.rank >= 0 ? `#${nextMoveInfo.rank + 1}` : ''}
+                      {nextMoveInfo.label}{' '}
+                      {nextMoveInfo.rank >= 0 ? `#${nextMoveInfo.rank + 1}` : ''}
                     </span>
                   </div>
                 </>

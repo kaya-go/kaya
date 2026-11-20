@@ -55,8 +55,9 @@ off, but:
   decoding them with `analysisBoardSize` and nothing changes for a square board.
 - **Cache key.** The board's rows are in it, so a rectangle has its own key and
   a square board keeps the key it always had: `KA` saved on square boards loads
-  as before. `KA` saved on a rectangle since #241 is not found any more (its key
-  was the padded square); rectangle `KA` from before #241 was already lost.
+  as before. Rectangle `KA` loads too: extraction rebuilds every node's
+  position on the real board and files it under that key. (#241, which keyed
+  rectangles on the padded square, never shipped in a release.)
 
 ### What else in fillRowV7 depends on the board size
 
@@ -113,6 +114,12 @@ The mask itself, on empty boards (ONNX Runtime CPU, komi 7, Black to play):
   against the edge (UI request, Rust board), distinct keys for 9:13, 13:9 and
   13:13. `real_rectangle` in `onnx_engine/real_rectangle.rs` prints the native
   before/after table with a real model.
+- Naming on the square leaks wherever a name reaches the screen. On a board
+  wider than tall the board labels rows by its height, so on SZ[13:9] the
+  bottom-left point is A1 on the board and A5 to the engine. The analysis bar's
+  played move and the report's key mistakes showed the engine's name until
+  `boardMoveName` (`gtpUtils.ts`) renamed them for display. Matching against
+  the engine's moves, and `KA`, keep the square naming.
 - The PyTorch sidecar reshaped every input to 19×19, so it only ran boards
   whose longer side was 19. It was removed instead of fixed, see
   [2026-11-20-remove-pytorch-backend.md](2026-11-20-remove-pytorch-backend.md).

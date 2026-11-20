@@ -1,6 +1,6 @@
 import type { MoveSuggestion } from '@kaya/ai-engine';
 import { sgfToVertex } from '@kaya/sgf';
-import { vertexToGTP } from '../../utils/gtpUtils';
+import { boardMoveName, vertexToGTP } from '../../utils/gtpUtils';
 import type { NextMoveInfo } from '../ai-analysis-types';
 
 interface NodeLike {
@@ -55,13 +55,16 @@ export function computeNextMoveInfo(args: {
   nextMoveVertex: { vertex: [number, number]; player: 1 | -1 } | null;
   /** Side of the square the engine names moves on (analysisBoardSize). */
   analysisSize: number;
+  /** Rows of the board, which its labels count from the bottom. */
+  boardHeight: number;
   mctsProgress: MCTSProgressLike | null | undefined;
   analysisResult: AnalysisResultLike | null | undefined;
 }): NextMoveInfo | null {
-  const { nextMoveVertex, analysisSize, mctsProgress, analysisResult } = args;
+  const { nextMoveVertex, analysisSize, boardHeight, mctsProgress, analysisResult } = args;
   if (!nextMoveVertex) return null;
   const gtp = vertexToGTP(nextMoveVertex.vertex, analysisSize);
   if (gtp === 'PASS') return null;
+  const label = boardMoveName(gtp, analysisSize, boardHeight);
 
   // Check in MCTS progress topMoves (during live analysis)
   if (mctsProgress && mctsProgress.topMoves.length > 0) {
@@ -74,6 +77,7 @@ export function computeNextMoveInfo(args: {
         vertex: nextMoveVertex.vertex,
         player: nextMoveVertex.player,
         gtp,
+        label,
         isTopMove: true,
         rank: idx,
         winRate: played.winRate,
@@ -96,6 +100,7 @@ export function computeNextMoveInfo(args: {
         vertex: nextMoveVertex.vertex,
         player: nextMoveVertex.player,
         gtp,
+        label,
         isTopMove: true,
         rank: idx,
         winRate: played.winRate,
@@ -108,6 +113,7 @@ export function computeNextMoveInfo(args: {
       vertex: nextMoveVertex.vertex,
       player: nextMoveVertex.player,
       gtp,
+      label,
       isTopMove: false,
       rank: -1,
     };
@@ -117,6 +123,7 @@ export function computeNextMoveInfo(args: {
     vertex: nextMoveVertex.vertex,
     player: nextMoveVertex.player,
     gtp,
+    label,
     isTopMove: false,
     rank: -1,
   };

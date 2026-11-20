@@ -54,7 +54,21 @@ export interface AnalysisResult {
   visits?: number;
   /** Ownership map (size*size array, values -1 to 1 from Black's perspective) */
   ownership?: number[];
+  /**
+   * The ANALYSIS_ENGINE_VERSION this result came from, on analysis read from a
+   * file (SGF `KA`). Unset on a result this engine computed. A result from
+   * another version is shown but never answers a request (AnalysisCache).
+   */
+  engineVersion?: number;
 }
+
+/**
+ * Version of what the engine computes from a position: its network inputs and
+ * search. Bump it when a change makes earlier results wrong, so analysis saved
+ * before it is shown but run again. 1: before 0.4.19. 2: KataGo's komi parity
+ * input (0.4.19).
+ */
+export const ANALYSIS_ENGINE_VERSION = 2;
 
 /**
  * Komi the engines assume when a caller passes none, and so the komi Kaya
