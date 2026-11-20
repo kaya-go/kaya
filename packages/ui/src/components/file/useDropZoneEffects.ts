@@ -308,10 +308,11 @@ export function usePasteHandler({
     return () => document.removeEventListener('paste', handlePaste);
   }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, reportPasteFailure]);
 
-  // Cmd+V / Ctrl+V fallback for Tauri, whose macOS webview fires no paste
-  // event outside a text field. Never on the web: the paste event above
-  // already carries the text, and reading the clipboard here cancelled that
-  // event and asked for clipboard permission on every Ctrl+V.
+  // Cmd+V / Ctrl+V fallback for Tauri, read through the clipboard plugin. On
+  // macOS it runs before the Edit menu's Paste item, and its preventDefault
+  // keeps that item from firing a second paste event. Never on the web: the
+  // paste event above already carries the text, and reading the clipboard here
+  // cancelled that event and asked for clipboard permission on every Ctrl+V.
   useEffect(() => {
     if (!isTauriApp()) return;
 

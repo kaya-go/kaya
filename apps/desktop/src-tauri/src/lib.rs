@@ -116,7 +116,26 @@ pub fn run() {
                 app_menu.append(&PredefinedMenuItem::separator(handle)?)?;
                 app_menu.append(&PredefinedMenuItem::quit(handle, None::<&str>)?)?;
 
-                let menu = Menu::with_items(handle, &[&app_menu])?;
+                // On macOS, Cmd+C/V/X/A/Z in a text field are menu key
+                // equivalents: without these items the webview never copies,
+                // pastes or selects. Kaya's own shortcuts call preventDefault,
+                // so they still win outside text fields.
+                let edit_menu = Submenu::with_items(
+                    handle,
+                    "Edit",
+                    true,
+                    &[
+                        &PredefinedMenuItem::undo(handle, None::<&str>)?,
+                        &PredefinedMenuItem::redo(handle, None::<&str>)?,
+                        &PredefinedMenuItem::separator(handle)?,
+                        &PredefinedMenuItem::cut(handle, None::<&str>)?,
+                        &PredefinedMenuItem::copy(handle, None::<&str>)?,
+                        &PredefinedMenuItem::paste(handle, None::<&str>)?,
+                        &PredefinedMenuItem::select_all(handle, None::<&str>)?,
+                    ],
+                )?;
+
+                let menu = Menu::with_items(handle, &[&app_menu, &edit_menu])?;
                 app.set_menu(menu)?;
             }
 
