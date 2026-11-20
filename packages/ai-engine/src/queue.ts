@@ -11,7 +11,9 @@
  *     to its caller.
  *   - A new 'live' request also replaces any pending 'live' (only the
  *     latest navigation target matters).
- *   - Explicit cancel(id) / cancelTag(tag) rejects the submitter's promise.
+ *   - Explicit cancel(id) / cancelTag(tag) / cancelAll() rejects the
+ *     submitter's promise, and nothing the cancelled request computes
+ *     reaches the cache, even when the engine finishes it anyway.
  *   - Cache lookups and stores follow one rule, in `analysis-cache.ts`.
  *   - Caller may pass a `cacheKey` (computed by the same generator the
  *     SGF persistence layer uses); otherwise the queue computes its own.
@@ -75,6 +77,12 @@ export interface AnalysisQueueOptions {
   cacheRef?: CacheRef;
 }
 
+/**
+ * Why a request in flight was stopped: `requeued` when a live request preempted
+ * it and a fresh copy waits in the queue, `cancelled` when its caller gave it up.
+ */
+type StopReason = 'requeued' | 'cancelled';
+
 interface InternalRequest {
   kind: 'single';
   id: RequestId;
@@ -83,8 +91,8 @@ interface InternalRequest {
   reject: (e: unknown) => void;
   /** Replaced each attempt — preemption aborts the current one. */
   controller: AbortController;
-  /** Set on the in-flight copy that was preempted; the queued copy is fresh. */
-  preempted: boolean;
+  /** Set on the in-flight copy once stopped; a re-queued copy starts fresh. */
+  stopped: StopReason | null;
 }
 
 interface InternalBatch {
@@ -94,7 +102,7 @@ interface InternalBatch {
   resolvers: Array<(r: AnalysisResult) => void>;
   rejecters: Array<(e: unknown) => void>;
   controller: AbortController;
-  preempted: boolean;
+  stopped: StopReason | null;
   /** All sub-requests share priority; we copy from the first. */
   priority: Priority;
   tag?: string;
@@ -149,7 +157,7 @@ export class AnalysisQueue {
       resolve,
       reject,
       controller: new AbortController(),
-      preempted: false,
+      stopped: null,
     };
 
     this.enqueue(internal, request.priority);
@@ -207,7 +215,7 @@ export class AnalysisQueue {
       resolvers,
       rejecters,
       controller: new AbortController(),
-      preempted: false,
+      stopped: null,
       priority: pending[0].priority,
       tag: pending[0].tag,
     };
@@ -218,24 +226,13 @@ export class AnalysisQueue {
   }
 
   cancel(id: RequestId): void {
-    const drop = (queue: Item[]): boolean => {
+    for (const queue of [this.liveQueue, this.batchQueue]) {
       const idx = queue.findIndex(r => r.id === id);
-      if (idx === -1) return false;
-      const [item] = queue.splice(idx, 1);
-      this.rejectItem(item, abortError());
-      return true;
-    };
-    if (drop(this.liveQueue)) return;
-    if (drop(this.batchQueue)) return;
-    if (this.inFlight && this.inFlight.id === id) {
-      // Mark + abort + reject; let pump's finally clean up inFlight. We
-      // must NOT clear inFlight from here — the suspended pump still
-      // holds it, and racing a new pump while the old await is unwinding
-      // could lead to two concurrent analyses.
-      this.inFlight.preempted = true;
-      this.inFlight.controller.abort();
-      this.rejectItem(this.inFlight, abortError());
+      if (idx !== -1) this.rejectItem(queue.splice(idx, 1)[0], abortError());
     }
+    // A preempted batch the engine could not stop is both queued again and
+    // still in flight: both copies go.
+    if (this.inFlight?.id === id) this.cancelInFlight();
   }
 
   cancelTag(tag: string): void {
@@ -249,21 +246,13 @@ export class AnalysisQueue {
     };
     filterTag(this.liveQueue);
     filterTag(this.batchQueue);
-    if (this.inFlight && itemTag(this.inFlight) === tag) {
-      this.inFlight.preempted = true;
-      this.inFlight.controller.abort();
-      this.rejectItem(this.inFlight, abortError());
-    }
+    if (this.inFlight && itemTag(this.inFlight) === tag) this.cancelInFlight();
   }
 
   cancelAll(): void {
     for (const item of this.liveQueue.splice(0)) this.rejectItem(item, abortError());
     for (const item of this.batchQueue.splice(0)) this.rejectItem(item, abortError());
-    if (this.inFlight) {
-      this.inFlight.preempted = true;
-      this.inFlight.controller.abort();
-      this.rejectItem(this.inFlight, abortError());
-    }
+    if (this.inFlight) this.cancelInFlight();
   }
 
   clearCache(): void {
@@ -300,17 +289,14 @@ export class AnalysisQueue {
       for (const old of this.liveQueue.splice(0)) this.rejectItem(old, abortError());
       this.liveQueue.push(item);
       // Transparent re-queue for batch (caller never sees the interruption).
-      if (this.inFlight && itemPriority(this.inFlight) === 'batch') {
+      // Not for one already stopped: a cancelled batch the engine could not
+      // stop would run again, and a re-queued one already has its copy queued.
+      if (this.inFlight && !this.inFlight.stopped && itemPriority(this.inFlight) === 'batch') {
         this.preempt(this.inFlight);
       }
-      // Drop in-flight live — user navigated away.
-      if (this.inFlight && itemPriority(this.inFlight) === 'live') {
-        this.inFlight.preempted = true;
-        this.inFlight.controller.abort();
-        this.rejectItem(this.inFlight, abortError());
-        // Don't clear inFlight here; pump's finally will, then pick up
-        // the new live we just queued.
-      }
+      // Drop in-flight live — user navigated away. Pump's finally then picks
+      // up the new live we just queued.
+      if (this.inFlight && itemPriority(this.inFlight) === 'live') this.cancelInFlight();
     } else {
       this.batchQueue.push(item);
     }
@@ -355,11 +341,11 @@ export class AnalysisQueue {
         ...(req.request.extra ?? {}),
       } as any);
 
-      if (req.preempted) return;
+      if (req.stopped) return;
       this.cache.store(req.request, result);
       req.resolve(result);
     } catch (err) {
-      if (req.preempted) return;
+      if (req.stopped) return;
       req.reject(err);
     }
   }
@@ -390,16 +376,19 @@ export class AnalysisQueue {
 
     try {
       const results = await this.engine.analyzeBatch(inputs);
-      // Cache before the preemption check: an engine that cannot stop a batch
-      // (the web worker) finishes it anyway, and the re-queued copy then finds
-      // every position here instead of running them all again. A search the
-      // abort did cut short came back shallower than asked, and is not kept.
+      // An engine that cannot stop a batch (the web worker) finishes it anyway.
+      // A cancelled one keeps nothing: whoever cancelled it may have just
+      // emptied the cache (Clear analysis, model switch). A re-queued one is
+      // cached, so its copy finds every position here instead of running them
+      // all again. A search the abort did cut short came back shallower than
+      // asked, and is not kept.
+      if (batch.stopped === 'cancelled') return;
       for (let k = 0; k < stillPending.length; k++) {
         const req = batch.requests[stillPending[k]];
         const r = results[k];
         if ((r.visits ?? req.numVisits) >= req.numVisits) this.cache.store(req, r);
       }
-      if (batch.preempted) return;
+      if (batch.stopped) return;
       for (let k = 0; k < stillPending.length; k++) {
         batch.resolvers[stillPending[k]](results[k]);
       }
@@ -408,25 +397,37 @@ export class AnalysisQueue {
       // stopping. Keeping them means the re-queued copy picks them up from the
       // cache instead of running the whole game through the model again.
       const partial = (err as { partialResults?: (AnalysisResult | null)[] })?.partialResults;
-      if (partial) {
+      if (partial && batch.stopped !== 'cancelled') {
         for (let k = 0; k < stillPending.length; k++) {
           const result = partial[k];
           if (result) this.cache.store(batch.requests[stillPending[k]], result);
         }
       }
-      if (batch.preempted) return;
+      if (batch.stopped) return;
       for (const idx of stillPending) batch.rejecters[idx](err);
     }
   }
 
+  /**
+   * Stop the request in flight for good and reject its caller. Pump's finally
+   * clears inFlight: the suspended pump still holds it, and starting another
+   * while its await unwinds could run two analyses at once.
+   */
+  private cancelInFlight(): void {
+    const item = this.inFlight!;
+    item.stopped = 'cancelled';
+    item.controller.abort();
+    this.rejectItem(item, abortError());
+  }
+
   private preempt(item: Item): void {
-    item.preempted = true;
+    item.stopped = 'requeued';
     item.controller.abort();
     if (item.kind === 'batch') {
       const fresh: InternalBatch = {
         ...item,
         controller: new AbortController(),
-        preempted: false,
+        stopped: null,
       };
       if (item.priority === 'batch') this.batchQueue.unshift(fresh);
       else this.liveQueue.unshift(fresh);
@@ -435,7 +436,7 @@ export class AnalysisQueue {
         ...item,
         kind: 'single',
         controller: new AbortController(),
-        preempted: false,
+        stopped: null,
       };
       if (item.request.priority === 'batch') this.batchQueue.unshift(fresh);
       else this.liveQueue.unshift(fresh);

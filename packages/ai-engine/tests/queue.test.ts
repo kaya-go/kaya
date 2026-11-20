@@ -100,6 +100,18 @@ class SteppableEngine {
   }
 }
 
+/**
+ * The web worker cannot stop a batch: WorkerEngine strips the signal, so a
+ * preempted or cancelled batch still runs to the end and resolves.
+ */
+function unstoppable(engine: SteppableEngine): Engine {
+  return {
+    analyzeBatch: (inputs: { signMap: SignMap }[]) =>
+      engine.analyzeBatch(inputs.map(i => ({ signMap: i.signMap }))),
+    analyze: () => engine.analyze(),
+  } as unknown as Engine;
+}
+
 /** Lets queued microtasks and timers run so the engine reaches its next gate. */
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 
@@ -136,14 +148,8 @@ describe('AnalysisQueue preemption', () => {
   });
 
   test('keeps a preempted batch that finished anyway', async () => {
-    // The web worker cannot stop a batch: WorkerEngine strips the signal, so a
-    // preempted batch still runs to the end and resolves.
     const engine = new SteppableEngine();
-    const queue = new AnalysisQueue({
-      analyzeBatch: (inputs: { signMap: SignMap }[]) =>
-        engine.analyzeBatch(inputs.map(i => ({ signMap: i.signMap }))),
-      analyze: () => engine.analyze(),
-    } as unknown as Engine);
+    const queue = new AnalysisQueue(unstoppable(engine));
 
     const batch = queue.submitBatch([0, 1, 2, 3].map(x => request(x, 'batch')));
     await settle();
@@ -191,6 +197,89 @@ describe('AnalysisQueue preemption', () => {
     expect(results).toHaveLength(3);
     expect(engine.batchCalls).toBe(1);
     expect(engine.positionsComputed).toBe(3);
+  });
+});
+
+/**
+ * A cancelled batch is no longer wanted, and what it computed may no longer
+ * hold: Clear analysis cancels, then empties the cache; a model switch disposes
+ * the queue, and the cache it shared is emptied for the new model. The web
+ * worker finishes such a batch anyway, and nothing of it may reach the cache:
+ * the key has no model, so an old entry would answer the new model's requests
+ * and be saved as `KA`.
+ */
+describe('AnalysisQueue cancellation', () => {
+  /** A full-game batch of four positions running on the worker, two of them done. */
+  async function batchHalfDone() {
+    const engine = new SteppableEngine();
+    const shared = { current: new Map<string, AnalysisResult>() };
+    const queue = new AnalysisQueue(unstoppable(engine), { cacheRef: shared });
+    const handles = queue.submitBatch([0, 1, 2, 3].map(x => request(x, 'batch')));
+    const outcomes = Promise.allSettled(handles.map(h => h.result));
+    await settle();
+    engine.allow(2);
+    await settle();
+    return { engine, shared, queue, handles, outcomes };
+  }
+
+  test('Clear analysis: the batch that finishes afterwards leaves the cache empty', async () => {
+    const { engine, shared, queue, outcomes } = await batchHalfDone();
+
+    queue.cancelAll();
+    queue.clearCache();
+    engine.allow(10);
+    await settle();
+
+    for (const o of await outcomes) expect(o.status).toBe('rejected');
+    expect(engine.positionsComputed).toBe(4);
+    expect(shared.current.size).toBe(0);
+  });
+
+  test('model switch: a disposed queue does not refill the cleared cache', async () => {
+    const { engine, shared, queue } = await batchHalfDone();
+
+    shared.current.clear();
+    await queue.dispose();
+    engine.allow(10);
+    await settle();
+
+    expect(shared.current.size).toBe(0);
+  });
+
+  test('a live request after Clear does not run the cancelled batch again', async () => {
+    const { engine, shared, queue } = await batchHalfDone();
+
+    queue.cancelAll();
+    queue.clearCache();
+    // The user clicks a move while the worker is still finishing the batch.
+    const live = queue.submit(request(8, 'live'));
+    engine.allow(10);
+    await live.result;
+    await settle();
+
+    expect(engine.batchCalls).toBe(1);
+    expect(engine.positionsComputed).toBe(5);
+    expect([...shared.current.values()]).toEqual([await live.result]);
+  });
+
+  test('a batch preempted, then stopped, keeps nothing', async () => {
+    for (const stop of [
+      (queue: AnalysisQueue) => queue.cancelTag('full-game'),
+      (queue: AnalysisQueue, id: string) => queue.cancel(id),
+    ]) {
+      const { engine, shared, queue, handles } = await batchHalfDone();
+
+      // A live request preempts the batch, which the worker cannot stop: it is
+      // queued again and still running when the user stops the full-game run.
+      const live = queue.submit(request(8, 'live'));
+      stop(queue, handles[0].id);
+      engine.allow(10);
+      await live.result;
+      await settle();
+
+      expect(engine.batchCalls).toBe(1);
+      expect([...shared.current.values()]).toEqual([await live.result]);
+    }
   });
 });
 
