@@ -34,6 +34,9 @@ and the keyboard cursor wrapped both axes on the height.
 - **The square covers the board.** `analysisBoardSize` is the longer side. No
   stone is cut off; the engine may rank points past the short edge, which
   callers already skip (`bestMoveOnBoard`, now the heatmap too).
+  Superseded by [the engine sees the real board](2026-11-20-analysis-real-board.md):
+  the request now carries the game's own board, and only the network's input
+  is square.
 - **Analysis helpers take the game's dimensions, never a size.**
   `reconstructAnalysisState`, `mapAnalysisPath`, `analysisCacheKeyAt` and
   `buildAnalysisRequest` apply `analysisBoardSize` themselves, so a caller
@@ -52,4 +55,6 @@ and the keyboard cursor wrapped both axes on the height.
   and `KA` written then read back lands on it (`analysisKeys.test.ts`).
 - Scoring and dead-stone estimation still assume a square board; analysis of
   a rectangle evaluates a padded square, so its numbers are approximate. A
-  real fix would mask the off-board points in the engine's input.
+  real fix would mask the off-board points in the engine's input: done in
+  [the engine sees the real board](2026-11-20-analysis-real-board.md), which
+  also found the padded square kept stones captured against the short edge.

@@ -22,7 +22,7 @@ interface AnalysisResultLike {
 interface BuildHeatmapArgs {
   showTopMoves: boolean;
   currentBoard: GoBoard;
-  /** Side of the square board the analysis ran on (analysisBoardSize). */
+  /** Side of the square the engine names moves on (analysisBoardSize). */
   analysisSize: number;
   aiSettings: AISettings;
   mctsProgress: MCTSProgressLike | null | undefined;
@@ -62,7 +62,7 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
   const metric = aiSettings.heatMapMetric ?? 'policy';
   const map: HeatMap = currentBoard.signMap.map(row => row.map(() => null));
   // A move decoded on the analysis square, kept when it is a free point of the
-  // game board: on a rectangle the square reaches past the short edge.
+  // game board.
   const freeVertex = (move: string): [number, number] | null => {
     const vertex = gtpToVertex(move, analysisSize);
     if (!vertex) return null;

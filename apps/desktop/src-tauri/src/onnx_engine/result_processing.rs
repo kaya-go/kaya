@@ -1,10 +1,15 @@
 //! Processing of raw ONNX inference outputs into structured results
 
 use super::featurization::{determine_next_player, ko_ban};
-use super::types::{AnalysisOptions, AnalysisResult, MoveSuggestion, OnnxOutputs};
+use super::types::{AnalysisOptions, AnalysisResult, BoardShape, MoveSuggestion, OnnxOutputs};
 use super::OnnxEngine;
 
-/// Process one position's raw inference outputs into an AnalysisResult.
+/// Process one position's raw inference outputs into an AnalysisResult, for a
+/// position on a board of `shape`.
+///
+/// Moves are ranked among the points of the board and the pass only, as
+/// KataGo's softmax runs over legal moves only, and named on the square input
+/// (row = side - y). Ownership is indexed on that square, 0 past the board's edge.
 fn process_raw_outputs(
     policy: &[f32],
     value: &[f32],
@@ -12,10 +17,9 @@ fn process_raw_outputs(
     ownership: Option<&[f32]>,
     policy_dims: &[usize],
     pla: i8,
-    board_size: usize,
+    shape: BoardShape,
 ) -> Result<AnalysisResult, String> {
-    let letters = "ABCDEFGHJKLMNOPQRST";
-
+    let side = shape.side;
     let num_moves = if policy_dims.len() == 3 {
         policy_dims[2]
     } else if policy_dims.len() >= 2 {
@@ -44,34 +48,42 @@ fn process_raw_outputs(
     let lead_current = if miscvalue.len() > 2 { miscvalue[2] * 20.0 } else { 0.0 };
     let black_lead = lead_current * (pla as f32);
 
-    // Policy softmax
-    let max_logit = policy_slice.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
-    let mut probs: Vec<f32> = policy_slice.iter().map(|p| (p - max_logit).exp()).collect();
-    let sum_probs: f32 = probs.iter().sum();
+    // The points of the board, then the pass; never a point past its edge.
+    let pass = side * side;
+    let mut indices: Vec<usize> = (0..shape.height)
+        .flat_map(|y| (0..shape.width).map(move |x| y * side + x))
+        .chain(std::iter::once(pass))
+        .filter(|&idx| idx < policy_slice.len())
+        .collect();
+
+    // Policy softmax over the moves of the board
+    let max_logit = indices.iter().map(|&i| policy_slice[i]).fold(f32::NEG_INFINITY, f32::max);
+    let mut probs = vec![0.0f32; policy_slice.len()];
+    for &i in &indices {
+        probs[i] = (policy_slice[i] - max_logit).exp();
+    }
+    let sum_probs: f32 = indices.iter().map(|&i| probs[i]).sum();
     // A NaN or infinite logit (an fp16 overflow, a broken GPU path) makes the
     // sum NaN. Refuse it, so a warm-up on such a backend fails and the chain
     // moves on, rather than ranking NaN probabilities.
     if !sum_probs.is_finite() || sum_probs <= 0.0 {
         return Err("The model returned a policy that is not a finite number".to_string());
     }
-    for p in &mut probs {
-        *p /= sum_probs;
+    for &i in &indices {
+        probs[i] /= sum_probs;
     }
 
     // Top 10 moves
-    let mut indices: Vec<usize> = (0..probs.len()).collect();
     indices.sort_by(|&a, &b| probs[b].total_cmp(&probs[a]));
 
     let move_suggestions: Vec<MoveSuggestion> = indices
         .iter()
         .take(10)
         .map(|&idx| {
-            let move_str = if idx == board_size * board_size {
+            let move_str = if idx == pass {
                 "PASS".to_string()
             } else {
-                let y = idx / board_size;
-                let x = idx % board_size;
-                format!("{}{}", letters.chars().nth(x).unwrap_or('?'), board_size - y)
+                shape.move_name(idx % side, idx / side)
             };
             MoveSuggestion { move_str, probability: probs[idx] }
         })
@@ -79,10 +91,13 @@ fn process_raw_outputs(
 
     // Ownership: KataGo ONNX head is pre-tanh; pla flips current-player → Black.
     let ownership_out = ownership.map(|own| {
-        let stride = board_size * board_size;
-        own[..stride.min(own.len())]
+        own[..pass.min(own.len())]
             .iter()
-            .map(|v| v.tanh() * (pla as f32))
+            .enumerate()
+            .map(|(i, v)| {
+                let on_board = i % side < shape.width && i / side < shape.height;
+                if on_board { v.tanh() * (pla as f32) } else { 0.0 }
+            })
             .collect()
     });
 
@@ -121,13 +136,10 @@ pub(crate) fn without_ko_recapture(
     sign_map: &[Vec<i8>],
     options: &AnalysisOptions,
 ) -> AnalysisResult {
-    let size = sign_map.len();
+    let shape = BoardShape::of(sign_map);
     let pla = determine_next_player(sign_map, options);
-    match ko_ban(options, pla, size) {
-        Some((x, y)) => {
-            let letter = "ABCDEFGHJKLMNOPQRST".chars().nth(x).unwrap_or('?');
-            drop_ko_move(result, &format!("{}{}", letter, size - y))
-        }
+    match ko_ban(options, pla, shape) {
+        Some((x, y)) => drop_ko_move(result, &shape.move_name(x, y)),
         None => result.clone(),
     }
 }
@@ -138,18 +150,20 @@ impl OnnxEngine {
         &self,
         outputs: &OnnxOutputs,
         pla: i8,
+        shape: BoardShape,
     ) -> Result<AnalysisResult, String> {
-        let results = self.process_batch_results(outputs, &[pla])?;
+        let results = self.process_batch_results(outputs, &[pla], shape)?;
         results.into_iter().next().ok_or("No results".to_string())
     }
 
-    /// Process batch inference results
+    /// Process batch inference results, every position on a board of `shape`
     pub(crate) fn process_batch_results(
         &self,
         outputs: &OnnxOutputs,
         plas: &[i8],
+        shape: BoardShape,
     ) -> Result<Vec<AnalysisResult>, String> {
-        process_batch_outputs(outputs, plas, self.board_size)
+        process_batch_outputs(outputs, plas, shape)
     }
 }
 
@@ -175,12 +189,13 @@ fn item_slice<'a>(
     })
 }
 
-/// Split batched outputs into one result per position.
+/// Split batched outputs into one result per position, all on a board of `shape`.
 fn process_batch_outputs(
     outputs: &OnnxOutputs,
     plas: &[i8],
-    size: usize,
+    shape: BoardShape,
 ) -> Result<Vec<AnalysisResult>, String> {
+    let size = shape.side;
     let batch_size = plas.len();
     if batch_size == 0 {
         return Ok(vec![]);
@@ -213,7 +228,7 @@ fn process_batch_outputs(
             ownership_slice,
             &[1, num_moves],
             pla,
-            size,
+            shape,
         )?;
 
         results.push(result);
@@ -226,8 +241,10 @@ fn process_batch_outputs(
 mod tests {
     use super::{process_batch_outputs, process_raw_outputs, without_ko_recapture};
     use crate::onnx_engine::types::{
-        AnalysisOptions, AnalysisResult, KoInfo, MoveSuggestion, OnnxOutputs,
+        AnalysisOptions, AnalysisResult, BoardShape, KoInfo, MoveSuggestion, OnnxOutputs,
     };
+
+    const SQUARE_2: BoardShape = BoardShape { width: 2, height: 2, side: 2 };
 
     fn outputs(policy_dims: Vec<usize>, miscvalue: usize, ownership: Option<usize>) -> OnnxOutputs {
         let batch = policy_dims[0];
@@ -245,15 +262,15 @@ mod tests {
     #[test]
     fn batch_outputs_of_another_shape_are_an_error_not_a_panic() {
         // Two 2x2 positions: 5 moves each, one policy head.
-        let ok = process_batch_outputs(&outputs(vec![2, 1, 5], 2 * 6, Some(2 * 4)), &[1, -1], 2);
+        let ok = process_batch_outputs(&outputs(vec![2, 1, 5], 2 * 6, Some(2 * 4)), &[1, -1], SQUARE_2);
         assert_eq!(ok.map(|r| r.len()), Ok(2));
 
         let short_ownership = outputs(vec![2, 1, 5], 2 * 10, Some(4));
-        let err = process_batch_outputs(&short_ownership, &[1, -1], 2).unwrap_err();
+        let err = process_batch_outputs(&short_ownership, &[1, -1], SQUARE_2).unwrap_err();
         assert!(err.contains("ownership"), "{err}");
 
         let flat_policy = outputs(vec![5], 10, None);
-        let err = process_batch_outputs(&flat_policy, &[1], 2).unwrap_err();
+        let err = process_batch_outputs(&flat_policy, &[1], SQUARE_2).unwrap_err();
         assert!(err.contains("policy"), "{err}");
     }
 
@@ -298,7 +315,7 @@ mod tests {
                 Some(&raw),
                 &[1, 1, 5],
                 pla,
-                2,
+                SQUARE_2,
             )
             .unwrap();
             let own = result.ownership.unwrap();
@@ -315,7 +332,37 @@ mod tests {
     fn a_nan_policy_is_an_error_not_a_panic() {
         let mut policy = [0.0f32; 5];
         policy[2] = f32::NAN;
-        let result = process_raw_outputs(&policy, &[0.0; 3], &[0.0; 10], None, &[1, 1, 5], 1, 2);
+        let result = process_raw_outputs(&policy, &[0.0; 3], &[0.0; 10], None, &[1, 1, 5], 1, SQUARE_2);
         assert!(result.unwrap_err().contains("policy"));
+    }
+
+    /// A board smaller than the network's input: the network may still rank a
+    /// point past its edge. Only points of the board and the pass are ranked,
+    /// their probabilities summing to 1, and ownership is 0 past the edge.
+    #[test]
+    fn only_points_of_the_board_are_ranked() {
+        // 1 wide, 2 high in a 2x2 input: indices 0 and 2 are on the board, 1
+        // and 3 past its right edge, 4 is the pass.
+        let shape = BoardShape { width: 1, height: 2, side: 2 };
+        let result = process_raw_outputs(
+            &[1.0, 5.0, 0.0, 4.0, -1.0],
+            &[0.0; 3],
+            &[0.0; 10],
+            Some(&[3.0, 3.0, -2.0, -2.0]),
+            &[1, 1, 5],
+            1,
+            shape,
+        )
+        .unwrap();
+
+        let moves: Vec<&str> = result.move_suggestions.iter().map(|s| s.move_str.as_str()).collect();
+        assert_eq!(moves, vec!["A2", "A1", "PASS"]);
+        let total: f32 = result.move_suggestions.iter().map(|s| s.probability).sum();
+        assert!((total - 1.0).abs() < 1e-6, "{total}");
+
+        let own = result.ownership.unwrap();
+        assert_eq!(own[1], 0.0);
+        assert_eq!(own[3], 0.0);
+        assert!((own[0] - 3.0f32.tanh()).abs() < 1e-6);
     }
 }

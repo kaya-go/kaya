@@ -287,8 +287,8 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     [gameTree, currentNodeId]
   );
 
-  // The engine's moves and ownership are on the square analysis board; the
-  // maps drawn from them are on the game board, which it covers.
+  // The engine names moves and indexes ownership on the square its network
+  // sees the board in; the maps drawn from them are on the game board.
   const analysisSize = analysisBoardSize(gameInfo);
 
   const nextMoveInfo = useMemo(

@@ -88,3 +88,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [macOS: an Edit menu, so text fields copy and paste](2026-11-20-macos-edit-menu.md)                         | shipped    |
 | 2026-11-20 | [Safari fires the paste event outside a text field](2026-11-20-safari-paste-event.md)                       | reference  |
 | 2026-11-20 | [Remove the PyTorch sidecar backend](2026-11-20-remove-pytorch-backend.md)                                  | shipped    |
+| 2026-11-20 | [The engine sees the real board](2026-11-20-analysis-real-board.md)                                         | shipped    |

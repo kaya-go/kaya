@@ -64,7 +64,7 @@ export function buildPerformanceReport(
   t: TFunction
 ): GamePerformanceReport | null {
   const komi = gameInfo.komi ?? DEFAULT_KOMI;
-  // Results are keyed and their moves written on the square analysis board.
+  // Results name their moves on the square the engine sees the board in.
   const analysisSize = analysisBoardSize(gameInfo);
 
   // Step 1: Get path from root to current node

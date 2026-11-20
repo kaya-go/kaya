@@ -19,6 +19,7 @@ import {
 } from './onnx-utils';
 import { filterKoMoves, runMCTS } from './onnx-mcts';
 import { featurizeToBuffer } from './onnx-featurization';
+import { boardShape, type BoardShape } from './board-shape';
 import type { MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
 import { createOnnxSession } from './onnx-session';
 import {
@@ -34,7 +35,6 @@ export { type OnnxEngineConfig } from './onnx-types';
 
 export class OnnxEngine extends Engine {
   private session: ort.InferenceSession | null = null;
-  private boardSize: number = 19;
   private debugEnabled = false;
   private usedProviders: string[] = [];
   private inputDataType: 'float32' | 'float16' = 'float32';
@@ -155,23 +155,19 @@ export class OnnxEngine extends Engine {
   ): Promise<AnalysisResult> {
     if (!this.session) throw new Error('Engine not initialized');
 
+    // The search plays on the board itself; the network sees it in a square
+    // input of side `size`, on which moves are named (see BoardShape).
     const board = new GoBoard(signMap);
-    const size = board.width;
-    this.boardSize = size;
+    const shape = boardShape(signMap);
+    const size = shape.side;
 
     let nextPla: Sign = 1;
     if (options.nextToPlay) {
       nextPla = options.nextToPlay === 'W' ? -1 : 1;
     } else {
-      let blackStones = 0,
-        whiteStones = 0;
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const s = board.get([x, y]);
-          if (s === 1) blackStones++;
-          else if (s === -1) whiteStones++;
-        }
-      }
+      const stones = signMap.flat();
+      const blackStones = stones.filter(s => s === 1).length;
+      const whiteStones = stones.filter(s => s === -1).length;
       nextPla = blackStones === whiteStones ? 1 : -1;
     }
 
@@ -206,7 +202,7 @@ export class OnnxEngine extends Engine {
         );
       }
 
-      return this.runBatchInference(batchBin, batchGlobal, plas, size);
+      return this.runBatchInference(batchBin, batchGlobal, plas, shape);
     };
 
     const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
@@ -240,7 +236,7 @@ export class OnnxEngine extends Engine {
     bin_input: Float32Array,
     global_input: Float32Array,
     plas: Sign[],
-    size: number
+    shape: BoardShape
   ): Promise<AnalysisResult[]> {
     const batchSize = plas.length;
 
@@ -248,7 +244,7 @@ export class OnnxEngine extends Engine {
       bin_input,
       global_input,
       batchSize,
-      size
+      shape.side
     );
 
     // Close the scope and free the tensors whatever happens: a scope left open
@@ -272,7 +268,7 @@ export class OnnxEngine extends Engine {
       throw new Error(`WebGPU validation error: ${scopeError.message}`);
     }
     if (!results) throw runError;
-    return processBatchResults(results, plas, size, batchSize);
+    return processBatchResults(results, plas, shape, batchSize);
   }
 
   private async prepareInputTensors(
@@ -343,8 +339,16 @@ export class OnnxEngine extends Engine {
       return results;
     }
 
-    const size = inputs[0].signMap.length;
-    this.boardSize = size;
+    // Every position goes into one tensor, so they must share a board.
+    const shape = boardShape(inputs[0].signMap);
+    const otherBoard = inputs.find(({ signMap }) => {
+      const other = boardShape(signMap);
+      return other.width !== shape.width || other.height !== shape.height;
+    });
+    if (otherBoard) {
+      throw new Error('analyzeBatch: every position of a batch must be on the same board');
+    }
+    const size = shape.side;
     const numPlanes = 22;
 
     const results: (AnalysisResult | null)[] = new Array(inputs.length).fill(null);
@@ -441,7 +445,7 @@ export class OnnxEngine extends Engine {
       );
 
       const inferenceStart = performance.now();
-      const chunkResults = await this.runBatchInference(chunkBin, chunkGlobal, chunkPlas, size);
+      const chunkResults = await this.runBatchInference(chunkBin, chunkGlobal, chunkPlas, shape);
       totalInferenceTime += performance.now() - inferenceStart;
 
       allBatchResults.push(...chunkResults);

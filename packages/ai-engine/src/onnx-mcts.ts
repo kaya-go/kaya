@@ -2,7 +2,11 @@ import { GoBoard, type Sign } from '@kaya/goboard';
 import type { MCTSNode, MCTSBatchEvaluator, MCTSProgress } from './onnx-types';
 import type { AnalysisResult, MoveSuggestion } from './types';
 
-/** Parse a GTP move string (e.g. "D4", "Q16", "PASS") to board [x, y] or null for pass. */
+/**
+ * Parse a GTP move string (e.g. "D4", "Q16", "PASS") named on a square of side
+ * `size` to [x, y], or null for a pass. Whether the point is on a smaller board
+ * is the board's to say (`analyzeMove`).
+ */
 export function parseMoveStr(move: string, size: number): [number, number] | null {
   if (!move || move === 'PASS') return null;
   const letters = 'ABCDEFGHJKLMNOPQRST';
@@ -88,6 +92,10 @@ export function expandNode(
  * Run PUCT MCTS search from the given position.
  * Uses batch evaluation with virtual loss to amortize GPU sync overhead.
  *
+ * @param rootBoard - The game's own board: every move is played on it, so a
+ *   point past its edge is never legal and a capture against it happens.
+ * @param size - Side of the network's square input, which moves are named on
+ *   (GTP row = size - y) and ownership is indexed on (see BoardShape).
  * @param maxMctsBatch - Max visits per loop iteration before yielding for progress.
  *   Caps batch size independently of maxInferenceBatch so that backends with
  *   unbounded inference batch (e.g. WASM) still emit incremental progress.

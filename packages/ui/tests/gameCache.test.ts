@@ -15,6 +15,7 @@ import { parse, sgfNodeToGameTreeNode } from '@kaya/sgf';
 import type { SGFProperty } from '../src/types/game';
 import {
   analysisBoardSize,
+  analysisCacheKeyAt,
   buildAnalysisRequest,
   clearAllCaches,
   mapAnalysisPath,
@@ -24,6 +25,7 @@ import {
 } from '../src/utils/gameCache';
 import {
   createInitialAnalysisState,
+  generateAnalysisCacheKey,
   nextToPlayToSign,
   updateAnalysisState,
   type AnalysisState,
@@ -311,11 +313,9 @@ describe('buildAnalysisRequest', () => {
     expect(request.extra).toEqual({ koInfo: { sign: 1, vertex: [2, 1] }, tag: 1 });
   });
 
-  test('a rectangular game is analysed on a square board that covers it', () => {
-    // A row shorter than the row count panics the native engine.
+  test('a rectangular game is analysed on its own board', () => {
     for (const [sgf, gameInfo, stone] of [
       ['(;SZ[9:13];B[am])', { boardSize: 9, boardHeight: 13 }, [0, 12]],
-      // Wider than tall: a square sized by height cut off the last four columns.
       ['(;SZ[13:9];B[ma])', { boardSize: 13, boardHeight: 9 }, [12, 0]],
     ] as const) {
       clearAllCaches();
@@ -326,12 +326,62 @@ describe('buildAnalysisRequest', () => {
         gameInfo,
       });
 
+      // Moves and ownership come back on the square the network sees.
       expect(analysisBoardSize(gameInfo)).toBe(13);
-      expect(request.signMap).toHaveLength(13);
-      expect(request.signMap.every(row => row.length === 13)).toBe(true);
+      expect(request.signMap).toHaveLength(gameInfo.boardHeight);
+      expect(request.signMap.every(row => row.length === gameInfo.boardSize)).toBe(true);
       expect(request.signMap[stone[1]][stone[0]]).toBe(1);
       expect(request.history).toEqual([{ color: 1, x: stone[0], y: stone[1] }]);
     }
+  });
+
+  test('a capture against the short edge happens in the analysed position', () => {
+    // White takes a black stone against the right edge of 9:13 and the bottom
+    // edge of 13:9. On a square padded past that edge the stone kept a liberty
+    // there, so the engine saw a stone the game no longer has.
+    for (const [sgf, gameInfo, stone] of [
+      [
+        '(;SZ[9:13];B[ig];W[if];B[aa];W[ih];B[ab];W[hg])',
+        { boardSize: 9, boardHeight: 13 },
+        [8, 6],
+      ],
+      [
+        '(;SZ[13:9];B[fi];W[ei];B[aa];W[gi];B[ab];W[fh])',
+        { boardSize: 13, boardHeight: 9 },
+        [5, 8],
+      ],
+    ] as const) {
+      clearAllCaches();
+      const tree = treeOf(sgf);
+      const last = mainLine(tree).at(-1)!;
+      const request = buildAnalysisRequest({ gameTree: tree, currentNodeId: last.id, gameInfo });
+
+      expect(
+        reconstructBoard(tree, last.id, gameInfo.boardSize, gameInfo.boardHeight).get([
+          stone[0],
+          stone[1],
+        ])
+      ).toBe(0);
+      expect(request.signMap[stone[1]][stone[0]]).toBe(0);
+    }
+  });
+
+  test('a rectangle and the square that covers it have different analysis keys', () => {
+    const key = (sgf: string, gameInfo: { boardSize: number; boardHeight?: number }) => {
+      const tree = treeOf(sgf);
+      return analysisCacheKeyAt(tree, tree.root.id, gameInfo, DEFAULT_KOMI);
+    };
+    const keys = [
+      key('(;SZ[9:13])', { boardSize: 9, boardHeight: 13 }),
+      key('(;SZ[13:9])', { boardSize: 13, boardHeight: 9 }),
+      key('(;SZ[13])', { boardSize: 13 }),
+    ];
+
+    expect(new Set(keys).size).toBe(3);
+    // A square board keeps the key it always had, so its saved KA still loads.
+    expect(keys[2]).toBe(
+      generateAnalysisCacheKey(GoBoard.fromDimensions(13).signMap, 'B', DEFAULT_KOMI, [])
+    );
   });
 
   test('with no tree, an empty board of the game size', () => {

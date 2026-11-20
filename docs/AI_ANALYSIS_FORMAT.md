@@ -25,7 +25,10 @@ interface KayaAnalysisData {
 
   /** Moves (Suggestions) */
   m: Array<{
-    /** Move coordinate (e.g., "Q16") */
+    /**
+     * Move coordinate (e.g., "Q16"), rows numbered on a square of the board's
+     * longer side (row = side - y): on SZ[13:9] the bottom row is 5.
+     */
     m: string;
 
     /**
@@ -45,7 +48,7 @@ interface KayaAnalysisData {
     v?: number;
   }>;
 
-  /** Ownership (Optional: Compressed string) */
+  /** Ownership (Optional: Compressed string), indexed y * side + x on that square */
   o?: string;
 }
 ```
