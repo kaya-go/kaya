@@ -42,9 +42,15 @@ next one, so the keyboard would compose, but any other caller that batches
 moves (gamepad, wheel, code) would keep the bug. The rAF dates from the first
 commit with no recorded reason, and it was left alone.
 
-Still render-bound: `switchBranch` and `switchToBranchIndex` read
-`branchInfo`, a memo of the rendered node. The keyboard throttles them to one
-per 80 ms, so two never land in one frame from the keys.
+Still render-bound:
+
+- `switchBranch` and `switchToBranchIndex` read `branchInfo`, a memo of the
+  rendered node. The keyboard throttles them to one per 80 ms, so two never
+  land in one frame from the keys.
+- Writers outside `useGameNavigation` set the state directly: a game-tree
+  click (the context maps `goToNode` to `setCurrentNodeId`), undo/redo,
+  playing a stone, loading a file. The ref follows them on the next render, so
+  a navigation call in the same frame still starts from the old node.
 
 ## Test
 
