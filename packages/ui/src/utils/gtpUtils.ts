@@ -108,12 +108,14 @@ export function bestMoveOnBoard(
   moves: string[],
   size: number,
   width: number,
-  height: number
+  height: number,
+  isFree: (vertex: Vertex) => boolean = () => true
 ): Vertex | null {
   for (const move of moves) {
     const vertex = parseGTPCoordinate(move, size);
     if (vertex === null) return [-1, -1];
-    if (vertex[0] < width && vertex[1] < height) return vertex;
+    // An occupied point is never playable: playing it would overwrite a stone.
+    if (vertex[0] < width && vertex[1] < height && isFree(vertex)) return vertex;
   }
   return null;
 }

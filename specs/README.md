@@ -73,3 +73,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-09 | [The cache answers only if it explored the forced move](2026-11-09-cache-explored-move.md)                  | shipped    |
 | 2026-11-10 | [SGF / ZIP load errors: capture and toast surface](2026-11-10-sgf-import-error-surface.md)                  | shipped    |
 | 2026-11-20 | [Model library: one copy per file, explicit metadata](2026-11-20-model-library-content-dedup.md)            | shipped    |
+| 2026-11-20 | [Analysis results keep their position](2026-11-20-analysis-result-position.md)                              | shipped    |

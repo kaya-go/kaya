@@ -96,6 +96,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     error,
     setError,
     runAnalysis,
+    stopLiveAnalysis,
     lookupCachedResult,
     waitForCurrentAnalysis,
     mctsProgress,
@@ -113,6 +114,14 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setAnalysisResult,
     selectedQuantization,
   });
+
+  // A full-game run outlives the render it started in: it must refresh the
+  // position on screen when a slice lands, not the one current at its start.
+  const lookupCachedResultRef = useRef(lookupCachedResult);
+  useEffect(() => {
+    lookupCachedResultRef.current = lookupCachedResult;
+  }, [lookupCachedResult]);
+  const lookupCurrentCachedResult = useCallback(() => lookupCachedResultRef.current(), []);
 
   const {
     isFullGameAnalyzing,
@@ -137,7 +146,7 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     gameInfo,
     aiSettings,
     updateAnalysisCacheSize,
-    lookupCachedResult,
+    lookupCachedResult: lookupCurrentCachedResult,
     currentNodeIdRef,
     selectedQuantization,
   });
@@ -280,9 +289,10 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (analysisMode && queue) {
       runAnalysis();
     } else if (!analysisMode) {
+      stopLiveAnalysis();
       setAnalysisResult(null);
     }
-  }, [analysisMode, queue, currentNodeId, runAnalysis, setAnalysisResult]);
+  }, [analysisMode, queue, currentNodeId, runAnalysis, stopLiveAnalysis, setAnalysisResult]);
 
   const nextMoveVertex = useMemo(
     () => computeNextMoveVertex(gameTree, currentNodeId),
