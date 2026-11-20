@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::Manager;
 
+use super::model_files::{install_model_file, is_download_temp, unique_temp_path};
 use crate::onnx_engine;
 
 /// State for chunked model upload
@@ -24,22 +25,24 @@ fn sanitize_model_id(model_id: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Get the temp file path for model upload
-fn get_model_temp_path() -> PathBuf {
-    std::env::temp_dir().join(format!("kaya-model-{}.onnx", std::process::id()))
-}
-
 /// Start a chunked model upload
 #[tauri::command]
 pub async fn onnx_start_upload() -> Result<String, String> {
-    let path = get_model_temp_path();
-    
-    File::create(&path)
+    let path = unique_temp_path("kaya-model-", "onnx");
+
+    // create_new: never write through a file someone else put at that name.
+    OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
         .map_err(|e| format!("Failed to create temp file: {}", e))?;
-    
-    let mut upload_path = MODEL_UPLOAD_PATH.lock().unwrap();
-    *upload_path = Some(path.clone());
-    
+
+    // An upload abandoned halfway would otherwise stay in the temp dir.
+    let abandoned = MODEL_UPLOAD_PATH.lock().unwrap().replace(path.clone());
+    if let Some(old) = abandoned {
+        let _ = std::fs::remove_file(old);
+    }
+
     Ok(path.to_string_lossy().to_string())
 }
 
@@ -104,14 +107,12 @@ fn save_uploaded_model(model_id: Option<String>, app_handle: &tauri::AppHandle) 
             .map_err(|e| format!("Failed to create models dir: {}", e))?;
         
         let cached_path = models_dir.join(format!("{}.onnx", id));
-        
-        std::fs::rename(&temp_path, &cached_path)
-            .or_else(|_| {
-                std::fs::copy(&temp_path, &cached_path)?;
-                std::fs::remove_file(&temp_path)
-            })
-            .map_err(|e| format!("Failed to cache model: {}", e))?;
-        
+
+        if let Err(e) = install_model_file(&temp_path, &cached_path) {
+            let _ = std::fs::remove_file(&temp_path);
+            return Err(format!("Failed to cache model: {}", e));
+        }
+
         cached_path
     } else {
         temp_path
@@ -176,6 +177,11 @@ pub async fn onnx_cache_downloaded_file(
     sanitize_model_id(&model_id)?;
 
     let src = std::path::Path::new(&temp_path);
+    // This moves the file and deletes the source: only take what
+    // `download_file` wrote, not any path the webview names.
+    if !is_download_temp(src) {
+        return Err(format!("Not a downloaded model file: {}", temp_path));
+    }
     if !src.exists() {
         return Err(format!("Temp file not found: {}", temp_path));
     }
@@ -198,12 +204,10 @@ pub async fn onnx_cache_downloaded_file(
     // both stay off the async runtime.
     let src = src.to_path_buf();
     tokio::task::spawn_blocking(move || {
-        std::fs::rename(&src, &cached_path)
-            .or_else(|_| {
-                std::fs::copy(&src, &cached_path)?;
-                std::fs::remove_file(&src)
-            })
-            .map_err(|e| format!("Failed to cache model: {}", e))?;
+        if let Err(e) = install_model_file(&src, &cached_path) {
+            let _ = std::fs::remove_file(&src);
+            return Err(format!("Failed to cache model: {}", e));
+        }
 
         let hash = sha256_base64url(&cached_path)?;
 

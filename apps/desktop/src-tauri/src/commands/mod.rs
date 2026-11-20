@@ -1,6 +1,7 @@
 //! Tauri commands for native ONNX inference and related functionality
 
 mod download;
+mod model_files;
 mod pytorch;
 mod updater;
 mod upload;
