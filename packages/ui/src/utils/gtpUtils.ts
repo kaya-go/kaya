@@ -98,11 +98,11 @@ export function vertexToGTP(vertex: Vertex | null, boardSize: number): string {
 }
 
 /**
- * The first of the engine's ranked moves that lands on a `width` × `height`
- * board, from an analysis run on a square board of side `size`. On a
- * rectangular board the engine also ranks points past the real edge, so those
- * are skipped. A pass, or a move that does not parse, is `[-1, -1]`, as
- * playMove takes it. Null when every move is off the board.
+ * The first of the engine's ranked moves that is a free point of a `width` ×
+ * `height` board, its moves named on a square of side `size`
+ * (analysisBoardSize). The engines rank only points of the board; one that
+ * is not is skipped all the same. A pass, or a move that does not parse, is
+ * `[-1, -1]`, as playMove takes it. Null when no move is playable.
  */
 export function bestMoveOnBoard(
   moves: string[],

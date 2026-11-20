@@ -353,24 +353,29 @@ width; `GameInfo.boardHeight` is set **only** when the board is rectangular.
 Board reconstruction honours both, so a `SZ[9:13]` game loads, displays and
 plays correctly, and the LRU cache key includes the height.
 
-Everything downstream of analysis still assumes a square board — the ONNX
-featurizer is `size * size`, and scoring and dead-stone estimation follow the
-same assumption. Analysis on a rectangular board is not supported. If you add
-a code path that builds a board from `GameInfo`, pass `boardHeight` through;
-if you add one that feeds a model, a square board is a precondition to check,
-not an assumption to inherit.
+Analysis sees the real board. The analysis helpers (`reconstructAnalysisState`,
+`mapAnalysisPath`, `analysisCacheKeyAt`, `buildAnalysisRequest`) take the
+game's dimensions and replay on that board, so a request's `signMap` is
+`height` rows of `width` points. Its shape is how the engines learn the
+dimensions: there is no width or height field for a layer to drop. The cache
+key holds the board's rows, so a rectangle never shares a key with the square
+that covers it, and square boards keep their keys (saved `KA` loads).
 
-Today analysis runs on a square board that covers the game board, its side the
-longer of width and height. `analysisBoardSize` in `gameCache.ts` decides it,
-and the analysis helpers (`reconstructAnalysisState`, `mapAnalysisPath`,
-`analysisCacheKeyAt`, `buildAnalysisRequest`) take the game's dimensions and
-apply it themselves, so no caller picks a size of its own and misses the cache.
-A row shorter than the row count panics the native engine with its lock held.
-Decode the engine's GTP moves with the same size, and expect points past the
-real edge of the board: Suggest move plays the best ranked move that is on it
-(`bestMoveOnBoard`), and the heatmap skips the others. Maps drawn on the board
-(markers, heatmap, ownership, the keyboard cursor) have the game's own height
-rows and width columns.
+Inside the engines, `BoardShape` (`@kaya/ai-engine`, and
+`onnx_engine/types.rs` natively) puts the board in the top-left corner of the
+network's square input, whose side is the longer of width and height. Plane 0
+marks the board's points and every plane is 0 past its edge, as KataGo's
+`fillRowV7` does; the search plays on the board itself, and the policy is
+ranked over its points and the pass only. A batch is one tensor, so its
+positions share a board. The engines name moves on that square (GTP row =
+side − y) and index ownership on it: decode results with `analysisBoardSize`
+in `gameCache.ts`, the longer side, which for a square board is its size. Maps
+drawn on the board (markers, heatmap, ownership, the keyboard cursor) have the
+game's own height rows and width columns. See
+[`specs/2026-11-20-analysis-real-board.md`](../specs/2026-11-20-analysis-real-board.md).
+
+Still square: scoring and dead-stone estimation. If you add a code path that
+builds a board from `GameInfo`, pass `boardHeight` through.
 
 ### 10. `gameControl` events have exactly one owner
 

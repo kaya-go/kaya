@@ -56,6 +56,7 @@ export * from './types';
 export type { MCTSProgress } from './onnx-types';
 
 // Utilities
+export * from './board-shape';
 export * from './analysis-utils';
 export * from './sgf-utils';
 export * from './webgpu-converter';

@@ -1,5 +1,6 @@
 import * as ort from 'onnxruntime-web/all';
 import type { Sign } from '@kaya/goboard';
+import { onBoard, type BoardShape } from './board-shape';
 import type { AnalysisResult, MoveSuggestion } from './types';
 
 /**
@@ -116,14 +117,19 @@ export function disposeTensors(results: ort.InferenceSession.ReturnType): void {
 }
 
 /**
- * Process batch inference results into AnalysisResult array.
+ * Process batch inference results into AnalysisResult array, every position on
+ * a board of `shape`. Moves are ranked among the points of the board and the
+ * pass only, as KataGo's softmax runs over legal moves only; they are named on
+ * the square input (row = side - y), and ownership is indexed on it, 0 past the
+ * edge of the board.
  */
 export async function processBatchResults(
   results: ort.InferenceSession.ReturnType,
   plas: Sign[],
-  size: number,
+  shape: BoardShape,
   batchSize: number
 ): Promise<AnalysisResult[]> {
+  const size = shape.side;
   const getData = async (tensor: ort.Tensor): Promise<Float32Array> => {
     if (typeof tensor.getData === 'function') {
       try {
@@ -158,6 +164,14 @@ export async function processBatchResults(
 
   const analysisResults: AnalysisResult[] = [];
   const letters = 'ABCDEFGHJKLMNOPQRST';
+  // The points of the board, then the pass; never a point past its edge.
+  const moveIndices: number[] = [];
+  for (let y = 0; y < shape.height; y++) {
+    for (let x = 0; x < shape.width; x++) {
+      if (y * size + x < numMoves) moveIndices.push(y * size + x);
+    }
+  }
+  if (size * size < numMoves) moveIndices.push(size * size);
 
   for (let b = 0; b < batchSize; b++) {
     const pla = plas[b];
@@ -185,26 +199,26 @@ export async function processBatchResults(
     // Convert lead to Black's perspective
     const blackLead = leadCurrentPlayer * pla;
 
-    // Policy softmax
+    // Policy softmax over the moves of the board
     let maxLogit = -Infinity;
-    for (let i = 0; i < numMoves; i++) {
+    for (const i of moveIndices) {
       if (policy[i] > maxLogit) maxLogit = policy[i];
     }
 
     const probs = new Float32Array(numMoves);
     let sumProbs = 0;
-    for (let i = 0; i < numMoves; i++) {
+    for (const i of moveIndices) {
       probs[i] = Math.exp(policy[i] - maxLogit);
       sumProbs += probs[i];
     }
-    for (let i = 0; i < numMoves; i++) probs[i] /= sumProbs;
+    for (const i of moveIndices) probs[i] /= sumProbs;
 
     // Top moves
-    const indices = Array.from({ length: numMoves }, (_, i) => i);
+    const indices = [...moveIndices];
     indices.sort((a, b) => probs[b] - probs[a]);
 
     const moveSuggestions: MoveSuggestion[] = [];
-    for (let i = 0; i < Math.min(10, numMoves); i++) {
+    for (let i = 0; i < Math.min(10, indices.length); i++) {
       const idx = indices[i];
       const prob = probs[idx];
       let moveStr = '';
@@ -229,7 +243,11 @@ export async function processBatchResults(
       currentTurn: pla === 1 ? 'B' : 'W',
       visits: 1,
       // KataGo ONNX ownership is pre-tanh; pla flips current-player → Black.
-      ownership: ownership ? Array.from(ownership).map(v => Math.tanh(v) * pla) : undefined,
+      ownership: ownership
+        ? Array.from(ownership, (v, i) =>
+            onBoard(shape, i % size, Math.floor(i / size)) ? Math.tanh(v) * pla : 0
+          )
+        : undefined,
     });
   }
 

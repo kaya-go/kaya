@@ -1,6 +1,6 @@
 import { GameTree, type GameTreeNode } from '@kaya/gametree';
 import { GoBoard } from '@kaya/goboard';
-import { DEFAULT_KOMI, type AnalysisRequest } from '@kaya/ai-engine';
+import { DEFAULT_KOMI, analysisSide, type AnalysisRequest } from '@kaya/ai-engine';
 import {
   createInitialAnalysisState,
   generateAnalysisCacheKey,
@@ -188,54 +188,50 @@ export function reconstructBoard(
 export type BoardDimensions = Pick<GameInfo, 'boardSize' | 'boardHeight'>;
 
 /**
- * Side of the square board analysis runs on, which is also the size to decode
- * the engine's GTP moves with. Engines size a board by its row count, and a row
- * shorter than that panics the native engine with its lock held, so analysis
- * keeps the board square. The square covers the whole game board, so on a
- * rectangle it is padded past the short edge and no stone is cut off: the
- * engine may then rank points off the real board, which callers skip (see
- * bestMoveOnBoard).
- *
- * The analysis helpers below take the game's dimensions and apply this
- * themselves, so a caller cannot pick another size and miss the cache.
+ * Side of the square the engines name moves and index ownership on, so the
+ * size to decode an analysis result with: the longer side of the board (see
+ * BoardShape in @kaya/ai-engine). The position analysed is the game's own
+ * board; only the network's input is square, the board in its corner.
  */
 export function analysisBoardSize({ boardSize, boardHeight }: BoardDimensions): number {
-  return Math.max(boardSize, boardHeight ?? boardSize);
+  return analysisSide(boardSize, boardHeight ?? boardSize);
 }
 
 /**
  * Reconstruct the analysis position at a node (board + history + nextToPlay +
- * ko) on the square analysis board. Clones so callers can safely feed
+ * ko) on the game's board. Clones so callers can safely feed
  * updateAnalysisState / queue submit. Null tree/node → empty initial state.
+ *
+ * The analysis helpers here take the game's dimensions, so a caller cannot
+ * build the position on another board and miss the cache.
  */
 export function reconstructAnalysisState(
   tree: GameTree<SGFProperty> | null,
   nodeId: number | string | null,
-  dimensions: BoardDimensions
+  { boardSize, boardHeight }: BoardDimensions
 ): AnalysisState {
-  return cloneAnalysisState(reconstructPosition(tree, nodeId, analysisBoardSize(dimensions)));
+  return cloneAnalysisState(reconstructPosition(tree, nodeId, boardSize, boardHeight));
 }
 
 /**
  * Walk a node sequence with one createInitial + updateAnalysisState loop, on
- * the square analysis board. Populates positionCache for intermediate/final
- * nodes so later reconstructAnalysisState hits are cheap.
+ * the game's board. Populates positionCache for intermediate/final nodes so
+ * later reconstructAnalysisState hits are cheap.
  */
 export function mapAnalysisPath<T>(
   tree: GameTree<SGFProperty>,
   nodes: GameTreeNode<SGFProperty>[],
   mapFn: (state: AnalysisState, index: number, node: GameTreeNode<SGFProperty>) => T,
-  dimensions: BoardDimensions
+  { boardSize, boardHeight }: BoardDimensions
 ): T[] {
   bindPositionCache(tree);
-  const size = analysisBoardSize(dimensions);
-  let state = createInitialAnalysisState(size);
+  let state = createInitialAnalysisState(boardSize, boardHeight);
   const results: T[] = new Array(nodes.length);
 
   for (let i = 0; i < nodes.length; i++) {
     state = updateAnalysisState(state, nodes[i], i);
     if (i % CACHE_STEP === 0 || i === nodes.length - 1) {
-      putPositionCache(positionCacheKey(nodes[i].id, size), state);
+      putPositionCache(positionCacheKey(nodes[i].id, boardSize, boardHeight), state);
     }
     results[i] = mapFn(state, i, nodes[i]);
   }
@@ -245,7 +241,8 @@ export function mapAnalysisPath<T>(
 
 /**
  * The analysis cache key of a position: the key the queue stores its result
- * under, and the one SGF `KA` persistence reads and writes.
+ * under, and the one SGF `KA` persistence reads and writes. The board's rows
+ * are in it, so a rectangle and the square that covers it never share a key.
  */
 export function analysisCacheKey(state: AnalysisState, komi: number): string {
   return generateAnalysisCacheKey(state.board.signMap, state.nextToPlay, komi, state.history);
@@ -255,10 +252,10 @@ export function analysisCacheKey(state: AnalysisState, komi: number): string {
 export function analysisCacheKeyAt(
   tree: GameTree<SGFProperty>,
   nodeId: number | string,
-  dimensions: BoardDimensions,
+  { boardSize, boardHeight }: BoardDimensions,
   komi: number
 ): string {
-  return analysisCacheKey(reconstructPosition(tree, nodeId, analysisBoardSize(dimensions)), komi);
+  return analysisCacheKey(reconstructPosition(tree, nodeId, boardSize, boardHeight), komi);
 }
 
 /** The request fields a caller may set. The position always comes from the tree. */
@@ -275,8 +272,8 @@ export type BuildAnalysisRequestParams = {
 
 /**
  * Build an engine request for the position at a node: board, history, side to
- * play and ko, all from one reconstruction. The board is square, see
- * analysisBoardSize.
+ * play and ko, all from one reconstruction. The board is the game's own, height
+ * rows of width points: its shape is how the engines learn the dimensions.
  */
 export function buildAnalysisRequest({
   gameTree,

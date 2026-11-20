@@ -6,11 +6,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::result_processing::drop_ko_move;
-use super::types::{AnalysisOptions, AnalysisResult, HistoryMove};
+use super::types::{AnalysisOptions, AnalysisResult, BoardShape, HistoryMove};
 use super::OnnxEngine;
 
 const CPUCT: f32 = 1.5;
-const LETTERS: &str = "ABCDEFGHJKLMNOPQRST";
 
 /// Progress update emitted during MCTS search.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -120,27 +119,28 @@ impl MCTSNode {
 // --- Board logic (simplified Go rules for MCTS tree traversal) ---
 
 /// A lightweight board representation for MCTS tree traversal.
-/// We need to apply moves and detect captures/ko.
+/// We need to apply moves and detect captures/ko. It is the game's own board,
+/// of any shape: past its edge there is neither a move nor a liberty.
 #[derive(Clone)]
 struct Board {
     grid: Vec<Vec<i8>>,
-    size: usize,
+    shape: BoardShape,
     ko_vertex: Option<(usize, usize)>,
     ko_sign: i8,
 }
 
 impl Board {
     fn with_ko(sign_map: &[Vec<i8>], ko_info: &Option<KoInfo>) -> Self {
-        let size = sign_map.len();
+        let shape = BoardShape::of(sign_map);
         let (ko_vertex, ko_sign) = match ko_info {
-            Some(ki) if ki.sign != 0 && ki.vertex[0] >= 0 && ki.vertex[1] >= 0 => {
+            Some(ki) if ki.sign != 0 && shape.contains(ki.vertex[0], ki.vertex[1]) => {
                 (Some((ki.vertex[0] as usize, ki.vertex[1] as usize)), ki.sign)
             }
             _ => (None, 0),
         };
         Self {
             grid: sign_map.to_vec(),
-            size,
+            shape,
             ko_vertex,
             ko_sign,
         }
@@ -149,16 +149,16 @@ impl Board {
     fn neighbors(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
         let mut result = Vec::with_capacity(4);
         if x > 0 { result.push((x - 1, y)); }
-        if x + 1 < self.size { result.push((x + 1, y)); }
+        if x + 1 < self.shape.width { result.push((x + 1, y)); }
         if y > 0 { result.push((x, y - 1)); }
-        if y + 1 < self.size { result.push((x, y + 1)); }
+        if y + 1 < self.shape.height { result.push((x, y + 1)); }
         result
     }
 
     /// Find all stones in the group containing (x, y).
     fn flood_group(&self, x: usize, y: usize, color: i8) -> Vec<(usize, usize)> {
         let mut group = Vec::new();
-        let mut visited = vec![vec![false; self.size]; self.size];
+        let mut visited = vec![vec![false; self.shape.width]; self.shape.height];
         let mut stack = vec![(x, y)];
         while let Some((cx, cy)) = stack.pop() {
             if visited[cy][cx] { continue; }
@@ -248,36 +248,16 @@ impl Board {
     }
 }
 
-/// Parse a GTP move string (e.g. "D4", "Q16", "PASS") to (x, y).
-fn parse_move_str(move_str: &str, size: usize) -> Option<(usize, usize)> {
-    if move_str.is_empty() || move_str == "PASS" {
-        return None;
-    }
-    let chars: Vec<char> = move_str.chars().collect();
-    let letter = chars[0].to_ascii_uppercase();
-    let x = LETTERS.find(letter)?;
-    let num: usize = move_str[1..].parse().ok()?;
-    if x >= size || num == 0 || num > size {
-        return None;
-    }
-    let y = size - num;
-    Some((x, y))
-}
-
 /// Get the GTP string for the ko-forbidden vertex.
 fn get_ko_vertex(board: &Board, pla: i8) -> Option<String> {
-    if let Some((kx, ky)) = board.ko_vertex {
-        if board.ko_sign == pla {
-            let letter = LETTERS.chars().nth(kx)?;
-            return Some(format!("{}{}", letter, board.size - ky));
-        }
-    }
-    None
+    let (kx, ky) = board.ko_vertex?;
+    (board.ko_sign == pla).then(|| board.shape.move_name(kx, ky))
 }
 
 /// Expand a node: create children from NN policy, keeping only legal moves.
-/// `make_move` refuses an occupied point, the ko point and a suicide alike; the
-/// network can rank any of them among its top moves.
+/// `parse_move` refuses a point past the edge of the board, and `make_move` an
+/// occupied point, the ko point and a suicide alike; the network can rank any
+/// of them among its top moves.
 fn expand_node(
     node: &mut MCTSNode,
     result: &AnalysisResult,
@@ -289,7 +269,7 @@ fn expand_node(
     for suggestion in &result.move_suggestions {
         let move_str = &suggestion.move_str;
         if move_str != "PASS" {
-            let legal = parse_move_str(move_str, board.size)
+            let legal = board.shape.parse_move(move_str)
                 .is_some_and(|(x, y)| board.make_move(pla, x, y).is_ok());
             if !legal { continue; }
         }
@@ -338,8 +318,9 @@ impl OnnxEngine {
         should_abort: &dyn Fn() -> bool,
         progress_callback: &mut dyn FnMut(MCTSProgress),
     ) -> Result<MCTSAnalysisResult, String> {
-        let size = sign_map.len();
-        self.board_size = size;
+        // The search plays on the board itself; ownership comes back on the
+        // square the network sees it in (see BoardShape).
+        let side = BoardShape::of(sign_map).side;
         let num_visits = options.num_visits;
         let max_batch: usize = 16;
 
@@ -366,7 +347,7 @@ impl OnnxEngine {
         let mut root = MCTSNode::new(1.0);
 
         // Ownership accumulator
-        let board_area = size * size;
+        let board_area = side * side;
         let mut ownership_sum = vec![0.0f64; board_area];
         let mut ownership_count: usize = 0;
 
@@ -462,7 +443,7 @@ impl OnnxEngine {
                         cur_hist = last_entries.into_iter().rev().collect();
                         cur_hist.push(HistoryMove { color: cur_pla, x: -1, y: -1 });
                     } else {
-                        if let Some((mx, my)) = parse_move_str(move_str, size) {
+                        if let Some((mx, my)) = cur_board.shape.parse_move(move_str) {
                             match cur_board.make_move(cur_pla, mx, my) {
                                 Ok(new_board) => {
                                     let last_entries: Vec<_> = cur_hist.iter().rev().take(4).cloned().collect();
@@ -664,7 +645,6 @@ impl OnnxEngine {
                                 history,
                                 include_move,
                                 extra_needed,
-                                size,
                                 should_abort,
                             )?;
                         }
@@ -674,7 +654,7 @@ impl OnnxEngine {
         }
 
         // Build final result
-        Self::build_mcts_result(&root, next_pla, &ownership_sum, ownership_count, size)
+        Self::build_mcts_result(&root, next_pla, &ownership_sum, ownership_count, side)
     }
 
     /// Run forced visits through the includeMove.
@@ -688,7 +668,6 @@ impl OnnxEngine {
         history: &[HistoryMove],
         include_move: &str,
         extra_needed: usize,
-        size: usize,
         should_abort: &dyn Fn() -> bool,
     ) -> Result<(), String> {
         for _ in 0..extra_needed {
@@ -705,7 +684,7 @@ impl OnnxEngine {
                 let last_entries: Vec<_> = cur_hist.iter().rev().take(4).cloned().collect();
                 cur_hist = last_entries.into_iter().rev().collect();
                 cur_hist.push(HistoryMove { color: cur_pla, x: -1, y: -1 });
-            } else if let Some((mx, my)) = parse_move_str(include_move, size) {
+            } else if let Some((mx, my)) = cur_board.shape.parse_move(include_move) {
                 match cur_board.make_move(cur_pla, mx, my) {
                     Ok(new_board) => {
                         let last_entries: Vec<_> = cur_hist.iter().rev().take(4).cloned().collect();
@@ -764,7 +743,7 @@ impl OnnxEngine {
                     let last_entries: Vec<_> = cur_hist.iter().rev().take(4).cloned().collect();
                     cur_hist = last_entries.into_iter().rev().collect();
                     cur_hist.push(HistoryMove { color: cur_pla, x: -1, y: -1 });
-                } else if let Some((mx, my)) = parse_move_str(move_str, size) {
+                } else if let Some((mx, my)) = cur_board.shape.parse_move(move_str) {
                     match cur_board.make_move(cur_pla, mx, my) {
                         Ok(new_board) => {
                             let last_entries: Vec<_> = cur_hist.iter().rev().take(4).cloned().collect();
@@ -1011,5 +990,37 @@ mod tests {
         grid[1][3] = 0;
         let no_ko = Board::with_ko(&grid, &None).make_move(1, 2, 1).unwrap();
         assert_eq!((no_ko.ko_vertex, no_ko.ko_sign), (None, 0));
+    }
+
+    /// A rectangle reaches the search as its own board. Moves are named on the
+    /// square the network sees it in (row = side - y), so the network can rank
+    /// a point past the edge: it is never a child.
+    #[test]
+    fn expansion_keeps_to_the_points_of_a_rectangle() {
+        // 9 wide, 13 high: K is the tenth column, past the right edge.
+        let tall = Board::with_ko(&vec![vec![0i8; 9]; 13], &None);
+        let mut node = MCTSNode::new(1.0);
+        expand_node(&mut node, &policy(&["K13", "J13", "A1", "PASS"]), &tall, 1);
+        assert_eq!(children(&node), vec!["J13", "A1", "PASS"]);
+
+        // 13 wide, 9 high: N13 is the top right corner, rows 1 to 4 are past
+        // the bottom edge.
+        let wide = Board::with_ko(&vec![vec![0i8; 13]; 9], &None);
+        let mut node = MCTSNode::new(1.0);
+        expand_node(&mut node, &policy(&["A1", "A4", "A5", "N13", "PASS"]), &wide, 1);
+        assert_eq!(children(&node), vec!["A5", "N13", "PASS"]);
+    }
+
+    /// Past the edge of a rectangle there is no liberty: a stone surrounded
+    /// against it is captured.
+    #[test]
+    fn a_capture_against_the_edge_of_a_rectangle_happens() {
+        // 9 wide, 13 high: Black on the right edge, White above and below.
+        let mut grid = vec![vec![0i8; 9]; 13];
+        grid[6][8] = 1;
+        grid[5][8] = -1;
+        grid[7][8] = -1;
+        let after = Board::with_ko(&grid, &None).make_move(-1, 7, 6).unwrap();
+        assert_eq!(after.sign_map()[6][8], 0);
     }
 }

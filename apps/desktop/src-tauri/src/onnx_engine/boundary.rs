@@ -7,7 +7,7 @@
 use std::sync::{Mutex, MutexGuard};
 
 use super::mcts::KoInfo;
-use super::types::AnalysisOptions;
+use super::types::{AnalysisOptions, BoardShape};
 
 /// Lock the global engine slot, recovering it when an earlier call panicked
 /// while holding it.
@@ -28,48 +28,53 @@ pub(crate) fn lock_or_reset<T>(slot: &Mutex<Option<T>>) -> MutexGuard<'_, Option
     })
 }
 
-/// Featurization indexes a board as a square of `sign_map.len()`, so a ragged
-/// or empty board would panic while the lock is held. Returns the board size.
-pub(super) fn validate_board(sign_map: &[Vec<i8>]) -> Result<usize, String> {
-    let size = sign_map.len();
-    if size == 0 {
+/// A board is `height` rows of `width` points, any shape (see `BoardShape`).
+/// Featurization and the search index every row by the first row's width, so
+/// a ragged or empty board would panic while the lock is held.
+pub(super) fn validate_board(sign_map: &[Vec<i8>]) -> Result<BoardShape, String> {
+    let shape = BoardShape::of(sign_map);
+    if shape.width == 0 {
         return Err("Invalid board: it is empty".to_string());
     }
-    if let Some((y, row)) = sign_map.iter().enumerate().find(|(_, row)| row.len() != size) {
+    if let Some((y, row)) = sign_map.iter().enumerate().find(|(_, row)| row.len() != shape.width) {
         return Err(format!(
-            "Invalid board: row {} has {} points on a board of {} rows (boards must be square)",
+            "Invalid board: row {} has {} points, row 0 has {} (rows must be the same length)",
             y,
             row.len(),
-            size
+            shape.width
         ));
     }
-    Ok(size)
+    Ok(shape)
 }
 
-/// Every position of a batch goes into one tensor, so they must share a size.
+/// Every position of a batch goes into one tensor, so they must share a board.
 pub(super) fn validate_batch(inputs: &[(Vec<Vec<i8>>, AnalysisOptions)]) -> Result<(), String> {
     let Some((first, _)) = inputs.first() else { return Ok(()) };
-    let size = validate_board(first)?;
+    let shape = validate_board(first)?;
     for (i, (sign_map, _)) in inputs.iter().enumerate().skip(1) {
         let other = validate_board(sign_map)?;
-        if other != size {
+        if other != shape {
             return Err(format!(
-                "Invalid batch: position {} has size {}, the first one size {}",
-                i, other, size
+                "Invalid batch: position {} has size {}x{}, the first one size {}x{}",
+                i, other.width, other.height, shape.width, shape.height
             ));
         }
     }
     Ok(())
 }
 
-/// The search names the ko point with `size - y`, which underflows for a point
-/// below the board. Negative coordinates mean "no ko" and are ignored.
-pub(super) fn validate_ko(ko_info: &Option<KoInfo>, size: usize) -> Result<(), String> {
+/// The search names the ko point with `side - y`, which underflows for a point
+/// below the square, and indexes the board with it. Negative coordinates mean
+/// "no ko" and are ignored.
+pub(super) fn validate_ko(ko_info: &Option<KoInfo>, shape: BoardShape) -> Result<(), String> {
     if let Some(ko) = ko_info {
         let [x, y] = ko.vertex;
-        let fits = |c: i32| c < 0 || (c as usize) < size;
-        if ko.sign != 0 && !(fits(x) && fits(y)) {
-            return Err(format!("Invalid ko point [{}, {}] on a {}x{} board", x, y, size, size));
+        let no_ko = x < 0 || y < 0;
+        if ko.sign != 0 && !no_ko && !shape.contains(x, y) {
+            return Err(format!(
+                "Invalid ko point [{}, {}] on a {}x{} board",
+                x, y, shape.width, shape.height
+            ));
         }
     }
     Ok(())

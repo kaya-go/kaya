@@ -13,6 +13,8 @@ pub mod mcts;
 mod result_processing;
 mod search_ids;
 mod types;
+#[cfg(test)]
+mod real_rectangle;
 
 pub use execution_providers::{
     ExecutionProviderInfo, ExecutionProviderPreference,
@@ -20,7 +22,7 @@ pub use execution_providers::{
     set_execution_provider_preference,
 };
 use featurization::determine_next_player;
-pub use types::{AnalysisOptions, AnalysisResult, HistoryMove};
+pub use types::{AnalysisOptions, AnalysisResult, BoardShape};
 
 use boundary::{lock_or_reset, validate_batch, validate_board, validate_ko};
 use execution_providers::configure_execution_providers;
@@ -33,7 +35,6 @@ use std::sync::{Mutex, MutexGuard};
 /// Native ONNX engine state
 pub struct OnnxEngine {
     pub(crate) session: Session,
-    pub(crate) board_size: usize,
     /// The active execution provider name
     provider_name: String,
     /// Whether the model uses fp16 I/O tensors
@@ -139,7 +140,6 @@ impl OnnxEngine {
 
         let mut engine = Self {
             session,
-            board_size: 19,
             provider_name: provider.name.clone(),
             is_fp16,
         };
@@ -202,7 +202,6 @@ impl OnnxEngine {
 
         let mut engine = Self {
             session,
-            board_size: 19,
             provider_name: provider.name.clone(),
             is_fp16,
         };
@@ -230,7 +229,7 @@ impl OnnxEngine {
     /// Run a warm-up inference on an empty board to validate the GPU backend works.
     /// Returns Err if inference fails, allowing the caller to fall back to CPU.
     fn validate_warmup(&mut self) -> Result<(), String> {
-        let size = self.board_size;
+        let size = 19;
         eprintln!("[OnnxEngine] Running warm-up validation inference ({}x{})...", size, size);
 
         let empty_board: Vec<Vec<i8>> = vec![vec![0i8; size]; size];
@@ -259,20 +258,15 @@ impl OnnxEngine {
         sign_map: &[Vec<i8>],
         options: &AnalysisOptions,
     ) -> Result<AnalysisResult, String> {
-        self.board_size = sign_map.len();
-
+        let shape = BoardShape::of(sign_map);
         let next_pla = determine_next_player(sign_map, options);
-        let ko = featurization::ko_ban(options, next_pla, self.board_size);
 
-        // Featurize using shared logic into ndarray
-        let (bin_input, global_input) =
-            featurize_ndarray(sign_map, next_pla, options.komi, &options.history, ko, self.board_size);
+        let mut bin_input = Array4::<f32>::zeros((1, 22, shape.side, shape.side));
+        let mut global_input = Array2::<f32>::zeros((1, 19));
+        featurize_ndarray(&mut bin_input, &mut global_input, 0, sign_map, next_pla, options);
 
-        // Run inference
         let results = self.run_inference(bin_input, global_input)?;
-
-        // Process results
-        self.process_results(&results, next_pla)
+        self.process_results(&results, next_pla, shape)
     }
 
     /// Analyze multiple positions in a batch
@@ -280,41 +274,26 @@ impl OnnxEngine {
         &mut self,
         inputs: &[(Vec<Vec<i8>>, AnalysisOptions)],
     ) -> Result<Vec<AnalysisResult>, String> {
-        if inputs.is_empty() {
-            return Ok(vec![]);
+        let Some((first, _)) = inputs.first() else { return Ok(vec![]) };
+        // Every position goes into one tensor, so they must share a board.
+        let shape = BoardShape::of(first);
+        if inputs.iter().any(|(sign_map, _)| BoardShape::of(sign_map) != shape) {
+            return Err("Invalid batch: its positions are not on the same board".to_string());
         }
-
-        self.board_size = inputs[0].0.len();
-        let size = self.board_size;
         let batch_size = inputs.len();
 
-        let mut bin_input = Array4::<f32>::zeros((batch_size, 22, size, size));
+        let mut bin_input = Array4::<f32>::zeros((batch_size, 22, shape.side, shape.side));
         let mut global_input = Array2::<f32>::zeros((batch_size, 19));
         let mut plas = Vec::with_capacity(batch_size);
 
         for (b, (sign_map, options)) in inputs.iter().enumerate() {
             let next_pla = determine_next_player(sign_map, options);
             plas.push(next_pla);
-            let ko = featurization::ko_ban(options, next_pla, size);
-
-            let (bin, global) =
-                featurize_ndarray(sign_map, next_pla, options.komi, &options.history, ko, size);
-
-            // Copy to batch tensors
-            for c in 0..22 {
-                for h in 0..size {
-                    for w in 0..size {
-                        bin_input[[b, c, h, w]] = bin[[0, c, h, w]];
-                    }
-                }
-            }
-            for i in 0..19 {
-                global_input[[b, i]] = global[[0, i]];
-            }
+            featurize_ndarray(&mut bin_input, &mut global_input, b, sign_map, next_pla, options);
         }
 
         let results = self.run_inference(bin_input, global_input)?;
-        self.process_batch_results(&results, &plas)
+        self.process_batch_results(&results, &plas, shape)
     }
 }
 
@@ -329,25 +308,22 @@ fn detect_fp16(session: &Session, label: &str) -> bool {
     is_fp16
 }
 
-/// Featurize a board position into ndarray tensors (for ONNX engine)
+/// Featurize a position into batch item `b` of the network's input tensors,
+/// zeroed beforehand: its board in the corner of their square (see `BoardShape`).
 fn featurize_ndarray(
+    bin_input: &mut Array4<f32>,
+    global_input: &mut Array2<f32>,
+    b: usize,
     sign_map: &[Vec<i8>],
     pla: i8,
-    komi: f32,
-    history: &[HistoryMove],
-    ko: Option<(usize, usize)>,
-    size: usize,
-) -> (Array4<f32>, Array2<f32>) {
-    let mut bin_input = Array4::<f32>::zeros((1, 22, size, size));
-    let mut global_input = Array2::<f32>::zeros((1, 19));
-
+    options: &AnalysisOptions,
+) {
+    let ko = featurization::ko_ban(options, pla, BoardShape::of(sign_map));
     featurization::featurize_into(
-        sign_map, pla, komi, history, ko,
-        |c, y, x, v| { bin_input[[0, c, y, x]] = v; },
-        |i, v| { global_input[[0, i]] = v; },
+        sign_map, pla, options.komi, &options.history, ko,
+        |c, y, x, v| { bin_input[[b, c, y, x]] = v; },
+        |i, v| { global_input[[b, i]] = v; },
     );
-
-    (bin_input, global_input)
 }
 
 // === Public API for Tauri commands ===
@@ -435,8 +411,8 @@ pub fn run_mcts_analysis(
     options: mcts::MCTSAnalysisOptions,
     progress_callback: &mut dyn FnMut(mcts::MCTSProgress),
 ) -> Result<mcts::MCTSAnalysisResult, String> {
-    let size = validate_board(&sign_map)?;
-    validate_ko(&options.ko_info, size)?;
+    let shape = validate_board(&sign_map)?;
+    validate_ko(&options.ko_info, shape)?;
     let aborted = || MCTS_IDS.is_aborted(request_id);
     // Aborted before it started: don't wait for the lock, run nothing. The
     // frontend reads the "aborted" error as an AbortError.
@@ -467,6 +443,7 @@ pub fn abort_mcts(request_id: u64) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use super::types::HistoryMove;
 
     /// A panic while a call holds the engine lock poisons it, and std never
     /// clears that by itself: every later call, a fresh initialization
@@ -485,15 +462,15 @@ mod tests {
         assert!(!is_engine_initialized());
     }
 
-    /// Featurization indexes the board as a square of `sign_map.len()`, so a
-    /// ragged or empty board, or a batch of mixed sizes, panicked under the
-    /// engine lock. They are refused before the lock is taken.
+    /// Featurization indexes every row by the first row's width, so a ragged
+    /// or empty board, or a batch of mixed sizes, panicked under the engine
+    /// lock. They are refused before the lock is taken.
     #[test]
     fn a_malformed_board_is_refused_before_the_engine_lock() {
         let mut ragged = vec![vec![0i8; 9]; 9];
         ragged[4].pop();
         let err = analyze_position(ragged, AnalysisOptions::default()).unwrap_err();
-        assert!(err.contains("square"), "{err}");
+        assert!(err.contains("same length"), "{err}");
 
         let err = analyze_position(vec![], AnalysisOptions::default()).unwrap_err();
         assert!(err.contains("empty"), "{err}");
@@ -504,8 +481,14 @@ mod tests {
         ];
         let err = analyze_batch(mixed).unwrap_err();
         assert!(err.contains("size"), "{err}");
+        let transposed = vec![
+            (vec![vec![0i8; 9]; 13], AnalysisOptions::default()),
+            (vec![vec![0i8; 13]; 9], AnalysisOptions::default()),
+        ];
+        let err = analyze_batch(transposed).unwrap_err();
+        assert!(err.contains("size"), "{err}");
 
-        // A ko point off the board underflows `size - y` when the search names it.
+        // A ko point off the board underflows `side - y` when the search names it.
         let search = mcts::MCTSAnalysisOptions {
             komi: 7.5,
             next_to_play: Some("B".to_string()),
@@ -517,6 +500,21 @@ mod tests {
         let err = run_mcts_analysis(next_mcts_request(), vec![vec![0i8; 9]; 9], search, &mut |_| {})
             .unwrap_err();
         assert!(err.contains("ko"), "{err}");
+    }
+
+    /// A rectangular game arrives as its own board, height rows of width points.
+    #[test]
+    fn a_rectangular_board_reaches_the_engine() {
+        for (width, height) in [(9usize, 13usize), (13, 9)] {
+            assert!(validate_board(&vec![vec![0i8; width]; height]).is_ok());
+            // The ko point is bounded by the board, not by the square around it.
+            let below = mcts::KoInfo { sign: 1, vertex: [0, height as i32] };
+            let right = mcts::KoInfo { sign: 1, vertex: [width as i32, 0] };
+            let shape = validate_board(&vec![vec![0i8; width]; height]).unwrap();
+            assert_eq!(shape, BoardShape { width, height, side: 13 });
+            assert!(validate_ko(&Some(below), shape).is_err());
+            assert!(validate_ko(&Some(right), shape).is_err());
+        }
     }
 
     /// The frontend aborts a search that has not reached the engine yet, for

@@ -53,7 +53,7 @@ export function computeNextMoveVertex(
  */
 export function computeNextMoveInfo(args: {
   nextMoveVertex: { vertex: [number, number]; player: 1 | -1 } | null;
-  /** Side of the square board the analysis ran on (analysisBoardSize). */
+  /** Side of the square the engine names moves on (analysisBoardSize). */
   analysisSize: number;
   mctsProgress: MCTSProgressLike | null | undefined;
   analysisResult: AnalysisResultLike | null | undefined;

@@ -182,7 +182,7 @@ const move = node.data.B?.[0] ?? node.data.W?.[0];
 
 - Rebuild a position with `reconstructBoard`, `reconstructPosition`, `reconstructAnalysisState` or `mapAnalysisPath`, never with a hand-written replay loop
 - UI `currentPlayer` (`useBoardState` → `GameTreeContext`) is the Sign projection of that same `nextToPlay` — do not re-derive side-to-play from `moveNumber` parity
-- Build an engine request for a node with `buildAnalysisRequest`: board, history, side to play and ko together, on the square board `analysisBoardSize` picks (the longer side, so a rectangle is covered). The analysis helpers take the game's dimensions, never a size: pass `gameInfo`
+- Build an engine request for a node with `buildAnalysisRequest`: board, history, side to play and ko together, on the game's own board (the engines put it in a square network input, plane 0 marking its points; decode their moves with `analysisBoardSize`, see docs/ARCHITECTURE.md §9). The analysis helpers take the game's dimensions, never a size: pass `gameInfo`
 - Valid for one `GameTree` instance: any other tree clears it, so tree writers have nothing to invalidate
 - `reconstructBoard` / `reconstructPosition` return the cached board by reference, so treat it as read-only and `.clone()` before mutating
 
