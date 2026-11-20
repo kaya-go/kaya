@@ -18,6 +18,30 @@ test.describe('Keyboard Navigation', () => {
 
     await expect(page.locator('body')).toBeVisible();
   });
+
+  // The board defers Home and End to the next animation frame. Pressed within
+  // one frame, End used to start from the node Home had just left, so it found
+  // nothing to do and the game stayed on its first move.
+  test('Home then End within one frame ends on the last move', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.app-header input[type="file"][accept^=".sgf"]').setInputFiles({
+      name: 'short.sgf',
+      mimeType: 'application/x-go-sgf',
+      buffer: Buffer.from('(;GM[1]FF[4]SZ[19];B[aa];W[bb];B[cc])'),
+    });
+    const counter = page.locator('.board-controls');
+    // A game opens on its last move.
+    await expect(counter).toContainText('Move 3 / 3');
+
+    // Both key presses in one task, then let the deferred navigation run.
+    await page.evaluate(async () => {
+      for (const key of ['Home', 'End']) {
+        document.body.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      }
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    await expect(counter).toContainText('Move 3 / 3');
+  });
 });
 
 test.describe('Game tree highlight', () => {

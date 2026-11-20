@@ -31,6 +31,22 @@ export function useGameNavigation({
   const rootIdRef = useRef(rootId);
   rootIdRef.current = rootId;
 
+  // Navigation starts from currentNodeIdRef, and a move updates it at once
+  // rather than on the next render, so two calls in one frame compose. The
+  // keyboard defers Home and End to the next animation frame: pressed within one
+  // frame, End used to walk from the node Home had just left and do nothing.
+  const moveTo = useCallback(
+    (id: number | string) => {
+      currentNodeIdRef.current = id;
+      setCurrentNodeId(id);
+    },
+    [setCurrentNodeId]
+  );
+  const getCurrentNode = useCallback(
+    () => gameTreeRef.current?.get(currentNodeIdRef.current) ?? null,
+    []
+  );
+
   const markNavigationStart = useCallback((label: string, targetNodeId: number | string) => {
     navigationTimingsRef.current.set(targetNodeId, {
       label,
@@ -71,9 +87,6 @@ export function useGameNavigation({
     () => (gameTree && currentNodeId !== null ? gameTree.get(currentNodeId) : null),
     [gameTree, currentNodeId]
   );
-
-  const currentNodeRef = useRef(currentNode);
-  currentNodeRef.current = currentNode;
 
   const nextMoveNode = useMemo(
     () => (currentNode ? getActiveChildForNode(currentNode) : null),
@@ -119,29 +132,29 @@ export function useGameNavigation({
 
       rememberActiveBranch(targetNode.parentId, targetNode.id);
       markNavigationStart('goToNode', nodeId);
-      setCurrentNodeId(nodeId);
+      moveTo(nodeId);
     },
-    [markNavigationStart, rememberActiveBranch, setCurrentNodeId]
+    [markNavigationStart, rememberActiveBranch, moveTo]
   );
 
   const goBack = useCallback(() => {
-    const node = currentNodeRef.current;
+    const node = getCurrentNode();
     if (node?.parentId === null || node?.parentId === undefined) return;
     const targetId = node.parentId;
     markNavigationStart('goBack', targetId);
-    setCurrentNodeId(targetId);
-  }, [markNavigationStart, setCurrentNodeId]);
+    moveTo(targetId);
+  }, [getCurrentNode, markNavigationStart, moveTo]);
 
   const goForward = useCallback(() => {
-    const node = currentNodeRef.current;
+    const node = getCurrentNode();
     if (!node) return;
     const nextNode = getActiveChildForNode(node);
     if (!nextNode) return;
 
     rememberActiveBranch(node.id, nextNode.id);
     markNavigationStart('goForward', nextNode.id);
-    setCurrentNodeId(nextNode.id);
-  }, [markNavigationStart, rememberActiveBranch, getActiveChildForNode, setCurrentNodeId]);
+    moveTo(nextNode.id);
+  }, [getCurrentNode, markNavigationStart, rememberActiveBranch, getActiveChildForNode, moveTo]);
 
   const goBackSteps = useCallback(
     (steps: number) => {
@@ -160,10 +173,10 @@ export function useGameNavigation({
 
       if (targetId !== startId) {
         markNavigationStart(`goBackSteps(${steps})`, targetId);
-        setCurrentNodeId(targetId);
+        moveTo(targetId);
       }
     },
-    [markNavigationStart, setCurrentNodeId]
+    [markNavigationStart, moveTo]
   );
 
   const goForwardSteps = useCallback(
@@ -187,18 +200,18 @@ export function useGameNavigation({
 
       if (targetId !== startId) {
         markNavigationStart(`goForwardSteps(${steps})`, targetId);
-        setCurrentNodeId(targetId);
+        moveTo(targetId);
       }
     },
-    [markNavigationStart, rememberActiveBranch, getActiveChildForNode, setCurrentNodeId]
+    [markNavigationStart, rememberActiveBranch, getActiveChildForNode, moveTo]
   );
 
   const goToStart = useCallback(() => {
     const rid = rootIdRef.current;
     if (rid === null || currentNodeIdRef.current === rid) return;
     markNavigationStart('goToStart', rid);
-    setCurrentNodeId(rid);
-  }, [markNavigationStart, setCurrentNodeId]);
+    moveTo(rid);
+  }, [markNavigationStart, moveTo]);
 
   const goToEnd = useCallback(() => {
     const tree = gameTreeRef.current;
@@ -225,8 +238,8 @@ export function useGameNavigation({
 
     if (nodeId === startId) return;
     markNavigationStart('goToEnd', nodeId);
-    setCurrentNodeId(nodeId);
-  }, [markNavigationStart, rememberActiveBranch, getActiveChildForNode, setCurrentNodeId]);
+    moveTo(nodeId);
+  }, [markNavigationStart, rememberActiveBranch, getActiveChildForNode, moveTo]);
 
   const navigateToMove = useCallback(
     (moveNumber: number) => {
@@ -243,10 +256,10 @@ export function useGameNavigation({
       }
       if (current) {
         markNavigationStart(`navigateToMove(${moveNumber})`, current.id);
-        setCurrentNodeId(current.id);
+        moveTo(current.id);
       }
     },
-    [getActiveChildForNode, markNavigationStart, setCurrentNodeId]
+    [getActiveChildForNode, markNavigationStart, moveTo]
   );
 
   const navigateToNextFork = useCallback(() => {
@@ -262,9 +275,9 @@ export function useGameNavigation({
     }
     if (current && current.id !== startId) {
       markNavigationStart('navigateToNextFork', current.id);
-      setCurrentNodeId(current.id);
+      moveTo(current.id);
     }
-  }, [getActiveChildForNode, markNavigationStart, setCurrentNodeId]);
+  }, [getActiveChildForNode, markNavigationStart, moveTo]);
 
   const navigateToPreviousFork = useCallback(() => {
     const tree = gameTreeRef.current;
@@ -273,17 +286,17 @@ export function useGameNavigation({
     const fork = findPreviousFork(tree, startId);
     if (fork && fork.id !== startId) {
       markNavigationStart('navigateToPreviousFork', fork.id);
-      setCurrentNodeId(fork.id);
+      moveTo(fork.id);
     }
-  }, [markNavigationStart, setCurrentNodeId]);
+  }, [markNavigationStart, moveTo]);
 
   const navigateToMainLine = useCallback(() => {
     const tree = gameTreeRef.current;
     const rid = rootIdRef.current;
     if (!tree || rid === null || rid === undefined) return;
     markNavigationStart('navigateToMainLine', rid);
-    setCurrentNodeId(rid);
-  }, [markNavigationStart, setCurrentNodeId]);
+    moveTo(rid);
+  }, [markNavigationStart, moveTo]);
 
   const navigateBackward = useCallback((steps = 1) => goBackSteps(steps), [goBackSteps]);
   const navigateForward = useCallback((steps = 1) => goForwardSteps(steps), [goForwardSteps]);
@@ -302,9 +315,10 @@ export function useGameNavigation({
   } = useBranchNavigation({
     gameTree,
     currentNode,
+    getCurrentNode,
     markNavigationStart,
     rememberActiveBranch,
-    setCurrentNodeId,
+    setCurrentNodeId: moveTo,
   });
 
   // Calculate total moves in the current active branch

@@ -110,6 +110,7 @@ kaya/
 - Consume via `useGameTreeSelector` or its domain hooks (`useGameTreeBoard`, ...): they read a stable store through `useSyncExternalStore`, so a component only re-renders when its slice changes. `useGameTree()` re-renders on every change
 - Callbacks from selectors keep one identity for good and call the latest version, so never use one as an effect dep to detect a state change. Select only what renders: a domain hook that exposes `currentBoard` re-renders on every navigation, and in a root-level component that drags the whole tree. For a value needed only in an event handler, use `useGameTreeGetter()`
 - Rebuilds positions through the LRU position cache it shares with AI analysis (see Performance Patterns)
+- Navigation in `useGameNavigation` moves through `moveTo`, which updates the current-node ref at once, so two calls in one frame compose (Home then End). A navigation callback reads the node from that ref (`getCurrentNode()`), never from a ref refreshed on render. See [`specs/2026-11-20-navigation-composes-within-a-frame.md`](specs/2026-11-20-navigation-composes-within-a-frame.md)
 - Modular hook architecture: `useGameTreeState`, `useBoardState`, `useGameNavigation`, `useGameModification`, `useEditMode`, `useScoring`, `useAIAnalysis`, `useAutoSave`, `useGameTreeUndoRedo`
 
 **2. AI Engine Lifecycle** (`packages/ui/src/contexts/AIEngineContext.tsx`)
