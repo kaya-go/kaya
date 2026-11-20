@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "碁盤画像認識（{{size}}×{{size}}、石{{count}}個）",
     "title": "碁盤画像認識",
     "selectSize": "碁盤サイズ：",
     "photo": "写真",

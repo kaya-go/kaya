@@ -5,29 +5,22 @@
  * navigation mode, and board state computations.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Sign, Marker, Vertex } from '@kaya/shudan';
-import { useGameTreeSelector } from '../../contexts/GameTreeContext';
-import type { GameTreeContextValue } from '../../types/game';
-import { useAIEngine } from '../../contexts/AIEngineContext';
-import { useToast } from '../ui/Toast';
 import {
   useGameTreeBoard,
   useGameTreeScore,
   useGameTreeAI,
   useGameTreeEdit,
   useGameTreeActions,
-  useGameTreeGetter,
 } from '../../contexts/selectors';
 import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
-import { bestMoveOnBoard } from '../../utils/gtpUtils';
-import { analysisBoardSize, buildAnalysisRequest } from '../../utils/gameCache';
-import { isAbortError, signToNextToPlay } from '../../utils/aiAnalysis';
-import type { AnalysisResult } from '@kaya/ai-engine';
-import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
+import { shouldIgnoreBoardShortcut } from '../../utils/boardShortcutGuard';
+
+export { useAIMoveGeneration } from './useAIMoveGeneration';
 
 // =========================
 // Current Player & Ghost Logic
@@ -98,177 +91,6 @@ export function useGameBoardState() {
 }
 
 // =========================
-// AI Move Generation
-// =========================
-
-export function useAIMoveGeneration(playSound: (sound: SoundType) => void) {
-  const { t } = useTranslation();
-  const { isModelLoaded, aiSettings, updateAnalysisCacheSize } = useGameTreeSelector(
-    useCallback(
-      (ctx: GameTreeContextValue) => ({
-        isModelLoaded: ctx.isModelLoaded,
-        aiSettings: ctx.aiSettings,
-        updateAnalysisCacheSize: ctx.updateAnalysisCacheSize,
-      }),
-      []
-    )
-  );
-  // The position only matters when a move is asked for: read it then, unsubscribed.
-  const getGameTree = useGameTreeGetter();
-  const { playMove } = useGameTreeActions();
-  const { queue, engine: aiEngine, isEngineReady, initializeEngine } = useAIEngine();
-  const { showToast } = useToast();
-  const { isAnalyzing, analysisResult, waitForCurrentAnalysis } = useAIAnalysis();
-
-  const [isGeneratingMove, setIsGeneratingMove] = useState(false);
-  const [pendingSuggestMove, setPendingSuggestMove] = useState(false);
-
-  // Keep refs in sync so executeGenerateMove always reads the latest values
-  const isAnalyzingRef = useRef(isAnalyzing);
-  useEffect(() => {
-    isAnalyzingRef.current = isAnalyzing;
-  }, [isAnalyzing]);
-  const analysisResultRef = useRef(analysisResult);
-  useEffect(() => {
-    analysisResultRef.current = analysisResult;
-  }, [analysisResult]);
-
-  const executeGenerateMove = useCallback(
-    async (currentPlayer: Sign) => {
-      if (!isModelLoaded) return;
-      const { gameTree, currentNodeId, currentNode: nodeBefore, gameInfo } = getGameTree();
-      // playMove plays on whatever node is current when it runs, and the awaits
-      // below can outlast a navigation. Check after each one that the user is
-      // still on the position the move is for.
-      const movedAway = () => getGameTree().currentNode !== nodeBefore;
-
-      setIsGeneratingMove(true);
-      setPendingSuggestMove(false);
-      try {
-        if (isAnalyzingRef.current) {
-          await waitForCurrentAnalysis();
-          if (movedAway()) return;
-        }
-
-        let moves: string[];
-        const cachedResult = analysisResultRef.current;
-        if (cachedResult?.moveSuggestions && cachedResult.moveSuggestions.length > 0) {
-          moves = cachedResult.moveSuggestions.map(s => s.move);
-        } else {
-          if (!queue) return;
-          const request = buildAnalysisRequest({
-            gameTree,
-            currentNodeId,
-            gameInfo,
-            overrides: {
-              numVisits: aiSettings.numVisits ?? 1,
-              nextToPlay: signToNextToPlay(currentPlayer),
-            },
-          });
-          // Through the queue, not engine.analyze: one inference at a time, and the
-          // result lands in the shared cache that the graph and SGF KA persistence read.
-          const analyze = async () => {
-            const handle = queue.submit(request);
-            const result = await handle.result;
-            // An empty id is a cache hit: the cache only grew if the engine ran.
-            if (handle.id !== '') updateAnalysisCacheSize();
-            return result;
-          };
-          let result: AnalysisResult;
-          try {
-            result = await analyze();
-          } catch (error) {
-            // Suggest rides the live lane, so a live analysis submitted after it
-            // cancels it: analysis switched on, or started in the same commit as a
-            // suggest that waited for the engine. That analysis is of this position,
-            // so wait for it and ask again: the cache answers.
-            if (!isAbortError(error) || movedAway()) throw error;
-            await waitForCurrentAnalysis();
-            if (movedAway()) return;
-            result = await analyze();
-          }
-          if (movedAway()) return;
-          moves = result.moveSuggestions.map(s => s.move);
-        }
-
-        const { boardSize: width, boardHeight: height = width } = gameInfo;
-        const vertex = bestMoveOnBoard(
-          moves.length > 0 ? moves : ['PASS'],
-          analysisBoardSize(gameInfo),
-          width,
-          height
-        );
-        if (vertex === null) {
-          showToast(t('gameboardActions.failedToGenerateMove'), 'error');
-          return;
-        }
-
-        playMove(vertex, currentPlayer);
-        playSound('move');
-      } catch (error) {
-        // Cancelled because the user left the position: nothing failed.
-        if (isAbortError(error) && movedAway()) return;
-        console.error('Failed to generate AI move:', error);
-        showToast(t('gameboardActions.failedToGenerateMove'), 'error');
-      } finally {
-        setIsGeneratingMove(false);
-      }
-    },
-    [
-      queue,
-      isModelLoaded,
-      getGameTree,
-      aiSettings.numVisits,
-      updateAnalysisCacheSize,
-      waitForCurrentAnalysis,
-      playMove,
-      playSound,
-      showToast,
-      t,
-    ]
-  );
-
-  const handleSuggestMove = useCallback(
-    async (currentPlayer: Sign) => {
-      if (!isModelLoaded) {
-        showToast(t('gameboardActions.loadAiModelFirst'), 'error');
-        return;
-      }
-
-      if (isEngineReady && aiEngine) {
-        await executeGenerateMove(currentPlayer);
-        return;
-      }
-
-      setPendingSuggestMove(true);
-      setIsGeneratingMove(true);
-      initializeEngine();
-      showToast(t('gameboardActions.initializingAiEngine'), 'info');
-    },
-    [isModelLoaded, isEngineReady, aiEngine, executeGenerateMove, showToast, t, initializeEngine]
-  );
-
-  // Auto-trigger move generation when engine becomes available
-  useEffect(() => {
-    if (pendingSuggestMove && isEngineReady && aiEngine && isModelLoaded) {
-      // Note: caller must provide currentPlayer when calling handleSuggestMove
-      // This effect is tricky - the currentPlayer at trigger time may differ.
-      // We skip auto-trigger here; it's handled by the component.
-    }
-  }, [pendingSuggestMove, isEngineReady, aiEngine, isModelLoaded]);
-
-  return {
-    isGeneratingMove,
-    pendingSuggestMove,
-    isEngineReady,
-    handleSuggestMove,
-    executeGenerateMove,
-    setPendingSuggestMove,
-    setIsGeneratingMove,
-  };
-}
-
-// =========================
 // Keyboard Shortcuts
 // =========================
 
@@ -299,13 +121,7 @@ export function useGameBoardKeyboard(options: {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target as HTMLElement).isContentEditable
-      ) {
-        return;
-      }
+      if (shouldIgnoreBoardShortcut(e)) return;
 
       if (matchesShortcut(e, 'board.toggleEditMode')) {
         handleToggleEditMode();

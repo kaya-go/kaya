@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "Reconnaissance de goban ({{size}}×{{size}}, {{count}} pierres)",
     "title": "Reconnaissance de goban",
     "selectSize": "Taille du goban :",
     "photo": "Photo",

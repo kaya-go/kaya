@@ -151,7 +151,14 @@ export async function createEngine(
     };
 
     const engine = new WorkerEngine(worker, config);
-    await engine.initialize();
+    try {
+      await engine.initialize();
+    } catch (error) {
+      // The chain tries the next backend next: do not leave this worker
+      // holding its copy of the model.
+      worker.terminate();
+      throw error;
+    }
     return engine;
   }
 }

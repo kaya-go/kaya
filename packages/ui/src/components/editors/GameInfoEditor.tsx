@@ -180,7 +180,8 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<EditElement>) => {
       e.stopPropagation();
-      if (e.key === 'Enter') {
+      // The Enter that confirms an input-method candidate belongs to the IME.
+      if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
         const isMultiline = e.currentTarget.tagName === 'TEXTAREA';
         if (isMultiline && !e.metaKey && !e.ctrlKey) return;
         e.preventDefault();

@@ -319,10 +319,10 @@ export function useGameModification({
   );
 
   const setNodeComment = useCallback(
-    (comment: string) => {
-      if (!gameTree || currentNodeId === null) return;
+    (comment: string, nodeId: number | string | null = currentNodeId) => {
+      if (!gameTree || nodeId === null || !gameTree.get(nodeId)) return;
       const newTree = gameTree.mutate(draft => {
-        draft.updateProperty(currentNodeId, 'C', [comment]);
+        draft.updateProperty(nodeId, 'C', [comment]);
       });
       setGameTree(newTree);
     },

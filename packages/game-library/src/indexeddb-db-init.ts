@@ -24,6 +24,28 @@ export function getStore(db: IDBDatabase, mode: IDBTransactionMode = 'readonly')
 }
 
 /**
+ * Settles when a readwrite transaction is durable: resolves on `complete`,
+ * rejects on `abort` or `error`.
+ *
+ * A request's `success` is not a commit. A quota error, for one, aborts the
+ * transaction after its put succeeded, so resolving on the request reported a
+ * save that never reached disk. Call it before the first await on the
+ * transaction, so `complete` cannot fire unobserved.
+ */
+export function transactionDone(transaction: IDBTransaction): Promise<void> {
+  const done = new Promise<void>((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () =>
+      reject(transaction.error ?? new DOMException('Transaction aborted', 'AbortError'));
+    transaction.onerror = () => reject(transaction.error);
+  });
+  // A failed request already rejects its own promise; this one is awaited
+  // only on the success path, so keep it from being reported as unhandled.
+  done.catch(() => {});
+  return done;
+}
+
+/**
  * Wrap an IDBRequest in a Promise.
  */
 export function idbRequest<T>(request: IDBRequest<T>): Promise<T> {

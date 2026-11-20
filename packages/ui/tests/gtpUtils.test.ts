@@ -214,3 +214,11 @@ describe('GTP Utils', () => {
     });
   });
 });
+
+describe('bestMoveOnBoard on a board with stones', () => {
+  test('skips a suggestion on an occupied point instead of playing over the stone', () => {
+    const occupied = new Set(['3,15']);
+    const isFree = (v: [number, number]) => !occupied.has(`${v[0]},${v[1]}`);
+    expect(bestMoveOnBoard(['D4', 'Q16'], 19, 19, 19, isFree)).toEqual([15, 3]);
+  });
+});

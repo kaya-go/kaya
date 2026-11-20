@@ -7,6 +7,7 @@ import { useEffect } from 'react';
 import { useGameTreeNavigation } from '../../contexts/selectors';
 import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
+import { shouldIgnoreBoardShortcut } from '../../utils/boardShortcutGuard';
 
 export function useBoardControlsKeyNav(): void {
   const {
@@ -30,14 +31,7 @@ export function useBoardControlsKeyNav(): void {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (navigationMode) return; // Skip keyboard nav in navigation mode
 
-      // Ignore if typing in an input or textarea
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target as HTMLElement).isContentEditable
-      ) {
-        return;
-      }
+      if (shouldIgnoreBoardShortcut(e)) return;
 
       // Throttle repeated key presses
       if (keyThrottled && e.repeat) return;

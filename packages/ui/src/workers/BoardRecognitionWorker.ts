@@ -59,6 +59,15 @@ export class BoardRecognitionWorker {
     this.worker = new Worker(new URL('./boardRecognition.worker.js', import.meta.url), {
       type: 'module',
     });
+    // A worker that fails to load or crashes never answers: settle every
+    // pending call instead of leaving the dialog spinning.
+    this.worker.onerror = e => {
+      e.preventDefault();
+      this.rejectAll(new Error(`Board recognition worker failed: ${e.message || 'not loaded'}`));
+    };
+    this.worker.onmessageerror = () => {
+      this.rejectAll(new Error('Board recognition worker sent an unreadable message'));
+    };
     this.worker.onmessage = (e: MessageEvent<WorkerResponse | WorkerProgress>) => {
       const data = e.data;
       // Handle progress updates
@@ -79,6 +88,11 @@ export class BoardRecognitionWorker {
         p.resolve(undefined as unknown as RecognitionResult);
       }
     };
+  }
+
+  private rejectAll(error: Error) {
+    for (const p of this.pending.values()) p.reject(error);
+    this.pending.clear();
   }
 
   private _getImgBuffer(imgData: Uint8ClampedArray): ArrayBuffer | undefined {

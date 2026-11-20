@@ -96,6 +96,14 @@ function startListening(): void {
 }
 
 /**
+ * Whether a dialog, sheet or menu is open. Every overlay registers here, so
+ * board shortcuts read it to stay out of the way while one is shown.
+ */
+export function hasOpenOverlay(): boolean {
+  return stack.length > 0;
+}
+
+/**
  * @param isOpen Whether the overlay is currently shown. Pass `true` for
  *   overlays that are conditionally *mounted* by their parent instead.
  * @param onClose Called when the user presses back while this overlay is the

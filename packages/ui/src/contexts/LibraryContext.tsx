@@ -22,6 +22,8 @@ import {
 import type { LibraryContextValue, LibraryProviderProps } from './library-types';
 import { useLibrarySelection } from './useLibrarySelection';
 import { useLibraryFileOps } from './useLibraryFileOps';
+import { useTranslation } from 'react-i18next';
+import { useToast } from '../components/ui/Toast';
 
 export type { LibraryContextValue, LibraryProviderProps };
 
@@ -37,6 +39,8 @@ export function LibraryProvider({
   onSaveComplete,
   onLoadedFileRenamed,
 }: LibraryProviderProps) {
+  const { t } = useTranslation();
+  const { showToast } = useToast();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -210,6 +214,13 @@ export function LibraryProvider({
     [moveItems]
   );
 
+  // Deleting a folder deletes its files: drop the open file's id if it went too.
+  const forgetLoadedFileIfGone = useCallback(async () => {
+    if (loadedFileId && !(await getLibraryStorage().getItem(loadedFileId))) {
+      setLoadedFileId(null);
+    }
+  }, [loadedFileId, setLoadedFileId]);
+
   const deleteItem = useCallback(
     async (id: LibraryItemId) => {
       const storage = getLibraryStorage();
@@ -222,12 +233,10 @@ export function LibraryProvider({
         next.delete(id);
         return next;
       });
-      if (loadedFileId === id) {
-        setLoadedFileId(null);
-      }
+      await forgetLoadedFileIfGone();
       await refresh();
     },
-    [refresh, selectedId, loadedFileId, setLoadedFileId, setSelectedId, setSelectedIds]
+    [refresh, selectedId, forgetLoadedFileIfGone, setSelectedId, setSelectedIds]
   );
 
   const deleteItems = useCallback(
@@ -235,16 +244,33 @@ export function LibraryProvider({
       const storage = getLibraryStorage();
       for (const id of ids) {
         await storage.deleteItem(id);
-        if (loadedFileId === id) {
-          setLoadedFileId(null);
-        }
       }
+      await forgetLoadedFileIfGone();
       setSelectedId(null);
       setSelectedIds(new Set());
       await refresh();
     },
-    [refresh, loadedFileId, setLoadedFileId, setSelectedId, setSelectedIds]
+    [refresh, forgetLoadedFileIfGone, setSelectedId, setSelectedIds]
   );
+
+  const updateLoadedFile = useCallback(async () => {
+    if (!loadedFileId || !getCurrentGameContent) return false;
+    const content = getCurrentGameContent();
+    if (!content) return false;
+
+    const storage = getLibraryStorage();
+
+    const existingFile = await storage.getItem(loadedFileId);
+    if (!existingFile || existingFile.type !== 'file') {
+      setLoadedFileId(null);
+      return false;
+    }
+
+    await storage.updateFile(loadedFileId, content);
+    await refresh();
+    onSaveComplete?.();
+    return true;
+  }, [loadedFileId, getCurrentGameContent, refresh, setLoadedFileId, onSaveComplete]);
 
   // Unsaved changes dialog helpers
   const showUnsavedChangesDialog = useCallback(
@@ -262,25 +288,23 @@ export function LibraryProvider({
     async (action: UnsavedChangesAction) => {
       setShowUnsavedDialog(false);
 
-      if (action === 'save' && loadedFileId && getCurrentGameContent) {
-        const content = getCurrentGameContent();
-        if (content) {
-          const storage = getLibraryStorage();
-          const existingFile = await storage.getItem(loadedFileId);
-          if (existingFile && existingFile.type === 'file') {
-            await storage.updateFile(loadedFileId, content);
-            await refresh();
-            onSaveComplete?.();
-          }
+      // Save that did not write must not let the caller replace the game.
+      let outcome = action;
+      if (action === 'save') {
+        const saved = await updateLoadedFile().catch(err => {
+          console.error('[Library] Save before leaving the game failed:', err);
+          return false;
+        });
+        if (!saved) {
+          outcome = 'cancel';
+          showToast(t('toast.failedToSave'), 'error');
         }
       }
 
-      if (unsavedDialogResolveRef.current) {
-        unsavedDialogResolveRef.current(action);
-        unsavedDialogResolveRef.current = null;
-      }
+      unsavedDialogResolveRef.current?.(outcome);
+      unsavedDialogResolveRef.current = null;
     },
-    [loadedFileId, getCurrentGameContent, refresh, onSaveComplete]
+    [updateLoadedFile, showToast, t]
   );
 
   const checkUnsavedChanges = useCallback(async (): Promise<boolean> => {
@@ -354,32 +378,14 @@ export function LibraryProvider({
     [refresh]
   );
 
-  const updateLoadedFile = useCallback(async () => {
-    if (!loadedFileId || !getCurrentGameContent) return false;
-    const content = getCurrentGameContent();
-    if (!content) return false;
-
-    const storage = getLibraryStorage();
-
-    const existingFile = await storage.getItem(loadedFileId);
-    if (!existingFile || existingFile.type !== 'file') {
-      setLoadedFileId(null);
-      return false;
-    }
-
-    await storage.updateFile(loadedFileId, content);
-    await refresh();
-    onSaveComplete?.();
-    return true;
-  }, [loadedFileId, getCurrentGameContent, refresh, setLoadedFileId, onSaveComplete]);
-
   const clearLibrary = useCallback(async () => {
     const storage = getLibraryStorage();
     await storage.clear();
     setSelectedId(null);
+    setLoadedFileId(null);
     setExpandedIds(new Set());
     await refresh();
-  }, [refresh, setSelectedId, setExpandedIds]);
+  }, [refresh, setSelectedId, setLoadedFileId, setExpandedIds]);
 
   const value = useMemo<LibraryContextValue>(
     () => ({

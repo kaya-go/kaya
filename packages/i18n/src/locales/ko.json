@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "바둑판 이미지 인식 ({{size}}×{{size}}, 돌 {{count}}개)",
     "title": "바둑판 이미지 인식",
     "selectSize": "바둑판 크기:",
     "photo": "사진",

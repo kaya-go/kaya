@@ -53,7 +53,8 @@ async function saveTauriFile(content: string, defaultFileName: string): Promise<
     await tauriSaveAPI.writeTextFile(filePath, content);
 
     // Return just the filename (not full path)
-    const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || defaultFileName;
+    // Windows paths use backslashes: split on either separator, or the whole path is the name.
+    const fileName = filePath.split(/[\\/]/).pop() || defaultFileName;
     return fileName;
   } catch (error) {
     console.error('Tauri save error:', error);

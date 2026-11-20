@@ -61,7 +61,7 @@ export function useLiveAnalysis({
   const [error, setError] = useState<string | null>(null);
   const [mctsProgress, setMctsProgress] = useState<MCTSProgress | null>(null);
 
-  const completionRef = useRef<(() => void) | null>(null);
+  const completionRef = useRef<((next?: Promise<void>) => void) | null>(null);
   const waiterRef = useRef<Promise<void>>(Promise.resolve());
   // Monotonic counter — increments on every runAnalysis() call. The local
   // copy at the start of a run is compared against this ref before
@@ -69,6 +69,24 @@ export function useLiveAnalysis({
   // run started while we were awaiting and we must not clobber its state.
   const runCounterRef = useRef(0);
   const waitForCurrentAnalysis = useCallback(() => waiterRef.current, []);
+  const lastRunNodeIdRef = useRef<number | string | null>(null);
+  // Id of the live search in flight, so turning analysis off can cancel it.
+  const liveHandleIdRef = useRef<string | null>(null);
+
+  /**
+   * Analysis was switched off: the run in flight must not land its result on
+   * whatever position is current when it finishes, and whoever waits for it
+   * (Suggest move) stops waiting.
+   */
+  const stopLiveAnalysis = useCallback(() => {
+    runCounterRef.current++;
+    if (liveHandleIdRef.current) queue?.cancel(liveHandleIdRef.current);
+    liveHandleIdRef.current = null;
+    completionRef.current?.();
+    completionRef.current = null;
+    setMctsProgress(null);
+    setIsAnalyzing(false);
+  }, [queue]);
 
   const lookupCachedResult = useCallback((): boolean => {
     if (!queue || !gameTree || currentNodeId === null || currentNodeId === undefined) return false;
@@ -141,9 +159,16 @@ export function useLiveAnalysis({
     setMctsProgress(null);
     setAnalysisResult(null);
     setIsAnalyzing(true);
+    // The run this one replaces is stale and never settles its waiters, so it
+    // hands them over. On the same node (settings changed, tree edited) they wait
+    // for this run; on another node they are released, and find they moved away.
+    const handOver = completionRef.current;
+    const sameNode = lastRunNodeIdRef.current === currentNodeId;
+    lastRunNodeIdRef.current = currentNodeId;
     waiterRef.current = new Promise(resolve => {
-      completionRef.current = resolve;
+      completionRef.current = next => resolve(next);
     });
+    handOver?.(sameNode ? waiterRef.current : undefined);
     setError(null);
 
     // Engines take a board as square, sized by signMap.length: a shorter row panics
@@ -238,6 +263,7 @@ export function useLiveAnalysis({
         },
         extra: { koInfo: currentPos.koInfo },
       });
+      liveHandleIdRef.current = currentHandle.id || null;
       const wasCurrentCacheHit = currentHandle.id === '';
       let currentResult: AnalysisResult;
       try {
@@ -280,6 +306,7 @@ export function useLiveAnalysis({
     } finally {
       // Only clear UI state if a newer run hasn't already taken over.
       if (!isStale()) {
+        liveHandleIdRef.current = null;
         setMctsProgress(null);
         setIsAnalyzing(false);
         completionRef.current?.();
@@ -307,6 +334,7 @@ export function useLiveAnalysis({
     error,
     setError,
     runAnalysis,
+    stopLiveAnalysis,
     lookupCachedResult,
     waitForCurrentAnalysis,
     mctsProgress,

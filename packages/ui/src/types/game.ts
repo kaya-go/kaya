@@ -229,7 +229,8 @@ export interface GameTreeContextValue {
   ) => void;
   addMarker: (vertex: Vertex, marker: Marker | null | string) => void;
   setNodeName: (name: string) => void;
-  setNodeComment: (comment: string) => void;
+  /** Sets the comment of `nodeId`, the current node by default. */
+  setNodeComment: (comment: string, nodeId?: number | string) => void;
   deleteNode: () => void;
   deleteContinuation: () => void;
   cutNode: () => void;
