@@ -36,6 +36,16 @@ describe('validateSGF', () => {
   });
 });
 
+describe('validateSGF tolerant', () => {
+  test('returns what it cannot read, and refuses what is not a game tree', () => {
+    expect(validateSGF('(;GM[1];B[aa])', 'tolerant')).toEqual([]);
+    expect(validateSGF('(;GM[1];B[aa];W[bb', 'tolerant').map(d => d.kind)).toEqual([
+      'unterminated-value',
+    ]);
+    expect(() => validateSGF('hello', 'tolerant')).toThrow('Invalid SGF content');
+  });
+});
+
 describe('ensureSGFExtension', () => {
   test('leaves an existing .sgf name alone, whatever its case', () => {
     expect(ensureSGFExtension('game.sgf')).toBe('game.sgf');

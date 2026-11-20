@@ -10,7 +10,7 @@
 import { describe, test, expect } from 'bun:test';
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import { decodeSgf, parseStrict, withUtf8Charset } from '../src/index';
+import { decodeSgf, labelUtf8, parseStrict, withUtf8Charset } from '../src/index';
 
 const fixture = (name: string) =>
   new Uint8Array(readFileSync(join(import.meta.dir, 'fixtures', 'charsets', name)));
@@ -45,6 +45,22 @@ describe('decodeSgf', () => {
     // a CA still naming GB2312 would make every other reader garble it.
     for (const name of Object.keys(games)) {
       expect(rootOf(decodeSgf(fixture(name))).data.CA, name).toEqual(['UTF-8']);
+    }
+  });
+
+  test('labels every game of a collection UTF-8, not only the first', () => {
+    // Downloads and ZIP exports write the stored text as UTF-8 bytes; a second
+    // game still saying CA[gb2312] is garbled by any reader that honours it.
+    const game = fixture('gb2312.sgf');
+    const collection = new Uint8Array(game.length * 2);
+    collection.set(game);
+    collection.set(game, game.length);
+
+    const games = parseStrict(decodeSgf(collection));
+    expect(games).toHaveLength(2);
+    for (const root of games) {
+      expect(root.data.CA).toEqual(['UTF-8']);
+      expect(root.data.PB).toEqual(['柯洁']);
     }
   });
 
@@ -97,6 +113,31 @@ describe('decodeSgf', () => {
     }
     const utf8 = new Uint8Array([0xef, 0xbb, 0xbf, ...new TextEncoder().encode(sgf)]);
     expect(decodeSgf(utf8).startsWith('(;')).toBe(true);
+  });
+});
+
+describe('labelUtf8', () => {
+  test('rewrites every CA property, past the head of the file', () => {
+    const far = ' '.repeat(70 * 1024);
+    const text = `(;GM[1]CA[ISO-8859-1]C[${far}])\n(;GM[1]CA [GB2312];B[aa])(;CA[utf8])`;
+    expect(labelUtf8(text)).toBe(`(;GM[1]CA[UTF-8]C[${far}])\n(;GM[1]CA [UTF-8];B[aa])(;CA[utf8])`);
+  });
+
+  test('leaves a CA written in a comment alone', () => {
+    const text = '(;GM[1]CA[GB2312]C[set CA[GB2312\\] in your editor])';
+    expect(labelUtf8(text)).toBe('(;GM[1]CA[UTF-8]C[set CA[GB2312\\] in your editor])');
+  });
+
+  test('leaves a value cut by the end of the input alone, so the file still reads as cut', () => {
+    const cut = '(;GM[1]CA[GB2312])(;GM[1]CA[GB23';
+    expect(labelUtf8(cut)).toBe('(;GM[1]CA[UTF-8])(;GM[1]CA[GB23');
+    expect(() => parseStrict(labelUtf8(cut))).toThrow(/Unterminated/);
+  });
+
+  test('returns text with no other charset unchanged', () => {
+    for (const text of ['(;GM[1])', '(;GM[1]CA[UTF-8])', '(;GM[1]XCA[GB2312])']) {
+      expect(labelUtf8(text)).toBe(text);
+    }
   });
 });
 

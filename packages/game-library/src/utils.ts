@@ -4,8 +4,8 @@
  * Helper functions for the library manager.
  */
 
-import { parse, parseStrict } from '@kaya/sgf';
-import type { LibraryItem, LibraryItemId, LibraryStats, SGFMetadata } from './types';
+import { parse, parseStrict, parseTolerant, type SgfDefect } from '@kaya/sgf';
+import type { LibraryItem, LibraryItemId, LibraryStats, SGFMetadata, SgfValidation } from './types';
 
 /** Generate a unique ID */
 export function generateId(): LibraryItemId {
@@ -63,14 +63,17 @@ export function extractSGFMetadata(content: string): SGFMetadata {
 
 /**
  * Validate SGF content, throwing `SgfValidationError` (from @kaya/sgf) so the
- * caller can say why a file was refused.
+ * caller can say why a file was refused. Returns what a tolerant check found
+ * it cannot read, which the content is stored with and opens without.
  *
  * The parser is lenient enough to turn arbitrary prose into a node, so parsing
  * alone is not a real check: a truncated or garbled autosave would sail through
- * and overwrite a good game. `parseStrict` requires a game tree.
+ * and overwrite a good game. Both checks require a game tree.
  */
-export function validateSGF(content: string): void {
+export function validateSGF(content: string, validation: SgfValidation = 'strict'): SgfDefect[] {
+  if (validation === 'tolerant') return parseTolerant(content).defects;
   parseStrict(content);
+  return [];
 }
 
 /** Sanitize filename (remove invalid characters) */

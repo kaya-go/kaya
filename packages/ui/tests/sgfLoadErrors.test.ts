@@ -9,11 +9,14 @@
 
 import { describe, test, expect } from 'bun:test';
 import type { TFunction } from 'i18next';
-import { parseStrict } from '@kaya/sgf';
+import { INVALID_SGF_CONTENT, parseStrict, parseTolerant } from '@kaya/sgf';
 import type { ImportResult } from '@kaya/game-library';
 import {
+  formatDuplicateError,
   formatImportResultError,
+  formatImportResultWarning,
   formatLibraryFileImportError,
+  formatOpenedWithDefects,
   formatSgfLoadError,
   formatZipImportError,
 } from '../src/utils/sgfLoadErrors';
@@ -28,9 +31,10 @@ import es from '../../i18n/src/locales/es.json';
 import it from '../../i18n/src/locales/it.json';
 
 const used = new Set<string>();
-const t = ((key: string, options?: { error?: string }) => {
+const t = ((key: string, options?: Record<string, string>) => {
   used.add(key);
-  return options?.error === undefined ? key : `${key}<${options.error}>`;
+  const values = Object.values(options ?? {});
+  return values.length === 0 ? key : `${key}<${values.join('|')}>`;
 }) as unknown as TFunction;
 
 /** The error a loader gets for this content. */
@@ -90,6 +94,7 @@ describe('library import errors', () => {
       imported: 3,
       failed: errors.length,
       errors,
+      withDefects: [],
     });
     const bad = (path: string) => ({ kind: 'sgf' as const, path, cause: refusal('x') });
 
@@ -103,6 +108,41 @@ describe('library import errors', () => {
   });
 });
 
+describe('stored content opened or imported without what cannot be read', () => {
+  test('a ZIP import names the first entry stored with defects and counts the others', () => {
+    const result = (withDefects: string[]): ImportResult => ({
+      success: true,
+      imported: 3,
+      failed: 0,
+      errors: [],
+      withDefects,
+    });
+    expect(formatImportResultWarning(result([]), t)).toBeNull();
+    expect(formatImportResultWarning(result(['old/cut.sgf', 'b.sgf']), t)).toBe(
+      'toast.importedWithDefects<old/cut.sgf> (+1)'
+    );
+  });
+
+  test('a file opened without a part says where it was', () => {
+    const defects = parseTolerant('(;GM[1](;B[aa])X[1](;B[bb])Y[2])').defects;
+    expect(formatOpenedWithDefects([], t)).toBeNull();
+    expect(formatOpenedWithDefects(defects, t)).toBe(
+      'toast.openedWithDefects<Unexpected content after a variation at 1:16> (+1)'
+    );
+  });
+
+  test('a duplication names the first item it could not copy', () => {
+    expect(formatDuplicateError({ copies: [], failures: [] }, t)).toBeNull();
+    const failures = [
+      { name: 'notes.sgf', cause: refusal('notes') },
+      { name: 'b.sgf', cause: new Error('quota exceeded') },
+    ];
+    expect(formatDuplicateError({ copies: [], failures }, t)).toBe(
+      `toast.failedToDuplicate<notes.sgf|${INVALID_SGF_CONTENT}> (+1)`
+    );
+  });
+});
+
 describe('toast keys', () => {
   test('every locale has every key the formatters use', () => {
     const problems: string[] = [];
@@ -112,7 +152,7 @@ describe('toast keys', () => {
         if (!toast[key.replace(/^toast\./, '')]) problems.push(`${locale}: missing "${key}"`);
       }
     }
-    expect(used.size).toBe(5);
+    expect(used.size).toBe(8);
     expect(problems).toEqual([]);
   });
 });
