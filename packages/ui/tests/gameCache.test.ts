@@ -217,6 +217,31 @@ describe('position cache across trees', () => {
   });
 });
 
+describe('a game whose setup stones are a compressed point list', () => {
+  // `AB[aa:cc]` is the rectangle aa..cc. It used to open on an empty board,
+  // and the engine was asked about that empty board too.
+  test('the board and the analysis request carry every stone of the rectangle', () => {
+    const tree = treeOf('(;GM[1]SZ[19]AB[aa:cc]AW[dd:de];B[pd])');
+    const node = tree.root.children[0];
+    const stones = (sign: number) =>
+      reconstructBoard(tree, node.id, 19)
+        .signMap.flat()
+        .filter(s => s === sign).length;
+
+    expect(stones(1)).toBe(10);
+    expect(stones(-1)).toBe(2);
+
+    const request = buildAnalysisRequest({
+      gameTree: tree,
+      currentNodeId: node.id,
+      gameInfo: { boardSize: 19 },
+    });
+    expect(request.signMap[0][0]).toBe(1);
+    expect(request.signMap[2][2]).toBe(1);
+    expect(request.signMap[4][3]).toBe(-1);
+  });
+});
+
 describe('buildAnalysisRequest', () => {
   // GAME's W[bb] captures at cb and leaves black a ko it may not retake at once.
   const KO_NODE = 8;

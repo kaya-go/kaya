@@ -3,7 +3,8 @@ import { GoBoard } from '@kaya/goboard';
 import {
   stringify as stringifySGF,
   extractGameInfo as extractGameInfoFromSGF,
-  type SGFNode,
+  type GameTreeNodeRecursive,
+  type SGFNodeData,
 } from '@kaya/sgf';
 import { injectAnalysisToTree, extractAnalysisFromTree } from '../utils/sgfAnalysis';
 import type { GameInfo, AISettings, NewGameConfig } from '../types/game';
@@ -18,7 +19,10 @@ interface UseGameTreeSGFOperationsParams {
   analysisCacheSize: number;
   updateAnalysisCacheSize: () => void;
   coreSaveSGF: () => string;
-  coreLoadSGFAsync: (content: string, onParsed?: (sgfRoot: SGFNode) => void) => Promise<void>;
+  coreLoadSGFAsync: (
+    content: string,
+    onParsed?: (root: GameTreeNodeRecursive<SGFNodeData>) => void
+  ) => Promise<void>;
   coreCreateNewGame: (config?: NewGameConfig) => void;
   isTreeDirty: boolean;
   markTreeClean: () => void;
@@ -76,9 +80,9 @@ export function useGameTreeSGFOperations({
     [markTreeClean, analysisCache, updateAnalysisCacheSize]
   );
 
-  // Helper: read the analysis a parsed SGF carries into the cache
+  // Helper: read the analysis a loaded SGF carries into the cache
   const extractAnalysisFromRoot = useCallback(
-    (sgfRoot: SGFNode) => {
+    (sgfRoot: GameTreeNodeRecursive<SGFNodeData>) => {
       if (!aiSettings.saveAnalysisToSgf) return;
       try {
         const info = extractGameInfoFromSGF(sgfRoot);

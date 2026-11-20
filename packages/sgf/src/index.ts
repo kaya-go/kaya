@@ -34,14 +34,9 @@ export {
   stringifyDates,
 } from './helpers';
 
-export {
-  tokenizeIter,
-  tokenize,
-  parseTokens,
-  parse,
-  sgfNodeToGameTreeNode,
-  stringify,
-} from './parser';
+export { tokenizeIter, tokenize, parseTokens, parse, stringify } from './parser';
+
+export { expandPointList, sgfNodeToGameTreeNode } from './load';
 
 export { extractGameInfo, gameInfoToPropertyWrites, parseBoardSize } from './gameInfo';
 

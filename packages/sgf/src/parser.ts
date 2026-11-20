@@ -2,15 +2,7 @@
  * @kaya/sgf - Tokenizer, parser, and stringifier for SGF content
  */
 
-import type {
-  GameTreeNodeRecursive,
-  ParseOptions,
-  RequiredParseOptions,
-  SGFNode,
-  SGFNodeData,
-  StringifyOptions,
-  Token,
-} from './types';
+import type { ParseOptions, RequiredParseOptions, SGFNode, StringifyOptions, Token } from './types';
 import { escapeString, unescapeString } from './helpers';
 
 // ============================================================================
@@ -333,68 +325,6 @@ export function parseTokens(tokens: Iterable<Token>, options: ParseOptions = {})
  */
 export function parse(contents: string, options: ParseOptions = {}): SGFNode[] {
   return parseTokens(tokenizeIter(contents), options);
-}
-
-// ============================================================================
-// Node Conversion
-// ============================================================================
-
-/**
- * Convert SGFNode to GameTreeNode format (for @kaya/gametree compatibility)
- * Cleans up [object Object] strings in comments and ensures IDs are not null
- */
-export function sgfNodeToGameTreeNode<T = SGFNodeData>(
-  sgfNode: SGFNode,
-  idCounter: { value: number } = { value: 0 },
-  parentId: number | string | null = null,
-  visited: Set<SGFNode> = new Set()
-): GameTreeNodeRecursive<T> {
-  // Prevent infinite recursion from circular references
-  if (visited.has(sgfNode)) {
-    throw new Error('SGF file contains circular references');
-  }
-  visited.add(sgfNode);
-
-  const id = sgfNode.id ?? idCounter.value++;
-
-  // Clean up data - remove [object Object] from comments
-  const cleanedData: SGFNodeData = {};
-  for (const [key, values] of Object.entries(sgfNode.data)) {
-    if (Array.isArray(values)) {
-      cleanedData[key] = values
-        .map((val: any) => {
-          if (typeof val === 'string') {
-            // Remove [object Object] patterns. Values that carry none are
-            // returned untouched: trimming every value ate the leading and
-            // trailing whitespace of every comment on each load/save cycle.
-            const stripped = val.replace(/\[object Object\\?\]/g, '');
-            const cleaned = stripped === val ? val : stripped.trim();
-            // For move properties (B/W), preserve empty strings (pass moves)
-            if ((key === 'B' || key === 'W') && cleaned === '' && val === '') {
-              return '';
-            }
-            return cleaned;
-          }
-          return val;
-        })
-        .filter((val: string) => {
-          // Keep empty strings for move properties (B/W) as they represent pass moves
-          if (key === 'B' || key === 'W') {
-            return true;
-          }
-          return val !== '';
-        });
-    }
-  }
-
-  return {
-    id,
-    data: cleanedData as T,
-    parentId,
-    children: sgfNode.children.map((child: SGFNode) =>
-      sgfNodeToGameTreeNode<T>(child, idCounter, id, visited)
-    ),
-  };
 }
 
 // ============================================================================
