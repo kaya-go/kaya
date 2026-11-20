@@ -75,6 +75,23 @@ export class TauriEngine extends Engine {
     this.listen = getTauriListen();
   }
 
+  /**
+   * Run an analysis command, reporting a native engine that is gone: after a
+   * panic, or an `onnx_dispose` from the engine this one replaced. Every later
+   * call fails until the owner builds a new engine on `onEngineLost`.
+   */
+  private async invokeAnalysis<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
+    try {
+      return await this.invoke!<T>(cmd, args);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (/Engine not initialized|panicked/.test(message)) {
+        this.onEngineLost?.(new Error(message));
+      }
+      throw e;
+    }
+  }
+
   private reportProgress(stage: UploadProgress['stage'], progress: number, message: string): void {
     this.onProgress?.({ stage, progress, message });
   }
@@ -277,7 +294,7 @@ export class TauriEngine extends Engine {
 
     try {
       // Single IPC call — entire MCTS runs in Rust
-      const result = await this.invoke<{
+      const result = await this.invokeAnalysis<{
         moveSuggestions: {
           move: string;
           probability: number;
@@ -397,7 +414,7 @@ export class TauriEngine extends Engine {
 
     const inferenceStart = performance.now();
     const batchInputs = uncachedInputs.map(u => u.input);
-    const batchResults = await this.invoke<AnalysisResult[]>('onnx_analyze_batch', {
+    const batchResults = await this.invokeAnalysis<AnalysisResult[]>('onnx_analyze_batch', {
       inputs: batchInputs,
     });
     const inferenceTime = performance.now() - inferenceStart;

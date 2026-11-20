@@ -5,6 +5,7 @@
 //! Linux ships the CPU-only ONNX Runtime distribution; GPU inference there
 //! goes through the PyTorch sidecar.
 
+mod boundary;
 mod execution_providers;
 mod featurization;
 mod inference;
@@ -25,12 +26,13 @@ pub use featurization::determine_next_player;
 pub use result_processing::process_raw_outputs;
 pub use types::{AnalysisOptions, AnalysisResult, HistoryMove};
 
+use boundary::{lock_or_reset, validate_batch, validate_board, validate_ko};
 use execution_providers::configure_execution_providers;
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Mutex;
+use std::sync::{Mutex, MutexGuard};
 
 /// Native ONNX engine state
 pub struct OnnxEngine {
@@ -347,19 +349,22 @@ fn featurize_ndarray(
 
 // === Public API for Tauri commands ===
 
+/// Every call goes through this: it recovers the lock after a panic.
+fn lock_engine() -> MutexGuard<'static, Option<OnnxEngine>> {
+    lock_or_reset(&ENGINE)
+}
+
 /// Initialize the global engine with model bytes
 pub fn initialize_engine(model_bytes: &[u8]) -> Result<(), String> {
     let engine = OnnxEngine::from_bytes(model_bytes)?;
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
-    *global = Some(engine);
+    *lock_engine() = Some(engine);
     Ok(())
 }
 
 /// Initialize the global engine from a file path
 pub fn initialize_engine_from_path(model_path: &str) -> Result<(), String> {
     let engine = OnnxEngine::new(Path::new(model_path))?;
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
-    *global = Some(engine);
+    *lock_engine() = Some(engine);
     Ok(())
 }
 
@@ -368,7 +373,8 @@ pub fn analyze_position(
     sign_map: Vec<Vec<i8>>,
     options: AnalysisOptions,
 ) -> Result<AnalysisResult, String> {
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
+    validate_board(&sign_map)?;
+    let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
     engine.analyze(&sign_map, &options)
 }
@@ -377,26 +383,26 @@ pub fn analyze_position(
 pub fn analyze_batch(
     inputs: Vec<(Vec<Vec<i8>>, AnalysisOptions)>,
 ) -> Result<Vec<AnalysisResult>, String> {
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
+    validate_batch(&inputs)?;
+    let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
     engine.analyze_batch(&inputs)
 }
 
 /// Dispose the global engine
 pub fn dispose_engine() -> Result<(), String> {
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
-    *global = None;
+    *lock_engine() = None;
     Ok(())
 }
 
 /// Check if engine is initialized
 pub fn is_engine_initialized() -> bool {
-    ENGINE.lock().map(|g| g.is_some()).unwrap_or(false)
+    lock_engine().is_some()
 }
 
 /// Get information about the current execution provider
 pub fn get_provider_info() -> Option<ExecutionProviderInfo> {
-    let global = ENGINE.lock().ok()?;
+    let global = lock_engine();
     let engine = global.as_ref()?;
     
     let name = engine.get_provider_name();
@@ -416,13 +422,15 @@ pub fn run_mcts_analysis(
     options: mcts::MCTSAnalysisOptions,
     progress_callback: &mut dyn FnMut(mcts::MCTSProgress),
 ) -> Result<mcts::MCTSAnalysisResult, String> {
+    let size = validate_board(&sign_map)?;
+    validate_ko(&options.ko_info, size)?;
     // Acquire the engine lock FIRST. If a previous MCTS is still running, this
     // blocks until it releases the lock — which only happens after it observes
     // any pending abort signal. Resetting MCTS_ABORT before this point would
     // race with an in-flight abort meant for the previous run, causing either
     // (a) the old run to ignore the abort, or (b) the new run to inherit a
     // stale `true` flag and self-abort immediately.
-    let mut global = ENGINE.lock().map_err(|e| e.to_string())?;
+    let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
     // Now that the previous run is fully done, clear the flag for our run.
     MCTS_ABORT.store(false, Ordering::Relaxed);
@@ -437,6 +445,56 @@ pub fn abort_mcts() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A panic while a call holds the engine lock poisons it, and std never
+    /// clears that by itself: every later call, a fresh initialization
+    /// included, failed until the app restarted.
+    #[test]
+    fn a_panic_under_the_engine_lock_does_not_outlive_the_call() {
+        let _ = std::thread::spawn(|| {
+            let _guard = ENGINE.lock();
+            panic!("simulated panic under the engine lock");
+        })
+        .join();
+        assert!(ENGINE.is_poisoned());
+
+        assert_eq!(dispose_engine(), Ok(()));
+        assert!(!ENGINE.is_poisoned());
+        assert!(!is_engine_initialized());
+    }
+
+    /// Featurization indexes the board as a square of `sign_map.len()`, so a
+    /// ragged or empty board, or a batch of mixed sizes, panicked under the
+    /// engine lock. They are refused before the lock is taken.
+    #[test]
+    fn a_malformed_board_is_refused_before_the_engine_lock() {
+        let mut ragged = vec![vec![0i8; 9]; 9];
+        ragged[4].pop();
+        let err = analyze_position(ragged, AnalysisOptions::default()).unwrap_err();
+        assert!(err.contains("square"), "{err}");
+
+        let err = analyze_position(vec![], AnalysisOptions::default()).unwrap_err();
+        assert!(err.contains("empty"), "{err}");
+
+        let mixed = vec![
+            (vec![vec![0i8; 19]; 19], AnalysisOptions::default()),
+            (vec![vec![0i8; 9]; 9], AnalysisOptions::default()),
+        ];
+        let err = analyze_batch(mixed).unwrap_err();
+        assert!(err.contains("size"), "{err}");
+
+        // A ko point off the board underflows `size - y` when the search names it.
+        let search = mcts::MCTSAnalysisOptions {
+            komi: 7.5,
+            next_to_play: Some("B".to_string()),
+            history: vec![],
+            num_visits: 10,
+            include_move: None,
+            ko_info: Some(mcts::KoInfo { sign: 1, vertex: [3, 9] }),
+        };
+        let err = run_mcts_analysis(vec![vec![0i8; 9]; 9], search, &mut |_| {}).unwrap_err();
+        assert!(err.contains("ko"), "{err}");
+    }
 
     /// A real analysis through the whole native stack, which CI never runs: it
     /// stops at `cargo check`, while an `ort` bump swaps the ONNX Runtime binary.
