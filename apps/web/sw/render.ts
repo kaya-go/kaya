@@ -10,21 +10,24 @@ export interface ServiceWorkerValues {
   buildId: string;
   /** The onnxruntime-web version served under wasm/<version>/. */
   ortVersion: string;
+  /** The files to cache at install, relative to the worker's scope (sw/plugin.ts). */
+  precache: string[];
 }
 
 const PLACEHOLDERS: Record<keyof ServiceWorkerValues, string> = {
   buildId: "'__KAYA_BUILD_ID__'",
   ortVersion: "'__KAYA_ORT_VERSION__'",
+  precache: "'__KAYA_PRECACHE__'",
 };
 
 /** Replace each placeholder, which must appear exactly once, by its value as a JS literal. */
-function fill(template: string, file: string, values: Record<string, string>): string {
+function fill(template: string, file: string, values: Record<string, string | string[]>): string {
   let out = template;
   for (const [placeholder, value] of Object.entries(values)) {
     if (out.split(placeholder).length !== 2) {
       throw new Error(`${file} must contain ${placeholder} exactly once`);
     }
-    if (!value) throw new Error(`No value for ${placeholder} in ${file}`);
+    if (!value || value.length === 0) throw new Error(`No value for ${placeholder} in ${file}`);
     out = out.replace(placeholder, () => JSON.stringify(value));
   }
   return out;
@@ -34,6 +37,7 @@ export function renderServiceWorker(template: string, values: ServiceWorkerValue
   return fill(template, 'sw.js', {
     [PLACEHOLDERS.buildId]: values.buildId,
     [PLACEHOLDERS.ortVersion]: values.ortVersion,
+    [PLACEHOLDERS.precache]: values.precache,
   });
 }
 

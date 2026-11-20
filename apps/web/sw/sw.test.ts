@@ -6,15 +6,44 @@ import { renderServiceWorker } from './render';
 const TEMPLATE = readFileSync(path.join(import.meta.dir, 'sw.js'), 'utf-8');
 const ORIGIN = 'https://kayago.app';
 const ORT = '1.31.1';
-/** The parts of a built index.html the worker reads at install. */
-const INDEX_HTML = [
-  '<script defer src="/vendor/gamecontroller.min.js"></script>',
-  '<script defer src="/static/js/index.abc123.js"></script>',
-  '<link href="/static/css/index.def456.css" rel="stylesheet">',
-  '<script async src="https://www.googletagmanager.com/gtag/js"></script>',
-].join('\n');
+/** A build's files, relative to its scope, as sw/plugin.ts lists them for sw.js. */
+const BUILD_2 = [
+  'assets/move-0.ogg',
+  'favicon.svg',
+  'icon-192.png',
+  'icon-512.png',
+  'index.html',
+  'manifest.json',
+  'static/css/index.def456.css',
+  'static/image/board.a1b2c3.png',
+  'static/js/async/ai-worker.c3d4e5.js',
+  'static/js/index.abc123.js',
+  'static/wasm/deadstones.e5f6a7.wasm',
+  'vendor/gamecontroller.min.js',
+];
 
-type RequestLike = string | { url: string };
+type RequestLike = string | { url: string; cache?: string };
+
+/** The server, and the network between it and the browser. */
+class Network {
+  /** URLs fetched, in order. */
+  readonly log: string[] = [];
+  /** The cache mode each URL was last fetched with. */
+  readonly modes = new Map<string, string>();
+  offline = false;
+  missing: string[] = [];
+
+  readonly fetch = async (request: RequestLike) => {
+    const url = typeof request === 'string' ? request : request.url;
+    if (this.offline) throw new TypeError('Failed to fetch');
+    this.log.push(url);
+    this.modes.set(url, (typeof request === 'string' ? undefined : request.cache) ?? 'default');
+    // An opaque response, as a cross-origin no-cors request gets
+    if (url.includes('opaque')) return Response.error();
+    if (this.missing.some(name => url.endsWith(name))) return new Response('', { status: 404 });
+    return new Response(`body of ${url}`, { status: 200, headers: { 'X-Origin': 'server' } });
+  };
+}
 
 /** Cache Storage, keyed by absolute URL the way the browser resolves it against the worker. */
 class FakeCaches {
@@ -22,33 +51,47 @@ class FakeCaches {
 
   constructor(
     names: string[],
-    private readonly fetch: (request: RequestLike) => Promise<Response>
+    private readonly network: Network
   ) {
     for (const name of names) this.stores.set(name, new Map());
+  }
+
+  private static key(request: RequestLike) {
+    return new URL(typeof request === 'string' ? request : request.url, `${ORIGIN}/`).href;
+  }
+
+  /** Store a response, as an earlier worker would have. */
+  seed(name: string, url: string) {
+    if (!this.stores.has(name)) this.stores.set(name, new Map());
+    this.stores.get(name)!.set(url, new Response(`body of ${url}`, { status: 200 }));
   }
 
   async open(name: string) {
     if (!this.stores.has(name)) this.stores.set(name, new Map());
     const store = this.stores.get(name)!;
-    const key = (request: RequestLike) =>
-      new URL(typeof request === 'string' ? request : request.url, `${ORIGIN}/`).href;
+    const key = FakeCaches.key;
     return {
       match: async (request: RequestLike) => store.get(key(request))?.clone(),
       put: async (request: RequestLike, response: Response) => {
         store.set(key(request), response);
       },
-      // Like the real Cache API, add/addAll reject a response that is not ok
-      addAll: async (requests: string[]) => {
-        const responses = await Promise.all(requests.map(request => this.fetch(request)));
-        if (responses.some(response => !response.ok)) throw new TypeError('Request failed');
-        requests.forEach((request, i) => store.set(key(request), responses[i]));
-      },
-      add: async (request: string) => {
-        const response = await this.fetch(request);
+      keys: async () => [...store.keys()].map(url => ({ url })),
+      // Like the real Cache API, add rejects a response that is not ok
+      add: async (request: RequestLike) => {
+        const response = await this.network.fetch(request);
         if (!response.ok) throw new TypeError('Request failed');
         store.set(key(request), response);
       },
     };
+  }
+
+  /** Searches every cache, in creation order, like the real one. */
+  async match(request: RequestLike) {
+    for (const store of this.stores.values()) {
+      const hit = store.get(FakeCaches.key(request));
+      if (hit) return hit.clone();
+    }
+    return undefined;
   }
 
   async keys() {
@@ -60,21 +103,23 @@ class FakeCaches {
   }
 }
 
+interface WorkerOptions {
+  /** Cache names that exist already. */
+  existing?: string[];
+  /** Files the server answers 404 for. */
+  missing?: string[];
+  buildId?: string;
+  files?: string[];
+  /** Share one server and one Cache Storage between workers of two builds. */
+  network?: Network;
+  caches?: FakeCaches;
+}
+
 /** Run the rendered worker against fake browser globals and return its event listeners. */
-function loadWorker(scope: string, existingCaches: string[] = [], missing: string[] = []) {
-  const network: string[] = [];
-  let offline = false;
-  const fetch = async (request: RequestLike) => {
-    const url = typeof request === 'string' ? request : request.url;
-    if (offline) throw new TypeError('Failed to fetch');
-    network.push(url);
-    // An opaque response, as a cross-origin no-cors request gets
-    if (url.includes('opaque')) return Response.error();
-    if (missing.some(name => url.endsWith(name))) return new Response('', { status: 404 });
-    const body = url.endsWith('index.html') ? `${INDEX_HTML}<!-- ${url} -->` : `body of ${url}`;
-    return new Response(body, { status: 200, headers: { 'X-Origin': 'server' } });
-  };
-  const caches = new FakeCaches(existingCaches, fetch);
+function loadWorker(scope: string, options: WorkerOptions = {}) {
+  const network = options.network ?? new Network();
+  network.missing.push(...(options.missing ?? []));
+  const caches = options.caches ?? new FakeCaches(options.existing ?? [], network);
   const listeners: Record<string, (event: unknown) => void> = {};
   const calls: string[] = [];
   const self = {
@@ -87,8 +132,12 @@ function loadWorker(scope: string, existingCaches: string[] = [], missing: strin
     clients: { claim: async () => calls.push('claim') },
   };
   const quiet = { log: () => {}, warn: () => {} };
-  const code = renderServiceWorker(TEMPLATE, { buildId: 'build-2', ortVersion: ORT });
-  new Function('self', 'caches', 'fetch', 'console', code)(self, caches, fetch, quiet);
+  const code = renderServiceWorker(TEMPLATE, {
+    buildId: options.buildId ?? 'build-2',
+    ortVersion: ORT,
+    precache: options.files ?? BUILD_2,
+  });
+  new Function('self', 'caches', 'fetch', 'console', code)(self, caches, network.fetch, quiet);
 
   const lifecycle = async (type: 'install' | 'activate') => {
     let done: Promise<unknown> = Promise.resolve();
@@ -112,28 +161,44 @@ function loadWorker(scope: string, existingCaches: string[] = [], missing: strin
   };
   return {
     caches,
-    network,
+    network: network.log,
     calls,
     lifecycle,
     request,
     message: (data: unknown) => listeners.message?.({ data }),
     goOffline: () => {
-      offline = true;
+      network.offline = true;
     },
   };
 }
 
+/** How the page asks for a file of the build. */
+function pageRequest(scope: string, file: string) {
+  const url = `${ORIGIN}${scope}${file}`;
+  if (file.endsWith('.png') || file.endsWith('.svg')) return { url, destination: 'image' };
+  if (file.endsWith('.ogg')) return { url, destination: 'audio' };
+  if (file.endsWith('.html')) return { url: `${ORIGIN}${scope}`, mode: 'navigate' };
+  return { url, destination: 'script' };
+}
+
 describe('renderServiceWorker', () => {
-  test('fills in the build id and ORT version', () => {
-    const code = renderServiceWorker(TEMPLATE, { buildId: 'abc-2026', ortVersion: ORT });
+  test('fills in the build id, the ORT version and the files to precache', () => {
+    const code = renderServiceWorker(TEMPLATE, {
+      buildId: 'abc-2026',
+      ortVersion: ORT,
+      precache: ['index.html', 'static/js/index.abc123.js'],
+    });
     expect(code).toContain(`const BUILD_ID = "abc-2026";`);
     expect(code).toContain(`const ORT_VERSION = "${ORT}";`);
+    expect(code).toContain(`const BUILD_FILES = ["index.html","static/js/index.abc123.js"];`);
     expect(code).not.toContain('__KAYA_');
   });
 
   test('refuses a template without its placeholders or a value', () => {
-    expect(() => renderServiceWorker('const x = 1;', { buildId: 'a', ortVersion: ORT })).toThrow();
-    expect(() => renderServiceWorker(TEMPLATE, { buildId: '', ortVersion: ORT })).toThrow();
+    const values = { buildId: 'a', ortVersion: ORT, precache: BUILD_2 };
+    expect(() => renderServiceWorker('const x = 1;', values)).toThrow();
+    expect(() => renderServiceWorker(TEMPLATE, { ...values, buildId: '' })).toThrow();
+    expect(() => renderServiceWorker(TEMPLATE, { ...values, precache: [] })).toThrow();
   });
 });
 
@@ -151,7 +216,7 @@ describe('activate cleanup', () => {
   ];
 
   test('stable deletes its own old caches and the legacy ones, nothing else', async () => {
-    const worker = loadWorker('/', existing);
+    const worker = loadWorker('/', { existing });
     await worker.lifecycle('activate');
     expect(await worker.caches.keys()).toEqual([
       'kaya-moku-models',
@@ -163,7 +228,7 @@ describe('activate cleanup', () => {
   });
 
   test('next leaves the stable caches alone', async () => {
-    const worker = loadWorker('/next/', existing);
+    const worker = loadWorker('/next/', { existing });
     await worker.lifecycle('activate');
     expect(await worker.caches.keys()).toEqual([
       'kaya-moku-models',
@@ -172,6 +237,75 @@ describe('activate cleanup', () => {
       'kaya|/|app|build-2',
       `kaya|/|ort|${ORT}`,
     ]);
+  });
+});
+
+describe('install', () => {
+  test('caches every file of the build, revalidating the files without a hash', async () => {
+    const network = new Network();
+    const worker = loadWorker('/next/', { network });
+    await worker.lifecycle('install');
+
+    const cached = [...worker.caches.stores.get('kaya|/next/|app|build-2')!.keys()];
+    const expected = ['', ...BUILD_2].map(file => `${ORIGIN}/next/${file}`);
+    expect(cached.sort()).toEqual(expected.sort());
+    expect(network.modes.get(`${ORIGIN}/next/index.html`)).toBe('no-cache');
+    expect(network.modes.get(`${ORIGIN}/next/assets/move-0.ogg`)).toBe('no-cache');
+    expect(network.modes.get(`${ORIGIN}/next/static/js/index.abc123.js`)).toBe('default');
+  });
+
+  test('offline after the visit that brought a new build: every file of it is served', async () => {
+    const network = new Network();
+    const caches = new FakeCaches([], network);
+    const build1 = BUILD_2.map(file => file.replace('index.abc123.js', 'index.0ld111.js'));
+    const previous = loadWorker('/', { network, caches, buildId: 'build-1', files: build1 });
+    await previous.lifecycle('install');
+    await previous.lifecycle('activate');
+
+    // The page of build 2 loads its files through build 1's worker, into
+    // build 1's cache, while build 2's worker installs
+    for (const file of BUILD_2) await previous.request(pageRequest('/', file));
+    const worker = loadWorker('/', { network, caches, buildId: 'build-2' });
+    network.log.length = 0;
+    await worker.lifecycle('install');
+    await worker.lifecycle('activate');
+    expect(await caches.keys()).toEqual(['kaya|/|app|build-2']);
+    // Hashed files the previous build had are copied, not downloaded again
+    expect(network.log).not.toContain(`${ORIGIN}/static/js/async/ai-worker.c3d4e5.js`);
+    expect(network.log).not.toContain(`${ORIGIN}/static/js/index.abc123.js`);
+
+    worker.goOffline();
+    for (const file of BUILD_2) {
+      const response = await worker.request(pageRequest('/', file));
+      expect({ file, ok: response?.ok }).toEqual({ file, ok: true });
+    }
+  });
+
+  test('an update that changes ORT caches the new version of the ORT files the user had', async () => {
+    const network = new Network();
+    const caches = new FakeCaches([], network);
+    for (const file of ['ort-wasm-simd-threaded.jsep.wasm', 'ort-wasm-simd-threaded.jsep.mjs']) {
+      caches.seed('kaya|/|ort|1.24.3', `${ORIGIN}/wasm/1.24.3/${file}`);
+      caches.seed('kaya|/next/|ort|1.24.3', `${ORIGIN}/next/wasm/1.24.3/other-scope-${file}`);
+    }
+    // ORT 1.24.3 before the versioned path: stable's legacy cache
+    caches.seed('kaya-runtime-v4', `${ORIGIN}/wasm/ort-wasm-simd-threaded.wasm`);
+
+    const worker = loadWorker('/', { network, caches });
+    await worker.lifecycle('install');
+    const ort = [...caches.stores.get(`kaya|/|ort|${ORT}`)!.keys()].sort();
+    expect(ort).toEqual([
+      `${ORIGIN}/wasm/${ORT}/ort-wasm-simd-threaded.jsep.mjs`,
+      `${ORIGIN}/wasm/${ORT}/ort-wasm-simd-threaded.jsep.wasm`,
+      `${ORIGIN}/wasm/${ORT}/ort-wasm-simd-threaded.wasm`,
+    ]);
+  });
+
+  test('a user who never ran the engine downloads no ORT file at install', async () => {
+    const network = new Network();
+    const worker = loadWorker('/', { network });
+    await worker.lifecycle('install');
+    expect(network.log.some(url => url.startsWith(`${ORIGIN}/wasm/`))).toBe(false);
   });
 });
 
@@ -207,25 +341,8 @@ describe('fetch', () => {
 
     worker.goOffline();
     const response = await worker.request({ url: `${ORIGIN}/some/route`, mode: 'navigate' });
-    expect(await response!.text()).toContain('/static/js/index.abc123.js');
+    expect(await response!.text()).toBe(`body of ${ORIGIN}/index.html`);
     expect(response!.headers.get('Cross-Origin-Embedder-Policy')).toBe('require-corp');
-  });
-
-  test('precaches the scripts and styles index.html loads, so the app starts offline', async () => {
-    const worker = loadWorker('/');
-    await worker.lifecycle('install');
-    const cached = [...worker.caches.stores.get('kaya|/|app|build-2')!.keys()];
-    expect(cached).toContain(`${ORIGIN}/static/js/index.abc123.js`);
-    expect(cached).toContain(`${ORIGIN}/static/css/index.def456.css`);
-    expect(cached).toContain(`${ORIGIN}/vendor/gamecontroller.min.js`);
-    expect(cached.some(url => url.includes('googletagmanager'))).toBe(false);
-
-    worker.goOffline();
-    const script = await worker.request({
-      url: `${ORIGIN}/static/js/index.abc123.js`,
-      destination: 'script',
-    });
-    expect(await script!.text()).toBe(`body of ${ORIGIN}/static/js/index.abc123.js`);
   });
 
   test('answers a network error, not a crash, offline with nothing cached', async () => {
@@ -298,8 +415,8 @@ describe('cross-origin isolation', () => {
     expect(worker.calls).toEqual(['skipWaiting', 'claim']);
   });
 
-  test('still installs when a shell file is missing: caching must not cost isolation', async () => {
-    const worker = loadWorker('/', [], ['icon-192.png', 'index.abc123.js']);
+  test('still installs when a file is missing: caching must not cost isolation', async () => {
+    const worker = loadWorker('/', { missing: ['icon-192.png', 'index.abc123.js'] });
     await worker.lifecycle('install');
     await worker.lifecycle('activate');
     expect(worker.calls).toEqual(['skipWaiting', 'claim']);
@@ -308,6 +425,7 @@ describe('cross-origin isolation', () => {
     expect(cached).toContain(`${ORIGIN}/index.html`);
     expect(cached).toContain(`${ORIGIN}/icon-512.png`);
     expect(cached).not.toContain(`${ORIGIN}/icon-192.png`);
+    expect(cached).not.toContain(`${ORIGIN}/static/js/index.abc123.js`);
     expect(cached).toContain(`${ORIGIN}/static/css/index.def456.css`);
   });
 

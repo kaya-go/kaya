@@ -5,7 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { resolveOrtWeb } from '../../scripts/ort-web';
-import { renderRegistration, renderServiceWorker } from './sw/render';
+import { pluginServiceWorker } from './sw/plugin';
+import { renderRegistration } from './sw/render';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -41,7 +42,13 @@ function serviceWorkerRegistration(): string {
 }
 
 export default defineConfig({
-  plugins: [pluginReact()],
+  plugins: [
+    pluginReact(),
+    pluginServiceWorker({
+      template: fs.readFileSync(path.join(__dirname, 'sw', 'sw.js'), 'utf-8'),
+      values: serviceWorkerValues,
+    }),
+  ],
   source: {
     entry: {
       index: './src/main.tsx',
@@ -65,11 +72,6 @@ export default defineConfig({
       {
         from: '../../version.json',
         to: '.',
-      },
-      {
-        from: 'sw/sw.js',
-        to: '.',
-        transform: input => renderServiceWorker(input.toString(), serviceWorkerValues()),
       },
       {
         from: 'public/vendor',
