@@ -40,6 +40,8 @@ export interface Token {
   col: number;
   pos: number;
   progress: number;
+  /** Set on a property value the end of the input cut off before its `]`. */
+  unterminated?: boolean;
 }
 
 /**
@@ -156,4 +158,6 @@ export interface RequiredParseOptions {
   dictionary: { [id: string]: SGFNode } | null;
   onProgress: (args: { progress: number }) => void;
   onNodeCreated: (args: { node: SGFNode }) => void;
+  /** Refuse what the lenient parser reads wrong or skips (see `parseChecked`). */
+  strict: boolean;
 }

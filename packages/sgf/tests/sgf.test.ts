@@ -54,6 +54,12 @@ describe('parse', () => {
     const [root] = parse('(;GM[1];B[];W[bb])');
     expect(root.children[0].data.B).toEqual(['']);
   });
+
+  test('keeps the whole of a value cut by the end of the input', () => {
+    // Its last character used to be dropped as if it were the closing bracket.
+    const [root] = parse('(;GM[1];B[aa];W[bb');
+    expect(root.children[0].children[0].data.W).toEqual(['bb']);
+  });
 });
 
 describe('parseStrict', () => {
@@ -89,6 +95,44 @@ describe('parseStrict', () => {
     expect(isSgfValidationError(caught)).toBe(true);
     expect((caught as Error).message).toMatch(/Unexpected token/);
     expect((caught as Error).cause).toBeInstanceOf(Error);
+  });
+
+  test('refuses a file cut inside a value', () => {
+    // '(;GM[1];B[aa];W[bb' used to load with W[b]: a move that was never played.
+    const truncated = {
+      'in a move': '(;GM[1];B[aa];W[bb',
+      'after an escaped bracket': '(;GM[1]C[abc\\]',
+      'in a comment that holds a parenthesis': '(;GM[1]C[see (a)',
+    };
+    for (const [name, content] of Object.entries(truncated)) {
+      expect(() => parseStrict(content), name).toThrow(SgfValidationError);
+      expect(() => parseStrict(content), name).toThrow(/^Unterminated property value at 1:\d+$/);
+    }
+  });
+
+  test('refuses a node after a variation instead of dropping it', () => {
+    // SGF allows only variations after the first one; the parser skipped the rest.
+    const misplaced = {
+      node: '(;A[1](;B[2]);C[3])',
+      property: '(;A[1](;B[2])(;B[3])C[3])',
+      'deeper in the tree': '(;A[1](;B[2](;C[1])D[4])(;B[3]))',
+    };
+    for (const [name, content] of Object.entries(misplaced)) {
+      expect(() => parseStrict(content), name).toThrow(SgfValidationError);
+      expect(() => parseStrict(content), name).toThrow(/^Unexpected content after a variation/);
+    }
+  });
+
+  test('accepts a game whose last parenthesis is missing', () => {
+    // Every value is whole, and the library stored content unchecked before
+    // 2026-09-12 (#169): refusing these would lock users out of their files.
+    expect(parseStrict('(;GM[1];B[aa];W[bb]')).toEqual(parse('(;GM[1];B[aa];W[bb])'));
+    expect(parseStrict('(;GM[1](;B[aa])(;B[bb]')).toEqual(parse('(;GM[1](;B[aa])(;B[bb]))'));
+  });
+
+  test('ignores what follows the last game tree', () => {
+    const sgf = '(;GM[1];B[aa])';
+    expect(parseStrict(`${sgf}\n\nExported by a tool; see its notes.\n`)).toEqual(parse(sgf));
   });
 
   test('passes parse options through', () => {
