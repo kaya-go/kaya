@@ -84,8 +84,12 @@ Tauri, only HTML gets the header, so workers have no policy in either mode.
   Moku from Hugging Face inside the worker). It reported 0 violations. A
   control fetch from the page to an unlisted host was blocked and reported in
   both engines.
-- **Real webview.** A debug binary (`tauri build --debug --no-bundle`) embeds
-  the policy. The manual pass in it on macOS is pending.
+- **Real webview.** A manual pass on macOS in a debug binary
+  (`tauri build --debug --no-bundle`, which embeds the policy) reported no
+  violation. It covered opening and dropping an SGF, save, scoring, live and
+  full-game analysis on the native and web backends, a model download, board
+  recognition from a photo, sounds, the update check, external links and an
+  OGS URL paste.
 - **Checks.** `cargo test --lib` (tauri-build validates the config),
   `bun run type-check`, `bun run test` and `bun run lint` pass.
 
