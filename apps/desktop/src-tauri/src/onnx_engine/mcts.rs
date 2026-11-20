@@ -223,8 +223,14 @@ impl Board {
             return Err(());
         }
 
-        // Detect ko: single stone capture leaving single stone
-        if captured.len() == 1 && own_group.len() == 1 {
+        // Ko: one stone took one stone and has a single liberty left, the
+        // point it emptied, so the other side could take back at once. With
+        // a second liberty there is nothing to retake (KataGo and
+        // @kaya/goboard check the same).
+        let single_liberty = || {
+            new_board.neighbors(x, y).iter().filter(|&&(nx, ny)| new_board.grid[ny][nx] == 0).count() == 1
+        };
+        if captured.len() == 1 && own_group.len() == 1 && single_liberty() {
             new_board.ko_vertex = Some(captured[0]);
             new_board.ko_sign = opp;
         }
@@ -978,5 +984,32 @@ mod tests {
         let filtered = filter_ko_moves(&policy_of(&[("E5", 0.3), ("C3", 0.1)]), &ko_board(), 1);
         let probs: Vec<f32> = filtered.move_suggestions.iter().map(|s| s.probability).collect();
         assert_eq!(probs, vec![0.3, 0.1]);
+    }
+
+    /// One stone taking one stone is a ko only if the taker is left with a
+    /// single liberty, the point it just emptied: only then can the other side
+    /// take back at once. The ko was set on every one-for-one capture, so the
+    /// board carried a ko that does not exist.
+    #[test]
+    fn a_one_stone_capture_is_a_ko_only_when_it_can_be_taken_back() {
+        // White at B4 (1, 1) has one liberty left, C4 (2, 1).
+        let mut grid = vec![vec![0i8; 5]; 5];
+        for (x, y) in [(1, 0), (0, 1), (1, 2)] {
+            grid[y][x] = 1;
+        }
+        for (x, y) in [(2, 0), (1, 1), (3, 1), (2, 2)] {
+            grid[y][x] = -1;
+        }
+
+        // Black takes at C4. White around it leaves B4 its only liberty: a ko.
+        let ko = Board::with_ko(&grid, &None).make_move(1, 2, 1).unwrap();
+        assert_eq!((ko.ko_vertex, ko.ko_sign), (Some((1, 1)), -1));
+        assert!(ko.make_move(-1, 1, 1).is_err(), "White may not take back at once");
+
+        // Without White at D4 the Black stone keeps D4 as a second liberty:
+        // White at B4 would not capture it, so there is nothing to retake.
+        grid[1][3] = 0;
+        let no_ko = Board::with_ko(&grid, &None).make_move(1, 2, 1).unwrap();
+        assert_eq!((no_ko.ko_vertex, no_ko.ko_sign), (None, 0));
     }
 }
