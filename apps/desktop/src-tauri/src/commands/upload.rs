@@ -13,14 +13,15 @@ use crate::onnx_engine;
 /// State for chunked model upload
 static MODEL_UPLOAD_PATH: Mutex<Option<PathBuf>> = Mutex::new(None);
 
-/// Validate that a model_id contains no path traversal characters
+/// Validate that a model_id is a plain file name: `[A-Za-z0-9._-]`, no `..`.
+/// The frontend builds ids from `[A-Za-z0-9_-]` (`modelCacheIdFromStorageId`).
 fn sanitize_model_id(model_id: &str) -> Result<(), String> {
-    if model_id.contains('/')
-        || model_id.contains('\\')
-        || model_id.contains("..")
-        || model_id.is_empty()
-    {
-        return Err("Invalid model ID: must not contain path separators or '..'".to_string());
+    let allowed = |c: char| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-');
+    if model_id.is_empty() || model_id.contains("..") || !model_id.chars().all(allowed) {
+        return Err(format!(
+            "Invalid model ID {:?}: use only letters, digits, '.', '_' and '-'",
+            model_id
+        ));
     }
     Ok(())
 }
@@ -239,6 +240,20 @@ mod tests {
 
         assert_eq!(empty.unwrap(), "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
         assert_eq!(abc.unwrap(), "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+    }
+
+    /// The id becomes a file name. A blacklist of `/`, `\` and `..` let through
+    /// `:` (an NTFS stream, a drive on Windows), NUL and every other character.
+    #[test]
+    fn model_ids_are_plain_file_names() {
+        use super::sanitize_model_id;
+
+        for ok in ["katago-latest", "b18c384nbt_fp16", "kata1.b28", "A-z_0.9"] {
+            assert!(sanitize_model_id(ok).is_ok(), "{ok}");
+        }
+        for bad in ["", "..", "a/b", "a\\b", "C:model", "a:b", "a b", "a\0b", "modèle", "~"] {
+            assert!(sanitize_model_id(bad).is_err(), "{bad:?}");
+        }
     }
 
     /// See `read_model_file`: the bytes must cross the IPC raw, not as JSON.
