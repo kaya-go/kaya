@@ -6,6 +6,7 @@ import {
   MOKU_BUNDLED_MODEL_FILE,
   MOKU_MODEL_URL,
 } from '../packages/board-recognition/src/moku-model';
+import { copyOrtRuntime, resolveOrtWeb } from './ort-web';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -33,20 +34,14 @@ async function copyDir(src: string, dest: string) {
 }
 
 async function copyFiles(srcDir: string, destDir: string, pattern: RegExp) {
-  try {
-    await fs.mkdir(destDir, { recursive: true });
-    const files = await fs.readdir(srcDir);
+  // No try/catch: a missing source folder is a broken checkout, and a build
+  // that carried on would ship without those files.
+  await fs.mkdir(destDir, { recursive: true });
+  const files = await fs.readdir(srcDir);
 
-    for (const file of files) {
-      if (pattern.test(file)) {
-        await fs.copyFile(path.join(srcDir, file), path.join(destDir, file));
-      }
-    }
-  } catch (error) {
-    // Ignore if source directory doesn't exist or other errors, similar to the shell script behavior
-    // But for critical paths we might want to log
-    if ((error as any).code !== 'ENOENT') {
-      console.error(`Error copying files from ${srcDir} to ${destDir}:`, error);
+  for (const file of files) {
+    if (pattern.test(file)) {
+      await fs.copyFile(path.join(srcDir, file), path.join(destDir, file));
     }
   }
 }
@@ -252,28 +247,14 @@ async function main() {
   // 2. Copy sounds to apps/web/public/assets
   await copyFiles(publicSoundsDir, webAssetsDir, /\.ogg$/);
 
-  // Copy ONNX Runtime WASM files
-  // Try to find onnxruntime-web in root node_modules or package node_modules
-  let onnxWasmSrc = path.join(rootDir, 'node_modules', 'onnxruntime-web', 'dist');
-  try {
-    await fs.access(onnxWasmSrc);
-  } catch {
-    onnxWasmSrc = path.join(
-      rootDir,
-      'packages',
-      'ai-engine',
-      'node_modules',
-      'onnxruntime-web',
-      'dist'
+  // ONNX Runtime's .wasm files, under wasm/<version>/ (see scripts/ort-web.ts)
+  const ort = resolveOrtWeb(rootDir);
+  for (const app of ['web', 'desktop']) {
+    const files = await copyOrtRuntime(ort, path.join(rootDir, 'apps', app, 'public', 'wasm'));
+    console.log(
+      `✅ onnxruntime-web ${ort.version} → apps/${app}/public/wasm (${files.length} files)`
     );
   }
-
-  const webWasmDest = path.join(rootDir, 'apps', 'web', 'public', 'wasm');
-  const desktopWasmDest = path.join(rootDir, 'apps', 'desktop', 'public', 'wasm');
-
-  // Copy .mjs files as well since they are requested by the browser
-  await copyFiles(onnxWasmSrc, webWasmDest, /\.(wasm|mjs)$/);
-  await copyFiles(onnxWasmSrc, desktopWasmDest, /\.(wasm|mjs)$/);
 
   // 3. Copy sounds to apps/desktop/public/assets
   await copyFiles(publicSoundsDir, desktopAssetsDir, /\.ogg$/);
@@ -290,7 +271,7 @@ async function main() {
     console.log('⏭️  Skipping Moku model (pass --with-model for desktop builds)');
   }
 
-  console.log('✅ Assets copied (sounds)');
+  console.log('✅ Assets copied');
 }
 
 main().catch(error => {

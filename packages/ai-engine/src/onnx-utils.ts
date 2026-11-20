@@ -3,6 +3,16 @@ import type { Sign } from '@kaya/goboard';
 import type { AnalysisResult, MoveSuggestion } from './types';
 
 /**
+ * Folder holding the `.wasm` files of this ORT version. The apps serve them
+ * under `<root>/<version>/` (scripts/ort-web.ts) so that a new ORT never runs
+ * against an old `.wasm` the web service worker cached under the same URL.
+ */
+export function versionedWasmPath(root: string, version: string | undefined): string {
+  if (!version) throw new Error('onnxruntime-web did not report its version');
+  return `${root.endsWith('/') ? root : `${root}/`}${version}/`;
+}
+
+/**
  * Convert Float32Array to Float16 (stored as Uint16Array).
  * Uses the standard IEEE 754 half-precision format.
  */

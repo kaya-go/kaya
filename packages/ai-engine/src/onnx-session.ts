@@ -3,6 +3,7 @@
  */
 import * as ort from 'onnxruntime-web/all';
 import type { OnnxEngineConfig } from './onnx-types';
+import { versionedWasmPath } from './onnx-utils';
 
 /** Result from session creation with all detected properties. */
 export interface SessionCreationResult {
@@ -265,7 +266,7 @@ export async function createOnnxSession(
   ort.env.wasm.numThreads = numThreads;
   ort.env.wasm.simd = true;
   ort.env.wasm.proxy = false;
-  ort.env.wasm.wasmPaths = config.wasmPath || '/wasm/';
+  ort.env.wasm.wasmPaths = versionedWasmPath(config.wasmPath || '/wasm/', ort.env.versions.web);
   ort.env.debug = false;
   ort.env.logLevel = 'warning';
 
