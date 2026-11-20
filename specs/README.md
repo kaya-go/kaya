@@ -80,3 +80,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Move probability is the prior; shared cache not evicted](2026-11-20-probability-prior-and-shared-cache.md) | shipped    |
 | 2026-11-20 | [Library drag e2e: hold until the drop hover lands](2026-11-20-library-drag-e2e-pending-hover.md)           | shipped    |
 | 2026-11-20 | [ORT files under `wasm/<version>/`, and a service worker per build](2026-11-20-ort-wasm-versioned-path.md)  | shipped    |
+| 2026-11-20 | [Library: a change made before the database opens is listed](2026-11-20-library-refresh-before-open.md)     | shipped    |
