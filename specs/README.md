@@ -95,3 +95,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Stored library games open, copy, restore; saves keep a collection](2026-11-20-library-stored-content.md)   | shipped    |
 | 2026-11-20 | [Stopping an analysis stops it, and leaves nothing behind](2026-11-20-analysis-stops-cleanly.md)            | shipped    |
 | 2026-11-20 | [KA records the engine version, and older analysis is run again](2026-11-20-ka-engine-version.md)           | shipped    |
+| 2026-11-20 | [Desktop audio clamps the buffer to the device's range](2026-11-20-audio-buffer-range.md)                   | shipped    |
