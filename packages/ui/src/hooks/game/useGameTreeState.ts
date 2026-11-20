@@ -6,10 +6,8 @@ import {
   stringify as stringifySGF,
   sgfNodeToGameTreeNode,
   extractGameInfo as extractGameInfoFromSGF,
-  gameInfoToPropertyWrites,
   vertexToSGF,
   withUtf8Charset,
-  type GameInfoPatch,
 } from '@kaya/sgf';
 import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
@@ -239,31 +237,6 @@ export function useGameTreeState() {
     return stringifySGF([withUtf8Charset(rootNode)]);
   }, [gameTree, rootId]);
 
-  const updateGameInfo = useCallback(
-    (info: GameInfoPatch) => {
-      if (!gameTree || rootId === null) return;
-
-      setGameTree(prevTree => {
-        if (!prevTree) return null;
-
-        const root = prevTree.get(rootId);
-        if (!root) return prevTree;
-
-        // Any write to the root yields a new tree, and isDirty compares tree
-        // identity, so a field saved unchanged must not write at all.
-        const writes = gameInfoToPropertyWrites(info, root.data);
-        if (writes.length === 0) return prevTree;
-
-        return prevTree.mutate(draft => {
-          for (const { ident, values } of writes) {
-            draft.updateProperty(rootId, ident, values);
-          }
-        });
-      });
-    },
-    [gameTree, rootId]
-  );
-
   return {
     gameTree,
     setGameTree,
@@ -281,7 +254,6 @@ export function useGameTreeState() {
     loadSGFAsync,
     createNewGame: newGame,
     saveSGF: exportSGF,
-    updateGameInfo,
     gameInfo,
     isDirty,
     markClean,
