@@ -258,3 +258,35 @@ test.describe('Library context menu', () => {
     ).toBeVisible();
   });
 });
+
+test.describe('Library import', () => {
+  // 1x1 transparent PNG.
+  const PNG = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+    'base64'
+  );
+  const game = (name: string) => ({
+    name,
+    mimeType: 'application/x-go-sgf',
+    buffer: Buffer.from('(;GM[1]FF[4]SZ[19];B[pd];W[dp])'),
+  });
+
+  test('a photo among the files opens recognition and the games after it are still stored', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page
+      .locator('.library-panel input[type="file"]')
+      .setInputFiles([
+        game('first.sgf'),
+        { name: 'board.png', mimeType: 'image/png', buffer: PNG },
+        game('second.sgf'),
+        game('third.sgf'),
+      ]);
+
+    for (const name of ['first.sgf', 'second.sgf', 'third.sgf']) {
+      await expect(page.locator('.library-tree-node', { hasText: name })).toBeVisible();
+    }
+    await expect(page.locator('.brd-dialog')).toBeVisible();
+  });
+});

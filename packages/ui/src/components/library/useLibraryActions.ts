@@ -61,16 +61,18 @@ export function useLibraryActions() {
   // Shared .sgf / .zip / image import used by drop and the file picker.
   const importLibraryFiles = useCallback(
     async (files: File[], parentId: string | null) => {
+      // The recognition dialog takes one photo. It opens once the other files
+      // are stored, so a photo in a multi-file import does not drop the rest.
+      let photo: File | null = null;
       for (const file of files) {
         const lowerName = file.name.toLowerCase();
         if (IMAGE_EXTENSIONS.some(ext => lowerName.endsWith(ext))) {
-          setRecognitionFile(file);
-          return;
+          photo ??= file;
+          continue;
         }
         if (lowerName.endsWith('.sgf')) {
-          const content = await file.text();
           try {
-            await createFile(file.name, content, parentId);
+            await createFile(file.name, await file.text(), parentId);
           } catch (error) {
             showToast(formatLibraryFileImportError(error, t), 'error');
           }
@@ -81,6 +83,7 @@ export function useLibraryActions() {
           if (message) showToast(message, 'error');
         }
       }
+      if (photo) setRecognitionFile(photo);
     },
     [createFile, importZip, showToast, t]
   );
