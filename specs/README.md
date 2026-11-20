@@ -63,7 +63,7 @@ link forward to the replacement. Don't delete history.
 | 2026-09-24 | [Moku v4: board corners from a corner head](2026-09-24-moku-v4-corner-head.md)                              | shipped    |
 | 2026-09-24 | [Mobile: tree edges, toasts, back gesture, AI status pill](2026-09-24-mobile-tree-toast-and-back.md)        | shipped    |
 | 2026-09-24 | [Game tree branches: main line, context menu, no splicing](2026-09-24-gametree-branch-management.md)        | shipped    |
-| 2026-09-24 | [Library drag e2e: release once the folder is highlighted](2026-09-24-library-drag-e2e-flake.md)            | shipped    |
+| 2026-09-24 | [Library drag e2e: release once the folder is highlighted](2026-09-24-library-drag-e2e-flake.md)            | superseded |
 | 2026-11-01 | [GameTree selectors read an external store](2026-11-01-game-tree-selector-store.md)                         | shipped    |
 | 2026-11-03 | [ort 2.0.0-rc.15: CoreML 3x faster, and four traps](2026-11-03-ort-rc15-migration.md)                       | shipped    |
 | 2026-11-04 | [A failed session swap reruns the backend chain](2026-11-04-engine-lost-reruns-chain.md)                    | shipped    |
@@ -78,3 +78,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Native search: aborts kept, lock recovers](2026-11-20-native-search-abort-and-lock.md)                     | shipped    |
 | 2026-11-20 | [SGF loading: what a file holds reaches the board](2026-11-20-sgf-loading-defects.md)                       | shipped    |
 | 2026-11-20 | [Move probability is the prior; shared cache not evicted](2026-11-20-probability-prior-and-shared-cache.md) | shipped    |
+| 2026-11-20 | [Library drag e2e: hold until the drop hover lands](2026-11-20-library-drag-e2e-pending-hover.md)           | shipped    |

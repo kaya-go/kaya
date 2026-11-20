@@ -1,10 +1,14 @@
 ---
 date: 2026-09-24
-status: shipped
+status: superseded
 scope: e2e/library
 ---
 
 # Library drag e2e: release once the folder is highlighted
+
+> Superseded by [2026-11-20](2026-11-20-library-drag-e2e-pending-hover.md): the
+> highlight can show an older hover than the one the drop guard reads, so the
+> hold now waits for two highlighted hovers at the drop point.
 
 ## Context
 
@@ -65,3 +69,4 @@ release.
 
 - `e2e/library.e2e.ts`
 - [Library tree: a stable row renderer](2026-09-12-stable-tree-row-renderer.md)
+- [Follow-up: hold until the drop hover lands](2026-11-20-library-drag-e2e-pending-hover.md)

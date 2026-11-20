@@ -68,25 +68,37 @@ async function startRename(page: Page, row: ReturnType<Page['locator']>) {
 const ROW_CORNER = { x: 5, y: 5 };
 
 /**
- * Keeps a dragged pointer on a folder until the folder shows it will take the drop.
+ * Keeps a dragged pointer on a folder until the folder will take the drop.
  *
- * react-dnd re-evaluates the hovered target on dragenter, and on dragover at most once
- * per animation frame, for the targets under the dragover that queued the frame.
- * Chrome drops only if the last dragover accepted the drop. Releasing in the frame the
- * pointer arrives therefore races a stale hover: a frame queued over the source row can
- * even clear the folder's highlight after it appears. While a pointer rests, a browser
- * keeps firing dragover; Playwright fires one per mouse move, so send another and let a
- * frame pass until the highlight holds.
+ * Chrome drops only if the dragover it sends at release passes the tree's drop guard,
+ * and the guard reads the newest hover, which the highlight shows only later:
+ * react-dnd hovers once per animation frame, with the client offset of the hover
+ * before (dnd-core calls `target.hover` before storing the new offset), and
+ * react-arborist applies that hover a frame after. One dragover and one frame at the
+ * folder could leave it highlighted by an older hover while a newer one, computed from
+ * a point on the way (the gap between rows: a drop at the root), waited to refuse the
+ * release. A browser keeps firing dragover while a pointer rests; Playwright fires one
+ * per mouse move. So send them at the drop point, two frames apart, until two in a row
+ * leave the highlight on: the second hover was computed at the drop point. See
+ * specs/2026-11-20-library-drag-e2e-pending-hover.md.
  */
 async function holdOverFolder(
   page: Page,
   folder: ReturnType<Page['locator']>,
   point: { x: number; y: number }
 ) {
+  let highlightedInARow = 0;
   await expect(async () => {
     await page.mouse.move(point.x, point.y);
-    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())));
-    expect(await folder.evaluate(el => el.classList.contains('drop-target'))).toBe(true);
+    await page.evaluate(
+      () =>
+        new Promise<void>(resolve =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        )
+    );
+    const highlighted = await folder.evaluate(el => el.classList.contains('drop-target'));
+    highlightedInARow = highlighted ? highlightedInARow + 1 : 0;
+    expect(highlightedInARow).toBeGreaterThanOrEqual(2);
   }).toPass({ timeout: 5000 });
 }
 
