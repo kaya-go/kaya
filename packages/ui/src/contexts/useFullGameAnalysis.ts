@@ -12,11 +12,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { MutableRefObject } from 'react';
 import type { AnalysisQueue, AnalysisRequest, AnalysisResult, Engine } from '@kaya/ai-engine';
-import type { SignMap } from '@kaya/goboard';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
-import type { SGFProperty } from '../types/game';
-import { getPathToNode, mapAnalysisPath } from '../utils/gameCache';
-import { generateAnalysisCacheKey, isAbortError } from '../utils/aiAnalysis';
+import type { GameInfo, SGFProperty } from '../types/game';
+import { analysisCacheKey, getPathToNode, mapAnalysisPath } from '../utils/gameCache';
+import { isAbortError } from '../utils/aiAnalysis';
 import type { ModelQuantization } from '../services/modelStorage';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
@@ -27,11 +26,9 @@ interface UseFullGameAnalysisParams {
   engine: Engine | null;
   analysisMode: boolean;
   setAnalysisMode: (mode: boolean) => void;
-  currentBoard: { signMap: SignMap };
   gameTree: GameTree<SGFProperty> | null;
   currentNodeId: number | string | null | undefined;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  gameInfo: any;
+  gameInfo: GameInfo;
   aiSettings: { numVisits?: number; fullGameNumVisits?: number; webgpuBatchSize?: number };
   updateAnalysisCacheSize: () => void;
   lookupCachedResult: () => boolean;
@@ -44,7 +41,6 @@ export function useFullGameAnalysis({
   engine,
   analysisMode,
   setAnalysisMode,
-  currentBoard,
   gameTree,
   currentNodeId,
   gameInfo,
@@ -106,8 +102,6 @@ export function useFullGameAnalysis({
       const fullSequence = [...historyNodes, ...futureNodes];
       setFullGameTotalMoves(fullSequence.length);
 
-      // Square, sized by height, as in useLiveAnalysis: engines cannot take anything else.
-      const boardSize = currentBoard.signMap.length;
       const komi = gameInfo?.komi ?? DEFAULT_KOMI;
       // Full-game uses its own visit setting (default 10) so deep live
       // search doesn't accidentally make a whole-game pass take hours.
@@ -126,12 +120,7 @@ export function useFullGameAnalysis({
         gameTree,
         fullSequence,
         (state, i) => {
-          const cacheKey = generateAnalysisCacheKey(
-            state.board.signMap,
-            state.nextToPlay,
-            komi,
-            state.history
-          );
+          const cacheKey = analysisCacheKey(state, komi);
 
           const request: AnalysisRequest = {
             signMap: state.board.clone().signMap,
@@ -151,7 +140,7 @@ export function useFullGameAnalysis({
           }
           positions.push({ index: i, request });
         },
-        boardSize
+        gameInfo
       );
 
       if (positions.length === 0) {
@@ -264,7 +253,6 @@ export function useFullGameAnalysis({
     currentNodeId,
     analysisMode,
     setAnalysisMode,
-    currentBoard,
     gameInfo,
     aiSettings.numVisits,
     aiSettings.fullGameNumVisits,

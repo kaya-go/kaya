@@ -273,6 +273,7 @@ export const GameTreeProvider: React.FC<{
     analysisCache,
     saveAnalysisToSgf: aiSettings.saveAnalysisToSgf,
     boardSize: gameInfo.boardSize ?? 19,
+    boardHeight: gameInfo.boardHeight,
     komi: gameInfo.komi ?? DEFAULT_KOMI,
     analysisCacheSize, // Triggers auto-save when analysis results are added
   });

@@ -10,8 +10,7 @@ import React, { useEffect, useCallback, useRef, useMemo } from 'react';
 import { useGameTreeSelector } from './GameTreeContext';
 import type { GameTreeContextValue } from '../types/game';
 import { useAIEngine } from './AIEngineContext';
-import { reconstructAnalysisState } from '../utils/gameCache';
-import { generateAnalysisCacheKey } from '../utils/aiAnalysis';
+import { analysisBoardSize, analysisCacheKeyAt } from '../utils/gameCache';
 import { AIAnalysisContext } from './ai-analysis-types';
 import type { AIAnalysisContextValue } from './ai-analysis-types';
 import { useLiveAnalysis } from './useLiveAnalysis';
@@ -104,7 +103,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     queue,
     engine,
     analysisMode,
-    currentBoard,
     gameTree,
     currentNodeId,
     moveNumber,
@@ -140,7 +138,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     engine,
     analysisMode,
     setAnalysisMode,
-    currentBoard,
     gameTree,
     currentNodeId,
     gameInfo,
@@ -254,16 +251,8 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (prevNumVisitsRef.current !== currentNumVisits) {
       // Invalidate only the current position's cache entry
       if (gameTree && currentNodeId !== null && currentNodeId !== undefined) {
-        const boardSize = currentBoard.signMap.length;
         const komi = gameInfo?.komi ?? DEFAULT_KOMI;
-        const state = reconstructAnalysisState(gameTree, currentNodeId, boardSize);
-        const cacheKey = generateAnalysisCacheKey(
-          state.board.signMap,
-          state.nextToPlay,
-          komi,
-          state.history
-        );
-        analysisCache.current.delete(cacheKey);
+        analysisCache.current.delete(analysisCacheKeyAt(gameTree, currentNodeId, gameInfo, komi));
         updateAnalysisCacheSize();
       }
       // Clear displayed result so live analysis re-triggers for the current position
@@ -277,7 +266,6 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setAnalysisResult,
     gameTree,
     currentNodeId,
-    currentBoard,
     gameInfo,
   ]);
 
@@ -299,9 +287,19 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     [gameTree, currentNodeId]
   );
 
+  // The engine's moves and ownership are on the square analysis board; the
+  // maps drawn from them are on the game board, which it covers.
+  const analysisSize = analysisBoardSize(gameInfo);
+
   const nextMoveInfo = useMemo(
-    () => computeNextMoveInfo({ nextMoveVertex, currentBoard, mctsProgress, analysisResult }),
-    [nextMoveVertex, currentBoard, mctsProgress, analysisResult]
+    () =>
+      computeNextMoveInfo({
+        nextMoveVertex,
+        analysisSize,
+        mctsProgress,
+        analysisResult,
+      }),
+    [nextMoveVertex, analysisSize, mctsProgress, analysisResult]
   );
 
   const heatMap = useMemo(
@@ -309,38 +307,37 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       buildHeatmap({
         showTopMoves,
         currentBoard,
+        analysisSize,
         aiSettings,
         mctsProgress,
         analysisResult,
         nextMoveInfo,
       }),
-    [showTopMoves, currentBoard, aiSettings, mctsProgress, analysisResult, nextMoveInfo]
+    [
+      showTopMoves,
+      currentBoard,
+      analysisSize,
+      aiSettings,
+      mctsProgress,
+      analysisResult,
+      nextMoveInfo,
+    ]
   );
 
   // Calculate ownership map
   const ownershipMap = useMemo(() => {
     if (!showOwnership || !analysisResult?.ownership) return null;
 
-    const boardSize = currentBoard.signMap.length;
-    const map: number[][] = Array(boardSize)
-      .fill(null)
-      .map(() => Array(boardSize).fill(0));
-
+    const { signMap } = currentBoard;
     const ownership = analysisResult.ownership;
-    for (let y = 0; y < boardSize; y++) {
-      for (let x = 0; x < boardSize; x++) {
+    return signMap.map((row, y) =>
+      row.map((sign, x) => {
         // Skip positions that already have stones
-        if (currentBoard.signMap[y]?.[x] !== 0) continue;
-
-        const idx = y * boardSize + x;
-        if (idx < ownership.length) {
-          map[y][x] = ownership[idx];
-        }
-      }
-    }
-
-    return map;
-  }, [showOwnership, analysisResult, currentBoard.signMap]);
+        if (sign !== 0) return 0;
+        return ownership[y * analysisSize + x] ?? 0;
+      })
+    );
+  }, [showOwnership, analysisResult, currentBoard, analysisSize]);
 
   // Reset state on game change
   useEffect(() => {

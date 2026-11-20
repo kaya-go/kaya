@@ -13,13 +13,18 @@ import type {
   GamePerformanceReport,
 } from '@kaya/ai-engine';
 import { generatePerformanceReport } from '@kaya/ai-engine';
-import { generateAnalysisCacheKey } from '../../utils/aiAnalysis';
-import { getPathToNode, mapAnalysisPath } from '../../utils/gameCache';
+import {
+  analysisBoardSize,
+  analysisCacheKey,
+  getPathToNode,
+  mapAnalysisPath,
+} from '../../utils/gameCache';
 import type { TFunction } from 'i18next';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
 
 interface GameInfoInput {
-  boardSize?: number;
+  boardSize: number;
+  boardHeight?: number;
   komi?: number;
   playerBlack?: string;
   playerWhite?: string;
@@ -58,8 +63,9 @@ export function buildPerformanceReport(
   analysisCache: React.RefObject<Map<string, AnalysisResult>>,
   t: TFunction
 ): GamePerformanceReport | null {
-  const boardSize = gameInfo.boardSize ?? 19;
   const komi = gameInfo.komi ?? DEFAULT_KOMI;
+  // Results are keyed and their moves written on the square analysis board.
+  const analysisSize = analysisBoardSize(gameInfo);
 
   // Step 1: Get path from root to current node
   const pathToCurrentNode = getPathToNode(gameTree, currentNodeId ?? rootId);
@@ -82,16 +88,8 @@ export function buildPerformanceReport(
   const analysisResults = mapAnalysisPath(
     gameTree,
     fullPath,
-    state => {
-      const cacheKey = generateAnalysisCacheKey(
-        state.board.signMap,
-        state.nextToPlay,
-        komi,
-        state.history
-      );
-      return analysisCache.current.get(cacheKey) ?? null;
-    },
-    boardSize
+    state => analysisCache.current.get(analysisCacheKey(state, komi)) ?? null,
+    gameInfo
   );
 
   // Second pass: pair consecutive results into before/after move positions
@@ -118,7 +116,7 @@ export function buildPerformanceReport(
       moveNumber: i,
       nodeId: currNode.id,
       player,
-      move: sgfToGtp(move, boardSize),
+      move: sgfToGtp(move, analysisSize),
       analysisBeforeMove: analysisResults[i - 1],
       analysisAfterMove: analysisResults[i],
     });
@@ -132,7 +130,7 @@ export function buildPerformanceReport(
   const gameInfoData: AIGameInfo = {
     blackPlayer: gameInfo.playerBlack ?? t('performanceReport.black'),
     whitePlayer: gameInfo.playerWhite ?? t('performanceReport.white'),
-    boardSize,
+    boardSize: gameInfo.boardSize,
     komi,
     result: gameInfo.result ?? '',
   };

@@ -32,6 +32,7 @@ const heatmap = (analysisResult: AnalysisResult, minProb = 0.01, nextMoveInfo = 
   buildHeatmap({
     showTopMoves: true,
     currentBoard: board,
+    analysisSize: 9,
     aiSettings: { heatMapMetric: 'policy', maxTopMoves: 10, minProb } as AISettings,
     mctsProgress: null,
     analysisResult,

@@ -81,21 +81,20 @@ export function useBoardState({
 
     if (markers.size === 0) return null;
 
-    // Convert Map to 2D array
-    const boardSize = gameInfo.boardSize;
-    const map: (Marker | null)[][] = Array(boardSize)
-      .fill(null)
-      .map(() => Array(boardSize).fill(null));
+    // Convert Map to 2D array: one row per board row, one cell per column
+    const width = gameInfo.boardSize;
+    const height = gameInfo.boardHeight ?? width;
+    const map: (Marker | null)[][] = Array.from({ length: height }, () => Array(width).fill(null));
 
     for (const [key, marker] of markers.entries()) {
       const [x, y] = key.split(',').map(Number);
-      if (x >= 0 && x < boardSize && y >= 0 && y < boardSize) {
+      if (x >= 0 && x < width && y >= 0 && y < height) {
         map[y][x] = marker;
       }
     }
 
     return map;
-  }, [currentNode, gameInfo.boardSize, editMode]);
+  }, [currentNode, gameInfo.boardSize, gameInfo.boardHeight, editMode]);
 
   const nextMoveNode = useMemo(() => {
     if (!currentNode || !gameTree || currentNode.children.length === 0) return null;

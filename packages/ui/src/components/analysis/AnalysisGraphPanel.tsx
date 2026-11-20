@@ -14,8 +14,8 @@ import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { AnalysisLegendModal } from './AnalysisLegendModal';
-import { generateAnalysisCacheKey, smoothAnalysisResult } from '../../utils/aiAnalysis';
-import { getPathToNode, mapAnalysisPath } from '../../utils/gameCache';
+import { smoothAnalysisResult } from '../../utils/aiAnalysis';
+import { analysisCacheKey, getPathToNode, mapAnalysisPath } from '../../utils/gameCache';
 import { AnalysisChart, type AnalysisDataPoint } from './AnalysisChart';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import './AnalysisGraphPanel.css';
@@ -104,7 +104,6 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
       return { dataPoints: [], totalPositions: 0, currentPositionIndex: 0, analyzedCount: 0 };
     }
 
-    const boardSize = gameInfo.boardSize ?? 19;
     const komi = gameInfo.komi ?? DEFAULT_KOMI;
 
     // Step 1: Get path from root to current node (this is the branch we're on)
@@ -124,26 +123,17 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     if (fullPath.length === 0)
       return { dataPoints: [], totalPositions: 0, currentPositionIndex: 0, analyzedCount: 0 };
 
-    // First pass: compute all cache keys and collect raw results
-    const cacheKeys: string[] = [];
+    // First pass: collect the cached result of each position
     const rawResults: (import('@kaya/ai-engine').AnalysisResult | null)[] = [];
 
     mapAnalysisPath(
       gameTree,
       fullPath,
       state => {
-        const cacheKey = generateAnalysisCacheKey(
-          state.board.signMap,
-          state.nextToPlay,
-          komi,
-          state.history
-        );
-        cacheKeys.push(cacheKey);
-
         // Collect raw result (or null if not cached)
-        rawResults.push(analysisCache.current.get(cacheKey) ?? null);
+        rawResults.push(analysisCache.current.get(analysisCacheKey(state, komi)) ?? null);
       },
-      boardSize
+      gameInfo
     );
 
     // Count how many positions have analysis results
