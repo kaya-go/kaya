@@ -139,10 +139,18 @@ export async function runMCTS(
   while (completed < numVisits) {
     if (signal?.aborted) break;
 
-    const batchSize = Math.min(maxMctsBatch, maxInferenceBatch, numVisits - completed);
+    // Until the root is expanded every path stops at it, so a full first batch
+    // would evaluate the root batchSize times over. Evaluate it alone first.
+    const batchSize = root.expanded
+      ? Math.min(maxMctsBatch, maxInferenceBatch, numVisits - completed)
+      : 1;
 
     // Phase 1: Select up to batchSize leaves using PUCT with virtual loss
     const pending: { path: Step[]; needsEval: boolean }[] = [];
+    // Leaves already queued for evaluation in this batch. Virtual loss only
+    // discourages a second pick, so a sharp prior can pick the same leaf again:
+    // that would be the same inference twice, counted as two visits.
+    const queuedLeaves = new Set<MCTSNode>();
 
     for (let b = 0; b < batchSize; b++) {
       const path: Step[] = [{ node: root, board: rootBoard, pla: nextPla, hist: history }];
@@ -204,11 +212,15 @@ export async function runMCTS(
         });
       }
 
+      const leaf = path[path.length - 1];
+      const needsEval = !leaf.node.expanded;
+      if (needsEval && queuedLeaves.has(leaf.node)) break;
+      if (needsEval) queuedLeaves.add(leaf.node);
+
       // Apply virtual loss along path to diversify subsequent selections
       for (const step of path) step.node.virtualLoss++;
 
-      const leaf = path[path.length - 1];
-      pending.push({ path, needsEval: !leaf.node.expanded });
+      pending.push({ path, needsEval });
     }
 
     // Phase 2: Batch evaluate unexpanded leaves in a single call

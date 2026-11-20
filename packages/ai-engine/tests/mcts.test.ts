@@ -67,3 +67,71 @@ describe('runMCTS per-move evaluation', () => {
     for (const m of early) expect(m.winRate).toBeUndefined();
   });
 });
+
+/**
+ * With a batch larger than 1, the first batch used to stop every path at the
+ * unexpanded root and evaluate it batch-size times; later batches could pick
+ * the same unexpanded leaf twice. Both spent inferences and counted visits
+ * that never reached a move.
+ */
+describe('runMCTS batching', () => {
+  /** A sharp prior over the first three empty points, so every node has moves. */
+  const COLUMNS = 'ABCDEFGHJ';
+  const onEmptyPoints: MCTSBatchEvaluator = async leaves =>
+    leaves.map((leaf): AnalysisResult => {
+      const empty: string[] = [];
+      leaf.board.signMap.forEach((row, y) =>
+        row.forEach((sign, x) => {
+          if (sign === 0) empty.push(`${COLUMNS[x]}${9 - y}`);
+        })
+      );
+      const [first, second, third] = empty;
+      return {
+        moveSuggestions: [
+          { move: first, probability: 0.9 },
+          { move: second, probability: 0.09 },
+          { move: third, probability: 0.01 },
+        ],
+        winRate: 0.6,
+        scoreLead: 1,
+        currentTurn: 'B',
+      };
+    });
+
+  async function batchedSearch(numVisits: number, batch: number) {
+    const evaluated: string[] = [];
+    const recording: MCTSBatchEvaluator = async leaves => {
+      for (const leaf of leaves) {
+        evaluated.push(leaf.history.map(h => `${h.color}:${h.x},${h.y}`).join(' '));
+      }
+      return onEmptyPoints(leaves);
+    };
+    const result = await runMCTS(
+      GoBoard.fromDimensions(9),
+      1,
+      7.5,
+      [],
+      numVisits,
+      9,
+      batch,
+      batch,
+      recording,
+      () => {}
+    );
+    return { result, evaluated };
+  }
+
+  test('the root is evaluated once, and every other visit goes to a move', async () => {
+    const { result, evaluated } = await batchedSearch(10, 8);
+    expect(evaluated.filter(path => path === '')).toHaveLength(1);
+    // One inference per visit: the root's, then one per new leaf.
+    expect(evaluated).toHaveLength(10);
+    const moveVisits = result.moveSuggestions.reduce((sum, s) => sum + (s.visits ?? 0), 0);
+    expect(moveVisits).toBe(9);
+  });
+
+  test('no position is evaluated twice', async () => {
+    const { evaluated } = await batchedSearch(32, 16);
+    expect(new Set(evaluated).size).toBe(evaluated.length);
+  });
+});

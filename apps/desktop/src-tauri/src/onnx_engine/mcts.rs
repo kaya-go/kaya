@@ -396,7 +396,9 @@ impl OnnxEngine {
         while completed < num_visits {
             if abort_flag.load(Ordering::Relaxed) { break; }
 
-            let batch_size = max_batch.min(num_visits - completed);
+            // Until the root is expanded every path stops at it, so a full first
+            // batch would evaluate the root batch_size times over. Evaluate it alone.
+            let batch_size = if root.expanded { max_batch.min(num_visits - completed) } else { 1 };
 
             // Phase 1: Select leaves using PUCT with virtual loss.
             // We collect paths as Vec<Vec<usize>> where each usize is
@@ -411,6 +413,10 @@ impl OnnxEngine {
             }
 
             let mut pending: Vec<PendingPath> = Vec::with_capacity(batch_size);
+            // Leaves already queued for evaluation in this batch. Virtual loss only
+            // discourages a second pick, so a sharp prior can pick the same leaf
+            // again: the same inference twice, counted as two visits.
+            let mut queued_leaves: Vec<*const MCTSNode> = Vec::with_capacity(batch_size);
 
             for _ in 0..batch_size {
                 let mut child_indices: Vec<usize> = Vec::new();
@@ -497,6 +503,11 @@ impl OnnxEngine {
 
                 let leaf_node = unsafe { &*cur_node };
                 let needs_eval = !leaf_node.expanded;
+                if needs_eval {
+                    let leaf_ptr = cur_node as *const MCTSNode;
+                    if queued_leaves.contains(&leaf_ptr) { break; }
+                    queued_leaves.push(leaf_ptr);
+                }
 
                 // Apply virtual loss along path
                 let mut vl_node: *mut MCTSNode = &mut root;
