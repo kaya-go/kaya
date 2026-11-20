@@ -20,6 +20,7 @@ import type {
   LibraryStats,
 } from './types';
 import {
+  computeLibraryStats,
   generateId,
   now,
   extractSGFMetadata,
@@ -401,22 +402,7 @@ export class IndexedDBStorage implements LibraryStorage {
 
   async getStats(): Promise<LibraryStats> {
     await this.ensureInitialized();
-    const items = await this.getAllItems();
-
-    let totalFiles = 0;
-    let totalFolders = 0;
-    let totalSize = 0;
-
-    for (const item of items) {
-      if (item.type === 'file') {
-        totalFiles++;
-        totalSize += item.size;
-      } else {
-        totalFolders++;
-      }
-    }
-
-    return { totalFiles, totalFolders, totalSize };
+    return computeLibraryStats(await this.getAllItems());
   }
 
   async clear(): Promise<void> {

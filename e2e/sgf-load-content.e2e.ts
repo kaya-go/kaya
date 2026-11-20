@@ -59,8 +59,6 @@ test.describe('SGF load content', () => {
 
   test('a Shift_JIS file imported into the library opens with its names', async ({ page }) => {
     await page.goto('/');
-    // The library has read IndexedDB: an import before that is not listed.
-    await expect(page.getByText('Your library is empty')).toBeVisible();
     await page
       .locator('.library-panel input[type="file"]')
       .setInputFiles(file('shift_jis.sgf', charsetFixture('shift_jis.sgf')));

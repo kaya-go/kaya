@@ -5,7 +5,7 @@
  */
 
 import { parse, parseStrict } from '@kaya/sgf';
-import type { SGFMetadata, LibraryItemId } from './types';
+import type { LibraryItem, LibraryItemId, LibraryStats, SGFMetadata } from './types';
 
 /** Generate a unique ID */
 export function generateId(): LibraryItemId {
@@ -210,4 +210,22 @@ export function makeUniqueName(
   }
 
   return newName;
+}
+
+/** Counts and total size of a list of library items. */
+export function computeLibraryStats(items: LibraryItem[]): LibraryStats {
+  let totalFiles = 0;
+  let totalFolders = 0;
+  let totalSize = 0;
+
+  for (const item of items) {
+    if (item.type === 'file') {
+      totalFiles++;
+      totalSize += item.size;
+    } else {
+      totalFolders++;
+    }
+  }
+
+  return { totalFiles, totalFolders, totalSize };
 }

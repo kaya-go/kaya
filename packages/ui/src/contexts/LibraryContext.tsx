@@ -13,8 +13,8 @@ import React, {
   useMemo,
   useRef,
 } from 'react';
-import type { LibraryItem, LibraryItemId, LibraryStats } from '@kaya/game-library';
-import { getLibraryStorage, initializeLibraryStorage } from '@kaya/game-library';
+import type { LibraryItemId } from '@kaya/game-library';
+import { getLibraryStorage } from '@kaya/game-library';
 import {
   UnsavedChangesDialog,
   type UnsavedChangesAction,
@@ -22,6 +22,7 @@ import {
 import type { LibraryContextValue, LibraryProviderProps } from './library-types';
 import { useLibrarySelection } from './useLibrarySelection';
 import { useLibraryFileOps } from './useLibraryFileOps';
+import { useLibraryItems } from './useLibraryItems';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/Toast';
 
@@ -41,9 +42,7 @@ export function LibraryProvider({
 }: LibraryProviderProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [items, setItems] = useState<LibraryItem[]>([]);
+  const { isInitialized, isLoading, items, stats, error, setError, refresh } = useLibraryItems();
   const [loadedFileId, setLoadedFileIdState] = useState<LibraryItemId | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(LOADED_FILE_ID_KEY);
@@ -51,8 +50,6 @@ export function LibraryProvider({
     }
     return null;
   });
-  const [stats, setStats] = useState<LibraryStats | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   // Unsaved changes dialog state
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
@@ -87,47 +84,6 @@ export function LibraryProvider({
       }
     }
   }, []);
-
-  // Initialize storage
-  useEffect(() => {
-    const init = async () => {
-      try {
-        await initializeLibraryStorage();
-        setIsInitialized(true);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to initialize library');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    init();
-  }, []);
-
-  // Refresh items when initialized
-  const refresh = useCallback(async () => {
-    if (!isInitialized) return;
-
-    setIsLoading(true);
-    try {
-      const storage = getLibraryStorage();
-      const allItems = await storage.getAllItems();
-      const libraryStats = await storage.getStats();
-      setItems(allItems);
-      setStats(libraryStats);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load library');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isInitialized]);
-
-  useEffect(() => {
-    if (isInitialized) {
-      refresh();
-    }
-  }, [isInitialized, refresh]);
 
   // File operations (download, import/export, duplicate)
   const {
