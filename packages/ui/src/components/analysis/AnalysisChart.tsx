@@ -13,10 +13,11 @@ export interface AnalysisChartProps {
   currentMoveNumber: number;
   /** Total moves in the branch (for x-axis range) */
   totalMoves: number;
-  /** Callback when user clicks on a data point (with analysis data) */
-  onNavigate?: (nodeId: number | string) => void;
-  /** Callback when user clicks on any position (by move number) */
-  onNavigateToMove?: (moveNumber: number) => void;
+  /**
+   * Called with the index of the position clicked, in the branch the chart
+   * plots (0 = root), analysed or not. Every node is a position, moves or not.
+   */
+  onSelectPosition?: (index: number) => void;
   /** Whether to show win rate line */
   showWinRate?: boolean;
   /** Whether to show score lead line */
@@ -34,8 +35,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
   data,
   currentMoveNumber,
   totalMoves,
-  onNavigate,
-  onNavigateToMove,
+  onSelectPosition,
   showWinRate = true,
   showScoreLead = true,
   onToggleWinRate,
@@ -64,8 +64,7 @@ export const AnalysisChart: React.FC<AnalysisChartProps> = ({
     data,
     currentMoveNumber,
     totalMoves,
-    onNavigate,
-    onNavigateToMove,
+    onSelectPosition,
     showWinRate,
     showScoreLead,
   });

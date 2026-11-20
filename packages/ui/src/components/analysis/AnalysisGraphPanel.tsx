@@ -42,7 +42,6 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     analysisCache,
     analysisCacheSize,
     navigate,
-    navigateToMove,
     analysisMode,
     toggleAnalysisMode,
   } = useGameTreeSelector(
@@ -55,7 +54,6 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
         analysisCache: ctx.analysisCache,
         analysisCacheSize: ctx.analysisCacheSize,
         navigate: ctx.navigate,
-        navigateToMove: ctx.navigateToMove,
         analysisMode: ctx.analysisMode,
         toggleAnalysisMode: ctx.toggleAnalysisMode,
       }),
@@ -98,12 +96,20 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
   // Build data points from the current branch (root → current → end of branch)
   const analysisData = useMemo((): {
     dataPoints: AnalysisDataPoint[];
+    pathNodeIds: Array<number | string>;
     totalPositions: number;
     currentPositionIndex: number;
     analyzedCount: number;
   } => {
+    const empty = {
+      dataPoints: [],
+      pathNodeIds: [],
+      totalPositions: 0,
+      currentPositionIndex: 0,
+      analyzedCount: 0,
+    };
     if (!gameTree || rootId === null || rootId === undefined || currentNodeId === null) {
-      return { dataPoints: [], totalPositions: 0, currentPositionIndex: 0, analyzedCount: 0 };
+      return empty;
     }
 
     const komi = gameInfo.komi ?? DEFAULT_KOMI;
@@ -122,8 +128,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
       lastNode = nextChild;
     }
 
-    if (fullPath.length === 0)
-      return { dataPoints: [], totalPositions: 0, currentPositionIndex: 0, analyzedCount: 0 };
+    if (fullPath.length === 0) return empty;
 
     // First pass: collect the cached result of each position
     const rawResults: (import('@kaya/ai-engine').AnalysisResult | null)[] = [];
@@ -162,6 +167,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
 
     return {
       dataPoints: points,
+      pathNodeIds: fullPath.map(node => node.id),
       totalPositions: fullPath.length,
       currentPositionIndex,
       analyzedCount,
@@ -170,20 +176,17 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisCacheSize]);
 
-  const { dataPoints, totalPositions, currentPositionIndex, analyzedCount } = analysisData;
+  const { dataPoints, pathNodeIds, totalPositions, currentPositionIndex, analyzedCount } =
+    analysisData;
 
-  const handleNavigate = useCallback(
-    (nodeId: number | string) => {
-      navigate(nodeId);
+  // The chart's x axis is the branch it plots, so a point is a node of it:
+  // counting moves instead lands elsewhere after a node without a move.
+  const handleSelectPosition = useCallback(
+    (index: number) => {
+      const nodeId = pathNodeIds[index];
+      if (nodeId !== undefined) navigate(nodeId);
     },
-    [navigate]
-  );
-
-  const handleNavigateToMove = useCallback(
-    (targetMoveNumber: number) => {
-      navigateToMove(targetMoveNumber);
-    },
-    [navigateToMove]
+    [navigate, pathNodeIds]
   );
 
   const isFullyAnalyzed = totalPositions > 0 && dataPoints.length === totalPositions;
@@ -345,8 +348,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
         data={dataPoints}
         currentMoveNumber={currentPositionIndex}
         totalMoves={totalPositions > 0 ? totalPositions - 1 : 0}
-        onNavigate={handleNavigate}
-        onNavigateToMove={handleNavigateToMove}
+        onSelectPosition={handleSelectPosition}
         showWinRate={showWinRate}
         showScoreLead={showScoreLead}
         onToggleWinRate={handleToggleWinRate}
