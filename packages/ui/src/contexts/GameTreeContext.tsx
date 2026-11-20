@@ -85,7 +85,6 @@ export const GameTreeProvider: React.FC<{
     gameInfo,
     loadSGFAsync: coreLoadSGFAsync,
     isLoadingSGF,
-    loadingProgress,
     loadingMessage,
     createNewGame: coreCreateNewGame,
     saveSGF: coreSaveSGF,
@@ -434,7 +433,6 @@ export const GameTreeProvider: React.FC<{
       lastSaveTime,
       triggerAutoSave,
       isLoadingSGF,
-      loadingProgress,
       loadingMessage,
       toggleDeadStones: toggleDeadStone,
       placeStoneDirect: addSetupStone,
@@ -469,7 +467,7 @@ export const GameTreeProvider: React.FC<{
       // SGF loading progress: without these the loading overlay never updated, and the
       // "skip the cache clear right after a load" guard in AIAnalysisContext never fired,
       // which discarded analysis restored from a SGF KA property.
-      isLoadingSGF, loadingProgress, loadingMessage,
+      isLoadingSGF, loadingMessage,
       // Analysis overlays: toggling ownership or top moves with the analysis bar already
       // open changes nothing else, so the toggles looked inert until the next navigation.
       showOwnership, toggleOwnership, showTopMoves, toggleTopMoves,

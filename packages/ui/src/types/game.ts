@@ -312,7 +312,6 @@ export interface GameTreeContextValue {
   lastSaveTime: Date | null;
   triggerAutoSave: () => void;
   isLoadingSGF: boolean;
-  loadingProgress: number;
   /** Translation key of the loading step, or '' */
   loadingMessage: string;
   toggleDeadStones: (vertex: Vertex | Vertex[], targetDead?: boolean) => void;
