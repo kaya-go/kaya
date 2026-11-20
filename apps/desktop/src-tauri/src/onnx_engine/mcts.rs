@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::result_processing::drop_ko_move;
 use super::types::{AnalysisOptions, AnalysisResult, HistoryMove};
 use super::OnnxEngine;
 
@@ -64,6 +65,7 @@ pub struct KoInfo {
 pub struct MCTSMoveSuggestion {
     #[serde(rename = "move")]
     pub move_str: String,
+    /// Policy prior, searched or not; the search's own say is `visits`.
     pub probability: f32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub win_rate: Option<f32>,
@@ -307,25 +309,11 @@ impl MCTSTopMove {
     }
 }
 
-/// Filter ko moves from an analysis result and renormalize.
+/// Filter the ko-forbidden recapture from a policy result (see `drop_ko_move`).
 fn filter_ko_moves(result: &AnalysisResult, board: &Board, pla: i8) -> AnalysisResult {
-    let ko_move = match get_ko_vertex(board, pla) {
-        Some(m) => m,
-        None => return result.clone(),
-    };
-    let filtered: Vec<_> = result.move_suggestions.iter()
-        .filter(|s| s.move_str != ko_move)
-        .cloned()
-        .collect();
-    let total: f32 = filtered.iter().map(|s| s.probability).sum();
-    let renormalized = if total > 0.0 {
-        filtered.into_iter().map(|mut s| { s.probability /= total; s }).collect()
-    } else {
-        filtered
-    };
-    AnalysisResult {
-        move_suggestions: renormalized,
-        ..result.clone()
+    match get_ko_vertex(board, pla) {
+        Some(ko_move) => drop_ko_move(result, &ko_move),
+        None => result.clone(),
     }
 }
 
@@ -674,7 +662,7 @@ impl OnnxEngine {
         }
 
         // Build final result
-        self.build_mcts_result(&root, next_pla, &ownership_sum, ownership_count, size)
+        Self::build_mcts_result(&root, next_pla, &ownership_sum, ownership_count, size)
     }
 
     /// Run forced visits through the includeMove.
@@ -835,7 +823,6 @@ impl OnnxEngine {
 
     /// Build the final MCTS result from the root node.
     fn build_mcts_result(
-        &self,
         root: &MCTSNode,
         next_pla: i8,
         ownership_sum: &[f64],
@@ -846,8 +833,6 @@ impl OnnxEngine {
 
         if let Some(ref children) = root.children {
             if !children.is_empty() {
-                let total_child_visits: usize = children.iter().map(|(_, c)| c.n).sum();
-
                 let mut sorted: Vec<&(String, MCTSNode)> = children.iter().collect();
                 sorted.sort_by(|a, b| {
                     if a.1.n != b.1.n {
@@ -857,17 +842,13 @@ impl OnnxEngine {
                     }
                 });
 
+                // `probability` stays the prior; the search's own say is `visits`.
                 for (move_str, child) in sorted {
-                    let probability = if child.n > 0 && total_child_visits > 0 {
-                        child.n as f32 / total_child_visits as f32
-                    } else {
-                        child.p
-                    };
                     let (win_rate, score_lead) = own_evaluation(child);
 
                     move_suggestions.push(MCTSMoveSuggestion {
                         move_str: move_str.clone(),
-                        probability,
+                        probability: child.p,
                         win_rate,
                         score_lead,
                         visits: Some(child.n),
@@ -901,10 +882,13 @@ mod tests {
     use crate::onnx_engine::types::MoveSuggestion;
 
     fn policy(moves: &[&str]) -> AnalysisResult {
+        policy_of(&moves.iter().map(|&m| (m, 0.25)).collect::<Vec<_>>())
+    }
+
+    fn policy_of(moves: &[(&str, f32)]) -> AnalysisResult {
         AnalysisResult {
-            move_suggestions: moves
-                .iter()
-                .map(|m| MoveSuggestion { move_str: m.to_string(), probability: 0.25 })
+            move_suggestions: moves.iter()
+                .map(|&(m, p)| MoveSuggestion { move_str: m.to_string(), probability: p })
                 .collect(),
             win_rate: 0.5,
             score_lead: 0.0,
@@ -938,5 +922,54 @@ mod tests {
         let mut black = MCTSNode::new(1.0);
         expand_node(&mut black, &result, &board, 1);
         assert_eq!(children(&black), vec!["C3", "A5", "PASS"]);
+    }
+
+    fn child(move_str: &str, prior: f32, visits: usize) -> (String, MCTSNode) {
+        let mut node = MCTSNode::new(prior);
+        node.n = visits;
+        node.w = 0.6 * visits as f64;
+        (move_str.to_string(), node)
+    }
+
+    /// `probability` is the policy prior, searched or not: what the search
+    /// thinks is in `visits`. Writing the visit share for visited moves and
+    /// the prior for the others put two units in one field.
+    #[test]
+    fn probability_is_the_prior_for_every_listed_move() {
+        let mut root = MCTSNode::new(1.0);
+        root.n = 8;
+        root.children = Some(vec![child("E5", 0.6, 6), child("C3", 0.3, 1), child("G7", 0.05, 0)]);
+
+        let result = OnnxEngine::build_mcts_result(&root, 1, &[], 0, 9).unwrap();
+        let by_move: Vec<_> = result.move_suggestions.iter()
+            .map(|s| (s.move_str.as_str(), s.probability, s.visits))
+            .collect();
+        assert_eq!(by_move, vec![("E5", 0.6, Some(6)), ("C3", 0.3, Some(1)), ("G7", 0.05, Some(0))]);
+    }
+
+    /// A ko: Black may not retake at B1 (x 1, y 8 on 9x9) on this move.
+    fn ko_board() -> Board {
+        Board::with_ko(&vec![vec![0i8; 9]; 9], &Some(KoInfo { sign: 1, vertex: [1, 8] }))
+    }
+
+    #[test]
+    fn the_ko_move_share_goes_to_the_legal_moves() {
+        let input = policy_of(&[("B1", 0.5), ("E5", 0.3), ("C3", 0.1)]);
+        let filtered = filter_ko_moves(&input, &ko_board(), 1);
+        let moves: Vec<_> = filtered.move_suggestions.iter()
+            .map(|s| (s.move_str.as_str(), s.probability))
+            .collect();
+        assert_eq!(moves.len(), 2);
+        assert_eq!(moves[0].0, "E5");
+        // Divided by 1 - 0.5: the policy covers every move, not just the listed ten.
+        assert!((moves[0].1 - 0.6).abs() < 1e-6, "{:?}", moves);
+        assert!((moves[1].1 - 0.2).abs() < 1e-6, "{:?}", moves);
+    }
+
+    #[test]
+    fn a_ko_move_that_is_not_listed_changes_nothing() {
+        let filtered = filter_ko_moves(&policy_of(&[("E5", 0.3), ("C3", 0.1)]), &ko_board(), 1);
+        let probs: Vec<f32> = filtered.move_suggestions.iter().map(|s| s.probability).collect();
+        assert_eq!(probs, vec![0.3, 0.1]);
     }
 }

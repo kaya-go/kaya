@@ -28,7 +28,11 @@ interface KayaAnalysisData {
     /** Move coordinate (e.g., "Q16") */
     m: string;
 
-    /** Probability (Policy) - 0.0 to 1.0 */
+    /**
+     * Probability (Policy) - 0.0 to 1.0. The network's prior, also for a
+     * searched move: the search's own say is `v`. Files saved before
+     * 2026-11-20 hold the visit share here for a move with visits.
+     */
     p: number;
 
     /** Win Rate for this move (Optional) */

@@ -96,6 +96,25 @@ pub fn process_raw_outputs(
     })
 }
 
+/// Remove the ko-forbidden recapture from a policy result. The policy covers
+/// every move, so the legal ones share 1 - p(ko): each is divided by that. A
+/// result that does not list the recapture comes back as it is.
+pub(crate) fn drop_ko_move(result: &AnalysisResult, ko_move: &str) -> AnalysisResult {
+    let Some(ko) = result.move_suggestions.iter().find(|s| s.move_str == ko_move) else {
+        return result.clone();
+    };
+    let legal = 1.0 - ko.probability;
+    let move_suggestions = result.move_suggestions.iter()
+        .filter(|s| s.move_str != ko_move)
+        .map(|s| {
+            let mut s = s.clone();
+            if legal > 0.0 { s.probability /= legal; }
+            s
+        })
+        .collect();
+    AnalysisResult { move_suggestions, ..result.clone() }
+}
+
 impl OnnxEngine {
     /// Process single inference result
     pub(crate) fn process_results(
