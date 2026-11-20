@@ -17,7 +17,7 @@ import type {
   ImportResult,
   ExportResult,
 } from './types';
-import { normalizeImportedSGFName } from './utils';
+import { normalizeImportedSGFName, validateSGF } from './utils';
 
 /**
  * Interface for storage operations needed by ZIP import/export.
@@ -40,6 +40,7 @@ export async function importZipToStorage(
     imported: 0,
     failed: 0,
     errors: [],
+    withDefects: [],
   };
 
   try {
@@ -101,12 +102,21 @@ export async function importZipToStorage(
         const parentPath = parts.slice(0, -1).join('/');
         const parentId = parentPath ? folderMap.get(parentPath) || null : null;
 
+        // A ZIP is how a library is backed up and moved: its entries are
+        // library content, which v0.4.18 and earlier stored with parts
+        // `parseStrict` refuses. Refusing them would drop the user's own games
+        // on a restore, so they are checked as stored content: kept as written,
+        // and they open without what cannot be read. Content that is not a
+        // game at all is still refused.
+        const defects = validateSGF(content, 'tolerant');
         await storage.createFile({
           name: normalizeImportedSGFName(fileName),
           content,
           parentId,
+          validation: 'tolerant',
         });
         result.imported++;
+        if (defects.length > 0) result.withDefects.push(path);
       } catch (error) {
         result.failed++;
         // .sgf zip entry failed (validation or storage). UI branches on cause

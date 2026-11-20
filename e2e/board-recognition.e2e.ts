@@ -126,6 +126,47 @@ test.describe('Board Recognition Dialog — mobile layout', () => {
   });
 });
 
+/** A 19×19 board with three stones, drawn in the page: a photo the detector can read. */
+async function drawnBoard(page: Page): Promise<Buffer> {
+  const base64 = await page.evaluate(async () => {
+    const size = 640;
+    const margin = 40;
+    const step = (size - 2 * margin) / 18;
+    const canvas = new OffscreenCanvas(size, size);
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#dcb35c';
+    ctx.fillRect(0, 0, size, size);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 19; i++) {
+      const p = margin + i * step;
+      ctx.beginPath();
+      ctx.moveTo(margin, p);
+      ctx.lineTo(size - margin, p);
+      ctx.moveTo(p, margin);
+      ctx.lineTo(p, size - margin);
+      ctx.stroke();
+    }
+    const stones: [number, number, string][] = [
+      [3, 3, '#000'],
+      [15, 15, '#fff'],
+      [15, 3, '#000'],
+    ];
+    for (const [x, y, color] of stones) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(margin + x * step, margin + y * step, step * 0.47, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const blob = await canvas.convertToBlob({ type: 'image/png' });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = '';
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return btoa(binary);
+  });
+  return Buffer.from(base64, 'base64');
+}
+
 // Downloads the Moku model from Hugging Face, so it runs only on request:
 // KAYA_E2E_MOKU=1 bun run test:e2e e2e/board-recognition.e2e.ts
 test.describe('Board Recognition Dialog — Moku model', () => {
@@ -162,5 +203,27 @@ test.describe('Board Recognition Dialog — Moku model', () => {
     await expect(page.locator('.brd-dialog')).toBeVisible();
     await page.waitForTimeout(2000);
     await expect(loading).toHaveCount(0);
+  });
+
+  test('cancelling the unsaved-changes prompt of Import as SGF keeps the scan', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const stone = page.locator('.shudan-vertex[data-x="3"][data-y="3"]');
+    await stone.click(); // an unsaved change, so importing asks first
+    const scanInput = page.locator('input[type="file"][accept=".jpg,.jpeg,.png,.webp,.bmp"]');
+    const buffer = await drawnBoard(page);
+    await scanInput.setInputFiles({ name: 'board.png', mimeType: 'image/png', buffer });
+    const importButton = page.locator('.brd-btn-import');
+    await expect(importButton).toBeEnabled({ timeout: 200000 });
+
+    await importButton.click();
+    await expect(page.locator('.unsaved-changes-dialog')).toBeVisible();
+    // The dialog used to close before asking, and Cancel lost the scan.
+    await expect(page.locator('.brd-dialog')).toBeVisible();
+    await page.locator('.unsaved-changes-btn.cancel').click();
+    await expect(page.locator('.unsaved-changes-dialog')).toHaveCount(0);
+    await expect(importButton).toBeEnabled();
+    await expect(stone).toHaveClass(/shudan-sign_1/);
   });
 });

@@ -73,7 +73,9 @@ export const useGameTree = () => {
 export const GameTreeProvider: React.FC<{
   children: React.ReactNode;
   onAutoSaveDisabled?: () => void;
-}> = ({ children, onAutoSaveDisabled }) => {
+  /** The dead-stone estimate of scoring mode failed. */
+  onScoreEstimateFailed?: () => void;
+}> = ({ children, onAutoSaveDisabled, onScoreEstimateFailed }) => {
   // 1. Core Game Tree State
   const {
     gameTree,
@@ -96,8 +98,8 @@ export const GameTreeProvider: React.FC<{
   } = useGameTreeState();
 
   // 1.5. Undo/Redo History
-  const { setGameTreeWithHistory, undo, redo, canUndo, canRedo, clearHistory } =
-    useGameTreeUndoRedo({ gameTree, currentNodeId, setGameTree, setCurrentNodeId });
+  const undoRedo = useGameTreeUndoRedo({ gameTree, currentNodeId, setGameTree, setCurrentNodeId });
+  const { setGameTreeWithHistory, undo, redo, canUndo, canRedo, clearHistory } = undoRedo;
 
   // Game info edits and resignations are undo steps like moves.
   const updateGameInfo = useGameInfoUpdate({
@@ -205,7 +207,7 @@ export const GameTreeProvider: React.FC<{
     isEstimating,
     estimationMode,
     toggleEstimationMode,
-  } = useScoring({ currentBoard, gameInfo });
+  } = useScoring({ currentBoard, gameInfo, onScoreEstimateFailed });
 
   // 7. AI Analysis
   const {
@@ -442,6 +444,7 @@ export const GameTreeProvider: React.FC<{
       redo,
       canUndo,
       canRedo,
+      setUnsavedCommentSource: undoRedo.setUnsavedCommentSource,
       deleteOtherBranches,
       moveName,
       moveUrl,
@@ -465,7 +468,7 @@ export const GameTreeProvider: React.FC<{
       isEstimating, estimationMode, toggleEstimationMode,
       analysisMode, analysisResult, isAnalyzing, winRate, scoreLead, bestMove, engineState,
       filename, isDirty, moveName, moveUrl, patternMatchingEnabled, setPatternMatchingEnabled,
-      lastSaveTime, triggerAutoSave, undo, redo, canUndo, canRedo, deleteOtherBranches,
+      lastSaveTime, triggerAutoSave, undo, redo, canUndo, canRedo, undoRedo.setUnsavedCommentSource, deleteOtherBranches,
       // SGF loading progress: without these the loading overlay never updated, and the
       // "skip the cache clear right after a load" guard in AIAnalysisContext never fired,
       // which discarded analysis restored from a SGF KA property.

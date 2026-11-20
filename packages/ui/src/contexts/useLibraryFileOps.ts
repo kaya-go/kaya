@@ -1,7 +1,18 @@
 import { useCallback } from 'react';
-import type { LibraryItem, LibraryItemId, ImportResult } from '@kaya/game-library';
+import type {
+  LibraryFile,
+  LibraryFolder,
+  LibraryItem,
+  LibraryItemId,
+  ImportResult,
+} from '@kaya/game-library';
 import { getLibraryStorage } from '@kaya/game-library';
 import { makeUniqueName } from '@kaya/game-library';
+import type { DuplicateResult } from './library-types';
+
+/** "game.sgf" -> "game (copy).sgf", "Joseki" -> "Joseki (copy)". */
+const copyName = (name: string): string =>
+  name.toLowerCase().endsWith('.sgf') ? `${name.slice(0, -4)} (copy).sgf` : `${name} (copy)`;
 
 interface UseLibraryFileOpsParams {
   refresh: () => Promise<void>;
@@ -200,84 +211,59 @@ export function useLibraryFileOps({ refresh, setError }: UseLibraryFileOpsParams
     [downloadFile, downloadFolder, setError]
   );
 
-  const duplicateItem = useCallback(
-    async (id: LibraryItemId): Promise<LibraryItem | null> => {
+  // A copy of what is stored: checked as stored content, so a game v0.4.18
+  // stored with parts that cannot be read is copied as it is. A failing item
+  // is counted and the rest still copied, so a folder is never left half-made.
+  // It never throws: every failure is in the result.
+  const duplicateItems = useCallback(
+    async (ids: LibraryItemId[]): Promise<DuplicateResult> => {
       const storage = getLibraryStorage();
-      const item = await storage.getItem(id);
-      if (!item) return null;
+      const result: DuplicateResult = { copies: [], failures: [] };
 
-      const siblings = await storage.getItems(item.parentId);
-      const siblingNames = siblings.map(s => ({ name: s.name, id: s.id }));
-
-      const createCopyName = (name: string): string => {
-        const lowerName = name.toLowerCase();
-        if (lowerName.endsWith('.sgf')) {
-          const baseName = name.slice(0, -4);
-          return `${baseName} (copy).sgf`;
+      const attempt = async <T>(name: string, copy: () => Promise<T>): Promise<T | null> => {
+        try {
+          return await copy();
+        } catch (cause) {
+          result.failures.push({ name, cause });
+          return null;
         }
-        return `${name} (copy)`;
+      };
+      const copyFile = (file: LibraryFile, name: string, parentId: LibraryItemId | null) =>
+        storage.createFile({ name, content: file.content, parentId, validation: 'tolerant' });
+      const copyFolderContents = async (source: LibraryFolder, destId: LibraryItemId) => {
+        const children = await attempt(source.name, () => storage.getItems(source.id));
+        for (const child of children ?? []) {
+          if (child.type === 'file') {
+            await attempt(child.name, () => copyFile(child, child.name, destId));
+            continue;
+          }
+          const folder = await attempt(child.name, () =>
+            storage.createFolder({ name: child.name, parentId: destId })
+          );
+          if (folder) await copyFolderContents(child, folder.id);
+        }
+      };
+      const duplicate = async (item: LibraryItem): Promise<LibraryItem> => {
+        const siblings = await storage.getItems(item.parentId);
+        const name = makeUniqueName(copyName(item.name), siblings);
+        if (item.type === 'file') return copyFile(item, name, item.parentId);
+        const folder = await storage.createFolder({ name, parentId: item.parentId });
+        await copyFolderContents(item, folder.id);
+        return folder;
       };
 
-      const copyBaseName = createCopyName(item.name);
-      const uniqueName = makeUniqueName(copyBaseName, siblingNames);
-
-      if (item.type === 'file') {
-        const newFile = await storage.createFile({
-          name: uniqueName,
-          content: item.content,
-          parentId: item.parentId,
-        });
-        await refresh();
-        return newFile;
-      } else {
-        const duplicateFolderContents = async (
-          sourceParentId: LibraryItemId,
-          destParentId: LibraryItemId
-        ) => {
-          const children = await storage.getItems(sourceParentId);
-          for (const child of children) {
-            if (child.type === 'file') {
-              await storage.createFile({
-                name: child.name,
-                content: child.content,
-                parentId: destParentId,
-              });
-            } else {
-              const newSubfolder = await storage.createFolder({
-                name: child.name,
-                parentId: destParentId,
-              });
-              await duplicateFolderContents(child.id, newSubfolder.id);
-            }
-          }
-        };
-
-        const newFolder = await storage.createFolder({
-          name: uniqueName,
-          parentId: item.parentId,
-        });
-
-        await duplicateFolderContents(item.id, newFolder.id);
-        await refresh();
-        return newFolder;
+      for (const id of ids) {
+        const item = await attempt(id, () => storage.getItem(id));
+        const copy = item && (await attempt(item.name, () => duplicate(item)));
+        if (copy) result.copies.push(copy);
       }
+      await refresh();
+      return result;
     },
     [refresh]
   );
 
-  const duplicateItems = useCallback(
-    async (ids: LibraryItemId[]): Promise<LibraryItem[]> => {
-      const results: LibraryItem[] = [];
-      for (const id of ids) {
-        const result = await duplicateItem(id);
-        if (result) {
-          results.push(result);
-        }
-      }
-      return results;
-    },
-    [duplicateItem]
-  );
+  const duplicateItem = useCallback((id: LibraryItemId) => duplicateItems([id]), [duplicateItems]);
 
   return {
     importZip,

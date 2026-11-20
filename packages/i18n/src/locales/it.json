@@ -112,6 +112,8 @@
     "default": "Predefinito",
     "downloaded": "scaricato/i",
     "customModels": "Modelli personalizzati",
+    "customModelDescription": "Modello caricato",
+    "latestCheckpointDescription": "Ultimo checkpoint (dic. 2025)",
     "downloadModel": "Scarica modello",
     "deleteModel": "Elimina modello",
     "uploadCustomModel": "Carica modello personalizzato",
@@ -515,6 +517,7 @@
     "autoEstimate": "Stima automatica",
     "autoEstimateDescription": "Usa simulazione Monte Carlo per rilevare automaticamente le pietre morte",
     "estimating": "Stimando...",
+    "estimateFailed": "Impossibile stimare le pietre morte. Clicca sulle pietre per segnarle come morte.",
     "done": "Fatto",
     "exitScoringMode": "Esci dalla modalità punteggio",
     "territory": "Territorio:",
@@ -545,6 +548,7 @@
     "savedFileToLibrary": "\"{{filename}}\" salvato nella libreria",
     "libraryFileNotFound": "File libreria non trovato. Salvataggio come nuovo...",
     "failedToSave": "Salvataggio nella libreria fallito",
+    "autoSaveTooLarge": "Partita troppo grande per il salvataggio automatico (max 5 MB)",
     "sgfCopied": "SGF copiato negli appunti!",
     "failedToCopy": "Copia fallita: {{error}}",
     "clipboardEmpty": "Gli appunti sono vuoti",
@@ -555,8 +559,11 @@
     "failedToLoadSgf": "Caricamento file SGF fallito: {{error}}",
     "invalidSgfContent": "Formato SGF non valido",
     "invalidSgfContentDetail": "Formato SGF non valido: {{error}}",
+    "openedWithDefects": "Una parte di questo file non è leggibile ed è stata omessa: {{error}}",
     "failedToImportToLibrary": "Importazione in libreria fallita: {{error}}",
-    "failedToImportZip": "Importazione ZIP fallita: {{error}}"
+    "failedToImportZip": "Importazione ZIP fallita: {{error}}",
+    "importedWithDefects": "Una parte di {{path}} non è leggibile: è stato importato e si apre senza di essa",
+    "failedToDuplicate": "Impossibile duplicare {{name}}: {{error}}"
   },
   "loading": {
     "loading": "Caricamento…",

@@ -112,6 +112,8 @@
     "default": "デフォルト",
     "downloaded": "ダウンロード済み",
     "customModels": "カスタムモデル",
+    "customModelDescription": "アップロードしたモデル",
+    "latestCheckpointDescription": "最新チェックポイント（2025年12月）",
     "downloadModel": "モデルをダウンロード",
     "deleteModel": "モデルを削除",
     "uploadCustomModel": "カスタムモデルをアップロード",
@@ -515,6 +517,7 @@
     "autoEstimate": "自動判定",
     "autoEstimateDescription": "モンテカルロシミュレーションで死に石を自動判定",
     "estimating": "判定中...",
+    "estimateFailed": "死に石を判定できませんでした。石をクリックして死に石に指定してください。",
     "done": "完了",
     "exitScoringMode": "計算モードを終了（S）",
     "territory": "地:",
@@ -545,6 +548,7 @@
     "savedFileToLibrary": "「{{filename}}」をライブラリに保存しました",
     "libraryFileNotFound": "ライブラリファイルが見つかりません。新規保存中...",
     "failedToSave": "ライブラリへの保存に失敗しました",
+    "autoSaveTooLarge": "棋譜が大きすぎるため自動保存できません（最大 5 MB）",
     "sgfCopied": "SGFをクリップボードにコピーしました！",
     "failedToCopy": "コピーに失敗: {{error}}",
     "clipboardEmpty": "クリップボードが空です",
@@ -555,8 +559,11 @@
     "failedToLoadSgf": "SGFファイルの読み込みに失敗: {{error}}",
     "invalidSgfContent": "SGF形式が不正です",
     "invalidSgfContentDetail": "SGF形式が不正です: {{error}}",
+    "openedWithDefects": "このファイルの一部を読み取れなかったため、除外しました: {{error}}",
     "failedToImportToLibrary": "ライブラリへのインポートに失敗: {{error}}",
-    "failedToImportZip": "ZIPのインポートに失敗: {{error}}"
+    "failedToImportZip": "ZIPのインポートに失敗: {{error}}",
+    "importedWithDefects": "{{path}} の一部を読み取れません: インポートしましたが、開くとその部分は除外されます",
+    "failedToDuplicate": "{{name}} を複製できませんでした: {{error}}"
   },
   "loading": {
     "loading": "読み込み中…",

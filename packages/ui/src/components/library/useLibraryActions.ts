@@ -9,8 +9,14 @@ import { buildSGF } from '@kaya/board-recognition';
 import { decodeSgf } from '@kaya/sgf';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import type { ConfirmDialogState } from './LibraryDialogs';
+import type { DuplicateResult } from '../../contexts/library-types';
 import { useToast } from '../ui/Toast';
-import { formatImportResultError, formatLibraryFileImportError } from '../../utils/sgfLoadErrors';
+import {
+  formatDuplicateError,
+  formatImportResultError,
+  formatImportResultWarning,
+  formatLibraryFileImportError,
+} from '../../utils/sgfLoadErrors';
 import { useOpenLibraryFile } from './useOpenLibraryFile';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
@@ -82,6 +88,8 @@ export function useLibraryActions() {
           const result = await importZip(buffer);
           const message = formatImportResultError(result, t);
           if (message) showToast(message, 'error');
+          const warning = formatImportResultWarning(result, t);
+          if (warning) showToast(warning, 'info');
         }
       }
       if (photo) setRecognitionFile(photo);
@@ -289,12 +297,19 @@ export function useLibraryActions() {
     [downloadItems]
   );
 
-  const handleBatchDuplicate = useCallback(
-    async (ids: LibraryItemId[]) => {
-      await duplicateItems(ids);
+  // A duplication copies what it can and names what it could not.
+  const reportDuplicate = useCallback(
+    async (duplicate: Promise<DuplicateResult>) => {
       setContextMenu(null);
+      const message = formatDuplicateError(await duplicate, t);
+      if (message) showToast(message, 'error');
     },
-    [duplicateItems]
+    [showToast, t]
+  );
+
+  const handleBatchDuplicate = useCallback(
+    (ids: LibraryItemId[]) => reportDuplicate(duplicateItems(ids)),
+    [duplicateItems, reportDuplicate]
   );
 
   const handleClearLibrary = useCallback(() => {
@@ -334,11 +349,8 @@ export function useLibraryActions() {
   );
 
   const handleDuplicate = useCallback(
-    async (item: LibraryItem) => {
-      await duplicateItem(item.id);
-      setContextMenu(null);
-    },
-    [duplicateItem]
+    (item: LibraryItem) => reportDuplicate(duplicateItem(item.id)),
+    [duplicateItem, reportDuplicate]
   );
 
   const handleTreeMove = useCallback(

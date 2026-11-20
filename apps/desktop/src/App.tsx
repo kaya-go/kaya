@@ -52,8 +52,12 @@ function AppWithToast({ versionData }: { versionData: VersionData | undefined })
   const { t } = useTranslation();
 
   const handleAutoSaveDisabled = useCallback(() => {
-    showToast('Game is too large for auto-save (max 5MB)', 'info');
-  }, [showToast]);
+    showToast(t('toast.autoSaveTooLarge'), 'info');
+  }, [showToast, t]);
+
+  const handleScoreEstimateFailed = useCallback(() => {
+    showToast(t('scoring.estimateFailed'), 'error');
+  }, [showToast, t]);
 
   // Register sound error handler — auto-disables sound and shows toast with copy button
   useEffect(() => {
@@ -80,7 +84,10 @@ function AppWithToast({ versionData }: { versionData: VersionData | undefined })
   return (
     <KeyboardShortcutsProvider>
       <GameControllerManagerProvider>
-        <GameTreeProvider onAutoSaveDisabled={handleAutoSaveDisabled}>
+        <GameTreeProvider
+          onAutoSaveDisabled={handleAutoSaveDisabled}
+          onScoreEstimateFailed={handleScoreEstimateFailed}
+        >
           <AIEngineProvider>
             <AIAnalysisProvider>
               <BoardNavigationProvider>

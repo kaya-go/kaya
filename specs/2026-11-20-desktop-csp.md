@@ -108,8 +108,10 @@ Tauri, only HTML gets the header, so workers have no policy in either mode.
 
 - **Android.** It shares `tauri.conf.json`, so it gets the same policy, but it
   was not run. Its IPC (`http://ipc.localhost`) is listed.
-- **Older macOS.** No `minimumSystemVersion` is set. WebKit before Safari 16
-  does not know `'wasm-unsafe-eval'` and would block the scoring WASM.
+- **Older macOS.** Settled by
+  [the pre-release UI review](2026-11-20-prerelease-ui-review.md):
+  `minimumSystemVersion` is 13.4, so no WebKit without `'wasm-unsafe-eval'`
+  runs the app.
 - **Inline styles.** `'unsafe-inline'` still allows style injection. Removing
   it would mean moving the theme `<style>` to a constructed stylesheet and
   patching the react-resizable-panels cursor style.

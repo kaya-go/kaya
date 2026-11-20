@@ -150,6 +150,7 @@ bun run copy-assets  # Runs automatically in build
 - Use `useKeyboardShortcuts()` hook from context
 - Add new shortcuts to `ShortcutId` type and `DEFAULT_SHORTCUTS`
 - Add translations under `shortcuts.{id}` in all locale files
+- A global key handler checks `shouldIgnoreShortcut(e)` (typing, or a dialog open): behind a dialog only fullscreen works. A new dialog registers through `useCloseOnBack`
 
 **5. Native Audio System** (`apps/desktop/src-tauri/src/audio.rs`)
 
@@ -218,7 +219,7 @@ Keep files small for readability and maintainability. Maximum line counts per fi
 3. **Workspace Dependencies**: Always use `workspace:*` in package.json
 4. **Cache Invalidation**: Call `clearAllCaches()` when loading new game
 5. **Tauri Plugin Versions**: Bump `@tauri-apps/plugin-*` together with its `tauri-plugin-*` crate (same major.minor) — `tauriVersions.test.ts` enforces it
-6. **Lenient SGF Parser**: `parse` turns prose into a node. Content that must be a game goes through `parseStrict` (`@kaya/sgf`), which throws `SgfValidationError`; show the failure with the formatters in `packages/ui/src/utils/sgfLoadErrors.ts`
+6. **Lenient SGF Parser**: `parse` turns prose into a node. Content that must be a game goes through `parseStrict` (`@kaya/sgf`), which throws `SgfValidationError`; show the failure with the formatters in `packages/ui/src/utils/sgfLoadErrors.ts`. Content already in the library (open, duplicate, ZIP restore, save over a collection) goes through `parseTolerant` / `validation: 'tolerant'` instead: v0.4.18 stored files `parseStrict` refuses
 7. **SGF Bytes and Forms**: decode file bytes with `decodeSgf` (`@kaya/sgf`, honours `CA`), never `file.text()` / `readTextFile`. After `sgfNodeToGameTreeNode`, point lists hold one point per value and a pass is always `B[]`/`W[]` (never `tt`)
 8. **Desktop CSP**: the page runs under `app.security.csp` (`tauri.conf.json`), also sent by the desktop dev server. A new remote host fetched from the page needs a `connect-src` entry; never add `'unsafe-eval'`
 

@@ -18,7 +18,7 @@ import { useBoardNavigation } from '../../contexts/BoardNavigationContext';
 import { useKeyboardShortcuts } from '../../contexts/KeyboardShortcutsContext';
 import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { type SoundType } from '../../services/sounds';
-import { shouldIgnoreBoardShortcut } from '../../utils/boardShortcutGuard';
+import { shouldIgnoreShortcut } from '../../utils/shortcutGuard';
 
 export { useAIMoveGeneration } from './useAIMoveGeneration';
 
@@ -121,7 +121,7 @@ export function useGameBoardKeyboard(options: {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (shouldIgnoreBoardShortcut(e)) return;
+      if (shouldIgnoreShortcut(e)) return;
 
       if (matchesShortcut(e, 'board.toggleEditMode')) {
         handleToggleEditMode();

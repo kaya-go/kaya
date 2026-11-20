@@ -239,7 +239,7 @@ export const GameInfoEditor: React.FC<GameInfoEditorProps> = ({
 
   return (
     <div className="game-info-editor">
-      <div className="game-info-display">
+      <div className="game-info-display" data-selectable-text>
         {fieldConfigs.map(config => {
           if (config.key === 'playerBlack') {
             return renderPlayerRow('playerBlack', 'rankBlack', t('gameInfo.black'));

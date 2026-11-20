@@ -11,6 +11,7 @@ import {
   LuChevronRight,
 } from 'react-icons/lu';
 import { BASE_MODELS, QUANTIZATION_OPTIONS } from '../../hooks/game/useAIAnalysis';
+import { modelDescription } from '../../utils/modelDescription';
 import type { UseKayaConfigReturn } from './useKayaConfig';
 import './KayaConfigBanner.css';
 import './KayaConfigModels.css';
@@ -125,7 +126,7 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                     )}
                   </div>
                   <div className="model-base-meta">
-                    <span className="model-base-desc">{baseModel.description}</span>
+                    <span className="model-base-desc">{t(baseModel.descriptionKey)}</span>
                     {hasDownloaded && (
                       <span className="model-base-downloaded">
                         {downloadedCount}/{variants.length} {t('aiConfig.downloaded')}
@@ -245,7 +246,7 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                       )}
                     </div>
                     <div className="model-variant-meta">
-                      <span className="model-variant-desc">{model.description}</span>
+                      <span className="model-variant-desc">{modelDescription(model, t)}</span>
                       {model.size && (
                         <span className="model-variant-size">
                           {(model.size / 1024 / 1024).toFixed(1)} MB

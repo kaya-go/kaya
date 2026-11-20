@@ -26,6 +26,7 @@ import { CurrentBoardRecognitionDialog } from '../dialogs/board-recognition/Curr
 import { useToast } from '../ui/Toast';
 import { formatSgfLoadError } from '../../utils/sgfLoadErrors';
 import { useTauriDragDrop, usePasteHandler, uploadDroppedModel } from './useDropZoneEffects';
+import { useSelectAllScope } from '../../hooks/useSelectAllScope';
 import './AppDropZone.css';
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
@@ -116,6 +117,9 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
       showToast,
       t,
     });
+
+    // Select All stays within a text field or block of text
+    useSelectAllScope();
 
     const handleFileLoad = useCallback(
       async (file: File) => {

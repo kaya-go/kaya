@@ -298,6 +298,12 @@ fails otherwise. See
 Add new IDs to the `ShortcutId` union and `DEFAULT_SHORTCUTS`, and add
 `shortcuts.{id}` translations to every locale.
 
+A shortcut waits while the user types in a text field or while a dialog or
+menu is open (`shouldIgnoreShortcut` / `hasOpenOverlay`, fed by every overlay
+through `useCloseOnBack`). Fullscreen is the one exception. Select All stays
+inside a text field or a block marked `data-selectable-text`
+(`useSelectAllScope`).
+
 ## Assets
 
 Kaya **never** uses symlinks for assets. Symlinks break on Windows and
@@ -464,13 +470,30 @@ and on the landing page. See
 after a variation; it accepts a missing final `)`, which older library files
 may have.
 
+Content already in the library is not refused for those two: v0.4.18 stored
+and opened such files. [`parseTolerant`](../packages/sgf/src/validation.ts)
+leaves them out instead (a cut value with its property, content after a
+variation) and returns what it left out. A library open tries strict first
+and falls back to it with an info toast
+([`openStoredGame`](../packages/ui/src/utils/storedGame.ts)); duplication,
+ZIP import and a save over the open library file check stored content with
+`validation: 'tolerant'`. A new file (Open, drop, paste, a single `.sgf`
+imported) stays strict. See
+[`specs/2026-11-20-library-stored-content.md`](../specs/2026-11-20-library-stored-content.md).
+
 ### 13. Bytes are decoded once, properties written in one form once
 
 The bytes of a file go through [`decodeSgf`](../packages/sgf/src/charset.ts),
 never `file.text()`, `readTextFile` or JSZip's `'string'`: it reads valid
 UTF-8 as UTF-8, otherwise the charset the file's `CA` names, and returns text
-labelled `CA[UTF-8]`. Everything Kaya writes is UTF-8 and says so
-(`withUtf8Charset` on save and copy).
+labelled `CA[UTF-8]`, every game of a collection included (`labelUtf8`).
+Everything Kaya writes is UTF-8 and says so (`withUtf8Charset` on save and
+copy).
+
+The editor opens the first game of a file. A save over the open library file
+puts the edited game in its place
+([`replaceFirstGame`](../packages/sgf/src/collection.ts)) and keeps the other
+games of a collection as they are stored.
 
 The load conversion, [`sgfNodeToGameTreeNode`](../packages/sgf/src/load.ts),
 writes point lists one point per value (`AB[aa:cc]` becomes nine values) and

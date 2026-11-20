@@ -7,6 +7,16 @@ import type {
   LibraryStats,
   ImportResult,
 } from '@kaya/game-library';
+import type { SgfDefect } from '@kaya/sgf';
+
+/**
+ * What a duplication made, and the items it could not copy. One failure does
+ * not stop it: the rest of the folder is still copied.
+ */
+export interface DuplicateResult {
+  copies: LibraryItem[];
+  failures: Array<{ name: string; cause: unknown }>;
+}
 
 export interface LibraryContextValue {
   /** Whether the library is initialized */
@@ -63,8 +73,11 @@ export interface LibraryContextValue {
   deleteItem: (id: LibraryItemId) => Promise<void>;
   /** Delete multiple items */
   deleteItems: (ids: LibraryItemId[]) => Promise<void>;
-  /** Open a file (load into game tree) */
-  openFile: (id: LibraryItemId) => Promise<void>;
+  /**
+   * Open a file (load into game tree). Resolves to what a stored file held
+   * that could not be read and was left out (empty when it opened as is).
+   */
+  openFile: (id: LibraryItemId) => Promise<SgfDefect[]>;
   /** Save current game to library */
   saveCurrentGame: (name: string, parentId?: LibraryItemId | null) => Promise<LibraryFile | null>;
   /** Update file content */
@@ -86,9 +99,9 @@ export interface LibraryContextValue {
   /** Clear the loaded file indicator (call when loading from outside library) */
   clearLoadedFile: () => void;
   /** Duplicate an item (file or folder) */
-  duplicateItem: (id: LibraryItemId) => Promise<LibraryItem | null>;
+  duplicateItem: (id: LibraryItemId) => Promise<DuplicateResult>;
   /** Duplicate multiple items */
-  duplicateItems: (ids: LibraryItemId[]) => Promise<LibraryItem[]>;
+  duplicateItems: (ids: LibraryItemId[]) => Promise<DuplicateResult>;
   /** Check for unsaved changes and prompt user. Returns true if safe to proceed. */
   checkUnsavedChanges: () => Promise<boolean>;
 }

@@ -112,6 +112,8 @@
     "default": "Standard",
     "downloaded": "heruntergeladen",
     "customModels": "Benutzerdefinierte Modelle",
+    "customModelDescription": "Hochgeladenes Modell",
+    "latestCheckpointDescription": "Neuester Checkpoint (Dez. 2025)",
     "downloadModel": "Modell herunterladen",
     "deleteModel": "Modell löschen",
     "uploadCustomModel": "Eigenes Modell hochladen",
@@ -515,6 +517,7 @@
     "autoEstimate": "Automatisch schätzen",
     "autoEstimateDescription": "Monte-Carlo-Simulation zur automatischen Erkennung toter Steine verwenden",
     "estimating": "Schätze...",
+    "estimateFailed": "Tote Steine konnten nicht geschätzt werden. Klicken Sie auf Steine, um sie als tot zu markieren.",
     "done": "Fertig",
     "exitScoringMode": "Wertungsmodus beenden",
     "territory": "Gebiet:",
@@ -545,6 +548,7 @@
     "savedFileToLibrary": "\"{{filename}}\" in Bibliothek gespeichert",
     "libraryFileNotFound": "Bibliotheksdatei nicht gefunden. Speichere als neue Datei...",
     "failedToSave": "Speichern in Bibliothek fehlgeschlagen",
+    "autoSaveTooLarge": "Partie zu groß für die automatische Speicherung (max. 5 MB)",
     "sgfCopied": "SGF in Zwischenablage kopiert!",
     "failedToCopy": "Kopieren fehlgeschlagen: {{error}}",
     "clipboardEmpty": "Zwischenablage ist leer",
@@ -555,8 +559,11 @@
     "failedToLoadSgf": "SGF-Datei laden fehlgeschlagen: {{error}}",
     "invalidSgfContent": "Ungültiges SGF-Format",
     "invalidSgfContentDetail": "Ungültiges SGF-Format: {{error}}",
+    "openedWithDefects": "Ein Teil dieser Datei ist nicht lesbar und wurde ausgelassen: {{error}}",
     "failedToImportToLibrary": "Import in die Bibliothek fehlgeschlagen: {{error}}",
-    "failedToImportZip": "ZIP-Import fehlgeschlagen: {{error}}"
+    "failedToImportZip": "ZIP-Import fehlgeschlagen: {{error}}",
+    "importedWithDefects": "Ein Teil von {{path}} ist nicht lesbar: importiert, öffnet sich ohne diesen Teil",
+    "failedToDuplicate": "Duplizieren von {{name}} fehlgeschlagen: {{error}}"
   },
   "loading": {
     "loading": "Wird geladen…",

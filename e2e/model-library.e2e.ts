@@ -115,3 +115,22 @@ test.describe('AI model library', () => {
     await expect(customModels(page).first()).toContainText('Active');
   });
 });
+
+test.describe('AI model library in another language', () => {
+  test.use({ locale: 'fr-FR' });
+
+  test('a custom model is described in the interface language', async ({ page }) => {
+    await openSettings(page);
+    await uploadInput(page).setInputFiles(model('mon-reseau.onnx', 'a network'));
+    await expect(customModels(page).first().locator('.model-variant-desc')).toHaveText(
+      'Modèle importé'
+    );
+  });
+
+  test('the catalog model is described in the interface language', async ({ page }) => {
+    await openSettings(page);
+    await expect(page.locator('.model-base-desc').first()).toHaveText(
+      'Dernier checkpoint (déc. 2025)'
+    );
+  });
+});
