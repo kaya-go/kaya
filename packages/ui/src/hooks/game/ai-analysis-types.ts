@@ -23,8 +23,8 @@ export interface BaseModelDefinition {
   name: string;
   /** User-friendly display name */
   displayName: string;
-  /** Short description */
-  description: string;
+  /** i18n key of the short description, translated where it is shown */
+  descriptionKey: string;
   /** Whether this is the recommended model */
   recommended?: boolean;
   /** Whether this is the default model */
@@ -64,7 +64,7 @@ export const BASE_MODELS: BaseModelDefinition[] = [
   {
     name: 'kata1-b28c512nbt-s12043015936-d5616446734',
     displayName: 'kata1-b28c512nbt-s12043M',
-    description: 'Latest checkpoint (Dec 2025)',
+    descriptionKey: 'aiConfig.latestCheckpointDescription',
     recommended: true,
     isDefault: true,
   },
@@ -120,7 +120,8 @@ export const PREDEFINED_MODELS: StoredModelMetadata[] = BASE_MODELS.flatMap(mode
       id,
       name: model.name,
       displayName: `${model.displayName}${precision}`,
-      description: model.description,
+      // Shown from the base model's descriptionKey, translated; nothing to store.
+      description: '',
       url: getModelUrl(model.name, variant.quantization),
       quantization: variant.quantization,
     };

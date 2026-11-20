@@ -60,7 +60,11 @@ its calibration.
 **Custom model description.** Uploads stored the English "User uploaded model".
 The model list now shows `aiConfig.customModelDescription`, translated at
 display time (`utils/modelDescription.ts`). Uploads store no description, and
-rows stored before read translated too.
+rows stored before read translated too. Two more strings were English in every
+language: the catalog model's description, now `descriptionKey` on
+`BASE_MODELS` (`aiConfig.latestCheckpointDescription`), and the toast for a
+game too large to autosave (`toast.autoSaveTooLarge`). Both are translated
+where they are shown.
 
 **Select All.** Cmd/Ctrl+A outside a text field selected the whole interface,
 on the web (browser default) and on macOS desktop (the Edit menu of #249).
@@ -107,11 +111,13 @@ navigated, and fails each time.
     `KAYA_E2E_MOKU=1`, with a board drawn in the page).
   - Select All outside a field, on a slider and in the game info
     (`select-all.e2e.ts`).
-  - The French custom-model description (`model-library.e2e.ts`).
+  - The French custom-model and catalog-model descriptions
+    (`model-library.e2e.ts`).
   - The estimate toast with the WASM blocked, shown once (`scoring.e2e.ts`).
   - A remote image in a comment renders a link, and no request reaches its host
     (`comments.e2e.ts`).
-- **Unit.** `modelDescription.test.ts`, `remarkImagesAsLinks.test.ts` (the
+- **Unit.** `modelDescription.test.ts`, `translatedAtDisplay.test.ts`,
+  `remarkImagesAsLinks.test.ts` (the
   markdown before the change rendered `<img>` and a `<link rel="preload">`),
   and `macosMinimumVersion.test.ts`.
 - **Desktop binary.** A `tauri build --debug --bundles app` binary reads

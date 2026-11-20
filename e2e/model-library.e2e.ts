@@ -126,4 +126,11 @@ test.describe('AI model library in another language', () => {
       'Modèle importé'
     );
   });
+
+  test('the catalog model is described in the interface language', async ({ page }) => {
+    await openSettings(page);
+    await expect(page.locator('.model-base-desc').first()).toHaveText(
+      'Dernier checkpoint (déc. 2025)'
+    );
+  });
 });

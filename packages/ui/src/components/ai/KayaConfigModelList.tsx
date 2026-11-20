@@ -126,7 +126,7 @@ export const KayaConfigModelList: React.FC<KayaConfigModelListProps> = ({
                     )}
                   </div>
                   <div className="model-base-meta">
-                    <span className="model-base-desc">{baseModel.description}</span>
+                    <span className="model-base-desc">{t(baseModel.descriptionKey)}</span>
                     {hasDownloaded && (
                       <span className="model-base-downloaded">
                         {downloadedCount}/{variants.length} {t('aiConfig.downloaded')}

@@ -46,8 +46,8 @@ function AppWithToast({ versionData }: { versionData: VersionData | undefined })
   const { t } = useTranslation();
 
   const handleAutoSaveDisabled = useCallback(() => {
-    showToast('Game is too large for auto-save (max 5MB)', 'info');
-  }, [showToast]);
+    showToast(t('toast.autoSaveTooLarge'), 'info');
+  }, [showToast, t]);
 
   const handleScoreEstimateFailed = useCallback(() => {
     showToast(t('scoring.estimateFailed'), 'error');
