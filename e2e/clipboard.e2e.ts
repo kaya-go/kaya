@@ -122,24 +122,43 @@ test.describe('Paste SGF', () => {
 
 test.describe('Keyboard Shortcuts for Clipboard', () => {
   test.beforeEach(async ({ page }) => {
+    // Count clipboard reads: on the web, a read can raise a permission prompt.
+    await page.addInitScript(() => {
+      const counter = window as unknown as { __clipboardReads: number };
+      counter.__clipboardReads = 0;
+      const read = navigator.clipboard.readText.bind(navigator.clipboard);
+      navigator.clipboard.readText = () => {
+        counter.__clipboardReads++;
+        return read();
+      };
+    });
     await page.goto('/');
     await expect(page.locator('.shudan-goban')).toBeVisible();
   });
 
-  test('can use Ctrl+V to paste SGF', async ({ page }) => {
-    // Write an SGF to clipboard
-    const testSgf = '(;FF[4]GM[1]SZ[19];B[jj])';
-    await page.evaluate(sgf => navigator.clipboard.writeText(sgf), testSgf);
+  const clipboardReads = () => (window as unknown as { __clipboardReads: number }).__clipboardReads;
 
-    // Use Ctrl+V
+  test('Ctrl+V does not read the clipboard behind the browser paste', async ({ page }) => {
     await page.keyboard.press('Control+v');
+    await page.keyboard.press('Meta+v');
+    expect(await page.evaluate(clipboardReads)).toBe(0);
+  });
 
-    // Navigate to end and verify the stone is on the board
+  test('a paste event with SGF loads the game', async ({ page }) => {
+    // What the browser fires for Ctrl+V / Cmd+V outside a text field.
+    await page.evaluate(sgf => {
+      const data = new DataTransfer();
+      data.setData('text/plain', sgf);
+      document.body.dispatchEvent(
+        new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true })
+      );
+    }, '(;FF[4]GM[1]SZ[19];B[jj])');
+
     await page.keyboard.press('End');
-
     // K10 (jj) = x:9, y:9
     await expect(page.locator('.shudan-vertex[data-x="9"][data-y="9"]')).toHaveClass(
       /shudan-sign_1/
     );
+    expect(await page.evaluate(clipboardReads)).toBe(0);
   });
 });

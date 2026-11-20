@@ -306,8 +306,13 @@ export function usePasteHandler({
     return () => document.removeEventListener('paste', handlePaste);
   }, [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, reportPasteFailure]);
 
-  // Keyboard shortcut handler for Cmd+V/Ctrl+V (fallback for Tauri on macOS)
+  // Cmd+V / Ctrl+V fallback for Tauri, whose macOS webview fires no paste
+  // event outside a text field. Never on the web: the paste event above
+  // already carries the text, and reading the clipboard here cancelled that
+  // event and asked for clipboard permission on every Ctrl+V.
   useEffect(() => {
+    if (!isTauriApp()) return;
+
     const handleKeyDown = async (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
         const target = e.target as HTMLElement;
