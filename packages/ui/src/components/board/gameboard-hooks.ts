@@ -28,6 +28,7 @@ import { isAbortError, signToNextToPlay } from '../../utils/aiAnalysis';
 import type { AnalysisResult } from '@kaya/ai-engine';
 import { useTranslation } from 'react-i18next';
 import { type SoundType } from '../../services/sounds';
+import { shouldIgnoreBoardShortcut } from '../../utils/boardShortcutGuard';
 
 // =========================
 // Current Player & Ghost Logic
@@ -299,13 +300,7 @@ export function useGameBoardKeyboard(options: {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target as HTMLElement).isContentEditable
-      ) {
-        return;
-      }
+      if (shouldIgnoreBoardShortcut(e)) return;
 
       if (matchesShortcut(e, 'board.toggleEditMode')) {
         handleToggleEditMode();

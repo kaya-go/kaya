@@ -20,6 +20,7 @@ import React, {
 import { useGameTreeSelector } from './GameTreeContext';
 import type { GameTreeContextValue } from '../types/game';
 import { useGameController, type GameControllerState } from '../useGameController';
+import { shouldIgnoreBoardShortcut } from '../utils/boardShortcutGuard';
 
 interface BoardNavigationContextValue {
   // Navigation mode
@@ -170,14 +171,7 @@ export const BoardNavigationProvider: React.FC<BoardNavigationProviderProps> = (
     if (!navigationMode) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if typing in an input or textarea
-      if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        (e.target as HTMLElement).isContentEditable
-      ) {
-        return;
-      }
+      if (shouldIgnoreBoardShortcut(e)) return;
 
       // Only handle if navigation mode is active
       // Arrow keys move cursor

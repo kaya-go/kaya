@@ -50,3 +50,25 @@ test.describe('Game tree highlight', () => {
     await expect.poll(currentNodes).toEqual(atEnd);
   });
 });
+
+test.describe('Board shortcuts behind an open dialog', () => {
+  test('arrow keys leave the game alone while settings are open', async ({ page }) => {
+    await page.goto('/');
+    const stone = page.locator('.shudan-vertex[data-x="3"][data-y="3"]');
+    await stone.click();
+    await expect(stone).toHaveClass(/shudan-sign_1/);
+
+    await page.locator('.kaya-config-trigger').click();
+    await expect(page.locator('.kaya-config-modal')).toBeVisible();
+    await page.locator('.kaya-config-modal').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('Home');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.kaya-config-modal')).toHaveCount(0);
+
+    // Still on the move: the keys pressed under the dialog did not navigate.
+    await expect(stone).toHaveClass(/shudan-sign_1/);
+    await page.keyboard.press('ArrowLeft');
+    await expect(stone).not.toHaveClass(/shudan-sign_1/);
+  });
+});
