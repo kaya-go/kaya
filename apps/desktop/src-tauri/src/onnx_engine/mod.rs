@@ -681,4 +681,55 @@ mod tests {
             assert!((0.1..=0.9).contains(&searched.win_rate), "win rate {}", searched.win_rate);
         }
     }
+
+    /// The network sees a ko only through input plane 6. Run it after touching
+    /// the featurizer:
+    ///
+    /// ```sh
+    /// KAYA_TEST_MODEL=/path/to/katago-latest.onnx \
+    ///     cargo test --release --lib real_ko -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "needs a real model, see KAYA_TEST_MODEL"]
+    fn real_ko_plane_keeps_the_network_off_the_recapture() {
+        let model = std::env::var("KAYA_TEST_MODEL").expect("KAYA_TEST_MODEL must point at a model");
+        let mut engine = OnnxEngine::new(Path::new(&model)).expect("engine should load");
+
+        // Black just took the white stone at E5 by playing F5: White may not
+        // take back at E5 this move.
+        //     D E F G
+        //  6  . X O .
+        //  5  X . X O
+        //  4  . X O .
+        let mut sign_map = vec![vec![0i8; 9]; 9];
+        for (x, y) in [(4, 3), (3, 4), (5, 4), (4, 5)] { sign_map[y][x] = 1; }
+        for (x, y) in [(5, 3), (6, 4), (5, 5)] { sign_map[y][x] = -1; }
+        let options = |ko_info| AnalysisOptions {
+            komi: 7.5,
+            next_to_play: Some("W".to_string()),
+            history: vec![HistoryMove { color: 1, x: 5, y: 4 }],
+            ko_info,
+        };
+        let recapture = |options: &AnalysisOptions, engine: &mut OnnxEngine| {
+            let result = engine.analyze(&sign_map, options).expect("analysis should run");
+            result.move_suggestions.iter().find(|s| s.move_str == "E5").map_or(0.0, |s| s.probability)
+        };
+
+        let blind = recapture(&options(None), &mut engine);
+        let ko = Some(mcts::KoInfo { sign: -1, vertex: [4, 4] });
+        let seen = recapture(&options(ko.clone()), &mut engine);
+        eprintln!("policy on the forbidden recapture E5: without plane 6 {blind:.4}, with it {seen:.4}");
+        assert!(seen < 0.01, "the network still plays the recapture: {seen}");
+
+        let listed = analyze_listing(&mut engine, &sign_map, &options(ko));
+        assert!(!listed.iter().any(|m| m == "E5"), "the batch command lists the recapture: {listed:?}");
+    }
+
+    /// The moves `analyze_batch`, the command, lists for one position.
+    fn analyze_listing(engine: &mut OnnxEngine, sign_map: &[Vec<i8>], options: &AnalysisOptions) -> Vec<String> {
+        let inputs = vec![(sign_map.to_vec(), options.clone())];
+        let results = engine.analyze_batch(&inputs).expect("analysis should run");
+        result_processing::without_ko_recapture(&results[0], sign_map, options)
+            .move_suggestions.into_iter().map(|s| s.move_str).collect()
+    }
 }
