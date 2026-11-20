@@ -319,7 +319,10 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               });
               showToast(t('aiConfig.gpuModelHint'), 'info');
             } else {
-              showToast(`AI running on ${backendDisplayName(result.activeBackend)}`, 'info');
+              showToast(
+                t('aiConfig.runningOn', { backend: backendDisplayName(result.activeBackend) }),
+                'info'
+              );
             }
             setAISettings({ backend: activeSetting });
           }

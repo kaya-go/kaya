@@ -204,7 +204,8 @@
       "fp32": "Aucune perte de précision. Téléchargement et mémoire les plus élevés.",
       "fp16": "Deux fois moins de téléchargement et de mémoire, pour une légère perte de précision.",
       "uint8": "Téléchargement et mémoire minimaux, pour la plus grande perte de précision."
-    }
+    },
+    "runningOn": "L'IA tourne sur {{backend}}"
   },
   "kayaConfig": {
     "title": "Paramètres",
@@ -280,7 +281,8 @@
     "notAnalyzed": "Non analysé",
     "perspectiveNote": "Le taux de victoire et le score sont du point de vue de Noir",
     "allPositionsAnalyzed": "Les {{count}} positions sont déjà toutes analysées",
-    "fullGameFailed": "L'analyse de la partie entière a échoué : {{message}}"
+    "fullGameFailed": "L'analyse de la partie entière a échoué : {{message}}",
+    "liveFailed": "L'analyse a échoué : {{message}}"
   },
   "analysisLegend": {
     "title": "Légende d'analyse",
@@ -335,7 +337,9 @@
     "downloadItems": "Télécharger {{count}} éléments",
     "deleteItems": "Supprimer {{count}} éléments",
     "create": "Créer",
-    "unsavedChangesIndicator": "Modifications non sauvegardées"
+    "unsavedChangesIndicator": "Modifications non sauvegardées",
+    "movingItem": "Déplacement de l'élément…",
+    "movingItems": "Déplacement de {{count}} éléments…"
   },
   "updater": {
     "checkForUpdates": "Rechercher les mises à jour...",
@@ -561,11 +565,17 @@
   },
   "loading": {
     "loading": "Chargement…",
-    "loadingSgfFile": "Chargement du fichier SGF"
+    "loadingSgfFile": "Chargement du fichier SGF",
+    "parsingSgf": "Lecture du SGF…",
+    "buildingTree": "Construction de l'arbre de jeu…",
+    "done": "Terminé"
   },
   "dropzone": {
     "dropToLoad": "Déposez pour charger la partie",
-    "dropOnLibrary": "Déposez sur la Bibliothèque pour sauvegarder"
+    "dropOnLibrary": "Déposez sur la Bibliothèque pour sauvegarder",
+    "unsupportedFile": "Déposez un fichier .sgf, .onnx ou une image",
+    "unsupportedDesktopFile": "Déposez un fichier .sgf ou .onnx",
+    "unsupportedLibraryFile": "Seuls les fichiers .sgf et .zip peuvent être ajoutés à la bibliothèque"
   },
   "languageSwitcher": {
     "changeLanguage": "Changer de langue",

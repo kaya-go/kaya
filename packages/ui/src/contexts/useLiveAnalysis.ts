@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { AnalysisQueue, AnalysisResult, MCTSProgress } from '@kaya/ai-engine';
 import type { Engine } from '@kaya/ai-engine';
 import type { SignMap } from '@kaya/goboard';
@@ -50,6 +51,7 @@ export function useLiveAnalysis({
   setAnalysisResult,
   selectedQuantization,
 }: UseLiveAnalysisParams) {
+  const { t } = useTranslation();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mctsProgress, setMctsProgress] = useState<MCTSProgress | null>(null);
@@ -270,7 +272,7 @@ export function useLiveAnalysis({
       if (isAbortError(err)) return;
       if (isStale()) return;
       const message = err instanceof Error ? err.message : String(err);
-      setError(`Analysis failed: ${message}`);
+      setError(t('analysis.liveFailed', { message }));
       console.error('[AI] Analysis failed:', err);
     } finally {
       // Only clear UI state if a newer run hasn't already taken over.
@@ -294,6 +296,7 @@ export function useLiveAnalysis({
     updateAnalysisCacheSize,
     setAnalysisResult,
     selectedQuantization,
+    t,
   ]);
 
   return {

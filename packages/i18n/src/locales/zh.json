@@ -204,7 +204,8 @@
       "fp32": "无精度损失。下载体积和内存占用最大。",
       "fp16": "下载和内存减半，精度略有损失。",
       "uint8": "下载和内存最小，精度损失最大。"
-    }
+    },
+    "runningOn": "AI 运行于 {{backend}}"
   },
   "kayaConfig": {
     "title": "设置",
@@ -280,7 +281,8 @@
     "notAnalyzed": "未分析",
     "perspectiveNote": "胜率和目差均以黑方视角显示",
     "allPositionsAnalyzed": "全部 {{count}} 个位置均已分析",
-    "fullGameFailed": "全局分析失败：{{message}}"
+    "fullGameFailed": "全局分析失败：{{message}}",
+    "liveFailed": "分析失败：{{message}}"
   },
   "analysisLegend": {
     "title": "分析图例",
@@ -335,7 +337,9 @@
     "downloadItems": "下载 {{count}} 项",
     "deleteItems": "删除 {{count}} 项",
     "create": "创建",
-    "unsavedChangesIndicator": "未保存的更改"
+    "unsavedChangesIndicator": "未保存的更改",
+    "movingItem": "正在移动项目…",
+    "movingItems": "正在移动 {{count}} 个项目…"
   },
   "updater": {
     "checkForUpdates": "检查更新...",
@@ -561,11 +565,17 @@
   },
   "loading": {
     "loading": "加载中…",
-    "loadingSgfFile": "正在加载 SGF 文件"
+    "loadingSgfFile": "正在加载 SGF 文件",
+    "parsingSgf": "正在解析 SGF…",
+    "buildingTree": "正在构建棋谱树…",
+    "done": "完成"
   },
   "dropzone": {
     "dropToLoad": "拖放以加载对局",
-    "dropOnLibrary": "拖放到棋库以保存"
+    "dropOnLibrary": "拖放到棋库以保存",
+    "unsupportedFile": "请拖入 .sgf、.onnx 或图片文件",
+    "unsupportedDesktopFile": "请拖入 .sgf 或 .onnx 文件",
+    "unsupportedLibraryFile": "只能将 .sgf 和 .zip 文件添加到棋库"
   },
   "languageSwitcher": {
     "changeLanguage": "更改语言",

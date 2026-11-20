@@ -42,6 +42,7 @@ export function useGameTreeState() {
   // Loading states
   const [isLoadingSGF, setIsLoadingSGF] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  // A translation key: the overlay translates it.
   const [loadingMessage, setLoadingMessage] = useState('');
 
   const gameInfo = useMemo(() => {
@@ -132,7 +133,7 @@ export function useGameTreeState() {
       new Promise<void>((resolve, reject) => {
         setIsLoadingSGF(true);
         setLoadingProgress(0);
-        setLoadingMessage('Parsing SGF...');
+        setLoadingMessage('loading.parsingSgf');
 
         // Small delay to let the loading overlay paint before the parse blocks
         setTimeout(() => {
@@ -141,7 +142,7 @@ export function useGameTreeState() {
               onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
             });
 
-            setLoadingMessage('Building game tree...');
+            setLoadingMessage('loading.buildingTree');
             const rootNode = sgfNodeToGameTreeNode(sgfRoot, { value: 0 }, null);
 
             // Approximate progress for tree building since we can't track it directly
@@ -167,7 +168,7 @@ export function useGameTreeState() {
 
             setGameId(`game-${Date.now()}`);
             setLoadingProgress(1);
-            setLoadingMessage('Done');
+            setLoadingMessage('loading.done');
             resolve();
           } catch (error) {
             reject(error);

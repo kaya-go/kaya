@@ -131,7 +131,7 @@ export function useTauriDragDrop({
             const message = formatImportResultError(await importZip(buffer.buffer), t);
             if (message) showToast(message, 'error');
           } else {
-            alert('Only .sgf and .zip files can be added to the library');
+            showToast(t('dropzone.unsupportedLibraryFile'), 'error');
             return;
           }
         }
@@ -192,13 +192,13 @@ export function useTauriDragDrop({
               if (filePath.endsWith('.sgf') || filePath.endsWith('.zip')) {
                 handleFileImportToLibrary(filePath);
               } else {
-                alert('Only .sgf and .zip files can be added to the library');
+                showToast(t('dropzone.unsupportedLibraryFile'), 'error');
               }
             } else {
               if (filePath.endsWith('.sgf') || filePath.endsWith('.onnx')) {
                 handleFileLoadFromPath(filePath);
               } else {
-                alert('Please drop a .sgf or .onnx file');
+                showToast(t('dropzone.unsupportedDesktopFile'), 'error');
               }
             }
 
@@ -231,6 +231,8 @@ export function useTauriDragDrop({
     updateDragState,
     updateLibraryState,
     isOverLibraryRef,
+    showToast,
+    t,
   ]);
 }
 

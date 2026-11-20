@@ -204,7 +204,8 @@
       "fp32": "No accuracy loss. Largest download and memory use.",
       "fp16": "Half the download and memory, for a small accuracy loss.",
       "uint8": "Smallest download and memory, for the largest accuracy loss."
-    }
+    },
+    "runningOn": "AI running on {{backend}}"
   },
   "kayaConfig": {
     "title": "Settings",
@@ -280,7 +281,8 @@
     "notAnalyzed": "Not analyzed",
     "perspectiveNote": "Win rate and score are from Black's perspective",
     "allPositionsAnalyzed": "All {{count}} positions are already analyzed",
-    "fullGameFailed": "Full game analysis failed: {{message}}"
+    "fullGameFailed": "Full game analysis failed: {{message}}",
+    "liveFailed": "Analysis failed: {{message}}"
   },
   "analysisLegend": {
     "title": "Analysis Legend",
@@ -335,7 +337,9 @@
     "downloadItems": "Download {{count}} Items",
     "deleteItems": "Delete {{count}} Items",
     "create": "Create",
-    "unsavedChangesIndicator": "Unsaved changes"
+    "unsavedChangesIndicator": "Unsaved changes",
+    "movingItem": "Moving item…",
+    "movingItems": "Moving {{count}} items…"
   },
   "updater": {
     "checkForUpdates": "Check for Updates...",
@@ -561,11 +565,17 @@
   },
   "loading": {
     "loading": "Loading...",
-    "loadingSgfFile": "Loading SGF File"
+    "loadingSgfFile": "Loading SGF File",
+    "parsingSgf": "Parsing SGF…",
+    "buildingTree": "Building game tree…",
+    "done": "Done"
   },
   "dropzone": {
     "dropToLoad": "Drop to load game",
-    "dropOnLibrary": "Drop on Library to save instead"
+    "dropOnLibrary": "Drop on Library to save instead",
+    "unsupportedFile": "Drop a .sgf, .onnx or image file",
+    "unsupportedDesktopFile": "Drop a .sgf or .onnx file",
+    "unsupportedLibraryFile": "Only .sgf and .zip files can be added to the library"
   },
   "languageSwitcher": {
     "changeLanguage": "Change language",

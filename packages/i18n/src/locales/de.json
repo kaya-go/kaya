@@ -204,7 +204,8 @@
       "fp32": "Kein Genauigkeitsverlust. Größter Download und Speicherbedarf.",
       "fp16": "Halber Download und Speicher, bei geringem Genauigkeitsverlust.",
       "uint8": "Kleinster Download und Speicher, bei größtem Genauigkeitsverlust."
-    }
+    },
+    "runningOn": "KI läuft auf {{backend}}"
   },
   "kayaConfig": {
     "title": "Einstellungen",
@@ -280,7 +281,8 @@
     "notAnalyzed": "Nicht analysiert",
     "perspectiveNote": "Gewinnrate und Punkte aus Sicht von Schwarz",
     "allPositionsAnalyzed": "Alle {{count}} Positionen sind bereits analysiert",
-    "fullGameFailed": "Analyse des gesamten Spiels fehlgeschlagen: {{message}}"
+    "fullGameFailed": "Analyse des gesamten Spiels fehlgeschlagen: {{message}}",
+    "liveFailed": "Analyse fehlgeschlagen: {{message}}"
   },
   "analysisLegend": {
     "title": "Analyse-Legende",
@@ -335,7 +337,9 @@
     "downloadItems": "{{count}} herunterladen",
     "deleteItems": "{{count}} löschen",
     "create": "Erstellen",
-    "unsavedChangesIndicator": "Nicht gespeicherte Änderungen"
+    "unsavedChangesIndicator": "Nicht gespeicherte Änderungen",
+    "movingItem": "Element wird verschoben…",
+    "movingItems": "{{count}} Elemente werden verschoben…"
   },
   "updater": {
     "checkForUpdates": "Nach Updates suchen...",
@@ -561,11 +565,17 @@
   },
   "loading": {
     "loading": "Wird geladen…",
-    "loadingSgfFile": "SGF-Datei wird geladen"
+    "loadingSgfFile": "SGF-Datei wird geladen",
+    "parsingSgf": "SGF wird gelesen…",
+    "buildingTree": "Spielbaum wird aufgebaut…",
+    "done": "Fertig"
   },
   "dropzone": {
     "dropToLoad": "Ablegen um Spiel zu laden",
-    "dropOnLibrary": "Auf Bibliothek ablegen um zu speichern"
+    "dropOnLibrary": "Auf Bibliothek ablegen um zu speichern",
+    "unsupportedFile": "Legen Sie eine .sgf-, .onnx- oder Bilddatei ab",
+    "unsupportedDesktopFile": "Legen Sie eine .sgf- oder .onnx-Datei ab",
+    "unsupportedLibraryFile": "Nur .sgf- und .zip-Dateien können zur Bibliothek hinzugefügt werden"
   },
   "languageSwitcher": {
     "changeLanguage": "Sprache ändern",

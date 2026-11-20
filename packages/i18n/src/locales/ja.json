@@ -204,7 +204,8 @@
       "fp32": "精度の低下なし。ダウンロード量とメモリ使用量は最大です。",
       "fp16": "ダウンロードとメモリが半分になり、精度はわずかに低下します。",
       "uint8": "ダウンロードとメモリが最小になり、精度の低下は最大です。"
-    }
+    },
+    "runningOn": "AI は {{backend}} で動作中です"
   },
   "kayaConfig": {
     "title": "設定",
@@ -280,7 +281,8 @@
     "notAnalyzed": "未分析",
     "perspectiveNote": "勝率と目差は黒番視点です",
     "allPositionsAnalyzed": "全{{count}}局面はすでに分析済みです",
-    "fullGameFailed": "全局分析に失敗しました：{{message}}"
+    "fullGameFailed": "全局分析に失敗しました：{{message}}",
+    "liveFailed": "分析に失敗しました：{{message}}"
   },
   "analysisLegend": {
     "title": "分析の凡例",
@@ -335,7 +337,9 @@
     "downloadItems": "{{count}}件をダウンロード",
     "deleteItems": "{{count}}件を削除",
     "create": "作成",
-    "unsavedChangesIndicator": "未保存の変更"
+    "unsavedChangesIndicator": "未保存の変更",
+    "movingItem": "項目を移動中…",
+    "movingItems": "{{count}}件の項目を移動中…"
   },
   "updater": {
     "checkForUpdates": "アップデートを確認...",
@@ -561,11 +565,17 @@
   },
   "loading": {
     "loading": "読み込み中…",
-    "loadingSgfFile": "SGFファイルを読み込み中"
+    "loadingSgfFile": "SGFファイルを読み込み中",
+    "parsingSgf": "SGF を解析中…",
+    "buildingTree": "棋譜ツリーを構築中…",
+    "done": "完了"
   },
   "dropzone": {
     "dropToLoad": "ドロップして対局を読み込む",
-    "dropOnLibrary": "ライブラリにドロップして保存"
+    "dropOnLibrary": "ライブラリにドロップして保存",
+    "unsupportedFile": ".sgf、.onnx、または画像ファイルをドロップしてください",
+    "unsupportedDesktopFile": ".sgf または .onnx ファイルをドロップしてください",
+    "unsupportedLibraryFile": "ライブラリに追加できるのは .sgf と .zip ファイルのみです"
   },
   "languageSwitcher": {
     "changeLanguage": "言語を変更",

@@ -206,11 +206,11 @@ export function useLibraryActions() {
         parentId = selectedItem?.type === 'folder' ? selectedId : selectedItem?.parentId || null;
       }
       setNewFolderParent(parentId);
-      setNewFolderName('New Folder');
+      setNewFolderName(t('library.newFolder'));
       newFolderInputInitialized.current = false;
       setShowNewFolderDialog(true);
     },
-    [selectedId, items]
+    [selectedId, items, t]
   );
 
   const handleCreateFolder = useCallback(async () => {
@@ -244,11 +244,11 @@ export function useLibraryActions() {
 
   const handleDelete = useCallback(
     (item: LibraryItem) => {
-      const title = item.type === 'folder' ? 'Delete Folder' : 'Delete File';
+      const title = item.type === 'folder' ? t('library.deleteFolder') : t('library.deleteFile');
       const message =
         item.type === 'folder'
-          ? `Delete folder "${item.name}" and all its contents?`
-          : `Delete "${item.name}"?`;
+          ? t('library.deleteFolderConfirm', { name: item.name })
+          : t('library.deleteFileConfirm', { name: item.name });
 
       setConfirmDialog({
         title,
@@ -261,15 +261,15 @@ export function useLibraryActions() {
       });
       setContextMenu(null);
     },
-    [deleteItem]
+    [deleteItem, t]
   );
 
   const handleBatchDelete = useCallback(
     (ids: LibraryItemId[]) => {
       const count = ids.length;
       setConfirmDialog({
-        title: `Delete ${count} Items`,
-        message: `Delete ${count} selected items? This cannot be undone.`,
+        title: t('library.deleteItemsTitle', { count }),
+        message: t('library.deleteItemsConfirm', { count }),
         danger: true,
         onConfirm: async () => {
           await deleteItems(ids);
@@ -278,7 +278,7 @@ export function useLibraryActions() {
       });
       setContextMenu(null);
     },
-    [deleteItems]
+    [deleteItems, t]
   );
 
   const handleBatchDownload = useCallback(
@@ -301,15 +301,15 @@ export function useLibraryActions() {
     if (items.length === 0) return;
 
     setConfirmDialog({
-      title: 'Clear Library',
-      message: `Delete all ${items.length} items from your library? This cannot be undone.`,
+      title: t('library.clearLibraryTitle'),
+      message: t('library.clearLibraryConfirm', { count: items.length }),
       danger: true,
       onConfirm: async () => {
         await clearLibrary();
         setConfirmDialog(null);
       },
     });
-  }, [items.length, clearLibrary]);
+  }, [items.length, clearLibrary, t]);
 
   const handleOpen = useCallback(
     (item: LibraryItem) => {

@@ -204,7 +204,8 @@
       "fp32": "Sin pérdida de precisión. Mayor descarga y uso de memoria.",
       "fp16": "La mitad de descarga y memoria, con una pequeña pérdida de precisión.",
       "uint8": "Mínima descarga y memoria, con la mayor pérdida de precisión."
-    }
+    },
+    "runningOn": "IA ejecutándose en {{backend}}"
   },
   "kayaConfig": {
     "title": "Configuración",
@@ -280,7 +281,8 @@
     "notAnalyzed": "Sin analizar",
     "perspectiveNote": "La tasa de victoria y la puntuación son desde la perspectiva de Negro",
     "allPositionsAnalyzed": "Las {{count}} posiciones ya están analizadas",
-    "fullGameFailed": "Falló el análisis de la partida completa: {{message}}"
+    "fullGameFailed": "Falló el análisis de la partida completa: {{message}}",
+    "liveFailed": "Falló el análisis: {{message}}"
   },
   "analysisLegend": {
     "title": "Leyenda del análisis",
@@ -335,7 +337,9 @@
     "downloadItems": "Descargar {{count}}",
     "deleteItems": "Eliminar {{count}}",
     "create": "Crear",
-    "unsavedChangesIndicator": "Cambios sin guardar"
+    "unsavedChangesIndicator": "Cambios sin guardar",
+    "movingItem": "Moviendo elemento…",
+    "movingItems": "Moviendo {{count}} elementos…"
   },
   "updater": {
     "checkForUpdates": "Buscar actualizaciones...",
@@ -561,11 +565,17 @@
   },
   "loading": {
     "loading": "Cargando…",
-    "loadingSgfFile": "Cargando archivo SGF"
+    "loadingSgfFile": "Cargando archivo SGF",
+    "parsingSgf": "Leyendo el SGF…",
+    "buildingTree": "Construyendo el árbol de juego…",
+    "done": "Listo"
   },
   "dropzone": {
     "dropToLoad": "Suelta para cargar la partida",
-    "dropOnLibrary": "Suelta en la Biblioteca para guardar"
+    "dropOnLibrary": "Suelta en la Biblioteca para guardar",
+    "unsupportedFile": "Suelta un archivo .sgf, .onnx o una imagen",
+    "unsupportedDesktopFile": "Suelta un archivo .sgf o .onnx",
+    "unsupportedLibraryFile": "Solo se pueden añadir archivos .sgf y .zip a la biblioteca"
   },
   "languageSwitcher": {
     "changeLanguage": "Cambiar idioma",
