@@ -14,6 +14,7 @@
  * (see #181).
  */
 
+import JSZip from 'jszip';
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
 
@@ -287,8 +288,6 @@ test.describe('Library import', () => {
     page,
   }) => {
     await page.goto('/');
-    // The library lists what it stores once it has opened its database.
-    await expect(page.getByText('Your library is empty')).toBeVisible();
     await page
       .locator('.library-panel input[type="file"]')
       .setInputFiles([
@@ -302,6 +301,41 @@ test.describe('Library import', () => {
       await expect(page.locator('.library-tree-node', { hasText: name })).toBeVisible();
     }
     await expect(page.locator('.brd-dialog')).toBeVisible();
+  });
+
+  test('a ZIP imported while the library is still opening lists every game', async ({ page }) => {
+    // Hold the database open back for a second, so the import starts first. Its
+    // refresh used to be dropped, the tree keeping what the startup read had seen
+    // in the middle of the import.
+    await page.addInitScript(() => {
+      const open = IDBFactory.prototype.open;
+      IDBFactory.prototype.open = function (this: IDBFactory, ...args: [string, number?]) {
+        const request = open.apply(this, args);
+        let onsuccess: ((event: Event) => void) | null = null;
+        Object.defineProperty(request, 'onsuccess', {
+          get: () => onsuccess,
+          set: handler => (onsuccess = handler),
+        });
+        request.addEventListener('success', event =>
+          setTimeout(() => onsuccess?.call(request, event), 1000)
+        );
+        return request;
+      };
+    });
+    const zip = new JSZip();
+    for (let i = 1; i <= 30; i++) {
+      zip.file(`game-${String(i).padStart(2, '0')}.sgf`, '(;GM[1]FF[4]SZ[19];B[pd];W[dp])');
+    }
+
+    await page.goto('/');
+    await page.locator('.library-panel input[type="file"]').setInputFiles({
+      name: 'games.zip',
+      mimeType: 'application/zip',
+      buffer: await zip.generateAsync({ type: 'nodebuffer' }),
+    });
+
+    await expect(page.locator('.library-stats')).toContainText('30 games');
+    await expect(page.locator('.library-tree-node', { hasText: 'game-01.sgf' })).toBeVisible();
   });
 });
 
