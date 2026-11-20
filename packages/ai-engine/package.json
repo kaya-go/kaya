@@ -15,11 +15,6 @@
       "types": "./dist/tauri-engine.d.ts",
       "import": "./dist/tauri-engine.js",
       "require": "./dist/tauri-engine.js"
-    },
-    "./pytorch-tauri-engine": {
-      "types": "./dist/pytorch-tauri-engine.d.ts",
-      "import": "./dist/pytorch-tauri-engine.js",
-      "require": "./dist/pytorch-tauri-engine.js"
     }
   },
   "scripts": {

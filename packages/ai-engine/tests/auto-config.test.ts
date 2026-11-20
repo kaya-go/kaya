@@ -19,7 +19,6 @@ function probe(overrides: Partial<Probe> = {}): Probe {
     hasShaderF16: false,
     threads: 8,
     approxRamMB: null,
-    hasPyTorchSidecar: false,
     ...overrides,
   };
 }
@@ -34,10 +33,6 @@ describe('pickQuantization', () => {
 
   test('Windows desktop keeps fp16 — DirectML has never been measured', () => {
     expect(pickConfig(desktop('windows')).quantization).toBe('fp16');
-  });
-
-  test('the PyTorch sidecar takes fp16', () => {
-    expect(pickConfig(desktop('linux', { hasPyTorchSidecar: true })).quantization).toBe('fp16');
   });
 
   test('WebGPU takes fp16 only when the adapter reports shader-f16', () => {
@@ -56,7 +51,6 @@ describe('pickQuantization', () => {
       desktop('macos'),
       desktop('windows'),
       desktop('linux'),
-      desktop('linux', { hasPyTorchSidecar: true }),
       probe({ hasWebGPU: true, hasShaderF16: true }),
       probe(),
     ];
@@ -67,16 +61,9 @@ describe('pickQuantization', () => {
 });
 
 describe('pickBackendChain', () => {
-  test('desktop without a sidecar tries the native GPU before the CPU', () => {
+  test('desktop tries the native GPU before the CPU, Linux included', () => {
     expect(pickConfig(desktop('macos')).backendChain).toEqual(['native-gpu', 'native-cpu']);
-  });
-
-  test('the PyTorch sidecar preempts the native chain when present', () => {
-    expect(pickConfig(desktop('linux', { hasPyTorchSidecar: true })).backendChain).toEqual([
-      'pytorch',
-      'native-gpu',
-      'native-cpu',
-    ]);
+    expect(pickConfig(desktop('linux')).backendChain).toEqual(['native-gpu', 'native-cpu']);
   });
 
   test('the browser falls back to WASM without WebGPU', () => {
@@ -89,7 +76,7 @@ describe('pickReason', () => {
   test('every pick reports one of the translatable reason ids', () => {
     const hosts: Probe[] = [
       desktop('macos'),
-      desktop('linux', { hasPyTorchSidecar: true }),
+      desktop('linux'),
       probe({ hasWebGPU: true, hasShaderF16: true }),
       probe({ hasWebGPU: true, hasShaderF16: false }),
       probe(),

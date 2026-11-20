@@ -124,13 +124,13 @@ new game is loaded.
 
 ### 3. AI engines are singletons, lifecycle-managed
 
-Web: ONNX Runtime in a Web Worker. Desktop: native Rust ORT or PyTorch
-sidecar (Linux GPU). Lifecycle owned by [`AIEngineContext`](../packages/ui/src/contexts/AIEngineContext.tsx);
+Web: ONNX Runtime in a Web Worker. Desktop: native Rust ORT (on the CPU on
+Linux). Lifecycle owned by [`AIEngineContext`](../packages/ui/src/contexts/AIEngineContext.tsx);
 analysis state by [`AIAnalysisContext`](../packages/ui/src/contexts/AIAnalysisContext.tsx).
 
 The default backend is **`auto`** — at provider mount time
 [`probeEnvironment`](../packages/ai-engine/src/auto-config.ts) detects
-Tauri / WebGPU / shader-f16 / PyTorch-sidecar availability and
+Tauri / WebGPU / shader-f16 availability and
 [`pickConfig`](../packages/ai-engine/src/auto-config.ts) returns a
 backend chain plus a `reason` id (`AutoPickReason`). The status pill
 ([`AIStatusPill`](../packages/ui/src/components/ai/AIStatusPill.tsx))
@@ -201,7 +201,7 @@ A native search is aborted by request id: Rust issues the id
 grows, so an abort that reaches Rust before its search still counts. The
 frontend never starts a search whose signal is already aborted. Progress
 events carry the request id, and a search ignores any other. The global
-engine locks (ONNX and the PyTorch sidecar) recover from a panic
+engine lock recovers from a panic
 (`lock_or_reset` drops the engine and the frontend builds a new one), and
 inputs that could panic are refused before the lock. See
 [`specs/2026-11-20-native-search-abort-and-lock.md`](../specs/2026-11-20-native-search-abort-and-lock.md).
@@ -222,7 +222,7 @@ is enabled — that is what the desktop builds currently ship:
 | -------- | -------- | ------------- | --------------------------------------------------- |
 | Windows  | DirectML | `directml` ✅ | GPU path; the pyke ORT build always includes it     |
 | macOS    | CoreML   | `coreml` ✅   | 13x over the CPU EP at the MCTS batch size          |
-| Linux    | —        | —             | CPU distribution; GPU is the PyTorch sidecar        |
+| Linux    | —        | —             | CPU distribution; no GPU path on Linux desktop      |
 | Android  | NNAPI    | `nnapi` ✅    | Nothing downloaded; `load-dynamic` supplies the .so |
 
 Since `ort` 2.0.0-rc.13 an EP feature does a **second** job: for the desktop

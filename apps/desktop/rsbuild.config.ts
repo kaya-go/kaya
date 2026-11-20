@@ -70,7 +70,7 @@ export default defineConfig({
     liveReload: false,
     // Disable lazy compilation: it depends on HMR to signal when modules are
     // needed, so with HMR off the lazy proxies block forever (the dynamic
-    // imports for onnxruntime-web, pytorch-tauri-engine, etc. never resolve).
+    // imports for onnxruntime-web, tauri-engine, etc. never resolve).
     lazyCompilation: false,
     client: {
       overlay: false,

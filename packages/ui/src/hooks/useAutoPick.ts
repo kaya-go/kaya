@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { type AutoPick, pickConfig, probeEnvironment } from '@kaya/ai-engine';
-import { isTauriApp } from '@kaya/platform';
 
 /**
  * Run the environment probe once and expose what auto-config would choose.
@@ -21,16 +20,7 @@ export function useAutoPick(): AutoPick | null {
     let cancelled = false;
 
     const run = async () => {
-      let pyTorchSidecarAvailable = false;
-      if (isTauriApp()) {
-        try {
-          const { isPyTorchAvailable } = await import('@kaya/ai-engine/pytorch-tauri-engine');
-          pyTorchSidecarAvailable = await isPyTorchAvailable();
-        } catch {
-          // Sidecar absent or not built in — the probe default (false) stands.
-        }
-      }
-      const probe = await probeEnvironment({ pyTorchSidecarAvailable });
+      const probe = await probeEnvironment();
       if (!cancelled) setAutoPick(pickConfig(probe));
     };
 

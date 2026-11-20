@@ -124,8 +124,6 @@
     "webgpuBatchSizeDescription": "Positions evaluated per inference call. Higher = faster analysis. WebGPU uses more memory at larger sizes; WebNN does not.",
     "nativeGpu": "Native - GPU",
     "nativeCpu": "Native - CPU only",
-    "pytorch": "PyTorch GPU (ROCm/CUDA)",
-    "pytorchUnavailable": "PyTorch GPU (not detected)",
     "webgpu": "WebGPU (Browser GPU)",
     "webnn": "WebNN (Chrome ML API)",
     "wasm": "WASM (Browser CPU)",
@@ -150,7 +148,6 @@
       "error": "AI engine error: {{message}}"
     },
     "backendReason": {
-      "pytorchSidecar": "PyTorch sidecar",
       "nativeGpu": "Native GPU",
       "nativeCpu": "Native CPU",
       "webgpu": "GPU — WebGPU",
@@ -183,14 +180,12 @@
     "backendDesc": {
       "native": "Uses GPU acceleration for fastest inference on desktop.",
       "nativeCpu": "Runs on CPU only. Most stable option on desktop.",
-      "pytorch": "GPU acceleration via ROCm or CUDA drivers.",
       "webgpu": "Leverages your graphics card directly in the browser.",
       "webnn": "Delegates to Chrome's built-in ML acceleration layer.",
       "wasm": "Runs on CPU. Slower but works everywhere."
     },
     "backendUnavailable": {
       "webgpu": "Your browser doesn't support WebGPU",
-      "pytorch": "ROCm/CUDA not detected on this system",
       "webnn": "Requires Chrome with WebNN support"
     },
     "backendRecommended": "Recommended",

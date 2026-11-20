@@ -138,7 +138,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Track which (backend, model, batch) combo we last initialized for.
   // Board size is intentionally omitted: the shipped ONNX has dynamic
-  // height/width, native/pytorch/wasm accept any size, and WebGPU graph
+  // height/width, native/wasm accept any size, and WebGPU graph
   // capture recreates its session/buffers inside OnnxEngine when size
   // changes. WebNN (the original reason this was in the key) is no longer
   // a reachable chain backend — see settingToChainBackend('webnn') → wasm.

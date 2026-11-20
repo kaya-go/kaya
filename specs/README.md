@@ -33,7 +33,7 @@ link forward to the replacement. Don't delete history.
 | 2026-01-02 | [Game performance report — rank+probability classifier](2026-01-02-game-performance-report.md)              | shipped    |
 | 2026-02-24 | [AI inference benchmarks on AMD Ryzen 8060S](2026-02-24-ai-inference-benchmarks-amd.md)                     | reference  |
 | 2026-02-28 | [WebGPU op decomposition + graph capture](2026-02-28-webgpu-op-decomposition.md)                            | shipped    |
-| 2026-02-28 | [PyTorch sidecar for Linux GPU](2026-02-28-pytorch-sidecar-rocm.md)                                         | shipped    |
+| 2026-02-28 | [PyTorch sidecar for Linux GPU](2026-02-28-pytorch-sidecar-rocm.md)                                         | superseded |
 | 2026-05-03 | [CoreML EP falls back to CPU on KataGo b28](2026-05-03-coreml-ep-falls-back-to-cpu.md)                      | superseded |
 | 2026-05-03 | [WebGPU unavailable in Tauri webview on macOS/Linux](2026-05-03-webgpu-unavailable-in-tauri-webview.md)     | reference  |
 | 2026-05-03 | [Native ONNX engine: single session, dynamic axes](2026-05-03-onnx-engine-single-session.md)                | shipped    |
@@ -87,3 +87,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Navigation calls compose within one frame](2026-11-20-navigation-composes-within-a-frame.md)               | shipped    |
 | 2026-11-20 | [macOS: an Edit menu, so text fields copy and paste](2026-11-20-macos-edit-menu.md)                         | shipped    |
 | 2026-11-20 | [Safari fires the paste event outside a text field](2026-11-20-safari-paste-event.md)                       | reference  |
+| 2026-11-20 | [Remove the PyTorch sidecar backend](2026-11-20-remove-pytorch-backend.md)                                  | shipped    |

@@ -2,8 +2,8 @@
 //!
 //! This module provides AI analysis using native ONNX Runtime, with GPU
 //! acceleration via DirectML (Windows), NNAPI (Android) or CoreML (macOS).
-//! Linux ships the CPU-only ONNX Runtime distribution; GPU inference there
-//! goes through the PyTorch sidecar.
+//! Linux ships the CPU-only ONNX Runtime distribution, so analysis there
+//! runs on the CPU.
 
 mod boundary;
 mod execution_providers;
@@ -19,16 +19,10 @@ pub use execution_providers::{
     get_available_providers, get_execution_provider_preference, preference_to_name,
     set_execution_provider_preference,
 };
-#[cfg(target_os = "linux")]
-pub use featurization::{determine_next_player, featurize_position};
-#[cfg(not(target_os = "linux"))]
-pub use featurization::determine_next_player;
-#[cfg(target_os = "linux")]
-pub use result_processing::process_raw_outputs;
+use featurization::determine_next_player;
 pub use types::{AnalysisOptions, AnalysisResult, HistoryMove};
 
-pub(crate) use boundary::lock_or_reset;
-use boundary::{validate_batch, validate_board, validate_ko};
+use boundary::{lock_or_reset, validate_batch, validate_board, validate_ko};
 use execution_providers::configure_execution_providers;
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};

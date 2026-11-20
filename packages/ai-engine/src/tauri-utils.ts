@@ -67,9 +67,8 @@ export interface TauriEngineConfig extends BaseEngineConfig {
    * - 'cpu': CPU only
    *
    * Linux has no GPU entry: the ONNX Runtime build we ship there is CPU-only,
-   * so 'auto' resolves to CPU and GPU inference goes through the PyTorch
-   * sidecar instead. The backend reports the provider that actually
-   * registered, never the one that was requested.
+   * so 'auto' resolves to CPU. The backend reports the provider that
+   * actually registered, never the one that was requested.
    */
   executionProvider?: ExecutionProviderPreference;
 }

@@ -9,8 +9,8 @@ use std::sync::{Mutex, MutexGuard};
 use super::mcts::KoInfo;
 use super::types::AnalysisOptions;
 
-/// Lock a global engine slot, recovering it when an earlier call panicked
-/// while holding it. The ONNX engine and the PyTorch sidecar both use it.
+/// Lock the global engine slot, recovering it when an earlier call panicked
+/// while holding it.
 ///
 /// std never clears a poisoned mutex by itself, so without this every later
 /// call, a fresh initialization included, failed until the app restarted. The

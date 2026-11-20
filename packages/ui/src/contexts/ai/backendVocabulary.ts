@@ -50,8 +50,6 @@ export function runtimeBackendToSetting(runtime: string): SettingsBackend {
       return 'native';
     case 'native-cpu':
       return 'native-cpu';
-    case 'pytorch':
-      return 'pytorch';
     default:
       return 'auto';
   }
@@ -61,9 +59,9 @@ export function runtimeBackendToSetting(runtime: string): SettingsBackend {
  * Settings value → the backend a chain should start with.
  *
  * Takes `string`, not `SettingsBackend`: it must also recognise values older
- * builds persisted — the legacy web `webgl`/`webnn` entries — so that a stale
- * setting degrades into the auto chain instead of into a backend that cannot
- * exist.
+ * builds persisted — the legacy web `webgl`/`webnn` entries, and `pytorch`
+ * from before the PyTorch sidecar was removed — so that a stale setting
+ * degrades into the auto chain instead of into a backend that cannot exist.
  *
  * There is deliberately no exception for the stale `'webgpu-gc'`: it is not a
  * settings value, `loadAISettings` already drops it (its whitelist sends
@@ -89,8 +87,6 @@ export function settingToChainBackend(setting: string): BackendId | null {
       return 'wasm';
     case 'native-cpu':
       return 'native-cpu';
-    case 'pytorch':
-      return 'pytorch';
     default:
       return null;
   }

@@ -12,8 +12,6 @@ mod audio;
 mod audio;
 mod commands;
 mod onnx_engine;
-#[cfg(target_os = "linux")]
-mod pytorch_engine;
 #[cfg(desktop)]
 mod window_state;
 
@@ -48,12 +46,6 @@ pub fn run() {
             commands::onnx_get_available_providers,
             commands::onnx_set_provider_preference,
             commands::onnx_get_provider_preference,
-            commands::pytorch_is_available,
-            commands::pytorch_initialize,
-            commands::pytorch_analyze,
-            commands::pytorch_analyze_batch,
-            commands::pytorch_benchmark,
-            commands::pytorch_dispose,
             commands::download_file,
             commands::update_preflight,
             audio::audio_init,

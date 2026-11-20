@@ -1,10 +1,13 @@
 ---
 date: 2026-02-28
-status: shipped
+status: superseded
 scope: ai
 ---
 
 # PyTorch sidecar for Linux GPU inference
+
+> Removed on 2026-11-20, see
+> [2026-11-20-remove-pytorch-backend.md](2026-11-20-remove-pytorch-backend.md).
 
 Run KataGo inference on Linux GPUs (AMD ROCm or NVIDIA CUDA) via a Python
 PyTorch subprocess, since native ORT execution providers are either

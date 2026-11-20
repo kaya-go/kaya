@@ -109,9 +109,6 @@ async function initOneBackend(backend: BackendId, cfg: EngineChainConfig): Promi
     case 'native-cpu':
       engineType = 'native';
       break;
-    case 'pytorch':
-      engineType = 'pytorch';
-      break;
     case 'webgpu': {
       if (!buffer) {
         throw new Error('Model bytes are required for the WebGPU backend');
@@ -186,7 +183,7 @@ function detectStaticBatchSize(modelName: string): number | undefined {
 }
 
 function isGpuBackend(reported: string): boolean {
-  return ['webgpu', 'webgpu-gc', 'webnn', 'native', 'pytorch'].includes(reported);
+  return ['webgpu', 'webgpu-gc', 'webnn', 'native'].includes(reported);
 }
 
 async function warmUp(engine: Engine, boardSize: number): Promise<void> {

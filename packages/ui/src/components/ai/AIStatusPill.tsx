@@ -147,7 +147,6 @@ function readyIcon(backend: string): React.ReactNode {
     case 'webgpu':
     case 'webgpu-gc':
     case 'native':
-    case 'pytorch':
     case 'webnn':
       return <LuZap />;
     case 'wasm':
@@ -168,8 +167,6 @@ function backendDisplayName(backend: string): string {
       return 'Native GPU';
     case 'native-cpu':
       return 'Native CPU';
-    case 'pytorch':
-      return 'PyTorch';
     case 'wasm':
       return 'CPU (WASM)';
     case 'webnn':
