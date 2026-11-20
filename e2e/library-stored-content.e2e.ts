@@ -17,6 +17,7 @@ test.use({ locale: 'en-US' });
 const CUT = '(;GM[1]FF[4]SZ[19];B[pd];W[dp';
 const AFTER_VARIATION = '(;GM[1]FF[4]SZ[19](;B[pd])(;B[dd]);W[pp])';
 const GAME = '(;GM[1]FF[4]SZ[19];B[pd];W[dp])';
+const NOT_A_GAME = 'Notes from the club evening';
 
 interface Planted {
   id: string;
@@ -110,25 +111,37 @@ test.describe('Library content stored by an earlier version', () => {
     await expect(page.locator('.toast.toast-error')).toHaveCount(0);
   });
 
-  test('a folder holding one is duplicated whole', async ({ page }) => {
+  test('a folder holding one is duplicated whole, past a file it cannot copy', async ({ page }) => {
+    // a-notes.sgf was stored before the library required a game (#169): it is
+    // copied first among the files, and its failure must not stop the others.
     await plant(page, [
       { id: 'folder', name: 'Old games' },
+      { id: 'notes', name: 'a-notes.sgf', parentId: 'folder', content: NOT_A_GAME },
       { id: 'cut', name: 'cut.sgf', parentId: 'folder', content: CUT },
       { id: 'good', name: 'good.sgf', parentId: 'folder', content: GAME },
+      { id: 'joseki', name: 'Joseki', parentId: 'folder' },
+      { id: 'ladder', name: 'ladder.sgf', parentId: 'joseki', content: GAME },
     ]);
 
     await row(page, 'Old games').click({ button: 'right' });
     await page.locator('.library-context-menu-item', { hasText: 'Duplicate' }).click();
+    await expect(page.locator('.toast.toast-error .toast-content')).toHaveText(
+      'Failed to duplicate a-notes.sgf: Invalid SGF content'
+    );
     await expect(row(page, 'Old games (copy)')).toBeVisible();
-    await expect(page.locator('.toast.toast-error')).toHaveCount(0);
 
     const items = await storedItems(page);
-    const copy = items.find(item => item.name === 'Old games (copy)')!;
+    const inside = (name: string, parent: string | null) =>
+      items.filter(item => item.parentId === parent && item.name === name);
+    const [copy] = inside('Old games (copy)', null);
     const copied = items.filter(item => item.parentId === copy.id);
-    expect(Object.fromEntries(copied.map(item => [item.name, item.content]))).toEqual({
+    expect(Object.fromEntries(copied.map(item => [item.name, item.content ?? 'folder']))).toEqual({
       'cut.sgf': CUT,
       'good.sgf': GAME,
+      Joseki: 'folder',
     });
+    const [joseki] = inside('Joseki', copy.id);
+    expect(inside('ladder.sgf', joseki.id).map(item => item.content)).toEqual([GAME]);
   });
 
   test('a ZIP backup holding one is restored whole, with a warning', async ({ page }) => {
