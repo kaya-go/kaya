@@ -235,6 +235,11 @@ impl Board {
     fn sign_map(&self) -> &[Vec<i8>] {
         &self.grid
     }
+
+    /// This board's ko, for the network's ko input plane.
+    fn ko_info(&self) -> Option<KoInfo> {
+        self.ko_vertex.map(|(x, y)| KoInfo { sign: self.ko_sign, vertex: [x as i32, y as i32] })
+    }
 }
 
 /// Parse a GTP move string (e.g. "D4", "Q16", "PASS") to (x, y).
@@ -526,6 +531,7 @@ impl OnnxEngine {
                                 komi,
                                 next_to_play: Some(if p.pla == 1 { "B" } else { "W" }.to_string()),
                                 history: p.hist.clone(),
+                                ko_info: p.board.ko_info(),
                             },
                         )
                     })
@@ -787,6 +793,7 @@ impl OnnxEngine {
                         komi,
                         next_to_play: Some(if cur_pla == 1 { "B" } else { "W" }.to_string()),
                         history: cur_hist,
+                        ko_info: cur_board.ko_info(),
                     },
                 )])?;
                 if let Some(result) = results.first() {

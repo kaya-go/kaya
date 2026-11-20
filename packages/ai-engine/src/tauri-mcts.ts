@@ -36,6 +36,14 @@ interface NativeSearchResult {
   visits?: number;
 }
 
+/** The `koInfo` a caller passed, as the native side takes it: null without a ko. */
+export function nativeKo(
+  options: EngineAnalysisOptions
+): { sign: number; vertex: [number, number] } | null {
+  const koInfo = options.koInfo as { sign: number; vertex: [number, number] } | undefined;
+  return koInfo && koInfo.sign !== 0 ? { sign: koInfo.sign, vertex: koInfo.vertex } : null;
+}
+
 function abortError(): Error {
   const error = new Error('MCTS search aborted');
   error.name = 'AbortError';
@@ -49,7 +57,6 @@ export async function runNativeSearch(
 ): Promise<AnalysisResult> {
   const onProgress = options.onProgress as ((p: MCTSProgress) => void) | undefined;
   const signal = options.signal as AbortSignal | undefined;
-  const koInfo = options.koInfo as { sign: number; vertex: [number, number] } | undefined;
 
   const requestId = await ipc.invoke<number>('onnx_mcts_request_id');
   if (signal?.aborted) throw abortError();
@@ -82,7 +89,7 @@ export async function runNativeSearch(
         })),
         numVisits: options.numVisits ?? 1,
         includeMove: options.includeMove ?? null,
-        koInfo: koInfo && koInfo.sign !== 0 ? { sign: koInfo.sign, vertex: koInfo.vertex } : null,
+        koInfo: nativeKo(options),
       },
     });
 

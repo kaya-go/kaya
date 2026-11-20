@@ -2,6 +2,8 @@
 
 use serde::{Deserialize, Serialize};
 
+pub use super::mcts::KoInfo;
+
 /// A move suggestion from the AI
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MoveSuggestion {
@@ -52,6 +54,10 @@ pub struct AnalysisOptions {
     /// Move history for history features
     #[serde(default)]
     pub history: Vec<HistoryMove>,
+    /// The ko, if any: `sign` may not play at `vertex` this move. Sets the
+    /// network's ko input plane, and the analysis commands drop the move.
+    #[serde(default)]
+    pub ko_info: Option<KoInfo>,
 }
 
 /// Mirrors `DEFAULT_KOMI` in `@kaya/ai-engine`.
@@ -65,6 +71,7 @@ impl Default for AnalysisOptions {
             komi: default_komi(),
             next_to_play: None,
             history: vec![],
+            ko_info: None,
         }
     }
 }

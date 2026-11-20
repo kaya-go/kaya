@@ -22,6 +22,14 @@ pub fn determine_next_player(sign_map: &[Vec<i8>], options: &AnalysisOptions) ->
     }
 }
 
+/// The point the side to play may not take back this move, if a ko binds it.
+pub fn ko_ban(options: &AnalysisOptions, pla: i8, size: usize) -> Option<(usize, usize)> {
+    let ko = options.ko_info.as_ref()?;
+    let (x, y) = (ko.vertex[0], ko.vertex[1]);
+    let on_board = x >= 0 && y >= 0 && (x as usize) < size && (y as usize) < size;
+    (ko.sign == pla && on_board).then(|| (x as usize, y as usize))
+}
+
 /// Compute liberties for each position on the board
 pub fn compute_liberties(sign_map: &[Vec<i8>]) -> Vec<Vec<usize>> {
     let size = sign_map.len();
@@ -85,12 +93,14 @@ pub fn compute_liberties(sign_map: &[Vec<i8>]) -> Vec<Vec<usize>> {
 ///
 /// This is the core featurization logic shared by both the ONNX engine (ndarray)
 /// and the PyTorch engine (flat Vec). Callers provide closures that write values
-/// into their respective data structures.
+/// into their respective data structures. `ko_ban` is the point `pla` may not
+/// take back (see `ko_ban`), for input plane 6.
 pub fn featurize_into(
     sign_map: &[Vec<i8>],
     pla: i8,
     komi: f32,
     history: &[HistoryMove],
+    ko_ban: Option<(usize, usize)>,
     mut set_bin: impl FnMut(usize, usize, usize, f32),
     mut set_global: impl FnMut(usize, f32),
 ) {
@@ -118,6 +128,11 @@ pub fn featurize_into(
                 if libs == 3 { set_bin(5, y, x, 1.0); }
             }
         }
+    }
+
+    // Channel 6: the ko recapture the side to play may not make
+    if let Some((x, y)) = ko_ban {
+        set_bin(6, y, x, 1.0);
     }
 
     // History features (channels 9-13: last 5 moves)
@@ -159,10 +174,44 @@ pub fn featurize_position(
     let mut global_input = vec![0.0f32; 19];
 
     featurize_into(
-        sign_map, pla, komi, history,
+        sign_map, pla, komi, history, None,
         |c, y, x, v| { bin_input[c * size * size + y * size + x] = v; },
         |i, v| { global_input[i] = v; },
     );
 
     (bin_input, global_input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::onnx_engine::types::KoInfo;
+
+    /// The points set in input plane 6 for `pla` to play, under `options`' ko.
+    fn ko_plane(options: &AnalysisOptions, pla: i8) -> Vec<(usize, usize)> {
+        let board = vec![vec![0i8; 9]; 9];
+        let mut set = vec![];
+        featurize_into(&board, pla, 7.5, &[], ko_ban(options, pla, 9), |c, y, x, _| {
+            if c == 6 { set.push((x, y)); }
+        }, |_, _| {});
+        set
+    }
+
+    fn with_ko(sign: i8, vertex: [i32; 2]) -> AnalysisOptions {
+        AnalysisOptions { ko_info: Some(KoInfo { sign, vertex }), ..Default::default() }
+    }
+
+    /// The web featurizer always set the ko plane; the native one never did,
+    /// so on desktop the network could not see a ko.
+    #[test]
+    fn the_ko_plane_marks_the_recapture_for_the_side_it_binds() {
+        assert_eq!(ko_plane(&with_ko(1, [1, 8]), 1), vec![(1, 8)]);
+    }
+
+    #[test]
+    fn the_ko_plane_is_empty_for_the_other_side_or_without_a_ko() {
+        assert!(ko_plane(&with_ko(1, [1, 8]), -1).is_empty());
+        assert!(ko_plane(&with_ko(0, [-1, -1]), 1).is_empty());
+        assert!(ko_plane(&AnalysisOptions::default(), 1).is_empty());
+    }
 }

@@ -243,6 +243,7 @@ impl OnnxEngine {
             komi: 7.5,
             next_to_play: Some("B".to_string()),
             history: vec![],
+            ko_info: None,
         };
 
         match self.analyze(&empty_board, &options) {
@@ -266,10 +267,11 @@ impl OnnxEngine {
         self.board_size = sign_map.len();
 
         let next_pla = determine_next_player(sign_map, options);
+        let ko = featurization::ko_ban(options, next_pla, self.board_size);
 
         // Featurize using shared logic into ndarray
         let (bin_input, global_input) =
-            featurize_ndarray(sign_map, next_pla, options.komi, &options.history, self.board_size);
+            featurize_ndarray(sign_map, next_pla, options.komi, &options.history, ko, self.board_size);
 
         // Run inference
         let results = self.run_inference(bin_input, global_input)?;
@@ -298,9 +300,10 @@ impl OnnxEngine {
         for (b, (sign_map, options)) in inputs.iter().enumerate() {
             let next_pla = determine_next_player(sign_map, options);
             plas.push(next_pla);
+            let ko = featurization::ko_ban(options, next_pla, size);
 
             let (bin, global) =
-                featurize_ndarray(sign_map, next_pla, options.komi, &options.history, size);
+                featurize_ndarray(sign_map, next_pla, options.komi, &options.history, ko, size);
 
             // Copy to batch tensors
             for c in 0..22 {
@@ -337,13 +340,14 @@ fn featurize_ndarray(
     pla: i8,
     komi: f32,
     history: &[HistoryMove],
+    ko: Option<(usize, usize)>,
     size: usize,
 ) -> (Array4<f32>, Array2<f32>) {
     let mut bin_input = Array4::<f32>::zeros((1, 22, size, size));
     let mut global_input = Array2::<f32>::zeros((1, 19));
 
     featurization::featurize_into(
-        sign_map, pla, komi, history,
+        sign_map, pla, komi, history, ko,
         |c, y, x, v| { bin_input[[0, c, y, x]] = v; },
         |i, v| { global_input[[0, i]] = v; },
     );
@@ -372,7 +376,7 @@ pub fn initialize_engine_from_path(model_path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Analyze a single position
+/// Analyze a single position. The move list leaves out the ko recapture.
 pub fn analyze_position(
     sign_map: Vec<Vec<i8>>,
     options: AnalysisOptions,
@@ -380,17 +384,25 @@ pub fn analyze_position(
     validate_board(&sign_map)?;
     let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
-    engine.analyze(&sign_map, &options)
+    let result = engine.analyze(&sign_map, &options)?;
+    Ok(result_processing::without_ko_recapture(&result, &sign_map, &options))
 }
 
-/// Analyze multiple positions in a batch
+/// Analyze multiple positions in a batch. The move lists leave out the ko
+/// recapture (the search drops it itself, from its own board).
 pub fn analyze_batch(
     inputs: Vec<(Vec<Vec<i8>>, AnalysisOptions)>,
 ) -> Result<Vec<AnalysisResult>, String> {
     validate_batch(&inputs)?;
     let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
-    engine.analyze_batch(&inputs)
+    let results = engine.analyze_batch(&inputs)?;
+    Ok(results.iter()
+        .zip(&inputs)
+        .map(|(result, (sign_map, options))| {
+            result_processing::without_ko_recapture(result, sign_map, options)
+        })
+        .collect())
 }
 
 /// Dispose the global engine
@@ -572,6 +584,7 @@ mod tests {
                 komi: 7.5,
                 next_to_play: Some("B".to_string()),
                 history: vec![],
+                ko_info: None,
             };
             let result = engine.analyze(&sign_map, &options).expect("analysis should run");
             let top: Vec<_> = result.move_suggestions.iter().take(3).collect();
@@ -640,6 +653,7 @@ mod tests {
                 komi: 7.5,
                 next_to_play: Some("B".to_string()),
                 history: vec![],
+                ko_info: None,
             };
             let result = engine.analyze(&sign_map, &options).expect("analysis should run");
             eprintln!(

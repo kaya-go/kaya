@@ -90,6 +90,8 @@ export interface TauriAnalysisOptions {
   komi: number;
   nextToPlay?: string;
   history: HistoryMove[];
+  /** The ko: `sign` may not play at `vertex` this move. */
+  koInfo?: { sign: number; vertex: [number, number] } | null;
 }
 
 /**

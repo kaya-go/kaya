@@ -147,3 +147,42 @@ describe('TauriEngine search abort', () => {
     expect(result.winRate).toBe(0.5);
   });
 });
+
+/**
+ * Desktop full-game analysis sends whole batches to the native engine. The
+ * native side can only ban the ko recapture (input plane 6, and the move
+ * list) if each position carries its ko.
+ */
+describe('TauriEngine.analyzeBatch ko', () => {
+  test('sends each position its ko', async () => {
+    const calls: [string, any][] = [];
+    const { engine } = engineWith(async (cmd, args: any) => {
+      calls.push([cmd, args]);
+      return (args?.inputs ?? []).map(() => ({
+        moveSuggestions: [],
+        winRate: 0.5,
+        scoreLead: 0,
+        currentTurn: 'B',
+      }));
+    });
+
+    await engine.analyzeBatch([
+      {
+        signMap: board,
+        options: { nextToPlay: 'B', koInfo: { sign: 1, vertex: [1, 0] } } as never,
+      },
+      {
+        signMap: board,
+        options: { nextToPlay: 'W', koInfo: { sign: 0, vertex: [-1, -1] } } as never,
+      },
+      { signMap: board, options: { nextToPlay: 'B' } },
+    ]);
+
+    const [, batch] = calls.find(([cmd]) => cmd === 'onnx_analyze_batch')!;
+    expect(batch.inputs.map((i: any) => i.options.koInfo)).toEqual([
+      { sign: 1, vertex: [1, 0] },
+      null,
+      null,
+    ]);
+  });
+});
