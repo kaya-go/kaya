@@ -4,10 +4,8 @@ use super::featurization::{determine_next_player, ko_ban};
 use super::types::{AnalysisOptions, AnalysisResult, MoveSuggestion, OnnxOutputs};
 use super::OnnxEngine;
 
-/// Process raw inference outputs into an AnalysisResult (standalone, no engine needed).
-///
-/// Used by both OnnxEngine and PyTorch engine.
-pub fn process_raw_outputs(
+/// Process one position's raw inference outputs into an AnalysisResult.
+fn process_raw_outputs(
     policy: &[f32],
     value: &[f32],
     miscvalue: &[f32],

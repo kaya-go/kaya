@@ -1,6 +1,4 @@
 //! Board featurization for KataGo neural network inputs
-//!
-//! Shared between OnnxEngine (ndarray) and PyTorch engine (flat Vec<f32>).
 
 use super::types::{AnalysisOptions, HistoryMove};
 
@@ -91,10 +89,8 @@ pub fn compute_liberties(sign_map: &[Vec<i8>]) -> Vec<Vec<usize>> {
 
 /// Fill binary and global input features from a board position.
 ///
-/// This is the core featurization logic shared by both the ONNX engine (ndarray)
-/// and the PyTorch engine (flat Vec). Callers provide closures that write values
-/// into their respective data structures. `ko_ban` is the point `pla` may not
-/// take back (see `ko_ban`), for input plane 6.
+/// Callers provide closures that write values into their tensors. `ko_ban` is
+/// the point `pla` may not take back (see `ko_ban`), for input plane 6.
 pub fn featurize_into(
     sign_map: &[Vec<i8>],
     pla: i8,
@@ -158,28 +154,6 @@ pub fn featurize_into(
     // White-to-move and -komi for Black-to-move. Kaya's Sign has Black=1, White=-1,
     // so selfKomi = -pla * komi.
     set_global(5, (-(pla as f32) * komi) / 20.0);
-}
-
-/// Featurize a board position into flat Vec<f32> (for PyTorch engine)
-#[cfg(target_os = "linux")]
-pub fn featurize_position(
-    sign_map: &[Vec<i8>],
-    pla: i8,
-    komi: f32,
-    history: &[HistoryMove],
-) -> (Vec<f32>, Vec<f32>) {
-    let size = sign_map.len();
-    let bin_len = 22 * size * size;
-    let mut bin_input = vec![0.0f32; bin_len];
-    let mut global_input = vec![0.0f32; 19];
-
-    featurize_into(
-        sign_map, pla, komi, history, None,
-        |c, y, x, v| { bin_input[c * size * size + y * size + x] = v; },
-        |i, v| { global_input[i] = v; },
-    );
-
-    (bin_input, global_input)
 }
 
 #[cfg(test)]

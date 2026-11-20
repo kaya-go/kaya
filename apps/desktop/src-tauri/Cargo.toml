@@ -62,8 +62,9 @@ tauri-plugin-window-state = "2.4.1"
 
 # Linux: the plain CPU distribution. No Linux build ships MIGraphX, the CUDA one
 # is a multi-GB download that expects a CUDA runtime on the user's machine, and
-# ORT_DYLIB_PATH is ignored unless ort is built with `load-dynamic`. The GPU
-# path on Linux is the PyTorch sidecar (specs/2026-02-28-pytorch-sidecar-rocm.md).
+# ORT_DYLIB_PATH is ignored unless ort is built with `load-dynamic`. Linux
+# desktop analysis runs on the CPU (the PyTorch GPU sidecar was removed, see
+# specs/2026-11-20-remove-pytorch-backend.md).
 [target.'cfg(target_os = "linux")'.dependencies]
 ort = { version = "2.0.0-rc.15", features = ["download-binaries", "half"] }
 

@@ -124,8 +124,6 @@
     "webgpuBatchSizeDescription": "推論呼び出しごとに評価する局面数。大きいほど分析が速くなります。WebGPUはサイズが大きいとメモリ使用量が増加しますが、WebNNは増加しません。",
     "nativeGpu": "ネイティブ - GPU",
     "nativeCpu": "ネイティブ - CPUのみ",
-    "pytorch": "PyTorch GPU (ROCm/CUDA)",
-    "pytorchUnavailable": "PyTorch GPU（未検出）",
     "webgpu": "WebGPU（ブラウザGPU）",
     "webnn": "WebNN（Chrome ML API）",
     "wasm": "WASM（ブラウザCPU）",
@@ -150,7 +148,6 @@
       "error": "AIエンジンエラー：{{message}}"
     },
     "backendReason": {
-      "pytorchSidecar": "PyTorch サイドカー",
       "nativeGpu": "ネイティブ GPU",
       "nativeCpu": "ネイティブ CPU",
       "webgpu": "GPU — WebGPU",
@@ -183,14 +180,12 @@
     "backendDesc": {
       "native": "最速オプション。GPU が利用可能な場合は自動使用し、なければ CPU にフォールバックします。",
       "nativeCpu": "CPU のみで実行します。デスクトップで最も安定したオプションです。",
-      "pytorch": "ROCm または CUDA ドライバーによる GPU アクセラレーション。",
       "webgpu": "ブラウザ内でグラフィックカードを直接利用します。",
       "webnn": "Chrome 内蔵の ML アクセラレーション層に委譲します。",
       "wasm": "CPU で実行します。低速ですがどこでも動作します。"
     },
     "backendUnavailable": {
       "webgpu": "お使いのブラウザは WebGPU に対応していません",
-      "pytorch": "このシステムでは ROCm/CUDA が検出されませんでした",
       "webnn": "WebNN 対応の Chrome が必要です"
     },
     "backendRecommended": "おすすめ",

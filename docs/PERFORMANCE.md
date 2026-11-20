@@ -50,9 +50,8 @@ const cached = patternCache.get(cacheKey);
 ONNX inference is never on the main thread:
 
 - **Web** — dedicated Web Worker. UI stays at 60 fps during analysis.
-- **Desktop** — native Rust ORT in a Tauri command (or PyTorch sidecar
-  on Linux GPU). The webview stays responsive; inference runs in a
-  separate process or thread.
+- **Desktop** — native Rust ORT in a Tauri command. The webview stays
+  responsive; inference runs on its own thread.
 
 ```typescript
 worker.postMessage({ type: 'analyze', signMap, options });

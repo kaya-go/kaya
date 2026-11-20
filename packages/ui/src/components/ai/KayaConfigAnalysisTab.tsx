@@ -30,8 +30,6 @@ type KayaConfigAnalysisTabProps = Pick<
   | 'handleFileSelect'
   | 'aiSettings'
   | 'setAISettings'
-  | 'isLinuxDesktop'
-  | 'pytorchAvailable'
   | 'webnnAvailable'
 >;
 
@@ -53,8 +51,6 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
   handleFileSelect,
   aiSettings,
   setAISettings,
-  isLinuxDesktop,
-  pytorchAvailable,
   webnnAvailable,
 }) => {
   const { t } = useTranslation();
@@ -228,8 +224,6 @@ export const KayaConfigAnalysisTab: React.FC<KayaConfigAnalysisTabProps> = ({
                 <BackendSelector
                   value={aiSettings.backend}
                   onChange={backend => setAISettings({ backend })}
-                  isLinuxDesktop={isLinuxDesktop}
-                  pytorchAvailable={pytorchAvailable}
                   webnnAvailable={webnnAvailable}
                 />
                 <div

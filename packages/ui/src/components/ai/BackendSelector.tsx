@@ -18,16 +18,12 @@ interface BackendOption {
 export interface BackendSelectorProps {
   value: AISettings['backend'];
   onChange: (backend: AISettings['backend']) => void;
-  isLinuxDesktop?: boolean;
-  pytorchAvailable?: boolean;
   webnnAvailable?: boolean;
 }
 
 export const BackendSelector: React.FC<BackendSelectorProps> = ({
   value,
   onChange,
-  isLinuxDesktop = false,
-  pytorchAvailable = false,
   webnnAvailable = false,
 }) => {
   const { t } = useTranslation();
@@ -68,17 +64,6 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
         icon: <LuCpu size={18} />,
         available: true,
       });
-      if (isLinuxDesktop) {
-        opts.push({
-          value: 'pytorch',
-          labelKey: pytorchAvailable ? 'aiConfig.pytorch' : 'aiConfig.pytorchUnavailable',
-          descKey: 'aiConfig.backendDesc.pytorch',
-          icon: <LuMonitor size={18} />,
-          available: pytorchAvailable,
-          unavailableKey: 'aiConfig.backendUnavailable.pytorch',
-        });
-      }
-
       // Web-based backends also available on desktop
       opts.push({
         value: 'webgpu',
@@ -126,7 +111,7 @@ export const BackendSelector: React.FC<BackendSelectorProps> = ({
     }
 
     return opts;
-  }, [isTauri, isLinuxDesktop, pytorchAvailable, webnnAvailable, hasWebGPU]);
+  }, [isTauri, webnnAvailable, hasWebGPU]);
 
   const handleSelect = (opt: BackendOption) => {
     if (!opt.available) return;

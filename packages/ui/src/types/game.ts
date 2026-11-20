@@ -43,13 +43,12 @@ export interface AISettings {
    * - 'auto': Auto-pick (probeEnvironment + pickConfig). Recommended.
    * - 'native': Native ONNX Runtime via Tauri (fastest, desktop only)
    * - 'native-cpu': Native ONNX Runtime CPU only (desktop only)
-   * - 'pytorch': PyTorch GPU via sidecar (Linux with ROCm/CUDA, fastest GPU)
    * - 'webgpu': WebGPU backend (requires WebGPU-converted model for speed)
    * - 'webnn': WebNN backend (Chrome, delegates to browser ML stack)
    * - 'wasm': WebAssembly backend (CPU, most compatible)
    * - 'webgl': Deprecated, falls back to wasm
    */
-  backend: 'auto' | 'native' | 'native-cpu' | 'pytorch' | 'webgpu' | 'webnn' | 'webgl' | 'wasm';
+  backend: 'auto' | 'native' | 'native-cpu' | 'webgpu' | 'webnn' | 'webgl' | 'wasm';
   saveAnalysisToSgf: boolean;
   /** Number of MCTS visits per position (1 = policy-only, >1 enables tree search) */
   numVisits: number;

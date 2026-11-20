@@ -124,8 +124,6 @@
     "webgpuBatchSizeDescription": "추론 호출당 평가하는 위치 수. 높을수록 분석이 빠릅니다. WebGPU는 값이 클수록 메모리를 더 사용하지만 WebNN은 그렇지 않습니다.",
     "nativeGpu": "네이티브 - GPU",
     "nativeCpu": "네이티브 - CPU만",
-    "pytorch": "PyTorch GPU (ROCm/CUDA)",
-    "pytorchUnavailable": "PyTorch GPU (감지되지 않음)",
     "webgpu": "WebGPU (브라우저 GPU)",
     "webnn": "WebNN (Chrome ML API)",
     "wasm": "WASM (브라우저 CPU)",
@@ -150,7 +148,6 @@
       "error": "AI 엔진 오류: {{message}}"
     },
     "backendReason": {
-      "pytorchSidecar": "PyTorch 사이드카",
       "nativeGpu": "네이티브 GPU",
       "nativeCpu": "네이티브 CPU",
       "webgpu": "GPU — WebGPU",
@@ -183,14 +180,12 @@
     "backendDesc": {
       "native": "가장 빠른 옵션. GPU가 있으면 자동으로 사용하고, 없으면 CPU로 전환합니다.",
       "nativeCpu": "CPU만 사용합니다. 데스크톱에서 가장 안정적인 옵션입니다.",
-      "pytorch": "ROCm 또는 CUDA 드라이버를 통한 GPU 가속.",
       "webgpu": "브라우저에서 그래픽 카드를 직접 활용합니다.",
       "webnn": "Chrome 내장 ML 가속 레이어에 위임합니다.",
       "wasm": "CPU에서 실행됩니다. 느리지만 어디서나 작동합니다."
     },
     "backendUnavailable": {
       "webgpu": "브라우저가 WebGPU를 지원하지 않습니다",
-      "pytorch": "이 시스템에서 ROCm/CUDA가 감지되지 않았습니다",
       "webnn": "WebNN을 지원하는 Chrome이 필요합니다"
     },
     "backendRecommended": "추천",

@@ -163,14 +163,13 @@ export function loadAISettings(): AISettings {
       const parsed = JSON.parse(stored);
       let backend = parsed.backend;
 
-      // 'native', 'native-cpu', and 'pytorch' are only valid in Tauri desktop app
-      if ((backend === 'native' || backend === 'native-cpu' || backend === 'pytorch') && !isTauri) {
-        console.log('[AI Settings] Native/PyTorch backend not available on web, using auto');
+      // 'native' and 'native-cpu' are only valid in Tauri desktop app
+      if ((backend === 'native' || backend === 'native-cpu') && !isTauri) {
+        console.log('[AI Settings] Native backend not available on web, using auto');
         backend = 'auto';
       } else if (
-        !['auto', 'native', 'native-cpu', 'pytorch', 'webgpu', 'webnn', 'webgl', 'wasm'].includes(
-          backend
-        )
+        // Anything else, the removed 'pytorch' included, goes back to the default.
+        !['auto', 'native', 'native-cpu', 'webgpu', 'webnn', 'webgl', 'wasm'].includes(backend)
       ) {
         backend = defaultBackend;
       } else if (backend === 'webgpu' && !hasGPU) {

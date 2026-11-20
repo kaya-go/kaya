@@ -21,17 +21,10 @@ import {
   settingToChainBackend,
 } from '../src/contexts/ai/backendVocabulary';
 import { readyReason, resolveBackendChain } from '../src/contexts/ai/engineHelpers';
+import { loadAISettings } from '../src/hooks/game/ai-analysis-types';
 
 /** Runtime labels `getRuntimeInfo().backend` can report today. */
-const RUNTIME_LABELS = [
-  'webgpu',
-  RUNTIME_WEBGPU_GC,
-  'webnn',
-  'wasm',
-  'native',
-  'native-cpu',
-  'pytorch',
-];
+const RUNTIME_LABELS = ['webgpu', RUNTIME_WEBGPU_GC, 'webnn', 'wasm', 'native', 'native-cpu'];
 
 /** A probe that found a browser GPU: WebGPU preferred, WASM as fallback. */
 const webAutoPick: AutoPick = {
@@ -42,7 +35,7 @@ const webAutoPick: AutoPick = {
 };
 
 /** Every backend id `initOneBackend` has a case for. */
-const CHAIN_VOCABULARY = ['webgpu', 'wasm', 'native-gpu', 'native-cpu', 'pytorch'];
+const CHAIN_VOCABULARY = ['webgpu', 'wasm', 'native-gpu', 'native-cpu'];
 
 function settings(backend: AISettings['backend']): AISettings {
   return {
@@ -81,7 +74,6 @@ describe('settingToChainBackend', () => {
     expect(settingToChainBackend('wasm')).toBe('wasm');
     expect(settingToChainBackend('native')).toBe('native-gpu');
     expect(settingToChainBackend('native-cpu')).toBe('native-cpu');
-    expect(settingToChainBackend('pytorch')).toBe('pytorch');
   });
 
   test('maps the legacy web backends onto the WASM/ONNX path', () => {
@@ -92,6 +84,10 @@ describe('settingToChainBackend', () => {
   test('returns null (let the probe decide) for auto and for junk', () => {
     expect(settingToChainBackend('auto')).toBeNull();
     expect(settingToChainBackend('cpu')).toBeNull();
+  });
+
+  test('the removed PyTorch backend lets the probe decide', () => {
+    expect(settingToChainBackend('pytorch')).toBeNull();
   });
 
   test('the stale runtime label is not a settings value either', () => {
@@ -132,7 +128,7 @@ describe('resolveBackendChain', () => {
       'wasm',
       'native',
       'native-cpu',
-      'pytorch',
+      'pytorch', // removed with the PyTorch sidecar
       'webnn',
       'webgl',
       RUNTIME_WEBGPU_GC, // what a pre-fix build wrote into localStorage
@@ -185,5 +181,27 @@ describe('readyReason', () => {
   test('a backend chosen in settings drops the reason, even when it is the preferred one', () => {
     expect(readyReason('webgpu', webAutoPick, 'webgpu')).toBeUndefined();
     expect(readyReason('wasm', webAutoPick, 'wasm')).toBeUndefined();
+  });
+});
+
+/* The PyTorch sidecar was removed (specs/2026-11-20-remove-pytorch-backend.md).
+   A desktop user who had picked it keeps 'pytorch' in localStorage: it must
+   load as auto, not as a backend the chain no longer has. */
+describe('a saved PyTorch backend', () => {
+  test('loads as auto on desktop', () => {
+    const g = globalThis as Record<string, unknown>;
+    const saved = { window: g.window, localStorage: g.localStorage };
+    g.window = { __TAURI_INTERNALS__: {} };
+    g.localStorage = {
+      getItem: () => JSON.stringify({ backend: 'pytorch' }),
+      setItem: () => {},
+      removeItem: () => {},
+    };
+    try {
+      expect(loadAISettings().backend).toBe('auto');
+    } finally {
+      g.window = saved.window;
+      g.localStorage = saved.localStorage;
+    }
   });
 });

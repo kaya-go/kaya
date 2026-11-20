@@ -2,8 +2,7 @@
  * Auto-config: probe the runtime environment, pick the best model
  * + backend chain. Goal — the user never picks a model or a backend.
  *
- * Pure functions, no Tauri invoke or worker imports. PyTorch sidecar
- * availability is passed in by the caller (only it has access to invoke()).
+ * Pure functions, no Tauri invoke or worker imports.
  */
 
 import { isTauriApp } from '@kaya/platform';
@@ -12,8 +11,7 @@ export type BackendId =
   | 'webgpu' // Browser WebGPU via ORT-Web
   | 'wasm' // Browser WASM via ORT-Web
   | 'native-gpu' // Tauri: native ORT with GPU EP (DirectML/NNAPI, CoreML if built in)
-  | 'native-cpu' // Tauri: native ORT, CPU EP
-  | 'pytorch'; // Tauri: PyTorch GPU sidecar (Linux ROCm/CUDA)
+  | 'native-cpu'; // Tauri: native ORT, CPU EP
 
 export type Quantization = 'fp16' | 'fp32' | 'uint8';
 
@@ -32,7 +30,6 @@ export interface Probe {
   hasShaderF16: boolean;
   threads: number;
   approxRamMB: number | null;
-  hasPyTorchSidecar: boolean;
 }
 
 /** Stable identifiers for the auto-pick explanation shown in the status pill.
@@ -43,7 +40,6 @@ export interface Probe {
  * names here are deliberately the i18n sub-keys to keep that mapping trivial.
  * `AUTO_PICK_REASONS` is the runtime list, used by the coverage test. */
 export const AUTO_PICK_REASONS = [
-  'pytorchSidecar',
   'nativeGpu',
   'nativeCpu',
   'webgpu',
@@ -62,15 +58,8 @@ export interface AutoPick {
   reason: AutoPickReason;
 }
 
-/**
- * Probe the runtime. Async because WebGPU adapter detection is async.
- *
- * `pyTorchSidecarAvailable` must be supplied by the caller on desktop
- * (it requires a Tauri invoke() to test).
- */
-export async function probeEnvironment(opts?: {
-  pyTorchSidecarAvailable?: boolean;
-}): Promise<Probe> {
+/** Probe the runtime. Async because WebGPU adapter detection is async. */
+export async function probeEnvironment(): Promise<Probe> {
   const isTauri = isTauriApp();
   const os = detectOS();
   const { hasWebGPU, hasShaderF16 } = await detectWebGPU();
@@ -92,7 +81,6 @@ export async function probeEnvironment(opts?: {
     hasShaderF16,
     threads,
     approxRamMB,
-    hasPyTorchSidecar: opts?.pyTorchSidecarAvailable ?? false,
   };
 }
 
@@ -151,12 +139,9 @@ async function detectWebGPU(): Promise<{ hasWebGPU: boolean; hasShaderF16: boole
 
 function pickBackendChain(probe: Probe): BackendId[] {
   if (probe.isTauri) {
-    // Desktop: PyTorch sidecar first if present (Linux GPU path), then
-    // native ORT (GPU then CPU). WebGPU is unavailable in Tauri WebView
-    // on macOS/Linux (see specs/2026-05-03-webgpu-unavailable-in-tauri-webview).
-    return probe.hasPyTorchSidecar
-      ? ['pytorch', 'native-gpu', 'native-cpu']
-      : ['native-gpu', 'native-cpu'];
+    // Desktop: native ORT, GPU then CPU. WebGPU is unavailable in Tauri
+    // WebView on macOS/Linux (see specs/2026-05-03-webgpu-unavailable-in-tauri-webview).
+    return ['native-gpu', 'native-cpu'];
   }
   // Web: WebGPU if present, WASM otherwise.
   return probe.hasWebGPU ? ['webgpu', 'wasm'] : ['wasm'];
@@ -195,11 +180,6 @@ function pickQuantization(preferred: BackendId, probe: Probe): Quantization {
       // — switching to a 280 MB download on a guess would repeat exactly the
       // mistake this comment documents.
       return probe.os === 'macos' ? 'fp32' : 'fp16';
-    case 'pytorch':
-      // DATED (Linux / ROCm, Python ORT, b18c384): fp16 roughly 1.7x fp32 at
-      // batch 16. Different stack, hardware and model from what ships today,
-      // so this is plausible rather than established.
-      return 'fp16';
     case 'webgpu':
       // RUNTIME-CHECKED: without the `shader-f16` adapter feature, fp16 is
       // emulated as fp32 and is strictly slower. This is the one cell that
@@ -224,8 +204,6 @@ function pickQuantization(preferred: BackendId, probe: Probe): Quantization {
  */
 function pickReason(backend: BackendId, probe: Probe): AutoPickReason {
   switch (backend) {
-    case 'pytorch':
-      return 'pytorchSidecar';
     case 'native-gpu':
       return 'nativeGpu';
     case 'native-cpu':

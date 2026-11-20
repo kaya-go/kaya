@@ -454,7 +454,7 @@ mod tests {
         } else if cfg!(target_os = "android") {
             "nnapi"
         } else {
-            // Linux ships the CPU-only distribution; GPU is the PyTorch sidecar.
+            // Linux ships the CPU-only distribution.
             "cpu"
         };
 

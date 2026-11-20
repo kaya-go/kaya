@@ -5,7 +5,6 @@ import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { useBoardTheme } from '@kaya/themes';
 import { useToast } from '../ui/Toast';
-import { isTauriApp } from '@kaya/platform';
 import { BASE_MODELS, getModelId } from '../../hooks/game/useAIAnalysis';
 import { useAutoPick } from '../../hooks/useAutoPick';
 
@@ -72,28 +71,13 @@ export function useKayaConfig() {
 
   const userModels = useMemo(() => modelLibrary.filter(m => m.isUserModel), [modelLibrary]);
 
-  // Detect Linux desktop for showing PyTorch option
-  const isLinuxDesktop =
-    isTauriApp() &&
-    typeof navigator !== 'undefined' &&
-    /linux/i.test(navigator.userAgent ?? navigator.platform);
-
   // What auto-config would choose on this host — drives which variant the
   // model library marks as the best fit.
   const autoPick = useAutoPick();
 
-  // Check if PyTorch GPU engine is available (Linux with ROCm/CUDA only)
-  const [pytorchAvailable, setPytorchAvailable] = useState(false);
   // Check WebNN availability (Chrome with navigator.ml)
   const [webnnAvailable, setWebnnAvailable] = useState(false);
   useEffect(() => {
-    if (isTauriApp()) {
-      import('@kaya/ai-engine/pytorch-tauri-engine')
-        .then(({ isPyTorchAvailable }) => {
-          isPyTorchAvailable().then(setPytorchAvailable);
-        })
-        .catch(() => {});
-    }
     if (typeof navigator !== 'undefined' && 'ml' in navigator) {
       setWebnnAvailable(true);
     }
@@ -243,8 +227,6 @@ export function useKayaConfig() {
     handleDownload,
     handleDelete,
     handleSelect,
-    isLinuxDesktop,
-    pytorchAvailable,
     webnnAvailable,
     aiSettings,
     setAISettings,

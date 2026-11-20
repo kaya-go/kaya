@@ -2,14 +2,12 @@
 
 mod download;
 mod model_files;
-mod pytorch;
 mod updater;
 mod upload;
 
 // Re-export submodule commands. For commands with #[cfg] variants,
 // we re-export the module itself so Tauri can find the proc-macro symbols.
 pub use download::*;
-pub use pytorch::*;
 pub use updater::*;
 pub use upload::*;
 
@@ -57,6 +55,15 @@ pub async fn onnx_analyze(
     tokio::task::spawn_blocking(move || onnx_engine::analyze_position(sign_map, options))
         .await
         .map_err(|e| format!("Task failed: {}", e))?
+}
+
+/// One position of a batch analysis
+#[derive(Debug, Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BatchInput {
+    pub sign_map: Vec<Vec<i8>>,
+    #[serde(default)]
+    pub options: AnalysisOptions,
 }
 
 /// Analyze multiple positions in a batch
