@@ -8,6 +8,9 @@
 mod boundary;
 mod execution_providers;
 mod featurization;
+#[cfg(test)]
+mod real_komi_parity;
+mod komi_parity;
 mod inference;
 pub mod mcts;
 mod result_processing;
@@ -640,10 +643,14 @@ mod tests {
         let model = std::env::var("KAYA_TEST_MODEL").expect("KAYA_TEST_MODEL must point at a model");
         let mut engine = OnnxEngine::new(Path::new(&model)).expect("engine should load");
 
+        // Komi 7: a balanced game on every size. With the komi parity input the
+        // network knows 7.5 on an empty 9x9 is a White win (about 3% for Black),
+        // which the win rate bounds below would read as a broken session.
+        let komi = 7.0;
         for size in [19usize, 9, 13, 19] {
             let sign_map = vec![vec![0i8; size]; size];
             let options = AnalysisOptions {
-                komi: 7.5,
+                komi,
                 next_to_play: Some("B".to_string()),
                 history: vec![],
                 ko_info: None,
@@ -661,7 +668,7 @@ mod tests {
             assert_eq!(ownership.len(), size * size);
 
             let search = mcts::MCTSAnalysisOptions {
-                komi: 7.5,
+                komi,
                 next_to_play: Some("B".to_string()),
                 history: vec![],
                 num_visits: 50,

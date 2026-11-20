@@ -196,6 +196,17 @@ Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts`
 command), zero IPC overhead per playout. Web: MCTS runs in the Web Worker
 that owns the ORT session, batching inference across playouts.
 
+The two featurizers (`onnx-featurization.ts`, `onnx_engine/featurization.rs`)
+fill the KataGo inputs of `fillRowV7` that Kaya knows: stones, liberties, the
+ko, the last five moves and passes, the komi, and the komi parity wave
+(global 18, `komi-parity.ts` / `komi_parity.rs`). They always describe area
+scoring with simple ko, which is why global 18 is always set: KataGo sets it
+under area scoring only. Not filled, on any board: ladders (planes 14–17), the
+pass-alive area (planes 18/19), "a pass would end the game" (global 14) and
+the komi clip. A change to one featurizer goes to the other, and the `real_`
+tests in `onnx_engine/` check it against a real model. See
+[`specs/2026-11-20-komi-parity-input.md`](../specs/2026-11-20-komi-parity-input.md).
+
 A native search is aborted by request id: Rust issues the id
 (`onnx_mcts_request_id`), and `onnx_abort_mcts(id)` raises a mark that only
 grows, so an abort that reaches Rust before its search still counts. The

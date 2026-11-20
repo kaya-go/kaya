@@ -1,3 +1,4 @@
+import { komiParityWave } from './komi-parity';
 import type { GoBoard, Sign } from '@kaya/goboard';
 
 /**
@@ -119,4 +120,10 @@ export function featurizeToBuffer(
   // White-to-move and -komi for Black-to-move. Kaya's Sign has Black=1, White=-1,
   // so selfKomi = -pla * komi.
   setGlobal(5, (-pla * komi) / 20.0);
+
+  // Komi parity (rowGlobal[18]), from the area of the board itself. KataGo
+  // sets it under area scoring only; Kaya always tells the network area
+  // scoring (global 9 stays 0), so it is always set. If Kaya ever passes
+  // territory scoring, it must become conditional, as in fillRowV7.
+  setGlobal(18, komiParityWave(-pla * komi, board.width * board.height));
 }
