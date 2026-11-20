@@ -75,3 +75,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Model library: one copy per file, explicit metadata](2026-11-20-model-library-content-dedup.md)            | shipped    |
 | 2026-11-20 | [Analysis results keep their position](2026-11-20-analysis-result-position.md)                              | shipped    |
 | 2026-11-20 | [MCTS evaluates the root once, and a leaf once per batch](2026-11-20-mcts-root-first.md)                    | shipped    |
+| 2026-11-20 | [Native search: aborts kept, lock recovers](2026-11-20-native-search-abort-and-lock.md)                     | shipped    |

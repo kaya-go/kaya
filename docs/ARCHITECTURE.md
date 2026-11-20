@@ -184,6 +184,14 @@ Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts`
 command), zero IPC overhead per playout. Web: MCTS runs in the Web Worker
 that owns the ORT session, batching inference across playouts.
 
+A native search is aborted by request id: Rust issues the id
+(`onnx_mcts_request_id`), and `onnx_abort_mcts(id)` raises a mark that only
+grows, so an abort that reaches Rust before its search still counts. The
+frontend never starts a search whose signal is already aborted. The global
+engine lock recovers from a panic (`lock_or_reset` drops the engine), and
+inputs that could panic are refused before the lock. See
+[`specs/2026-11-20-native-search-abort-and-lock.md`](../specs/2026-11-20-native-search-abort-and-lock.md).
+
 The native ONNX engine keeps **one session per engine** with the model's
 natural dynamic axes — see [`specs/2026-05-03-onnx-engine-single-session.md`](../specs/2026-05-03-onnx-engine-single-session.md).
 WebGPU is unavailable in Tauri's webview on Mac/Linux — see

@@ -45,7 +45,12 @@ function ownEvaluation(child: MCTSNode): { winRate?: number; scoreLead?: number 
   return child.N > 0 ? { winRate: child.W / child.N, scoreLead: child.S / child.N } : {};
 }
 
-/** Expand a node: create children from NN policy, skipping occupied and ko-illegal intersections. */
+/**
+ * Expand a node: create children from NN policy, keeping only legal moves.
+ * `analyzeMove` refuses an occupied point, the ko point and a suicide alike;
+ * the network can rank any of them among its top moves, and `makeMove` would
+ * play a suicide.
+ */
 export function expandNode(
   node: MCTSNode,
   eval_: AnalysisResult,
@@ -54,16 +59,11 @@ export function expandNode(
   size: number
 ): void {
   node.children = new Map();
-  const koVertex = getKoVertex(board, pla, size);
   for (const suggestion of eval_.moveSuggestions) {
     const move = suggestion.move;
     if (move !== 'PASS') {
-      if (koVertex && move === koVertex) continue;
       const parsed = parseMoveStr(move, size);
-      if (!parsed) continue;
-      // Skip occupied intersections
-      const stone = board.get(parsed);
-      if (stone !== 0) continue;
+      if (!parsed || !board.analyzeMove(pla, parsed).valid) continue;
     }
     node.children.set(move, {
       N: 0,

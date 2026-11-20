@@ -1,6 +1,7 @@
 //! Tauri commands for native ONNX inference and related functionality
 
 mod download;
+mod model_files;
 mod pytorch;
 mod updater;
 mod upload;
@@ -71,11 +72,19 @@ pub async fn onnx_analyze_batch(inputs: Vec<BatchInput>) -> Result<Vec<AnalysisR
     .map_err(|e| format!("Task failed: {}", e))?
 }
 
+/// A new id for an MCTS search: pass it to `onnx_analyze_mcts`, and to
+/// `onnx_abort_mcts` to stop that search.
+#[tauri::command]
+pub fn onnx_mcts_request_id() -> u64 {
+    onnx_engine::next_mcts_request()
+}
+
 /// Run full MCTS search in Rust (eliminates per-batch IPC overhead).
 /// Progress updates are sent via the Tauri event system.
 #[tauri::command]
 pub async fn onnx_analyze_mcts(
     app: tauri::AppHandle,
+    request_id: u64,
     sign_map: Vec<Vec<i8>>,
     options: MCTSAnalysisOptions,
 ) -> Result<MCTSAnalysisResult, String> {
@@ -83,16 +92,17 @@ pub async fn onnx_analyze_mcts(
         let mut progress_cb = |progress: MCTSProgress| {
             let _ = app.emit("mcts-progress", &progress);
         };
-        onnx_engine::run_mcts_analysis(sign_map, options, &mut progress_cb)
+        onnx_engine::run_mcts_analysis(request_id, sign_map, options, &mut progress_cb)
     })
     .await
     .map_err(|e| format!("Task failed: {}", e))?
 }
 
-/// Abort an in-progress MCTS search.
+/// Abort the MCTS search `request_id` and any older one. It may run already,
+/// wait for the engine, or not have reached Rust yet.
 #[tauri::command]
-pub fn onnx_abort_mcts() {
-    onnx_engine::abort_mcts();
+pub fn onnx_abort_mcts(request_id: u64) {
+    onnx_engine::abort_mcts(request_id);
 }
 
 /// Dispose the ONNX engine

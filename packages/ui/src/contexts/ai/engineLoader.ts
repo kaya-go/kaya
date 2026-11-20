@@ -29,9 +29,12 @@ export async function getTauriCachedModelPath(data: ModelDataSource): Promise<st
 async function readFromTauriDiskCache(storageId: string): Promise<ArrayBuffer | null> {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
-    const bytes = await invoke<number[] | Uint8Array>('onnx_read_model_bytes', {
+    // The command answers with raw bytes, an ArrayBuffer here. The other shapes
+    // cover Tauri's postMessage IPC fallback.
+    const bytes = await invoke<ArrayBuffer | Uint8Array | number[]>('onnx_read_model_bytes', {
       modelId: modelCacheIdFromStorageId(storageId),
     });
+    if (bytes instanceof ArrayBuffer) return bytes;
     const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     return u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
   } catch {

@@ -11,7 +11,6 @@
  */
 
 import type { SignMap } from '@kaya/goboard';
-import type { Sign } from '@kaya/goboard';
 import {
   Engine,
   type EngineAnalysisOptions,
@@ -19,7 +18,7 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import { DEFAULT_KOMI, type AnalysisResult } from './types';
-import type { MCTSProgress } from './onnx-types';
+import { runNativeSearch } from './tauri-mcts';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -57,6 +56,8 @@ export class TauriEngine extends Engine {
   private executionProvider: ExecutionProviderPreference;
   private providerIsGpu = false;
   private modelIsFp16 = false;
+  /** Set by `dispose`: the native slot is empty on purpose, not lost. */
+  private disposed = false;
 
   constructor(config: TauriEngineConfig = {}) {
     super(config);
@@ -73,6 +74,23 @@ export class TauriEngine extends Engine {
     // Get invoke and listen functions immediately in constructor
     this.invoke = getTauriInvoke();
     this.listen = getTauriListen();
+  }
+
+  /**
+   * Run an analysis command, reporting a native engine that is gone: after a
+   * panic, or an `onnx_dispose` from the engine this one replaced. Every later
+   * call fails until the owner builds a new engine on `onEngineLost`.
+   */
+  private async invokeAnalysis<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
+    try {
+      return await this.invoke!<T>(cmd, args);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      if (!this.disposed && /Engine not initialized|panicked/.test(message)) {
+        this.onEngineLost?.(new Error(message));
+      }
+      throw e;
+    }
   }
 
   private reportProgress(stage: UploadProgress['stage'], progress: number, message: string): void {
@@ -236,86 +254,13 @@ export class TauriEngine extends Engine {
     if (!this.invoke) {
       throw new Error('TauriEngine can only be used in a Tauri environment');
     }
-
-    const numVisits: number = (options as any).numVisits ?? 1;
-    const komi = options.komi ?? DEFAULT_KOMI;
-    const onProgress = (options as any).onProgress as ((p: MCTSProgress) => void) | undefined;
-    const signal = (options as any).signal as AbortSignal | undefined;
-
-    // Build ko info
-    const koInfo = (options as any).koInfo as { sign: Sign; vertex: [number, number] } | undefined;
-    let koOption: { sign: number; vertex: [number, number] } | undefined;
-    if (koInfo && (koInfo.sign as number) !== 0) {
-      koOption = { sign: koInfo.sign as number, vertex: koInfo.vertex };
-    }
-
-    const includeMove = options.includeMove;
-
-    // Listen for progress events from Rust
-    let unlisten: (() => void) | undefined;
-    if (onProgress && this.listen) {
-      unlisten = await this.listen<MCTSProgress>(
-        'mcts-progress',
-        (event: { payload: MCTSProgress }) => {
-          onProgress(event.payload);
-        }
-      );
-    }
-
-    // Wire abort signal to Rust abort command
-    let abortHandler: (() => void) | undefined;
-    if (signal) {
-      abortHandler = () => {
-        this.invoke!('onnx_abort_mcts');
-      };
-      if (signal.aborted) {
-        abortHandler();
-      } else {
-        signal.addEventListener('abort', abortHandler, { once: true });
-      }
-    }
-
-    try {
-      // Single IPC call — entire MCTS runs in Rust
-      const result = await this.invoke<{
-        moveSuggestions: {
-          move: string;
-          probability: number;
-          winRate?: number;
-          scoreLead?: number;
-          visits?: number;
-        }[];
-        winRate: number;
-        scoreLead: number;
-        currentTurn: string;
-        ownership?: number[];
-        visits?: number;
-      }>('onnx_analyze_mcts', {
-        signMap: signMap.map(row => row.map(s => s as number)),
-        options: {
-          komi,
-          nextToPlay: options.nextToPlay ?? null,
-          history: this.convertHistory(options.history),
-          numVisits,
-          includeMove: includeMove ?? null,
-          koInfo: koOption ?? null,
-        },
-      });
-
-      return {
-        moveSuggestions: result.moveSuggestions,
-        winRate: result.winRate,
-        scoreLead: result.scoreLead,
-        currentTurn: result.currentTurn as 'B' | 'W',
-        ownership: result.ownership,
-        visits: result.visits,
-      };
-    } finally {
-      if (unlisten) unlisten();
-      if (signal && abortHandler) {
-        signal.removeEventListener('abort', abortHandler);
-      }
-    }
+    const ipc = {
+      invoke: this.invoke,
+      listen: this.listen,
+      invokeAnalysis: <T>(cmd: string, args: Record<string, unknown>) =>
+        this.invokeAnalysis<T>(cmd, args),
+    };
+    return runNativeSearch(ipc, signMap, options);
   }
 
   async analyzeBatch(
@@ -397,7 +342,7 @@ export class TauriEngine extends Engine {
 
     const inferenceStart = performance.now();
     const batchInputs = uncachedInputs.map(u => u.input);
-    const batchResults = await this.invoke<AnalysisResult[]>('onnx_analyze_batch', {
+    const batchResults = await this.invokeAnalysis<AnalysisResult[]>('onnx_analyze_batch', {
       inputs: batchInputs,
     });
     const inferenceTime = performance.now() - inferenceStart;
@@ -434,6 +379,7 @@ export class TauriEngine extends Engine {
   }
 
   async dispose(): Promise<void> {
+    this.disposed = true;
     if (this.invoke) {
       try {
         await this.invoke('onnx_dispose');

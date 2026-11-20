@@ -11,17 +11,20 @@ pub async fn download_file(_url: String) -> Result<String, String> {
 #[cfg(desktop)]
 #[tauri::command]
 pub async fn download_file(app: tauri::AppHandle, url: String) -> Result<String, String> {
-    use futures::StreamExt;
-    use tauri::Emitter;
-    use tokio::io::AsyncWriteExt;
+    use super::model_files::{unique_temp_path, DOWNLOAD_PREFIX};
+    use std::time::Duration;
 
     // Validate URL scheme
     if !url.starts_with("https://") {
         return Err("Only HTTPS URLs are allowed".to_string());
     }
 
+    // No total timeout, which would cut a slow 280 MB download short: a
+    // connection that stops sending is what must fail, instead of hanging.
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::limited(10))
+        .connect_timeout(Duration::from_secs(30))
+        .read_timeout(Duration::from_secs(60))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -35,22 +38,46 @@ pub async fn download_file(app: tauri::AppHandle, url: String) -> Result<String,
         return Err(format!("Download failed with status: {}", response.status()));
     }
 
-    // Create temp file in system temp directory (matches Tauri fs:allow-temp-* scope)
-    let temp_dir = std::env::temp_dir();
-    let temp_path = temp_dir.join(format!("kaya_download_{}.tmp", std::process::id()));
+    // One file per download: two downloads at once shared the old pid-only name.
+    let temp_path = unique_temp_path(DOWNLOAD_PREFIX, "tmp");
     let temp_path_str = temp_path
         .to_str()
         .ok_or("Invalid temp path")?
         .to_string();
 
+    // create_new: never write through a file someone else put at that name.
+    let file = tokio::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp_path)
+        .await
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    // A download that fails halfway leaves nothing behind.
+    if let Err(e) = write_body(&app, response, file).await {
+        let _ = tokio::fs::remove_file(&temp_path).await;
+        return Err(e);
+    }
+
+    Ok(temp_path_str)
+}
+
+/// Stream the response body into `file`, emitting progress events. Fails when
+/// the body ends short of its announced length.
+#[cfg(desktop)]
+async fn write_body(
+    app: &tauri::AppHandle,
+    response: reqwest::Response,
+    mut file: tokio::fs::File,
+) -> Result<(), String> {
+    use futures::StreamExt;
+    use tauri::Emitter;
+    use tokio::io::AsyncWriteExt;
+
     let total_size = response.content_length().unwrap_or(0);
     let mut downloaded: u64 = 0;
     let mut stream = response.bytes_stream();
     let mut last_progress: u64 = 0;
-
-    let mut file = tokio::fs::File::create(&temp_path)
-        .await
-        .map_err(|e| format!("Failed to create temp file: {}", e))?;
 
     // Emit initial progress
     let _ = app.emit(
@@ -90,6 +117,13 @@ pub async fn download_file(app: tauri::AppHandle, url: String) -> Result<String,
         .map_err(|e| format!("Failed to flush temp file: {}", e))?;
     drop(file);
 
+    if total_size > 0 && downloaded != total_size {
+        return Err(format!(
+            "Download incomplete: received {} of {} bytes",
+            downloaded, total_size
+        ));
+    }
+
     // Emit completion
     let _ = app.emit(
         "download-progress",
@@ -100,5 +134,5 @@ pub async fn download_file(app: tauri::AppHandle, url: String) -> Result<String,
         }),
     );
 
-    Ok(temp_path_str)
+    Ok(())
 }

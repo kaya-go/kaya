@@ -3,8 +3,6 @@
 //! This runs the entire MCTS loop in Rust, eliminating the IPC overhead
 //! that occurs when MCTS runs in JS with per-batch Tauri IPC calls.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use serde::{Deserialize, Serialize};
 
 use super::types::{AnalysisOptions, AnalysisResult, HistoryMove};
@@ -146,10 +144,6 @@ impl Board {
         }
     }
 
-    fn get(&self, x: usize, y: usize) -> i8 {
-        self.grid[y][x]
-    }
-
     fn neighbors(&self, x: usize, y: usize) -> Vec<(usize, usize)> {
         let mut result = Vec::with_capacity(4);
         if x > 0 { result.push((x - 1, y)); }
@@ -250,7 +244,7 @@ fn parse_move_str(move_str: &str, size: usize) -> Option<(usize, usize)> {
     let letter = chars[0].to_ascii_uppercase();
     let x = LETTERS.find(letter)?;
     let num: usize = move_str[1..].parse().ok()?;
-    if num == 0 || num > size {
+    if x >= size || num == 0 || num > size {
         return None;
     }
     let y = size - num;
@@ -268,27 +262,23 @@ fn get_ko_vertex(board: &Board, pla: i8) -> Option<String> {
     None
 }
 
-/// Expand a node: create children from NN policy, skipping occupied/ko-illegal.
+/// Expand a node: create children from NN policy, keeping only legal moves.
+/// `make_move` refuses an occupied point, the ko point and a suicide alike; the
+/// network can rank any of them among its top moves.
 fn expand_node(
     node: &mut MCTSNode,
     result: &AnalysisResult,
     board: &Board,
     pla: i8,
 ) {
-    let ko_vertex = get_ko_vertex(board, pla);
     let mut children = Vec::new();
 
     for suggestion in &result.move_suggestions {
         let move_str = &suggestion.move_str;
         if move_str != "PASS" {
-            if let Some(ref kv) = ko_vertex {
-                if move_str == kv { continue; }
-            }
-            if let Some((x, y)) = parse_move_str(move_str, board.size) {
-                if board.get(x, y) != 0 { continue; }
-            } else {
-                continue;
-            }
+            let legal = parse_move_str(move_str, board.size)
+                .is_some_and(|(x, y)| board.make_move(pla, x, y).is_ok());
+            if !legal { continue; }
         }
         children.push((move_str.clone(), MCTSNode::new(suggestion.probability)));
     }
@@ -346,7 +336,7 @@ impl OnnxEngine {
         &mut self,
         sign_map: &[Vec<i8>],
         options: &MCTSAnalysisOptions,
-        abort_flag: &AtomicBool,
+        should_abort: &dyn Fn() -> bool,
         progress_callback: &mut dyn FnMut(MCTSProgress),
     ) -> Result<MCTSAnalysisResult, String> {
         let size = sign_map.len();
@@ -394,7 +384,7 @@ impl OnnxEngine {
 
         let mut completed: usize = 0;
         while completed < num_visits {
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Until the root is expanded every path stops at it, so a full first
             // batch would evaluate the root batch_size times over. Evaluate it alone.
@@ -464,8 +454,6 @@ impl OnnxEngine {
                         }
                     }
 
-                    child_indices.push(best_idx);
-
                     let (ref move_str, _) = children[best_idx];
 
                     // Apply the move to get the new board state
@@ -494,6 +482,9 @@ impl OnnxEngine {
                         }
                     }
 
+                    // Only a move that was played joins the path: an illegal one
+                    // pushed first got the visits and value of the node above it.
+                    child_indices.push(best_idx);
                     cur_pla = -cur_pla;
 
                     // Navigate to child node
@@ -529,7 +520,7 @@ impl OnnxEngine {
 
             // Check abort before starting the (slow) ONNX inference. If the user
             // navigated away during leaf selection, skip the inference entirely.
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Phase 2: Batch evaluate unexpanded leaves
             let to_evaluate: Vec<usize> = pending.iter().enumerate()
@@ -560,7 +551,7 @@ impl OnnxEngine {
             // Inference is the dominant per-batch cost. Check abort right after
             // it returns so we don't waste time on backup + progress emit when
             // the user has already moved on.
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Phase 3: Remove virtual loss, expand leaves, backup values
             let mut eval_idx: usize = 0;
@@ -655,7 +646,7 @@ impl OnnxEngine {
 
         // Force additional visits through includeMove if needed
         if let Some(ref include_move) = options.include_move {
-            if num_visits > 1 && !abort_flag.load(Ordering::Relaxed) {
+            if num_visits > 1 && !should_abort() {
                 if let Some(ref children) = root.children {
                     if let Some((child_idx, _)) = children.iter().enumerate()
                         .find(|(_, (m, _))| m == include_move)
@@ -674,7 +665,7 @@ impl OnnxEngine {
                                 include_move,
                                 extra_needed,
                                 size,
-                                abort_flag,
+                                should_abort,
                             )?;
                         }
                     }
@@ -698,10 +689,10 @@ impl OnnxEngine {
         include_move: &str,
         extra_needed: usize,
         size: usize,
-        abort_flag: &AtomicBool,
+        should_abort: &dyn Fn() -> bool,
     ) -> Result<(), String> {
         for _ in 0..extra_needed {
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Force select includeMove at root
             let mut cur_board = root_board.clone();
@@ -767,7 +758,6 @@ impl OnnxEngine {
                     }
                 }
 
-                path_indices.push(best_idx);
                 let (ref move_str, _) = children[best_idx];
 
                 if move_str == "PASS" {
@@ -791,6 +781,8 @@ impl OnnxEngine {
                 } else {
                     break;
                 }
+                // Played: only now does the move join the path (see `run_mcts`).
+                path_indices.push(best_idx);
 
                 cur_pla = -cur_pla;
                 let n = unsafe { &mut *cur_node };
@@ -900,5 +892,51 @@ impl OnnxEngine {
             ownership,
             visits: Some(root.n),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::onnx_engine::types::MoveSuggestion;
+
+    fn policy(moves: &[&str]) -> AnalysisResult {
+        AnalysisResult {
+            move_suggestions: moves
+                .iter()
+                .map(|m| MoveSuggestion { move_str: m.to_string(), probability: 0.25 })
+                .collect(),
+            win_rate: 0.5,
+            score_lead: 0.0,
+            current_turn: "W".to_string(),
+            ownership: None,
+        }
+    }
+
+    fn children(node: &MCTSNode) -> Vec<&str> {
+        node.children.as_ref().unwrap().iter().map(|(m, _)| m.as_str()).collect()
+    }
+
+    /// The network may rank a suicide point among its top moves. Expansion only
+    /// skipped occupied and ko points, so the search kept such a move as a child,
+    /// and every visit that picked it backed up its parent's value under it.
+    #[test]
+    fn expansion_drops_suicide_points() {
+        // Black surrounds C3: White there has no liberty and captures nothing.
+        let mut grid = vec![vec![0i8; 5]; 5];
+        for (x, y) in [(2, 1), (1, 2), (3, 2), (2, 3)] {
+            grid[y][x] = 1;
+        }
+        let board = Board::with_ko(&grid, &None);
+        let result = policy(&["C3", "A5", "C4", "PASS"]);
+
+        let mut white = MCTSNode::new(1.0);
+        expand_node(&mut white, &result, &board, -1);
+        assert_eq!(children(&white), vec!["A5", "PASS"]);
+
+        // For Black, C3 is an eye of its own, a legal move.
+        let mut black = MCTSNode::new(1.0);
+        expand_node(&mut black, &result, &board, 1);
+        assert_eq!(children(&black), vec!["C3", "A5", "PASS"]);
     }
 }

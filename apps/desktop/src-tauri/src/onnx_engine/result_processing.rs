@@ -49,13 +49,19 @@ pub fn process_raw_outputs(
     let max_logit = policy_slice.iter().cloned().fold(f32::NEG_INFINITY, f32::max);
     let mut probs: Vec<f32> = policy_slice.iter().map(|p| (p - max_logit).exp()).collect();
     let sum_probs: f32 = probs.iter().sum();
+    // A NaN or infinite logit (an fp16 overflow, a broken GPU path) makes the
+    // sum NaN. Refuse it, so a warm-up on such a backend fails and the chain
+    // moves on, rather than ranking NaN probabilities.
+    if !sum_probs.is_finite() || sum_probs <= 0.0 {
+        return Err("The model returned a policy that is not a finite number".to_string());
+    }
     for p in &mut probs {
         *p /= sum_probs;
     }
 
     // Top 10 moves
     let mut indices: Vec<usize> = (0..probs.len()).collect();
-    indices.sort_by(|&a, &b| probs[b].partial_cmp(&probs[a]).unwrap());
+    indices.sort_by(|&a, &b| probs[b].total_cmp(&probs[a]));
 
     let move_suggestions: Vec<MoveSuggestion> = indices
         .iter()
@@ -107,61 +113,111 @@ impl OnnxEngine {
         outputs: &OnnxOutputs,
         plas: &[i8],
     ) -> Result<Vec<AnalysisResult>, String> {
-        let size = self.board_size;
-        let batch_size = plas.len();
-
-        // Determine strides from dimensions
-        let policy_dims = &outputs.policy_dims;
-        let num_policy_heads = if policy_dims.len() == 3 {
-            policy_dims[1]
-        } else {
-            1
-        };
-        let num_moves = if policy_dims.len() == 3 {
-            policy_dims[2]
-        } else {
-            policy_dims[1]
-        };
-        let policy_stride = num_policy_heads * num_moves;
-        let value_stride = 3;
-        let miscvalue_stride = 10;
-        let ownership_stride = size * size;
-
-        let mut results = Vec::with_capacity(batch_size);
-
-        for b in 0..batch_size {
-            let pla = plas[b];
-
-            let policy_start = b * policy_stride;
-            let policy_end = policy_start + num_moves;
-            let value_start = b * value_stride;
-            let misc_start = b * miscvalue_stride;
-
-            let ownership_slice = outputs.ownership.as_ref().map(|own| {
-                let start = b * ownership_stride;
-                &own[start..start + ownership_stride]
-            });
-
-            let result = process_raw_outputs(
-                &outputs.policy[policy_start..policy_end],
-                &outputs.value[value_start..value_start + 3],
-                &outputs.miscvalue[misc_start..misc_start + miscvalue_stride],
-                ownership_slice,
-                &[1, num_moves],
-                pla,
-                size,
-            )?;
-
-            results.push(result);
-        }
-
-        Ok(results)
+        process_batch_outputs(outputs, plas, self.board_size)
     }
+}
+
+/// One batch item's slice of a model output. A custom model with other heads
+/// or shapes gives shorter outputs than KataGo's, and slicing past their end
+/// panicked under the engine lock.
+fn item_slice<'a>(
+    data: &'a [f32],
+    item: usize,
+    stride: usize,
+    len: usize,
+    head: &str,
+) -> Result<&'a [f32], String> {
+    let start = item * stride;
+    data.get(start..start + len).ok_or_else(|| {
+        format!(
+            "The model's '{}' output has {} values, too few for batch item {} ({} each)",
+            head,
+            data.len(),
+            item,
+            stride
+        )
+    })
+}
+
+/// Split batched outputs into one result per position.
+fn process_batch_outputs(
+    outputs: &OnnxOutputs,
+    plas: &[i8],
+    size: usize,
+) -> Result<Vec<AnalysisResult>, String> {
+    let batch_size = plas.len();
+    if batch_size == 0 {
+        return Ok(vec![]);
+    }
+
+    // [batch, heads, moves] or [batch, moves]; only the first head is used.
+    let (num_policy_heads, num_moves) = match outputs.policy_dims.as_slice() {
+        [_, heads, moves] => (*heads, *moves),
+        [_, moves] => (1, *moves),
+        dims => return Err(format!("Unexpected policy output shape {:?}", dims)),
+    };
+    let policy_stride = num_policy_heads * num_moves;
+    let value_stride = 3;
+    // KataGo exports 10 misc values, older nets fewer: use what the model gives.
+    let miscvalue_stride = outputs.miscvalue.len() / batch_size;
+    let ownership_stride = size * size;
+
+    let mut results = Vec::with_capacity(batch_size);
+
+    for (b, &pla) in plas.iter().enumerate() {
+        let ownership_slice = match &outputs.ownership {
+            Some(own) => Some(item_slice(own, b, ownership_stride, ownership_stride, "ownership")?),
+            None => None,
+        };
+
+        let result = process_raw_outputs(
+            item_slice(&outputs.policy, b, policy_stride, num_moves, "policy")?,
+            item_slice(&outputs.value, b, value_stride, value_stride, "value")?,
+            item_slice(&outputs.miscvalue, b, miscvalue_stride, miscvalue_stride, "miscvalue")?,
+            ownership_slice,
+            &[1, num_moves],
+            pla,
+            size,
+        )?;
+
+        results.push(result);
+    }
+
+    Ok(results)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::process_raw_outputs;
+    use super::{process_batch_outputs, process_raw_outputs};
+    use crate::onnx_engine::types::OnnxOutputs;
+
+    fn outputs(policy_dims: Vec<usize>, miscvalue: usize, ownership: Option<usize>) -> OnnxOutputs {
+        let batch = policy_dims[0];
+        OnnxOutputs {
+            policy: vec![0.0; policy_dims.iter().product()],
+            value: vec![0.0; batch * 3],
+            miscvalue: vec![0.0; miscvalue],
+            ownership: ownership.map(|n| vec![0.0; n]),
+            policy_dims,
+        }
+    }
+
+    /// Shapes other than KataGo's sliced past the end of an output and panicked
+    /// under the engine lock. A shorter misc head is fine, the rest an error.
+    #[test]
+    fn batch_outputs_of_another_shape_are_an_error_not_a_panic() {
+        // Two 2x2 positions: 5 moves each, one policy head.
+        let ok = process_batch_outputs(&outputs(vec![2, 1, 5], 2 * 6, Some(2 * 4)), &[1, -1], 2);
+        assert_eq!(ok.map(|r| r.len()), Ok(2));
+
+        let short_ownership = outputs(vec![2, 1, 5], 2 * 10, Some(4));
+        let err = process_batch_outputs(&short_ownership, &[1, -1], 2).unwrap_err();
+        assert!(err.contains("ownership"), "{err}");
+
+        let flat_policy = outputs(vec![5], 10, None);
+        let err = process_batch_outputs(&flat_policy, &[1], 2).unwrap_err();
+        assert!(err.contains("policy"), "{err}");
+    }
 
     #[test]
     fn ownership_is_tanh_squashed_and_black_centric() {
@@ -183,5 +239,15 @@ mod tests {
                 assert!((-1.0..=1.0).contains(v));
             }
         }
+    }
+
+    /// A NaN logit (an fp16 overflow, a broken GPU path) made the sort panic
+    /// while the engine lock was held, which poisoned it.
+    #[test]
+    fn a_nan_policy_is_an_error_not_a_panic() {
+        let mut policy = [0.0f32; 5];
+        policy[2] = f32::NAN;
+        let result = process_raw_outputs(&policy, &[0.0; 3], &[0.0; 10], None, &[1, 1, 5], 1, 2);
+        assert!(result.unwrap_err().contains("policy"));
     }
 }

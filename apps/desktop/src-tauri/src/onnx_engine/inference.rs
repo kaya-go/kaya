@@ -2,10 +2,17 @@
 
 use half::f16;
 use ndarray::{Array2, Array4};
-use ort::value::Tensor;
+use ort::session::SessionOutputs;
+use ort::value::{DynValue, Tensor};
 
 use super::types::OnnxOutputs;
 use super::OnnxEngine;
+
+/// A named model output. Indexing `outputs["policy"]` panics when a custom
+/// model lacks that output, and that panic poisoned the engine lock.
+fn output<'a>(outputs: &'a SessionOutputs<'_>, name: &str) -> Result<&'a DynValue, String> {
+    outputs.get(name).ok_or_else(|| format!("The model has no '{}' output", name))
+}
 
 impl OnnxEngine {
     /// Run ONNX inference (dispatches to fp16 or fp32 path).
@@ -39,20 +46,20 @@ impl OnnxEngine {
             .run(ort::inputs![bin_tensor, global_tensor])
             .map_err(|e| format!("Inference failed: {}", e))?;
 
-        let (policy_shape, policy_data) = outputs["policy"]
+        let (policy_shape, policy_data) = output(&outputs, "policy")?
             .try_extract_tensor::<f32>()
             .map_err(|e| format!("Failed to extract policy: {}", e))?;
 
-        let (_value_shape, value_data) = outputs["value"]
+        let (_value_shape, value_data) = output(&outputs, "value")?
             .try_extract_tensor::<f32>()
             .map_err(|e| format!("Failed to extract value: {}", e))?;
 
-        let (_misc_shape, miscvalue_data) = outputs["miscvalue"]
+        let (_misc_shape, miscvalue_data) = output(&outputs, "miscvalue")?
             .try_extract_tensor::<f32>()
             .map_err(|e| format!("Failed to extract miscvalue: {}", e))?;
 
-        let ownership = if outputs.contains_key("ownership") {
-            let (_own_shape, own_data) = outputs["ownership"]
+        let ownership = if let Some(own) = outputs.get("ownership") {
+            let (_own_shape, own_data) = own
                 .try_extract_tensor::<f32>()
                 .map_err(|e| format!("Failed to extract ownership: {}", e))?;
             Some(own_data.to_vec())
@@ -91,20 +98,20 @@ impl OnnxEngine {
             .run(ort::inputs![bin_tensor, global_tensor])
             .map_err(|e| format!("Inference failed: {}", e))?;
 
-        let (policy_shape, policy_data) = outputs["policy"]
+        let (policy_shape, policy_data) = output(&outputs, "policy")?
             .try_extract_tensor::<f16>()
             .map_err(|e| format!("Failed to extract policy: {}", e))?;
 
-        let (_value_shape, value_data) = outputs["value"]
+        let (_value_shape, value_data) = output(&outputs, "value")?
             .try_extract_tensor::<f16>()
             .map_err(|e| format!("Failed to extract value: {}", e))?;
 
-        let (_misc_shape, miscvalue_data) = outputs["miscvalue"]
+        let (_misc_shape, miscvalue_data) = output(&outputs, "miscvalue")?
             .try_extract_tensor::<f16>()
             .map_err(|e| format!("Failed to extract miscvalue: {}", e))?;
 
-        let ownership = if outputs.contains_key("ownership") {
-            let (_own_shape, own_data) = outputs["ownership"]
+        let ownership = if let Some(own) = outputs.get("ownership") {
+            let (_own_shape, own_data) = own
                 .try_extract_tensor::<f16>()
                 .map_err(|e| format!("Failed to extract ownership: {}", e))?;
             Some(own_data.iter().map(|v| v.to_f32()).collect())

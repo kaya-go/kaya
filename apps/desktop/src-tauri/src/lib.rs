@@ -39,6 +39,7 @@ pub fn run() {
             commands::onnx_initialize_from_path,
             commands::onnx_analyze,
             commands::onnx_analyze_batch,
+            commands::onnx_mcts_request_id,
             commands::onnx_analyze_mcts,
             commands::onnx_abort_mcts,
             commands::onnx_dispose,
