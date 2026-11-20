@@ -12,16 +12,57 @@ pub struct BatchInput {
     pub options: onnx_engine::AnalysisOptions,
 }
 
-/// Check if PyTorch GPU inference is available
+/// What the PyTorch probe answered, asked once per run.
+#[cfg(target_os = "linux")]
+static PYTORCH_AVAILABLE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+
+/// Check if PyTorch GPU inference is available.
+///
+/// The probe starts Python and imports torch, which takes seconds, and the
+/// frontend asks at every start-up. As a sync command it ran on the main thread
+/// and froze the window meanwhile. It now runs off the async runtime, once:
+/// PyTorch installed while the app runs shows up after a restart.
 #[tauri::command]
-pub fn pytorch_is_available() -> bool {
+pub async fn pytorch_is_available() -> bool {
     #[cfg(target_os = "linux")]
     {
-        crate::pytorch_engine::is_pytorch_available()
+        tokio::task::spawn_blocking(|| {
+            cached_probe(&PYTORCH_AVAILABLE, crate::pytorch_engine::is_pytorch_available)
+        })
+        .await
+        .unwrap_or(false)
     }
     #[cfg(not(target_os = "linux"))]
     {
         false
+    }
+}
+
+/// The cached answer, running `probe` only the first time. Concurrent first
+/// calls wait for the one probe in flight.
+#[cfg(any(target_os = "linux", test))]
+fn cached_probe(cache: &std::sync::OnceLock<bool>, probe: impl FnOnce() -> bool) -> bool {
+    *cache.get_or_init(probe)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::cached_probe;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::OnceLock;
+
+    #[test]
+    fn the_pytorch_probe_runs_once() {
+        let cache = OnceLock::new();
+        let runs = AtomicUsize::new(0);
+        let probe = || {
+            runs.fetch_add(1, Ordering::SeqCst);
+            true
+        };
+
+        assert!(cached_probe(&cache, probe));
+        assert!(cached_probe(&cache, probe));
+        assert_eq!(runs.load(Ordering::SeqCst), 1);
     }
 }
 
