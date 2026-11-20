@@ -11,7 +11,7 @@
 import { describe, test, expect } from 'bun:test';
 import { AnalysisQueue, generateAnalysisCacheKey, type AnalysisRequest } from '../src/queue';
 import type { Engine } from '../src/base-engine';
-import type { AnalysisResult } from '../src/types';
+import { ANALYSIS_ENGINE_VERSION, type AnalysisResult } from '../src/types';
 import type { SignMap } from '@kaya/goboard';
 
 const EMPTY_BOARD: SignMap = Array.from({ length: 9 }, () => Array(9).fill(0));
@@ -376,6 +376,44 @@ describe('AnalysisQueue cache and the forced move', () => {
     expect(await ask(queue, search(32, 'A1'))).toBe(false);
     expect(await ask(queue, search(32, 'A1'))).toBe(true);
     expect(engine.runs).toHaveLength(2);
+  });
+});
+
+/**
+ * Analysis read from a file another engine version wrote (every `KA` saved
+ * before the komi parity input) is shown, but never stands in for a run: its
+ * values came from other network inputs. A new result replaces it.
+ */
+describe('AnalysisQueue and analysis from another engine version', () => {
+  function sharedWith(entry: AnalysisResult) {
+    const shared = { current: new Map<string, AnalysisResult>() };
+    const key = generateAnalysisCacheKey(request(0, 'live').signMap, 'W', 7.5, []);
+    shared.current.set(key, entry);
+    return { shared, key };
+  }
+
+  test('never answers a request, and the new result replaces it', async () => {
+    const legacy: AnalysisResult = { ...result(9), visits: 2500, engineVersion: 1 };
+    const { shared, key } = sharedWith(legacy);
+    const engine = new SearchEngine();
+    const queue = new AnalysisQueue(engine as unknown as Engine, { cacheRef: shared });
+
+    expect(queue.peek(request(0, 'live'))).toBeNull();
+    const fresh = await queue.submit(request(0, 'live')).result;
+
+    // Run at the depth asked for: the old entry's 2500 visits are no reason to
+    // search that deep again.
+    expect(engine.runs).toEqual([{ numVisits: 1, includeMove: undefined }]);
+    expect(shared.current.get(key)).toBe(fresh);
+    expect(queue.peek(request(0, 'live'))).toBe(fresh);
+  });
+
+  test('analysis this engine version wrote answers as before', () => {
+    const saved: AnalysisResult = { ...result(9), engineVersion: ANALYSIS_ENGINE_VERSION };
+    const { shared } = sharedWith(saved);
+    const queue = new AnalysisQueue(new SearchEngine() as unknown as Engine, { cacheRef: shared });
+
+    expect(queue.peek(request(0, 'live'))).toBe(saved);
   });
 });
 

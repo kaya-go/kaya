@@ -1,4 +1,4 @@
-import type { AnalysisResult, MoveSuggestion } from '@kaya/ai-engine';
+import { ANALYSIS_ENGINE_VERSION, type AnalysisResult, type MoveSuggestion } from '@kaya/ai-engine';
 import type { SGFNodeData } from '@kaya/sgf';
 import type { GameTree, GameTreeNode } from '@kaya/gametree';
 import {
@@ -35,6 +35,11 @@ export interface KayaAnalysisData {
   }>;
   /** Ownership (Optional: Compressed string) */
   o?: string;
+  /**
+   * ANALYSIS_ENGINE_VERSION that computed the values. Absent: 1, every KA
+   * saved before 0.4.19.
+   */
+  e?: number;
 }
 
 /**
@@ -110,6 +115,10 @@ export function serializeAnalysis(result: AnalysisResult): string {
     data.o = encodeOwnership(result.ownership);
   }
 
+  // Analysis read from an older file keeps its version: saving it again must
+  // not pass its values for this engine's.
+  data.e = result.engineVersion ?? ANALYSIS_ENGINE_VERSION;
+
   return JSON.stringify(data);
 }
 
@@ -134,6 +143,8 @@ export function parseAnalysis(json: string, currentTurn: 'B' | 'W'): AnalysisRes
       visits: data.v,
       currentTurn, // Caller must provide this as it's not stored in the JSON (inferred from node)
       moveSuggestions,
+      // Shown, but answers a request only when this engine version wrote it.
+      engineVersion: data.e ?? 1,
     };
 
     // Restore ownership if present
