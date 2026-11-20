@@ -77,3 +77,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [MCTS evaluates the root once, and a leaf once per batch](2026-11-20-mcts-root-first.md)                    | shipped    |
 | 2026-11-20 | [Native search: aborts kept, lock recovers](2026-11-20-native-search-abort-and-lock.md)                     | shipped    |
 | 2026-11-20 | [SGF loading: what a file holds reaches the board](2026-11-20-sgf-loading-defects.md)                       | shipped    |
+| 2026-11-20 | [Move probability is the prior; shared cache not evicted](2026-11-20-probability-prior-and-shared-cache.md) | shipped    |

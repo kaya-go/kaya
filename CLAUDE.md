@@ -129,7 +129,7 @@ kaya/
 - `useLiveAnalysis` and `useFullGameAnalysis` are thin queue submitters — no module-level guard state
 - Desktop: full MCTS loop runs in native Rust (`onnx_analyze_mcts` command) — zero IPC overhead. A search is aborted by a request id Rust issues, never by a shared flag, and is not started once its signal is aborted. The `ENGINE` lock recovers from a panic through `lock_or_reset`; validate command inputs before taking it. See [`specs/2026-11-20-native-search-abort-and-lock.md`](specs/2026-11-20-native-search-abort-and-lock.md)
 - Web: MCTS runs in Web Worker with batched inference; full-game uses `queue.submitBatch()` for the policy-only fast path
-- Heatmap metric toggle: policy / ΔWin% / ΔScore. Colors (and the policy text) show each move's share of the search's visits, or the policy prior when no search ran. `MoveSuggestion.probability` is always the prior; the share comes from `visits`
+- Heatmap metric toggle: policy / ΔWin% / ΔScore. Colors (and the policy text) show each move's share of the search's visits, or the policy prior when no search ran. `MoveSuggestion.probability` is always the prior; the share comes from `visits`. See [`specs/2026-11-20-probability-prior-and-shared-cache.md`](specs/2026-11-20-probability-prior-and-shared-cache.md)
 - Next move display: compares played move to AI's top suggestion with rank and delta metrics
 - See [`specs/2026-05-04-ai-analysis-mcts-first.md`](specs/2026-05-04-ai-analysis-mcts-first.md) for the rationale
 
