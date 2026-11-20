@@ -8,8 +8,10 @@ import {
   extractGameInfo as extractGameInfoFromSGF,
   gameInfoToPropertyWrites,
   vertexToSGF,
+  withUtf8Charset,
   type GameInfoPatch,
-  type SGFNode,
+  type GameTreeNodeRecursive,
+  type SGFNodeData,
 } from '@kaya/sgf';
 import { getHandicapStones, type Vertex } from '@kaya/goboard';
 import { type SGFProperty, type NewGameConfig } from '../../types/game';
@@ -125,8 +127,11 @@ export function useGameTreeState() {
   // The content is parsed and the tree built before anything of the current
   // game is touched, so a file that fails leaves it whole. `onParsed` runs just
   // before the new tree is committed, for state that must be replaced with it.
+  // It gets the converted root, not the parsed one: the conversion is what
+  // expands compressed point lists, and analysis read from the file must be
+  // keyed on the positions the board will show.
   const loadSGFAsync = useCallback(
-    (sgfContent: string, onParsed?: (sgfRoot: SGFNode) => void) =>
+    (sgfContent: string, onParsed?: (root: GameTreeNodeRecursive<SGFNodeData>) => void) =>
       new Promise<void>((resolve, reject) => {
         setIsLoadingSGF(true);
         setLoadingProgress(0);
@@ -152,7 +157,7 @@ export function useGameTreeState() {
               throw new Error('Tree validation failed: ' + issues[0]);
             }
 
-            onParsed?.(sgfRoot);
+            onParsed?.(rootNode);
             clearAllCaches();
             setGameTree(newTree);
             cleanTreeRef.current = newTree; // Mark as clean after load
@@ -233,7 +238,7 @@ export function useGameTreeState() {
     if (!gameTree || rootId === null) return '';
     const rootNode = gameTree.get(rootId);
     if (!rootNode) return '';
-    return stringifySGF([rootNode]);
+    return stringifySGF([withUtf8Charset(rootNode)]);
   }, [gameTree, rootId]);
 
   const updateGameInfo = useCallback(

@@ -6,6 +6,7 @@
  */
 
 import type JSZipType from 'jszip';
+import { decodeSgf } from '@kaya/sgf';
 import type {
   LibraryItem,
   LibraryFile,
@@ -93,7 +94,8 @@ export async function importZipToStorage(
 
     for (const { path, file } of files) {
       try {
-        const content = await file.async('string');
+        // Bytes, not 'string': JSZip would read every entry as UTF-8.
+        const content = decodeSgf(await file.async('uint8array'));
         const parts = path.split('/');
         const fileName = parts[parts.length - 1];
         const parentPath = parts.slice(0, -1).join('/');

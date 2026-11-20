@@ -376,3 +376,22 @@ error's class and `ImportError.kind`, never from its message. Toasts render
 from `ToastProvider`, not from a screen, so they show with the header hidden
 and on the landing page. See
 [`specs/2026-11-10-sgf-import-error-surface.md`](../specs/2026-11-10-sgf-import-error-surface.md).
+
+`parseStrict` also refuses a value cut by the end of the input and content
+after a variation; it accepts a missing final `)`, which older library files
+may have.
+
+### 13. Bytes are decoded once, properties written in one form once
+
+The bytes of a file go through [`decodeSgf`](../packages/sgf/src/charset.ts),
+never `file.text()`, `readTextFile` or JSZip's `'string'`: it reads valid
+UTF-8 as UTF-8, otherwise the charset the file's `CA` names, and returns text
+labelled `CA[UTF-8]`. Everything Kaya writes is UTF-8 and says so
+(`withUtf8Charset` on save and copy).
+
+The load conversion, [`sgfNodeToGameTreeNode`](../packages/sgf/src/load.ts),
+writes point lists one point per value (`AB[aa:cc]` becomes nine values) and
+an FF[3] pass `B[tt]` as `B[]` on boards up to 19x19. Readers after the load
+(board replay, analysis, setup editing, markers) take one point per value and
+an empty move as the only pass. See
+[`specs/2026-11-20-sgf-loading-defects.md`](../specs/2026-11-20-sgf-loading-defects.md).

@@ -18,6 +18,9 @@
 # SVG files (treat as text for better diffing)
 *.svg text eol=lf
 
+# SGF test files in legacy charsets (GB2312, Shift_JIS, ...): keep their bytes
+packages/sgf/tests/fixtures/charsets/** -text
+
 # Binary files
 *.png binary
 *.jpg binary

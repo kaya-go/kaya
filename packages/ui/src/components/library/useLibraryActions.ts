@@ -6,6 +6,7 @@ import { useState, useCallback, useRef, useEffect, type DragEvent, type MouseEve
 import { useTranslation } from 'react-i18next';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { buildSGF } from '@kaya/board-recognition';
+import { decodeSgf } from '@kaya/sgf';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import type { ConfirmDialogState } from './LibraryDialogs';
 import { useToast } from '../ui/Toast';
@@ -72,7 +73,7 @@ export function useLibraryActions() {
         }
         if (lowerName.endsWith('.sgf')) {
           try {
-            await createFile(file.name, await file.text(), parentId);
+            await createFile(file.name, decodeSgf(await file.arrayBuffer()), parentId);
           } catch (error) {
             showToast(formatLibraryFileImportError(error, t), 'error');
           }

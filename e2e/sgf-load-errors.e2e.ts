@@ -53,6 +53,17 @@ test.describe('SGF load errors', () => {
     await expect(errorToast(page)).toHaveText(/Invalid SGF format: Unexpected token/);
   });
 
+  test('Open on a file cut inside a value: refused, not opened with a move never played', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await headerOpen(page).setInputFiles(file('cut.sgf', '(;GM[1]SZ[19];B[pd];W[dp'));
+    await expect(errorToast(page)).toHaveText(
+      /Invalid SGF format: Unterminated property value at 1:22/
+    );
+    await expect(page.locator('.shudan-vertex.shudan-sign_1')).toHaveCount(0);
+  });
+
   test('library import of a file that is not a game: a toast, and nothing is stored', async ({
     page,
   }) => {

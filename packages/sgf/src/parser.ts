@@ -2,15 +2,7 @@
  * @kaya/sgf - Tokenizer, parser, and stringifier for SGF content
  */
 
-import type {
-  GameTreeNodeRecursive,
-  ParseOptions,
-  RequiredParseOptions,
-  SGFNode,
-  SGFNodeData,
-  StringifyOptions,
-  Token,
-} from './types';
+import type { ParseOptions, RequiredParseOptions, SGFNode, StringifyOptions, Token } from './types';
 import { escapeString, unescapeString } from './helpers';
 
 // ============================================================================
@@ -100,6 +92,7 @@ export function* tokenizeIter(contents: string): Generator<Token> {
       pos++;
       col++;
       let inEscape = false;
+      let closed = false;
 
       while (pos < len) {
         const c = contents[pos];
@@ -114,6 +107,7 @@ export function* tokenizeIter(contents: string): Generator<Token> {
 
         if (!inEscape && c === ']') {
           pos++;
+          closed = true;
           break;
         }
 
@@ -128,6 +122,7 @@ export function* tokenizeIter(contents: string): Generator<Token> {
         col: startCol,
         pos: startPos,
         progress: startPos / (len - 1),
+        ...(closed ? {} : { unterminated: true }),
       };
       continue;
     }
@@ -186,14 +181,16 @@ class Peekable<T> implements Iterator<T> {
 }
 
 /**
- * Internal recursive parser
+ * Internal recursive parser. `depth` is 0 for the collection (the content
+ * around the game trees) and 1 or more inside a game tree.
  */
 function parseTokensRecursive(
   peekableTokens: Peekable<Token>,
   parentId: number | string | null,
-  options: RequiredParseOptions
+  options: RequiredParseOptions,
+  depth: number
 ): SGFNode | null {
-  const { getId, dictionary, onProgress, onNodeCreated } = options;
+  const { getId, dictionary, onProgress, onNodeCreated, strict } = options;
 
   let anchor: SGFNode | null = null;
   let node: SGFNode | null = null;
@@ -201,7 +198,7 @@ function parseTokensRecursive(
 
   // Parse nodes in sequence
   while (!peekableTokens.peek().done) {
-    const { type, value, row, col } = peekableTokens.peek().value!;
+    const { type, value, row, col, unterminated } = peekableTokens.peek().value!;
 
     if (type === 'parenthesis' && value === '(') break;
     if (type === 'parenthesis' && value === ')') {
@@ -256,9 +253,14 @@ function parseTokensRecursive(
         }
       }
     } else if (type === 'c_value_type') {
+      // A value the end of the input cut off: its content is not what was
+      // written, and in a move it names a point that was never played.
+      if (unterminated && strict) {
+        throw new Error(`Unterminated property value at ${row + 1}:${col + 1}`);
+      }
       if (property !== null) {
-        // Remove brackets and unescape
-        property.push(unescapeString(value.slice(1, -1)));
+        // Remove the brackets (a cut value has no closing one) and unescape
+        property.push(unescapeString(value.slice(1, unterminated ? undefined : -1)));
       }
     } else if (type === 'invalid') {
       throw new Error(`Unexpected token at ${row + 1}:${col + 1}`);
@@ -281,15 +283,22 @@ function parseTokensRecursive(
     onNodeCreated({ node });
   }
 
-  // Parse variations (children)
+  // Parse variations (children). Only variations may follow the first one:
+  // anything else in a game tree is skipped, or refused when strict. Around
+  // the game trees (depth 0) it is not part of any game and is skipped.
   while (!peekableTokens.peek().done) {
-    const { type, value, progress } = peekableTokens.peek().value!;
+    const { type, value, row, col, progress } = peekableTokens.peek().value!;
 
     if (type === 'parenthesis' && value === '(') {
       peekableTokens.next();
 
       const nodeToAttachTo = node ?? anchor;
-      const child = parseTokensRecursive(peekableTokens, nodeToAttachTo?.id ?? null, options);
+      const child = parseTokensRecursive(
+        peekableTokens,
+        nodeToAttachTo?.id ?? null,
+        options,
+        depth + 1
+      );
 
       if (child !== null && nodeToAttachTo !== null) {
         nodeToAttachTo.children.push(child);
@@ -297,6 +306,8 @@ function parseTokensRecursive(
     } else if (type === 'parenthesis' && value === ')') {
       onProgress({ progress });
       break;
+    } else if (strict && depth > 0) {
+      throw new Error(`Unexpected content after a variation at ${row + 1}:${col + 1}`);
     }
 
     peekableTokens.next();
@@ -309,6 +320,31 @@ function parseTokensRecursive(
  * Parse tokens into SGF node tree
  */
 export function parseTokens(tokens: Iterable<Token>, options: ParseOptions = {}): SGFNode[] {
+  return parseTokensWith(tokens, options, false);
+}
+
+/**
+ * Parse SGF string into node tree
+ */
+export function parse(contents: string, options: ParseOptions = {}): SGFNode[] {
+  return parseTokens(tokenizeIter(contents), options);
+}
+
+/**
+ * Parse SGF string, refusing what `parse` would read wrong or drop: a value
+ * cut by the end of the input, and content after a variation in a game tree.
+ * For `parseStrict`, which adds the checks on the whole content; not exported
+ * from the package.
+ */
+export function parseChecked(contents: string, options: ParseOptions = {}): SGFNode[] {
+  return parseTokensWith(tokenizeIter(contents), options, true);
+}
+
+function parseTokensWith(
+  tokens: Iterable<Token>,
+  options: ParseOptions,
+  strict: boolean
+): SGFNode[] {
   const defaultGetId = (() => {
     let id = 0;
     return () => id++;
@@ -319,82 +355,14 @@ export function parseTokens(tokens: Iterable<Token>, options: ParseOptions = {})
     dictionary: options.dictionary ?? null,
     onProgress: options.onProgress ?? (() => {}),
     onNodeCreated: options.onNodeCreated ?? (() => {}),
+    strict,
   };
 
   const peekable = new Peekable(tokens);
-  const node = parseTokensRecursive(peekable, null, fullOptions);
+  const node = parseTokensRecursive(peekable, null, fullOptions, 0);
 
   if (!node) return [];
   return node.id == null ? node.children : [node];
-}
-
-/**
- * Parse SGF string into node tree
- */
-export function parse(contents: string, options: ParseOptions = {}): SGFNode[] {
-  return parseTokens(tokenizeIter(contents), options);
-}
-
-// ============================================================================
-// Node Conversion
-// ============================================================================
-
-/**
- * Convert SGFNode to GameTreeNode format (for @kaya/gametree compatibility)
- * Cleans up [object Object] strings in comments and ensures IDs are not null
- */
-export function sgfNodeToGameTreeNode<T = SGFNodeData>(
-  sgfNode: SGFNode,
-  idCounter: { value: number } = { value: 0 },
-  parentId: number | string | null = null,
-  visited: Set<SGFNode> = new Set()
-): GameTreeNodeRecursive<T> {
-  // Prevent infinite recursion from circular references
-  if (visited.has(sgfNode)) {
-    throw new Error('SGF file contains circular references');
-  }
-  visited.add(sgfNode);
-
-  const id = sgfNode.id ?? idCounter.value++;
-
-  // Clean up data - remove [object Object] from comments
-  const cleanedData: SGFNodeData = {};
-  for (const [key, values] of Object.entries(sgfNode.data)) {
-    if (Array.isArray(values)) {
-      cleanedData[key] = values
-        .map((val: any) => {
-          if (typeof val === 'string') {
-            // Remove [object Object] patterns. Values that carry none are
-            // returned untouched: trimming every value ate the leading and
-            // trailing whitespace of every comment on each load/save cycle.
-            const stripped = val.replace(/\[object Object\\?\]/g, '');
-            const cleaned = stripped === val ? val : stripped.trim();
-            // For move properties (B/W), preserve empty strings (pass moves)
-            if ((key === 'B' || key === 'W') && cleaned === '' && val === '') {
-              return '';
-            }
-            return cleaned;
-          }
-          return val;
-        })
-        .filter((val: string) => {
-          // Keep empty strings for move properties (B/W) as they represent pass moves
-          if (key === 'B' || key === 'W') {
-            return true;
-          }
-          return val !== '';
-        });
-    }
-  }
-
-  return {
-    id,
-    data: cleanedData as T,
-    parentId,
-    children: sgfNode.children.map((child: SGFNode) =>
-      sgfNodeToGameTreeNode<T>(child, idCounter, id, visited)
-    ),
-  };
 }
 
 // ============================================================================

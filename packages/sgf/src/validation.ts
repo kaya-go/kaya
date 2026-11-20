@@ -7,7 +7,7 @@
  * failure with one error class so callers branch on the class, not on a message.
  */
 
-import { parse } from './parser';
+import { parseChecked } from './parser';
 import type { ParseOptions, SGFNode } from './types';
 
 /** Message of an {@link SgfValidationError} that carries no parser detail. */
@@ -24,9 +24,16 @@ export function isSgfValidationError(error: unknown): error is SgfValidationErro
 }
 
 /**
- * Parse content that must be an SGF game tree: it starts with "(;" and holds
- * at least one node. Anything else throws {@link SgfValidationError}; a parser
- * error is wrapped, its message kept and the original set as `cause`.
+ * Parse content that must be an SGF game tree: it starts with "(;", holds at
+ * least one node, no value is cut by the end of the input, and nothing but
+ * variations follows the first variation of a tree. Anything else throws
+ * {@link SgfValidationError}; a parser error is wrapped, its message kept and
+ * the original set as `cause`.
+ *
+ * A missing final ")" is accepted: every value read is whole, and the library
+ * stored content unchecked before 2026-09-12 (#169), so refusing it would lock
+ * users out of files they could open. Content after the last game tree is not
+ * part of a game and is ignored, as `parse` does.
  */
 export function parseStrict(contents: string, options: ParseOptions = {}): SGFNode[] {
   if (!/^\s*\(\s*;/.test(contents)) {
@@ -35,7 +42,7 @@ export function parseStrict(contents: string, options: ParseOptions = {}): SGFNo
 
   let nodes: SGFNode[];
   try {
-    nodes = parse(contents, options);
+    nodes = parseChecked(contents, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : INVALID_SGF_CONTENT;
     throw new SgfValidationError(message, { cause: error });

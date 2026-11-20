@@ -13,6 +13,8 @@
 import 'fake-indexeddb/auto';
 import { IDBFactory } from 'fake-indexeddb';
 import JSZip from 'jszip';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { IndexedDBStorage } from '../src/indexeddb-storage';
 import { DB_NAME, DB_VERSION, STORE_NAME } from '../src/indexeddb-db-init';
@@ -577,6 +579,23 @@ describe('ZIP export and import', () => {
       i => i.name === 'game (1).sgf'
     ) as LibraryFile;
     expect(second.metadata.gameName).toBe('Second');
+  });
+
+  test('reads an entry in the charset its CA names, and stores it labelled UTF-8', async () => {
+    // JSZip's 'string' read every entry as UTF-8: a GB2312 game was stored
+    // with U+FFFD in place of every name, and exported that way.
+    const gb2312 = readFileSync(
+      join(import.meta.dir, '..', '..', 'sgf', 'tests', 'fixtures', 'charsets', 'gb2312.sgf')
+    );
+    const zip = new JSZip();
+    zip.file('gb2312.sgf', gb2312);
+    const imported = await storage.importZip(await zip.generateAsync({ type: 'arraybuffer' }));
+
+    expect(imported.imported).toBe(1);
+    const stored = (await storage.getItems(null))[0] as LibraryFile;
+    expect(stored.content).toContain('PB[柯洁]');
+    expect(stored.content).toContain('CA[UTF-8]');
+    expect(stored.content).not.toContain('\uFFFD');
   });
 
   test('ignores non-SGF entries and reports the ones it cannot store', async () => {
