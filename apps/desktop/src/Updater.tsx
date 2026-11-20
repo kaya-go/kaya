@@ -3,7 +3,7 @@ import { check, Update, type DownloadEvent } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { message } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
-import { useTranslation, externalLinkComponents } from '@kaya/ui';
+import { useTranslation, externalLinkComponents, remarkImagesAsLinks } from '@kaya/ui';
 import { checkInstallLocation, errorText, offerManualDownload } from './updateInstall';
 import { applyDownloadEvent, NO_PROGRESS, progressKey } from './updateProgress';
 import { UpdaterFooter, type UpdaterStatus } from './UpdaterFooter';
@@ -226,7 +226,8 @@ export function Updater() {
         {update.body && (
           <div className="updater-release-notes">
             <ReactMarkdown
-              remarkPlugins={[remarkGfm, remarkBreaks]}
+              // Images as links, like SGF comments: nothing loads from the web on display.
+              remarkPlugins={[remarkGfm, remarkBreaks, remarkImagesAsLinks]}
               components={externalLinkComponents}
             >
               {stripHtmlComments(update.body)}

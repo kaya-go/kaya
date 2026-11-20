@@ -31,6 +31,7 @@ import { useAIAnalysis } from '../ai/AIAnalysisOverlay';
 import { useGameTreeSelector } from '../../contexts/GameTreeContext';
 import type { GameTreeContextValue } from '../../types/game';
 import { ConfirmationDialog } from '../dialogs/ConfirmationDialog';
+import { useResignConfirmation } from './useResignConfirmation';
 import { AnalysisLegendModal } from '../analysis/AnalysisLegendModal';
 import { AnalysisBar } from './AnalysisBar';
 import { GameBoardActionBar } from './GameBoardActionBar';
@@ -93,8 +94,6 @@ export const GameBoard: React.FC = memo(() => {
   const isTouch = useIsTouchDevice();
   const swipeEnabled = isTouch && !scoringMode && !editMode;
   const swipeHandlers = useBoardSwipeNavigation(goBack, goForward, swipeEnabled);
-
-  const [showResignConfirm, setShowResignConfirm] = useState(false);
 
   // Keyboard and wheel navigation (always active, even when board controls are collapsed)
   useBoardControlsKeyNav();
@@ -224,14 +223,10 @@ export const GameBoard: React.FC = memo(() => {
     playMove([-1, -1], currentPlayer);
   }, [playMove, currentPlayer]);
 
-  const handleResign = useCallback(() => setShowResignConfirm(true), []);
-
-  const handleResignConfirm = useCallback(() => {
-    resign(currentPlayer);
-    setShowResignConfirm(false);
-  }, [currentPlayer, resign]);
-
-  const handleResignCancel = useCallback(() => setShowResignConfirm(false), []);
+  const { resigningPlayer, requestResign, confirmResign, cancelResign } = useResignConfirmation(
+    currentPlayer,
+    resign
+  );
 
   // Scoring dimmed vertices
   const dimmedVertices = useScoringDimmedVertices({
@@ -260,7 +255,7 @@ export const GameBoard: React.FC = memo(() => {
     <div className="gameboard-container">
       <GameBoardActionBar
         onPass={handlePass}
-        onResign={handleResign}
+        onResign={requestResign}
         onToggleScoringMode={toggleScoringMode}
         onToggleAnalysisBar={toggleShowAnalysisBar}
         onToggleNavigationMode={toggleNavigationMode}
@@ -353,15 +348,15 @@ export const GameBoard: React.FC = memo(() => {
 
       {/* Resign Confirmation Dialog */}
       <ConfirmationDialog
-        isOpen={showResignConfirm}
+        isOpen={resigningPlayer !== null}
         title={t('boardControls.resignGame')}
         message={t('boardControls.resignConfirm', {
-          player: currentPlayer === 1 ? t('gameInfo.black') : t('gameInfo.white'),
+          player: resigningPlayer === 1 ? t('gameInfo.black') : t('gameInfo.white'),
         })}
         confirmLabel={t('boardControls.resign')}
         cancelLabel={t('cancel')}
-        onConfirm={handleResignConfirm}
-        onCancel={handleResignCancel}
+        onConfirm={confirmResign}
+        onCancel={cancelResign}
       />
     </div>
   );

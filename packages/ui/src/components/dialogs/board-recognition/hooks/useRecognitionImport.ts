@@ -68,11 +68,13 @@ export function useRecognitionImport({ close, onNavigateToBoard }: Options) {
   /**
    * Opens the recognised board as a new game. It replaces the current one, so
    * it asks about unsaved changes first, like every other way to open a game.
+   * The dialog stays open while it asks: Cancel goes back to the scan and its
+   * calibration, which closing first used to throw away.
    */
   const importAsGame = useCallback(
     async (sgf: string) => {
-      close();
       if (!(await checkUnsavedChanges())) return;
+      close();
       try {
         await loadSGFAsync(sgf);
         setFileName('scan.sgf');

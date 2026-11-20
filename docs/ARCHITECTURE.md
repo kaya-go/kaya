@@ -291,6 +291,12 @@ fails otherwise. See
 Add new IDs to the `ShortcutId` union and `DEFAULT_SHORTCUTS`, and add
 `shortcuts.{id}` translations to every locale.
 
+A shortcut waits while the user types in a text field or while a dialog or
+menu is open (`shouldIgnoreShortcut` / `hasOpenOverlay`, fed by every overlay
+through `useCloseOnBack`). Fullscreen is the one exception. Select All stays
+inside a text field or a block marked `data-selectable-text`
+(`useSelectAllScope`).
+
 ## Assets
 
 Kaya **never** uses symlinks for assets. Symlinks break on Windows and

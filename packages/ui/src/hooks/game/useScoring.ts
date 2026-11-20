@@ -13,6 +13,12 @@ import { DEFAULT_KOMI } from '@kaya/ai-engine';
 interface UseScoringProps {
   currentBoard: GoBoard | null;
   gameInfo: GameInfo;
+  /**
+   * The dead-stone estimate failed (the deadstones WebAssembly did not load,
+   * for one). Scoring still works by hand, so the user is told rather than
+   * left with an estimate that never comes.
+   */
+  onScoreEstimateFailed?: () => void;
 }
 
 const INITIAL_ITERATIONS = 2000;
@@ -55,8 +61,21 @@ function computeScoreData(
   };
 }
 
-export function useScoring({ currentBoard, gameInfo }: UseScoringProps) {
+export function useScoring({ currentBoard, gameInfo, onScoreEstimateFailed }: UseScoringProps) {
   const [scoreMode, setScoreMode] = useState(false);
+  // Read through a ref: autoScore runs again whenever its identity changes.
+  const onScoreEstimateFailedRef = useRef(onScoreEstimateFailed);
+  useEffect(() => {
+    onScoreEstimateFailedRef.current = onScoreEstimateFailed;
+  });
+  // Once per visit to scoring mode: the estimate runs again on every move
+  // navigated, and a module that failed to load fails each time.
+  const estimateFailureShownRef = useRef(false);
+  const reportEstimateFailure = useCallback(() => {
+    if (estimateFailureShownRef.current) return;
+    estimateFailureShownRef.current = true;
+    onScoreEstimateFailedRef.current?.();
+  }, []);
   const [deadStones, setDeadStones] = useState<Set<string>>(new Set());
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimationMode, setEstimationMode] = useState(true);
@@ -126,10 +145,11 @@ export function useScoring({ currentBoard, gameInfo }: UseScoringProps) {
       setDeadStones(dead);
     } catch (error) {
       console.error('Auto-score failed:', error);
+      reportEstimateFailure();
     } finally {
       setIsEstimating(false);
     }
-  }, [currentBoard, deriveDeadStones]);
+  }, [currentBoard, deriveDeadStones, reportEstimateFailure]);
 
   // Re-run Monte Carlo when dead stones are toggled manually
   useEffect(() => {
@@ -152,6 +172,7 @@ export function useScoring({ currentBoard, gameInfo }: UseScoringProps) {
         setProbabilityMap(probMap);
       } catch (error) {
         console.error('Refresh probability map failed:', error);
+        reportEstimateFailure();
       } finally {
         setIsEstimating(false);
       }
@@ -172,6 +193,7 @@ export function useScoring({ currentBoard, gameInfo }: UseScoringProps) {
     if (scoreMode) {
       autoScore();
     } else {
+      estimateFailureShownRef.current = false;
       // autoScore changes with the board, so this runs on every navigation:
       // keep the same empty Set to skip a second provider render.
       setDeadStones(prev => (prev.size === 0 ? prev : new Set()));

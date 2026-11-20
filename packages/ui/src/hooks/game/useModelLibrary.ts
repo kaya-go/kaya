@@ -424,7 +424,8 @@ export function useModelLibrary() {
         const newMetadata: StoredModelMetadata = {
           id,
           ...parsed,
-          description: 'User uploaded model',
+          // Shown translated by `modelDescription`, never stored as text.
+          description: '',
           size: file.size,
           date: Date.now(),
           isUserModel: true,

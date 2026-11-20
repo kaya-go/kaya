@@ -4,6 +4,7 @@ import {
   useLibraryPanel,
   useGameInfoEditMode,
   useKeyboardShortcuts,
+  hasOpenOverlay,
   useLayoutMode,
   usePwaInstall,
   type GameTreeGraphRef,
@@ -125,16 +126,17 @@ export function useAppContentState({ onMobileTabChange }: UseAppContentStateOpti
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Toggle header
+      // The layout stays put behind a dialog: the header holds the settings,
+      // new game and scan dialogs, and hiding it would drop the one open.
+      const behindDialog = hasOpenOverlay();
       if (matchesShortcut(e, 'view.toggleHeader')) {
         e.preventDefault();
-        setShowHeader(prev => !prev);
+        if (!behindDialog) setShowHeader(prev => !prev);
         return;
       }
-      // Toggle sidebar
       if (matchesShortcut(e, 'view.toggleSidebar')) {
         e.preventDefault();
-        setShowSidebar(prev => !prev);
+        if (!behindDialog) setShowSidebar(prev => !prev);
         return;
       }
     };

@@ -6,6 +6,7 @@ import { AnalysisResult } from '@kaya/ai-engine';
 
 import type { ConfigTab } from '../components/ai/useKayaConfig';
 import type { StoredModelMetadata } from '../services/modelStorage';
+import type { UnsavedCommentSource } from '../contexts/useGameTreeUndoRedo';
 
 export interface SGFProperty {
   [key: string]: string[];
@@ -322,6 +323,8 @@ export interface GameTreeContextValue {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  /** Where undo and redo find the comment being typed, which they carry with them. */
+  setUnsavedCommentSource: (source: UnsavedCommentSource | null) => void;
 
   // Branch management
   deleteOtherBranches: () => void;
