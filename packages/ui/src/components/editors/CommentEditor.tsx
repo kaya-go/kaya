@@ -46,11 +46,14 @@ const CommentEditorContext = createContext<CommentEditorContextValue | null>(nul
  * Wrap your app with this to share state between CommentHeaderActions and CommentEditor.
  */
 export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { currentNode, moveNumber, gameSettings, setGameSettings } = useGameTreeBoard();
+  const { currentNode, moveNumber, gameId, gameSettings, setGameSettings } = useGameTreeBoard();
   const { setNodeComment: updateComment } = useGameTreeEdit();
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState('');
   const prevNodeIdRef = useRef<string | number | null>(null);
+  const prevGameIdRef = useRef(gameId);
+  // The comment as it was when editing started, to tell whether anything was typed.
+  const editStartRef = useRef('');
 
   const fontScale = gameSettings.commentFontScale;
   const adjustFontScale = useCallback(
@@ -65,14 +68,22 @@ export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({
   const currentComment = currentNode?.data.C?.[0] || '';
   const currentNodeId = currentNode?.id ?? null;
 
-  // Reset editing state when navigating to a different node
+  // Leaving a node mid-edit (a move played, a tree click, the mouse wheel)
+  // saves what was typed to the node it was typed for. Not when a new game
+  // replaced the tree: the old node id can exist in the new game too.
   useEffect(() => {
     if (prevNodeIdRef.current !== currentNodeId) {
+      const leftNodeId = prevNodeIdRef.current;
+      const sameGame = prevGameIdRef.current === gameId;
+      if (isEditing && sameGame && leftNodeId !== null && editText !== editStartRef.current) {
+        updateComment(editText, leftNodeId);
+      }
       setEditText(currentComment);
       setIsEditing(false);
       prevNodeIdRef.current = currentNodeId;
     }
-  }, [currentNodeId, currentComment]);
+    prevGameIdRef.current = gameId;
+  }, [currentNodeId, currentComment, gameId, isEditing, editText, updateComment]);
 
   // Update edit text when comment changes externally (but not while editing)
   useEffect(() => {
@@ -82,6 +93,7 @@ export const CommentEditorProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [currentComment, isEditing]);
 
   const handleEdit = useCallback(() => {
+    editStartRef.current = currentComment;
     setEditText(currentComment);
     setIsEditing(true);
   }, [currentComment]);
@@ -265,8 +277,9 @@ export const CommentEditor: React.FC = () => {
       if (e.key === 'Escape') {
         e.preventDefault();
         handleCancel();
-      } else if (e.key === 'Enter' && !e.shiftKey) {
-        // Enter without Shift saves the comment
+      } else if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+        // Enter without Shift saves the comment. Not the Enter that confirms an
+        // input-method candidate (Chinese, Japanese, Korean): it belongs to the IME.
         e.preventDefault();
         handleSave();
       } else if (e.key === 's' && (e.metaKey || e.ctrlKey)) {

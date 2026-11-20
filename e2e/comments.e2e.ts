@@ -72,3 +72,19 @@ test.describe('Comment Editing', () => {
     await expect(page.locator('.comment-markdown')).toContainText(testComment);
   });
 });
+
+test.describe('Comment typed on a node the user leaves', () => {
+  test('playing the next move keeps the comment typed on the previous one', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.shudan-vertex[data-x="3"][data-y="3"]').click();
+
+    await page.locator('.comment-edit-button').click();
+    await page.locator('.comment-textarea').fill('Black takes the corner');
+    // Play the reply without saving: the click on the board leaves the node.
+    await page.locator('.shudan-vertex[data-x="15"][data-y="15"]').click();
+    await expect(page.locator('.comment-textarea')).toHaveCount(0);
+
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('.comment-markdown')).toContainText('Black takes the corner');
+  });
+});
