@@ -98,6 +98,19 @@ export function vertexToGTP(vertex: Vertex | null, boardSize: number): string {
 }
 
 /**
+ * A move the engine named on its square of side `size` (row = size − y, as
+ * `KA` stores it), renamed as the board labels the point (row = height − y,
+ * shudan's defaultCoordY). The two differ on a board wider than tall. A pass,
+ * or a name that does not parse, comes back as it is.
+ */
+export function boardMoveName(move: string, size: number, height: number): string {
+  const vertex = parseGTPCoordinate(move, size);
+  if (!vertex) return move;
+  const [x, y] = vertex;
+  return `${'ABCDEFGHJKLMNOPQRST'[x]}${height - y}`;
+}
+
+/**
  * The first of the engine's ranked moves that is a free point of a `width` ×
  * `height` board, its moves named on a square of side `size`
  * (analysisBoardSize). The engines rank only points of the board; one that

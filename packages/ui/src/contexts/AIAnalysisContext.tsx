@@ -290,16 +290,19 @@ export const AIAnalysisProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // The engine names moves and indexes ownership on the square its network
   // sees the board in; the maps drawn from them are on the game board.
   const analysisSize = analysisBoardSize(gameInfo);
+  // Move names shown to the user count rows as the board labels them.
+  const boardHeight = gameInfo.boardHeight ?? gameInfo.boardSize;
 
   const nextMoveInfo = useMemo(
     () =>
       computeNextMoveInfo({
         nextMoveVertex,
         analysisSize,
+        boardHeight,
         mctsProgress,
         analysisResult,
       }),
-    [nextMoveVertex, analysisSize, mctsProgress, analysisResult]
+    [nextMoveVertex, analysisSize, boardHeight, mctsProgress, analysisResult]
   );
 
   const heatMap = useMemo(
