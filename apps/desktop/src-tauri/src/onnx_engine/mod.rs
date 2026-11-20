@@ -504,11 +504,23 @@ mod tests {
             let searched = engine
                 .run_mcts(&sign_map, &search, &AtomicBool::new(false), &mut |_| {})
                 .expect("search should run");
+            let move_visits: usize = searched.move_suggestions.iter().filter_map(|m| m.visits).sum();
             eprintln!(
-                "mcts winRate={:.4} scoreLead={:.3} best={:?}",
-                searched.win_rate, searched.score_lead, searched.move_suggestions.first()
+                "mcts winRate={:.4} scoreLead={:.3} best={:?} visits on listed moves={}",
+                searched.win_rate, searched.score_lead, searched.move_suggestions.first(), move_visits
             );
             assert!((0.2..=0.8).contains(&searched.win_rate), "win rate {}", searched.win_rate);
+            // The root is evaluated once: every other visit reaches a move.
+            assert!(move_visits >= 90, "only {} of 100 visits reached a move", move_visits);
+
+            // Full-game analysis searches 10 visits a position: they must reach moves too.
+            let short = mcts::MCTSAnalysisOptions { num_visits: 10, ..search.clone() };
+            let searched = engine
+                .run_mcts(&sign_map, &short, &AtomicBool::new(false), &mut |_| {})
+                .expect("search should run");
+            let move_visits: usize = searched.move_suggestions.iter().filter_map(|m| m.visits).sum();
+            eprintln!("mcts 10 visits: visits on listed moves={}", move_visits);
+            assert!(move_visits >= 8, "only {} of 10 visits reached a move", move_visits);
         }
     }
 
