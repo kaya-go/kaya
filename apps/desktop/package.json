@@ -35,10 +35,10 @@
     "@tauri-apps/plugin-shell": "^2.6.0",
     "@tauri-apps/plugin-updater": "^2.14.1",
     "coi-serviceworker": "^0.1.7",
-    "i18next": "^26.7.2",
+    "i18next": "^27.2.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-i18next": "^17.1.13",
+    "react-i18next": "^18.0.3",
     "react-markdown": "^10.1.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1"
