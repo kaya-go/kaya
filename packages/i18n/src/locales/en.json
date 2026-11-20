@@ -559,8 +559,11 @@
     "failedToLoadSgf": "Failed to load SGF file: {{error}}",
     "invalidSgfContent": "Invalid SGF format",
     "invalidSgfContentDetail": "Invalid SGF format: {{error}}",
+    "openedWithDefects": "Part of this file could not be read and was left out: {{error}}",
     "failedToImportToLibrary": "Failed to import to library: {{error}}",
-    "failedToImportZip": "Failed to import ZIP: {{error}}"
+    "failedToImportZip": "Failed to import ZIP: {{error}}",
+    "importedWithDefects": "Part of {{path}} cannot be read: it was imported and opens without that part",
+    "failedToDuplicate": "Failed to duplicate {{name}}: {{error}}"
   },
   "loading": {
     "loading": "Loading...",

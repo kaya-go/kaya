@@ -11,6 +11,7 @@ import { decodeSgf, isSgfValidationError } from '@kaya/sgf';
 import type { ToastType } from '../ui/Toast';
 import {
   formatImportResultError,
+  formatImportResultWarning,
   formatLibraryFileImportError,
   formatSgfLoadError,
 } from '../../utils/sgfLoadErrors';
@@ -128,8 +129,11 @@ export function useTauriDragDrop({
             await createFile(fileName, content, null);
           } else if (filePath.endsWith('.zip')) {
             const buffer = await fs.readFile(filePath);
-            const message = formatImportResultError(await importZip(buffer.buffer), t);
+            const result = await importZip(buffer.buffer);
+            const message = formatImportResultError(result, t);
             if (message) showToast(message, 'error');
+            const warning = formatImportResultWarning(result, t);
+            if (warning) showToast(warning, 'info');
           } else {
             showToast(t('dropzone.unsupportedLibraryFile'), 'error');
             return;

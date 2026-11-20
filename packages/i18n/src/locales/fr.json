@@ -559,8 +559,11 @@
     "failedToLoadSgf": "Échec du chargement SGF : {{error}}",
     "invalidSgfContent": "Format SGF invalide",
     "invalidSgfContentDetail": "Format SGF invalide : {{error}}",
+    "openedWithDefects": "Une portion de ce fichier est illisible et a été omise : {{error}}",
     "failedToImportToLibrary": "Échec de l'import dans la bibliothèque : {{error}}",
-    "failedToImportZip": "Échec de l'import ZIP : {{error}}"
+    "failedToImportZip": "Échec de l'import ZIP : {{error}}",
+    "importedWithDefects": "Une portion de {{path}} est illisible : le fichier est importé et s'ouvre sans elle",
+    "failedToDuplicate": "Échec de la duplication de {{name}} : {{error}}"
   },
   "loading": {
     "loading": "Chargement…",

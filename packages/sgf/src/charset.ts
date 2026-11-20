@@ -8,6 +8,8 @@
  * what it reads and what it writes both say CA[UTF-8].
  */
 
+import { unescapeString } from './helpers';
+import { tokenizeIter } from './parser';
 import type { SGFNodeData } from './types';
 
 /** CA is a root property: it is looked for in this many bytes from the start. */
@@ -15,6 +17,7 @@ const HEAD_LENGTH = 64 * 1024;
 
 /** `CA[...]` as a property: not preceded by a letter (so not `XCA[`). */
 const CA_PROPERTY = /(^|[^A-Za-z])CA\s*\[([^\]]*)\]/;
+const CA_PROPERTIES = new RegExp(CA_PROPERTY.source, 'g');
 
 /** Names some writers use that `TextDecoder` does not know. */
 const CHARSET_ALIASES: Record<string, string> = {
@@ -39,9 +42,9 @@ const isUtf8Label = (label: string) => /^utf-?8$/i.test(label.trim());
  * 3. Otherwise the charset CA names, read from the ASCII head of the file.
  * 4. Otherwise (no CA, or one no decoder knows) UTF-8, lossy.
  *
- * The CA of the returned text is rewritten to UTF-8: the text is stored and
- * written as UTF-8 from here on, and a CA still naming GB2312 would make every
- * other reader garble it.
+ * Every CA of the returned text, one per game of a collection, is rewritten to
+ * UTF-8 ({@link labelUtf8}): the text is stored and written as UTF-8 from here
+ * on, and a CA still naming GB2312 would make every other reader garble it.
  */
 export function decodeSgf(input: ArrayBuffer | Uint8Array): string {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
@@ -83,14 +86,51 @@ function declaredDecoder(bytes: Uint8Array): TextDecoder | null {
   }
 }
 
-/** Rewrite the CA of decoded text to UTF-8, if it names another charset. */
-function labelUtf8(text: string): string {
-  const match = CA_PROPERTY.exec(text.slice(0, HEAD_LENGTH));
-  if (!match || isUtf8Label(match[2])) return text;
+/**
+ * Rewrite every CA of SGF text to UTF-8: the text is a string from here on,
+ * stored and written as UTF-8. Every game of a collection carries its own CA,
+ * and one still naming GB2312 makes another reader garble that game.
+ *
+ * Read through the tokenizer, so a `CA[...]` inside a comment is left alone. A
+ * value the end of the input cut off is left alone too: rewriting it would
+ * close it, and the file would pass for whole.
+ */
+export function labelUtf8(text: string): string {
+  if (!namesOtherCharset(text)) return text;
 
-  const start = match.index + match[1].length;
-  const end = match.index + match[0].length;
-  return `${text.slice(0, start)}CA[UTF-8]${text.slice(end)}`;
+  const edits: Array<{ start: number; end: number }> = [];
+  let inCharset = false;
+  for (const token of tokenizeIter(text)) {
+    if (token.type === 'prop_ident') {
+      inCharset = token.value === 'CA';
+    } else if (token.type !== 'c_value_type') {
+      inCharset = false;
+    } else if (
+      inCharset &&
+      !token.unterminated &&
+      !isUtf8Label(unescapeString(token.value.slice(1, -1)))
+    ) {
+      edits.push({ start: token.pos, end: token.pos + token.value.length });
+    }
+  }
+
+  let result = text;
+  for (const { start, end } of edits.reverse()) {
+    result = `${result.slice(0, start)}[UTF-8]${result.slice(end)}`;
+  }
+  return result;
+}
+
+/**
+ * Whether the text may hold a CA naming another charset than UTF-8: the
+ * cheap test that spares most files the tokenizer. It can only err towards
+ * yes (a CA in a comment, an escaped bracket), which the tokenizer then sorts.
+ */
+function namesOtherCharset(text: string): boolean {
+  for (const match of text.matchAll(CA_PROPERTIES)) {
+    if (!isUtf8Label(match[2])) return true;
+  }
+  return false;
 }
 
 /**

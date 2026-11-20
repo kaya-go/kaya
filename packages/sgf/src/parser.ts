@@ -2,7 +2,14 @@
  * @kaya/sgf - Tokenizer, parser, and stringifier for SGF content
  */
 
-import type { ParseOptions, RequiredParseOptions, SGFNode, StringifyOptions, Token } from './types';
+import type {
+  ParseOptions,
+  RequiredParseOptions,
+  SgfDefect,
+  SGFNode,
+  StringifyOptions,
+  Token,
+} from './types';
 import { escapeString, unescapeString } from './helpers';
 
 // ============================================================================
@@ -190,11 +197,12 @@ function parseTokensRecursive(
   options: RequiredParseOptions,
   depth: number
 ): SGFNode | null {
-  const { getId, dictionary, onProgress, onNodeCreated, strict } = options;
+  const { getId, dictionary, onProgress, onNodeCreated, onDefect } = options;
 
   let anchor: SGFNode | null = null;
   let node: SGFNode | null = null;
   let property: string[] | null = null;
+  let identifier = '';
 
   // Parse nodes in sequence
   while (!peekableTokens.peek().done) {
@@ -235,7 +243,7 @@ function parseTokensRecursive(
     } else if (type === 'prop_ident') {
       if (node !== null) {
         // Normalize property identifier (uppercase only)
-        let identifier =
+        identifier =
           value === value.toUpperCase()
             ? value
             : value
@@ -253,12 +261,17 @@ function parseTokensRecursive(
         }
       }
     } else if (type === 'c_value_type') {
-      // A value the end of the input cut off: its content is not what was
-      // written, and in a move it names a point that was never played.
-      if (unterminated && strict) {
-        throw new Error(`Unterminated property value at ${row + 1}:${col + 1}`);
-      }
-      if (property !== null) {
+      if (unterminated && onDefect !== null) {
+        // A value the end of the input cut off: its content is not what was
+        // written, and in a move it names a point that was never played. Left
+        // out, with its property if it had no other value: an empty `W` would
+        // still read as a white move.
+        onDefect(defect('unterminated-value', 'Unterminated property value', row, col));
+        if (node !== null && property !== null && property.length === 0) {
+          delete node.data[identifier];
+        }
+        property = null;
+      } else if (property !== null) {
         // Remove the brackets (a cut value has no closing one) and unescape
         property.push(unescapeString(value.slice(1, unterminated ? undefined : -1)));
       }
@@ -284,12 +297,15 @@ function parseTokensRecursive(
   }
 
   // Parse variations (children). Only variations may follow the first one:
-  // anything else in a game tree is skipped, or refused when strict. Around
-  // the game trees (depth 0) it is not part of any game and is skipped.
+  // anything else in a game tree is skipped, and reported once per run of
+  // skipped tokens. Around the game trees (depth 0) it is not part of any game
+  // and is skipped silently.
+  let skipping = false;
   while (!peekableTokens.peek().done) {
     const { type, value, row, col, progress } = peekableTokens.peek().value!;
 
     if (type === 'parenthesis' && value === '(') {
+      skipping = false;
       peekableTokens.next();
 
       const nodeToAttachTo = node ?? anchor;
@@ -306,8 +322,9 @@ function parseTokensRecursive(
     } else if (type === 'parenthesis' && value === ')') {
       onProgress({ progress });
       break;
-    } else if (strict && depth > 0) {
-      throw new Error(`Unexpected content after a variation at ${row + 1}:${col + 1}`);
+    } else if (onDefect !== null && depth > 0 && !skipping) {
+      onDefect(defect('content-after-variation', 'Unexpected content after a variation', row, col));
+      skipping = true;
     }
 
     peekableTokens.next();
@@ -316,11 +333,17 @@ function parseTokensRecursive(
   return anchor;
 }
 
+function defect(kind: SgfDefect['kind'], what: string, row: number, col: number): SgfDefect {
+  const line = row + 1;
+  const column = col + 1;
+  return { kind, line, column, message: `${what} at ${line}:${column}` };
+}
+
 /**
  * Parse tokens into SGF node tree
  */
 export function parseTokens(tokens: Iterable<Token>, options: ParseOptions = {}): SGFNode[] {
-  return parseTokensWith(tokens, options, false);
+  return parseTokensWith(tokens, options, null);
 }
 
 /**
@@ -331,19 +354,26 @@ export function parse(contents: string, options: ParseOptions = {}): SGFNode[] {
 }
 
 /**
- * Parse SGF string, refusing what `parse` would read wrong or drop: a value
- * cut by the end of the input, and content after a variation in a game tree.
- * For `parseStrict`, which adds the checks on the whole content; not exported
- * from the package.
+ * Parse SGF string, telling `onDefect` of what `parse` would read wrong or
+ * drop: a value cut by the end of the input, and content after a variation in
+ * a game tree. `onDefect` throws to refuse the content (`parseStrict`), or
+ * returns to have the defect left out (`parseTolerant`): the cut value, with
+ * its property if it had no other value, and the content after the variation.
+ * For those two, which add the checks on the whole content; not exported from
+ * the package.
  */
-export function parseChecked(contents: string, options: ParseOptions = {}): SGFNode[] {
-  return parseTokensWith(tokenizeIter(contents), options, true);
+export function parseChecked(
+  contents: string,
+  options: ParseOptions,
+  onDefect: (defect: SgfDefect) => void
+): SGFNode[] {
+  return parseTokensWith(tokenizeIter(contents), options, onDefect);
 }
 
 function parseTokensWith(
   tokens: Iterable<Token>,
   options: ParseOptions,
-  strict: boolean
+  onDefect: ((defect: SgfDefect) => void) | null
 ): SGFNode[] {
   const defaultGetId = (() => {
     let id = 0;
@@ -355,7 +385,7 @@ function parseTokensWith(
     dictionary: options.dictionary ?? null,
     onProgress: options.onProgress ?? (() => {}),
     onNodeCreated: options.onNodeCreated ?? (() => {}),
-    strict,
+    onDefect,
   };
 
   const peekable = new Peekable(tokens);

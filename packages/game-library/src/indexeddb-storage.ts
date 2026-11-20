@@ -18,6 +18,7 @@ import type {
   ImportResult,
   ExportResult,
   LibraryStats,
+  UpdateFileOptions,
 } from './types';
 import {
   computeLibraryStats,
@@ -220,9 +221,9 @@ export class IndexedDBStorage implements LibraryStorage {
 
   async createFile(options: CreateFileOptions): Promise<LibraryFile> {
     await this.ensureInitialized();
-    const { name, content, parentId = null } = options;
+    const { name, content, parentId = null, validation } = options;
 
-    validateSGF(content);
+    validateSGF(content, validation);
 
     const metadata = extractSGFMetadata(content);
     const timestamp = now();
@@ -280,14 +281,18 @@ export class IndexedDBStorage implements LibraryStorage {
     return folder;
   }
 
-  async updateFile(id: LibraryItemId, content: string): Promise<LibraryFile> {
+  async updateFile(
+    id: LibraryItemId,
+    content: string,
+    options: UpdateFileOptions = {}
+  ): Promise<LibraryFile> {
     await this.ensureInitialized();
     const item = await this.getItem(id);
     if (!item || item.type !== 'file') {
       throw new Error('File not found');
     }
 
-    validateSGF(content);
+    validateSGF(content, options.validation);
 
     const metadata = extractSGFMetadata(content);
 

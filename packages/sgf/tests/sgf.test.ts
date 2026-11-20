@@ -21,6 +21,7 @@ import {
   parseDates,
   stringifyDates,
   parseStrict,
+  parseTolerant,
   SgfValidationError,
   isSgfValidationError,
   INVALID_SGF_CONTENT,
@@ -144,6 +145,70 @@ describe('parseStrict', () => {
   test('isSgfValidationError tells it from any other error', () => {
     expect(isSgfValidationError(new Error(INVALID_SGF_CONTENT))).toBe(false);
     expect(isSgfValidationError('SgfValidationError')).toBe(false);
+  });
+});
+
+describe('parseTolerant', () => {
+  // Content v0.4.18 stored in the library and opened; parseStrict refuses it.
+  const cutMove = '(;GM[1];B[aa];W[bb';
+  const cutComment = '(;GM[1]C[path C:\\])';
+  const afterVariation = '(;GM[1](;B[aa])(;B[bb]);W[cc])';
+
+  test('returns what parseStrict returns for a whole game, and no defect', () => {
+    for (const sgf of ['(;FF[4]SZ[19];B[aa];W[bb])', '(;GM[1](;B[aa])(;B[bb]', '(;A[1])(;B[2])']) {
+      expect(parseTolerant(sgf), sgf).toEqual({ nodes: parseStrict(sgf), defects: [] });
+    }
+  });
+
+  test('still refuses content that is not a game tree', () => {
+    for (const content of ['hello world', '', '(B[aa];W[bb])', '(;B[aa]])']) {
+      expect(() => parseTolerant(content), content).toThrow(SgfValidationError);
+    }
+  });
+
+  test('leaves out a cut move, never reading it as a move that was played', () => {
+    const { nodes, defects } = parseTolerant(cutMove);
+    const cut = nodes[0].children[0].children[0];
+
+    expect(nodes[0].children[0].data.B).toEqual(['aa']);
+    // No W key at all: an empty W would still read as a white move.
+    expect('W' in cut.data).toBe(false);
+    expect(defects).toEqual([
+      {
+        kind: 'unterminated-value',
+        line: 1,
+        column: 16,
+        message: 'Unterminated property value at 1:16',
+      },
+    ]);
+  });
+
+  test('a cut value is left out, its whole values kept', () => {
+    const [root] = parseTolerant('(;GM[1]AB[aa][bb][c').nodes;
+    expect(root.data.AB).toEqual(['aa', 'bb']);
+
+    const [commented] = parseTolerant(cutComment).nodes;
+    expect(commented.data).toEqual({ GM: ['1'] });
+  });
+
+  test('skips content after a variation and says where, once per run', () => {
+    const { nodes, defects } = parseTolerant(afterVariation);
+    expect(nodes).toEqual(parse(afterVariation));
+    expect(nodes[0].children.map(child => child.data)).toEqual([{ B: ['aa'] }, { B: ['bb'] }]);
+    expect(defects.map(d => d.message)).toEqual(['Unexpected content after a variation at 1:24']);
+
+    const twice = parseTolerant('(;A[1](;B[2])X[3](;C[4]);D[5])').defects;
+    expect(twice.map(d => [d.kind, d.column])).toEqual([
+      ['content-after-variation', 14],
+      ['content-after-variation', 25],
+    ]);
+  });
+
+  test('a defect it leaves out is the error parseStrict throws', () => {
+    for (const content of [cutMove, cutComment, afterVariation]) {
+      const [first] = parseTolerant(content).defects;
+      expect(() => parseStrict(content), content).toThrow(first.message);
+    }
   });
 });
 

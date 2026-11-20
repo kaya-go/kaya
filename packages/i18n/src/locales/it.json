@@ -559,8 +559,11 @@
     "failedToLoadSgf": "Caricamento file SGF fallito: {{error}}",
     "invalidSgfContent": "Formato SGF non valido",
     "invalidSgfContentDetail": "Formato SGF non valido: {{error}}",
+    "openedWithDefects": "Una parte di questo file non è leggibile ed è stata omessa: {{error}}",
     "failedToImportToLibrary": "Importazione in libreria fallita: {{error}}",
-    "failedToImportZip": "Importazione ZIP fallita: {{error}}"
+    "failedToImportZip": "Importazione ZIP fallita: {{error}}",
+    "importedWithDefects": "Una parte di {{path}} non è leggibile: è stato importato e si apre senza di essa",
+    "failedToDuplicate": "Impossibile duplicare {{name}}: {{error}}"
   },
   "loading": {
     "loading": "Caricamento…",

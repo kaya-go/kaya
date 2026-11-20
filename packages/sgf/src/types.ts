@@ -158,6 +158,24 @@ export interface RequiredParseOptions {
   dictionary: { [id: string]: SGFNode } | null;
   onProgress: (args: { progress: number }) => void;
   onNodeCreated: (args: { node: SGFNode }) => void;
-  /** Refuse what the lenient parser reads wrong or skips (see `parseChecked`). */
-  strict: boolean;
+  /**
+   * Told of what the lenient parser reads wrong or skips (see `parseChecked`).
+   * Throwing refuses the content; returning has the parser leave the defect
+   * out. Null for `parse`, which reads it as written.
+   */
+  onDefect: ((defect: SgfDefect) => void) | null;
+}
+
+/**
+ * Part of a file the parser cannot read as written: a value the end of the
+ * input cut off, or content after a variation inside a game tree.
+ * `parseStrict` refuses the file for it; `parseTolerant` leaves it out.
+ */
+export interface SgfDefect {
+  kind: 'unterminated-value' | 'content-after-variation';
+  /** 1-based, where the defect starts. */
+  line: number;
+  column: number;
+  /** English, with the position: what `parseStrict` throws for it. */
+  message: string;
 }

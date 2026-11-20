@@ -559,8 +559,11 @@
     "failedToLoadSgf": "加载 SGF 文件失败：{{error}}",
     "invalidSgfContent": "SGF 格式不合法",
     "invalidSgfContentDetail": "SGF 格式不合法：{{error}}",
+    "openedWithDefects": "此文件有部分内容无法读取，已略去：{{error}}",
     "failedToImportToLibrary": "导入棋库失败：{{error}}",
-    "failedToImportZip": "导入 ZIP 失败：{{error}}"
+    "failedToImportZip": "导入 ZIP 失败：{{error}}",
+    "importedWithDefects": "{{path}} 有部分内容无法读取：已导入，打开时将略去该部分",
+    "failedToDuplicate": "无法复制 {{name}}：{{error}}"
   },
   "loading": {
     "loading": "加载中…",
