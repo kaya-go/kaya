@@ -7,10 +7,10 @@
 import type { Vertex, SignMap } from './types';
 
 /**
- * Alphabet for coordinate conversion
- * Note: 'I' is skipped in Go notation (A-H, J-T for 19x19)
+ * Alphabet for coordinate conversion: A-Z without I, as in GTP and
+ * `@kaya/goboard` (A-T on 19x19, up to Z on 25x25).
  */
-export const alpha = 'ABCDEFGHJKLMNOPQRST'.split('');
+export const alpha = 'ABCDEFGHJKLMNOPQRSTUVWXYZ'.split('');
 
 /**
  * Check if two vertices are equal
@@ -76,10 +76,13 @@ export function range(start: number, end: number): number[] {
 }
 
 /**
- * Default X coordinate formatter (A-T, skipping I)
+ * Default X coordinate formatter: A-Z skipping I, then two letters (AA, AB,
+ * ...) past Z, so every column of the largest SGF board (52) has a label.
  */
 export function defaultCoordX(x: number): string {
-  return alpha[x] || '';
+  if (x < 0) return '';
+  if (x < alpha.length) return alpha[x];
+  return (alpha[Math.floor(x / alpha.length) - 1] ?? '') + alpha[x % alpha.length];
 }
 
 /**
