@@ -17,15 +17,27 @@ const PLACEHOLDERS: Record<keyof ServiceWorkerValues, string> = {
   ortVersion: "'__KAYA_ORT_VERSION__'",
 };
 
-export function renderServiceWorker(template: string, values: ServiceWorkerValues): string {
+/** Replace each placeholder, which must appear exactly once, by its value as a JS literal. */
+function fill(template: string, file: string, values: Record<string, string>): string {
   let out = template;
-  for (const key of Object.keys(PLACEHOLDERS) as (keyof ServiceWorkerValues)[]) {
-    const placeholder = PLACEHOLDERS[key];
+  for (const [placeholder, value] of Object.entries(values)) {
     if (out.split(placeholder).length !== 2) {
-      throw new Error(`sw.js must contain ${placeholder} exactly once`);
+      throw new Error(`${file} must contain ${placeholder} exactly once`);
     }
-    if (!values[key]) throw new Error(`No ${key} for sw.js`);
-    out = out.replace(placeholder, JSON.stringify(values[key]));
+    if (!value) throw new Error(`No value for ${placeholder} in ${file}`);
+    out = out.replace(placeholder, () => JSON.stringify(value));
   }
   return out;
+}
+
+export function renderServiceWorker(template: string, values: ServiceWorkerValues): string {
+  return fill(template, 'sw.js', {
+    [PLACEHOLDERS.buildId]: values.buildId,
+    [PLACEHOLDERS.ortVersion]: values.ortVersion,
+  });
+}
+
+/** Fill the registration script (register.js) that index.html inlines. */
+export function renderRegistration(template: string, scriptUrl: string): string {
+  return fill(template, 'register.js', { "'__KAYA_SW_URL__'": scriptUrl });
 }

@@ -7,8 +7,8 @@
 //    before (specs/2026-11-20-single-service-worker.md).
 // 2. Caching: the app shell for offline use, and ONNX Runtime's large files.
 //
-// Its page side is the script in index.html: it registers this worker and
-// reloads once a page that started without a worker comes under one.
+// Its page side is sw/register.js, inlined into index.html: it registers this
+// worker and reloads, once, a page that loaded without the headers.
 // It must NOT interfere with IndexedDB/blob URLs (cached models).
 //
 // This file is a template: sw/render.ts fills in the two values below when

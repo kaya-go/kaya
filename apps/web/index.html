@@ -32,39 +32,8 @@
     </script>
     <link rel="icon" type="image/svg+xml" href="<%= assetPrefix %>favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <% if (registerServiceWorker) { %>
-    <script>
-      // Registers Kaya's service worker (apps/web/sw/sw.js). It caches the app
-      // and adds the COOP/COEP headers GitHub Pages cannot send, which ORT's
-      // multi-threaded WASM needs. A page loaded without those headers (first
-      // visit, or under the workers of an older build) reloads once the worker
-      // takes control. An isolated page never reloads: an update keeps the
-      // headers.
-      (function () {
-        var sw = navigator.serviceWorker;
-        if (!sw || !window.isSecureContext) return;
-        var RELOADED = 'kaya-sw-isolation-reload';
-        var isolated = window.crossOriginIsolated !== false;
-        sw.register('<%= assetPrefix %>sw.js').catch(function (error) {
-          console.error('[SW] Registration failed:', error);
-        });
-        try {
-          if (isolated) sessionStorage.removeItem(RELOADED);
-        } catch (e) {}
-        if (isolated) return;
-        sw.addEventListener('controllerchange', function () {
-          try {
-            // One try per session: a browser that cannot be isolated this way does not loop
-            if (sessionStorage.getItem(RELOADED)) return;
-            sessionStorage.setItem(RELOADED, '1');
-          } catch (e) {
-            return;
-          }
-          window.location.reload();
-        });
-      })();
-    </script>
-    <% } %>
+    <!-- Registers the service worker: apps/web/sw/register.js -->
+    <%= serviceWorkerRegistration %>
 
     <!-- Primary Meta Tags -->
     <title>Kaya — Play, Study & Analyze Go</title>

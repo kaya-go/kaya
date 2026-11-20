@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 import { resolveOrtWeb } from '../../scripts/ort-web';
-import { renderServiceWorker } from './sw/render';
+import { renderRegistration, renderServiceWorker } from './sw/render';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -29,6 +29,17 @@ function serviceWorkerValues() {
 // Default to '/' for local builds (relative paths don't work well with Rsbuild)
 const assetPrefix = process.env.ASSET_PREFIX ?? '/';
 
+/**
+ * The inline script that registers sw.js (sw/register.js), for production
+ * builds only: the dev server sends COOP/COEP itself, and a caching worker
+ * would get in the way of reloads there.
+ */
+function serviceWorkerRegistration(): string {
+  if (process.env.NODE_ENV !== 'production') return '';
+  const template = fs.readFileSync(path.join(__dirname, 'sw', 'register.js'), 'utf-8');
+  return `<script>\n${renderRegistration(template, `${assetPrefix}sw.js`)}</script>`;
+}
+
 export default defineConfig({
   plugins: [pluginReact()],
   source: {
@@ -45,9 +56,7 @@ export default defineConfig({
     template: './index.html',
     templateParameters: {
       assetPrefix,
-      // The dev server sends COOP/COEP itself, and a caching worker would
-      // get in the way of reloads there
-      registerServiceWorker: process.env.NODE_ENV === 'production',
+      serviceWorkerRegistration: serviceWorkerRegistration(),
     },
   },
   output: {
