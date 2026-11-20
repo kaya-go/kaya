@@ -172,7 +172,11 @@ persistence Just Works against the same Map. The rule for that cache (what
 answers a request, which result to keep) lives in
 [`analysis-cache.ts`](../packages/ai-engine/src/analysis-cache.ts). The queue
 never evicts from the shared Map: it is what a save writes, and its owner clears
-it when a game is loaded or created.
+it when a game is loaded or created. `KA` records the engine version that
+computed it: analysis from another version is shown and saved back as it was,
+but answers no request, so analysing its position again replaces it. Readers
+of the Map watch `analysisRevision`, not its size, since a replacement keeps the
+size.
 
 Preemption reaches into the engine: `analyzeBatch` checks the abort signal
 between inference chunks and throws an `AbortError` carrying the positions it

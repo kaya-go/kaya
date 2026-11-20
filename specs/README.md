@@ -91,3 +91,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [The engine sees the real board](2026-11-20-analysis-real-board.md)                                         | shipped    |
 | 2026-11-20 | [The network gets KataGo's komi parity input](2026-11-20-komi-parity-input.md)                              | shipped    |
 | 2026-11-20 | [Stopping an analysis stops it, and leaves nothing behind](2026-11-20-analysis-stops-cleanly.md)            | shipped    |
+| 2026-11-20 | [KA records the engine version, and older analysis is run again](2026-11-20-ka-engine-version.md)           | shipped    |
