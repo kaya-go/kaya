@@ -104,8 +104,8 @@ export function getNeighbors([x, y]: Vertex, width: number, height: number): Ver
 }
 
 /**
- * Get pseudo-liberty count (liberties + friendly stones with liberties).
- * Used for detecting atari and captures.
+ * Count the liberties of the group at a vertex, stopping at 3 (callers only
+ * tell 0, 1 and 2 apart). Used for detecting atari and captures.
  */
 export function getPseudoLibertyCount(
   [x, y]: Vertex,
@@ -123,8 +123,11 @@ export function getPseudoLibertyCount(
   for (const [nx, ny] of neighbors) {
     if (result.length >= 3) break;
     if (data[ny][nx] === -sign || visited.some(equals([nx, ny]))) continue;
-    if (data[ny][nx] === 0 && !result.some(equals([nx, ny]))) {
-      result.push([nx, ny]);
+    // An empty point is a liberty, never a way into more stones: walking on
+    // from one already counted reached stones of either colour (from an empty
+    // point, -sign is 0) and added the liberties of the opponent's group.
+    if (data[ny][nx] === 0) {
+      if (!result.some(equals([nx, ny]))) result.push([nx, ny]);
       continue;
     }
 
