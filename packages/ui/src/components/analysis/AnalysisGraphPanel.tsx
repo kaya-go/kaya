@@ -41,6 +41,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
     gameInfo,
     analysisCache,
     analysisCacheSize,
+    analysisRevision,
     navigate,
     analysisMode,
     toggleAnalysisMode,
@@ -53,6 +54,7 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
         gameInfo: ctx.gameInfo,
         analysisCache: ctx.analysisCache,
         analysisCacheSize: ctx.analysisCacheSize,
+        analysisRevision: ctx.analysisRevision,
         navigate: ctx.navigate,
         analysisMode: ctx.analysisMode,
         toggleAnalysisMode: ctx.toggleAnalysisMode,
@@ -172,9 +174,9 @@ export const AnalysisGraphPanel: React.FC<AnalysisGraphPanelProps> = ({ classNam
       currentPositionIndex,
       analyzedCount,
     };
-    // analysisCache is mutated in place: analysisCacheSize is what changes when results land.
+    // analysisCache is mutated in place: analysisRevision is what changes when results land.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisCacheSize]);
+  }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisRevision]);
 
   const { dataPoints, pathNodeIds, totalPositions, currentPositionIndex, analyzedCount } =
     analysisData;

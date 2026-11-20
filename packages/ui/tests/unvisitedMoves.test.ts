@@ -31,6 +31,7 @@ describe('next-move panel', () => {
     const info = computeNextMoveInfo({
       nextMoveVertex: playedG7,
       analysisSize: 9,
+      boardHeight: 9,
       mctsProgress: null,
       analysisResult: result,
     });
@@ -43,6 +44,7 @@ describe('next-move panel', () => {
     const info = computeNextMoveInfo({
       nextMoveVertex: playedG7,
       analysisSize: 9,
+      boardHeight: 9,
       mctsProgress: {
         topMoves: [
           { move: 'E5', winRate: 0.6, scoreLead: 1 },
@@ -65,6 +67,7 @@ describe('next-move panel', () => {
     const info = computeNextMoveInfo({
       nextMoveVertex: playedG7,
       analysisSize: 9,
+      boardHeight: 9,
       mctsProgress: null,
       analysisResult: visited,
     });

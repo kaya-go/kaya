@@ -6,7 +6,8 @@
  * tempo-zigzag inherent to KataGo's per-player view.
  *
  * Cancellation, serialization, and "live preempts live/batch" rules all
- * live in the queue. This hook just submits and consumes.
+ * live in the queue, and how a run stops in `ai/liveRun.ts`. This hook just
+ * submits and consumes.
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -17,6 +18,7 @@ import type { SignMap } from '@kaya/goboard';
 import { sgfToVertex } from '@kaya/sgf';
 import { analysisBoardSize, analysisCacheKey, reconstructAnalysisState } from '../utils/gameCache';
 import { isAbortError, smoothAnalysisResult, type AnalysisHistoryItem } from '../utils/aiAnalysis';
+import { runLiveRequests } from './ai/liveRun';
 import { vertexToGTP } from '../utils/gtpUtils';
 import type { ModelQuantization } from '../services/modelStorage';
 import type { GameInfo } from '../types/game';
@@ -65,23 +67,23 @@ export function useLiveAnalysis({
   const runCounterRef = useRef(0);
   const waitForCurrentAnalysis = useCallback(() => waiterRef.current, []);
   const lastRunNodeIdRef = useRef<number | string | null>(null);
-  // Id of the live search in flight, so turning analysis off can cancel it.
-  const liveHandleIdRef = useRef<string | null>(null);
+  // Stops the run in flight, whichever request it is at (see runLiveRequests).
+  const liveRunRef = useRef<AbortController | null>(null);
 
   /**
-   * Analysis was switched off: the run in flight must not land its result on
-   * whatever position is current when it finishes, and whoever waits for it
-   * (Suggest move) stops waiting.
+   * Analysis was switched off: the run in flight submits nothing more, must
+   * not land its result on whatever position is current when it finishes, and
+   * whoever waits for it (Suggest move) stops waiting.
    */
   const stopLiveAnalysis = useCallback(() => {
     runCounterRef.current++;
-    if (liveHandleIdRef.current) queue?.cancel(liveHandleIdRef.current);
-    liveHandleIdRef.current = null;
+    liveRunRef.current?.abort();
+    liveRunRef.current = null;
     completionRef.current?.();
     completionRef.current = null;
     setMctsProgress(null);
     setIsAnalyzing(false);
-  }, [queue]);
+  }, []);
 
   const lookupCachedResult = useCallback((): boolean => {
     if (!queue || !gameTree || currentNodeId === null || currentNodeId === undefined) return false;
@@ -129,6 +131,10 @@ export function useLiveAnalysis({
 
     const runId = ++runCounterRef.current;
     const isStale = () => runId !== runCounterRef.current;
+    // The run this one replaces submits nothing more.
+    liveRunRef.current?.abort();
+    const liveRun = new AbortController();
+    liveRunRef.current = liveRun;
 
     setMctsProgress(null);
     setAnalysisResult(null);
@@ -189,66 +195,50 @@ export function useLiveAnalysis({
 
     const numVisits = aiSettings.numVisits ?? 1;
     const startTime = performance.now();
-    let prevResult: AnalysisResult | null = null;
-    let inferences = 0;
 
     try {
-      // Step 1: prev (numVisits=1 for fast smoothing baseline)
-      if (prevPos) {
-        const handle = queue.submit({
-          signMap: prevPos.signMap,
-          nextToPlay: prevPos.nextToPlay,
-          komi,
-          history: prevPos.history,
-          numVisits: 1,
-          priority: 'live',
-          cacheKey: prevPos.cacheKey,
-          extra: { koInfo: prevPos.koInfo },
-        });
-        const wasCacheHit = handle.id === '';
-        try {
-          prevResult = await handle.result;
-          if (!wasCacheHit) inferences++;
-        } catch (err) {
-          if (isAbortError(err)) return;
-          throw err;
-        }
-      }
-
-      // Step 2: current (full MCTS at user visits). Filter progress by
-      // runId — after a preempt the engine may keep emitting events for
-      // a few hundred ms while MCTS unwinds, attributed to a position
-      // the user has already left.
-      const currentHandle = queue.submit({
-        signMap: currentPos.signMap,
-        nextToPlay: currentPos.nextToPlay,
-        komi,
-        history: currentPos.history,
-        numVisits,
-        priority: 'live',
-        cacheKey: currentPos.cacheKey,
-        includeMove,
-        onProgress: (p: MCTSProgress) => {
-          if (isStale()) return;
-          setMctsProgress(p);
+      const run = await runLiveRequests(
+        queue,
+        {
+          // The parent at one visit, the fast smoothing baseline.
+          prev: prevPos && {
+            signMap: prevPos.signMap,
+            nextToPlay: prevPos.nextToPlay,
+            komi,
+            history: prevPos.history,
+            numVisits: 1,
+            priority: 'live',
+            cacheKey: prevPos.cacheKey,
+            extra: { koInfo: prevPos.koInfo },
+          },
+          // The current position at the user's visits. Filter progress by
+          // runId — after a preempt the engine may keep emitting events for
+          // a few hundred ms while MCTS unwinds, attributed to a position
+          // the user has already left.
+          current: {
+            signMap: currentPos.signMap,
+            nextToPlay: currentPos.nextToPlay,
+            komi,
+            history: currentPos.history,
+            numVisits,
+            priority: 'live',
+            cacheKey: currentPos.cacheKey,
+            includeMove,
+            onProgress: (p: MCTSProgress) => {
+              if (isStale()) return;
+              setMctsProgress(p);
+            },
+            extra: { koInfo: currentPos.koInfo },
+          },
         },
-        extra: { koInfo: currentPos.koInfo },
-      });
-      liveHandleIdRef.current = currentHandle.id || null;
-      const wasCurrentCacheHit = currentHandle.id === '';
-      let currentResult: AnalysisResult;
-      try {
-        currentResult = await currentHandle.result;
-        if (!wasCurrentCacheHit) inferences++;
-      } catch (err) {
-        if (isAbortError(err)) return;
-        throw err;
-      }
+        liveRun.signal
+      );
 
-      if (isStale()) return;
+      if (!run || isStale()) return;
+      const { current: currentResult, inferences } = run;
       if (inferences > 0) updateAnalysisCacheSize();
 
-      const smoothed = smoothAnalysisResult(currentResult, prevResult);
+      const smoothed = smoothAnalysisResult(currentResult, run.prev);
       setAnalysisResult(smoothed);
 
       // Compact log line — useful for diagnostics, kept brief.
@@ -277,7 +267,7 @@ export function useLiveAnalysis({
     } finally {
       // Only clear UI state if a newer run hasn't already taken over.
       if (!isStale()) {
-        liveHandleIdRef.current = null;
+        liveRunRef.current = null;
         setMctsProgress(null);
         setIsAnalyzing(false);
         completionRef.current?.();
