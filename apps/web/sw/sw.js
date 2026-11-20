@@ -1,10 +1,15 @@
 /// <reference lib="webworker" />
 
-// PWA Service Worker for Kaya
-// This service worker enables the "install" prompt and provides basic caching
-// IMPORTANT: This SW must NOT interfere with:
-// - IndexedDB/blob URLs (for cached models)
-// - The coi-serviceworker (handles CORS isolation)
+// Kaya's service worker. It has two jobs:
+// 1. Cross-origin isolation. ORT's multi-threaded WASM needs SharedArrayBuffer,
+//    which needs COOP/COEP headers, and GitHub Pages cannot send them. The
+//    worker adds them to every response it serves, as coi-serviceworker did
+//    before (specs/2026-11-20-single-service-worker.md).
+// 2. Caching: the app shell for offline use, and ONNX Runtime's large files.
+//
+// Its page side is the script in index.html: it registers this worker and
+// reloads once a page that started without a worker comes under one.
+// It must NOT interfere with IndexedDB/blob URLs (cached models).
 //
 // This file is a template: sw/render.ts fills in the two values below when
 // the build copies it to dist/sw.js.
@@ -47,111 +52,152 @@ function isStaleCache(name) {
   return LEGACY_CACHE.test(name);
 }
 
-/** Serve from the cache, else from the network, keeping what `keep` accepts. */
+/**
+ * Serve from the cache, else from the network, keeping what `keep` accepts.
+ * A storage error falls back to the network: the app's code goes through
+ * here, and a broken cache must not blank the page.
+ */
 function cacheFirst(cacheName, request, keep = response => response.ok) {
-  return caches.open(cacheName).then(cache =>
-    cache.match(request).then(cached => {
+  return caches
+    .open(cacheName)
+    .then(cache => cache.match(request).then(cached => ({ cache, cached })))
+    .catch(() => ({ cache: null, cached: undefined }))
+    .then(({ cache, cached }) => {
       if (cached) return cached;
       return fetch(request).then(response => {
-        if (keep(response)) {
-          cache.put(request, response.clone());
+        if (cache && keep(response)) {
+          cache.put(request, response.clone()).catch(() => {});
         }
         return response;
       });
-    })
+    });
+}
+
+/**
+ * Cache what can be cached. A missing file costs offline use only: the
+ * install must never fail on it, since without a worker the page also loses
+ * its cross-origin isolation.
+ */
+function addAllBestEffort(cache, urls) {
+  return Promise.all(
+    urls.map(url => cache.add(url).catch(error => console.warn('[SW] Not cached:', url, error)))
   );
 }
 
-// Install event - cache critical assets
+/**
+ * The headers that make the page and its workers cross-origin isolated, as
+ * coi-serviceworker set them in Chromium and Firefox. coi switched other
+ * browsers to COEP credentialless; WebKit is not isolated under it, and is
+ * under require-corp, so every browser gets require-corp here. Opaque
+ * responses cannot carry headers.
+ */
+function withIsolationHeaders(response) {
+  if (!response) return Response.error();
+  if (response.status === 0) return response;
+  const headers = new Headers(response.headers);
+  headers.set('Cross-Origin-Embedder-Policy', 'require-corp');
+  headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  headers.set('Cross-Origin-Opener-Policy', 'same-origin');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+/**
+ * The scripts and styles this build's index.html loads, so that the app can
+ * start offline after a single visit. Best effort: what fails here is cached
+ * the first time the page asks for it.
+ */
+function precacheEntryAssets(cache) {
+  return cache
+    .match('./index.html')
+    .then(response => (response ? response.text() : ''))
+    .then(html => {
+      const urls = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)]
+        .map(match => new URL(match[1], self.location.href))
+        .filter(url => url.origin === self.location.origin)
+        .map(url => url.href);
+      return addAllBestEffort(cache, urls);
+    });
+}
+
+// Install event - cache critical assets, best effort
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(APP_CACHE).then(cache => {
-      console.log('[SW] Precaching app shell');
-      return cache.addAll(PRECACHE_ASSETS);
-    })
+    caches
+      .open(APP_CACHE)
+      .then(cache => {
+        console.log('[SW] Precaching app shell');
+        return addAllBestEffort(cache, PRECACHE_ASSETS).then(() => precacheEntryAssets(cache));
+      })
+      .catch(error => console.warn('[SW] Precache failed:', error))
   );
-  // Don't skipWaiting() here - it causes conflicts with coi-serviceworker
-  // which also triggers page reloads. Let the user decide when to update
-  // via the "Update available" prompt, or wait for explicit SKIP_WAITING message.
+  // A new build takes over at once. It sends the same headers, so open pages
+  // stay isolated, and index.html does not reload a page that already had a
+  // worker. This is also what replaces the old coi-serviceworker / sw.js pair.
+  self.skipWaiting();
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches, and control the open pages
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.filter(isStaleCache).map(name => {
-          console.log('[SW] Deleting old cache:', name);
-          return caches.delete(name);
-        })
-      );
-    })
+    Promise.all([
+      caches.keys().then(cacheNames =>
+        Promise.all(
+          cacheNames.filter(isStaleCache).map(name => {
+            console.log('[SW] Deleting old cache:', name);
+            return caches.delete(name);
+          })
+        )
+      ),
+      self.clients.claim(),
+    ])
   );
-  // Don't call clients.claim() immediately - let coi-serviceworker handle
-  // page control to avoid conflicts with CORS isolation reloads
 });
 
-// Fetch event - selective caching, avoid interfering with WASM/workers
-self.addEventListener('fetch', event => {
-  const { request } = event;
+/** Where a request is served from. Everything passes through withIsolationHeaders. */
+function respond(request) {
   const url = new URL(request.url);
 
-  // Skip non-GET requests
-  if (request.method !== 'GET') return;
+  if (request.method !== 'GET') return fetch(request);
 
-  // CRITICAL: Skip blob URLs (used for IndexedDB cached models)
-  if (url.protocol === 'blob:') return;
-
-  // Skip cross-origin requests (except fonts)
   if (url.origin !== self.location.origin) {
     // Only cache Google Fonts (font files can come back opaque)
     if (
       url.origin === 'https://fonts.googleapis.com' ||
       url.origin === 'https://fonts.gstatic.com'
     ) {
-      event.respondWith(
-        cacheFirst(APP_CACHE, request, response => response.ok || response.type === 'opaque')
-      );
+      return cacheFirst(APP_CACHE, request, response => response.ok || response.type === 'opaque');
     }
-    return;
+    return fetch(request);
   }
 
   // ONNX Runtime files: cache-first, since they are large and only change
-  // with the ORT version, which is in the URL. The response is cached with
-  // all headers preserved (including CORS headers needed for SharedArrayBuffer).
-  if (url.pathname.startsWith(ORT_PATH)) {
-    event.respondWith(cacheFirst(ORT_CACHE, request));
-    return;
-  }
+  // with the ORT version, which is in the URL.
+  if (url.pathname.startsWith(ORT_PATH)) return cacheFirst(ORT_CACHE, request);
 
   // ORT files of another version are asked for by a page of another build
   // (a tab opened before an update): let the network serve them, uncached.
-  if (url.pathname.startsWith(WASM_ROOT)) return;
+  if (url.pathname.startsWith(WASM_ROOT)) return fetch(request);
 
-  // Other WebAssembly (hashed bundler output). .onnx model files are NOT
-  // cached here (they use their own Cache API store).
+  // The bundler's output (JS, CSS, workers, WebAssembly) has a content hash
+  // in its name, and vendor scripts change only with a build: cache-first in
+  // this build's cache, which is what lets the app start offline.
+  if (url.pathname.startsWith(`${SCOPE}static/`) || url.pathname.startsWith(`${SCOPE}vendor/`)) {
+    return cacheFirst(APP_CACHE, request);
+  }
+
+  // Other WebAssembly. .onnx model files are NOT cached here (they use their
+  // own Cache API store).
   if (url.pathname.endsWith('.wasm') || url.pathname.endsWith('.mjs')) {
-    event.respondWith(cacheFirst(APP_CACHE, request));
-    return;
+    return cacheFirst(APP_CACHE, request);
   }
 
-  // Skip service workers
-  if (url.pathname.endsWith('sw.js') || url.pathname.endsWith('coi-serviceworker.js')) {
-    return;
-  }
-
-  // Skip worker scripts
-  if (request.destination === 'worker' || request.destination === 'sharedworker') {
-    return;
-  }
-
-  // For static images - cache first (but not board textures which might need headers)
-  if (
-    request.destination === 'image' &&
-    !url.pathname.includes('/static/') // Skip hashed static assets
-  ) {
-    event.respondWith(cacheFirst(APP_CACHE, request));
-    return;
+  // Images outside static/ (icons, board textures): cache first
+  if (request.destination === 'image') {
+    return cacheFirst(APP_CACHE, request);
   }
 
   // For audio files - network first, then cache (sounds need to work offline)
@@ -160,57 +206,51 @@ self.addEventListener('fetch', event => {
     request.destination === 'audio' ||
     (url.pathname.includes('/assets/') && url.pathname.endsWith('.ogg'))
   ) {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          // Only cache if it's actually an audio file, not an HTML fallback
-          const contentType = response.headers.get('content-type') || '';
-          if (response.ok && contentType.includes('audio')) {
-            const responseClone = response.clone();
-            caches.open(APP_CACHE).then(cache => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          return caches.open(APP_CACHE).then(cache => cache.match(request));
-        })
-    );
-    return;
+    return fetch(request)
+      .then(response => {
+        const contentType = response.headers.get('content-type') || '';
+        if (response.ok && contentType.includes('audio')) {
+          const responseClone = response.clone();
+          caches
+            .open(APP_CACHE)
+            .then(cache => cache.put(request, responseClone))
+            .catch(() => {});
+        }
+        return response;
+      })
+      .catch(() => caches.open(APP_CACHE).then(cache => cache.match(request)));
   }
 
   // For navigation requests (HTML) - network first with cache fallback
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then(response => {
-          if (response.ok) {
-            const responseClone = response.clone();
-            caches.open(APP_CACHE).then(cache => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() =>
+    return fetch(request)
+      .then(response => {
+        if (response.ok) {
+          const responseClone = response.clone();
           caches
             .open(APP_CACHE)
-            .then(cache =>
-              cache.match(request).then(cached => cached || cache.match('./index.html'))
-            )
-        )
-    );
-    return;
+            .then(cache => cache.put(request, responseClone))
+            .catch(() => {});
+        }
+        return response;
+      })
+      .catch(() =>
+        caches
+          .open(APP_CACHE)
+          .then(cache => cache.match(request).then(cached => cached || cache.match('./index.html')))
+      );
   }
 
-  // For everything else (JS/CSS) - don't cache, let browser handle it
-  // This avoids issues with hashed assets and ensures fresh code
-});
+  // Everything else (version.json, worker scripts outside static/): network.
+  // They still get the headers: a worker's isolation comes from its own
+  // script response.
+  return fetch(request);
+}
 
-// Message handler for skip waiting
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  // Forwarding these would fail (same rule as coi-serviceworker)
+  if (request.cache === 'only-if-cached' && request.mode !== 'same-origin') return;
+
+  event.respondWith(respond(request).then(withIsolationHeaders));
 });

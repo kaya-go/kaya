@@ -8,17 +8,8 @@ import {
 } from '@kaya/ui';
 import App from './App.tsx';
 import '@kaya/ui/dist/styles/ui.css';
-import { registerServiceWorker } from './pwa.ts';
 
-// Register PWA service worker
-registerServiceWorker({
-  onNeedRefresh: () => {
-    console.log('[PWA] New content available, refresh to update');
-  },
-  onOfflineReady: () => {
-    console.log('[PWA] App ready to work offline');
-  },
-});
+// The service worker is registered by index.html, before the app loads.
 
 // Ask the browser to keep our storage so downloaded models and settings persist
 // across sessions instead of being evicted (issue #115). No-op outside the web.

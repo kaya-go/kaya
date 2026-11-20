@@ -181,3 +181,8 @@ The risks are three:
 
 It is worth doing as its own change, with the upgrade harness used here plus
 WebKit and Firefox runs, not folded into an ORT bump.
+
+Done in
+[2026-11-20-single-service-worker.md](2026-11-20-single-service-worker.md).
+One correction: offline also needed the app's JavaScript in the cache, which
+`sw.js` never stored.

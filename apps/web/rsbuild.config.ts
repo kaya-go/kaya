@@ -25,9 +25,6 @@ function serviceWorkerValues() {
   return { buildId: `${gitHash}-${buildDate}`, ortVersion };
 }
 
-// Resolve coi-serviceworker path (handles monorepo hoisting)
-const coiServiceWorkerPath = path.dirname(require.resolve('coi-serviceworker/package.json'));
-
 // Use ASSET_PREFIX from env for GitHub Pages deployment
 // Default to '/' for local builds (relative paths don't work well with Rsbuild)
 const assetPrefix = process.env.ASSET_PREFIX ?? '/';
@@ -48,6 +45,9 @@ export default defineConfig({
     template: './index.html',
     templateParameters: {
       assetPrefix,
+      // The dev server sends COOP/COEP itself, and a caching worker would
+      // get in the way of reloads there
+      registerServiceWorker: process.env.NODE_ENV === 'production',
     },
   },
   output: {
@@ -55,10 +55,6 @@ export default defineConfig({
     copy: [
       {
         from: '../../version.json',
-        to: '.',
-      },
-      {
-        from: path.join(coiServiceWorkerPath, 'coi-serviceworker.js'),
         to: '.',
       },
       {
