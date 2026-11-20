@@ -135,6 +135,40 @@ describe('TauriEngine search abort', () => {
     expect(calls).toContainEqual(['onnx_abort_mcts', { requestId: 42 }]);
   });
 
+  // Every search emits on one event name: a late event from the search before
+  // showed that search's moves as this one's progress.
+  test('progress from another search is ignored', async () => {
+    const progress = (requestId: number, bestMove: string) => ({
+      requestId,
+      completedVisits: 1,
+      totalVisits: 10,
+      bestMove,
+      bestMoveVisits: 1,
+      winRate: 0.5,
+      scoreLead: 0,
+      topMoves: [],
+    });
+    let deliver: (event: { payload: unknown }) => void = () => {};
+    const { engine } = recordingEngine(async () => {
+      deliver({ payload: progress(41, 'Q16') });
+      deliver({ payload: progress(42, 'D4') });
+      return searched;
+    });
+    (engine as unknown as Record<string, unknown>).listen = async (
+      _event: string,
+      handler: (event: { payload: unknown }) => void
+    ) => {
+      deliver = handler;
+      return () => {};
+    };
+    const onProgress = mock((_p: unknown) => {});
+
+    await engine.analyze(board, { numVisits: 10, onProgress } as never);
+
+    expect(onProgress).toHaveBeenCalledTimes(1);
+    expect(onProgress.mock.calls[0][0]).toMatchObject({ bestMove: 'D4' });
+  });
+
   test('a search left alone returns its result', async () => {
     const { engine } = recordingEngine(async () => searched);
     const controller = new AbortController();

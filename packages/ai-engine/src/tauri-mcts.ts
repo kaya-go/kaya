@@ -21,6 +21,9 @@ export interface NativeSearchIpc {
   invokeAnalysis: <T>(cmd: string, args: Record<string, unknown>) => Promise<T>;
 }
 
+/** An "mcts-progress" event: the progress of the search `requestId`. */
+type SearchProgress = MCTSProgress & { requestId: number };
+
 interface NativeSearchResult {
   moveSuggestions: {
     move: string;
@@ -107,7 +110,12 @@ export async function runNativeSearch(
 
   let unlisten: (() => void) | undefined;
   if (onProgress && ipc.listen) {
-    unlisten = await ipc.listen<MCTSProgress>('mcts-progress', event => onProgress(event.payload));
+    // Every search emits on this one event name, and an event from the search
+    // before this one can still arrive: keep this search's own.
+    unlisten = await ipc.listen<SearchProgress>('mcts-progress', ({ payload }) => {
+      const { requestId: from, ...progress } = payload;
+      if (from === requestId) onProgress(progress);
+    });
   }
 
   const abort = () => {
