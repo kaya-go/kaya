@@ -45,9 +45,14 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
   // Analysis cache (persisted across renders)
   const analysisCache = useRef<Map<string, AnalysisResult>>(new Map());
   const [analysisCacheSize, setAnalysisCacheSize] = useState<number>(0);
+  // What readers of the map watch: a result that replaces another under its key
+  // (a deeper search, analysis from an older file run again) leaves the size as
+  // it was.
+  const [analysisRevision, setAnalysisRevision] = useState<number>(0);
 
   const updateAnalysisCacheSize = useCallback(() => {
     setAnalysisCacheSize(analysisCache.current.size);
+    setAnalysisRevision(revision => revision + 1);
   }, []);
 
   const setAISettings = useCallback((settings: Partial<AISettings>) => {
@@ -221,6 +226,7 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
     engineState,
     analysisCache,
     analysisCacheSize,
+    analysisRevision,
     updateAnalysisCacheSize,
     // Model Library
     modelLibrary,

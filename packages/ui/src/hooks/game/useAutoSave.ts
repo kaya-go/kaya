@@ -137,7 +137,8 @@ interface UseAutoSaveProps {
   boardSize?: number;
   boardHeight?: number;
   komi?: number;
-  analysisCacheSize?: number; // Triggers auto-save when analysis results are added
+  /** Triggers auto-save when analysis results land (GameTreeContextValue.analysisRevision). */
+  analysisRevision?: number;
 }
 
 export function useAutoSave({
@@ -151,7 +152,7 @@ export function useAutoSave({
   boardSize = 19,
   boardHeight,
   komi,
-  analysisCacheSize,
+  analysisRevision,
 }: UseAutoSaveProps) {
   const [hasAutoSavedGame, setHasAutoSavedGame] = useState(false);
   const [lastSaveTime, setLastSaveTime] = useState<Date | null>(null);
@@ -159,7 +160,7 @@ export function useAutoSave({
   const lastSavedStateRef = useRef<{
     treeHash: string;
     nodeId: number | string | null;
-    cacheSize: number;
+    analysisRevision: number;
   } | null>(null);
 
   // Check for auto-saved game on mount
@@ -177,11 +178,11 @@ export function useAutoSave({
 
     // Calculate current state hash
     const currentHash = gameTree.getHash(); // Use full hash to detect any changes
-    const currentCacheSize = analysisCacheSize ?? 0;
+    const currentRevision = analysisRevision ?? 0;
     const currentState = {
       treeHash: currentHash,
       nodeId: currentNodeId,
-      cacheSize: currentCacheSize,
+      analysisRevision: currentRevision,
     };
 
     // Check if state has actually changed
@@ -189,7 +190,7 @@ export function useAutoSave({
       !lastSavedStateRef.current ||
       lastSavedStateRef.current.treeHash !== currentState.treeHash ||
       lastSavedStateRef.current.nodeId !== currentState.nodeId ||
-      lastSavedStateRef.current.cacheSize !== currentState.cacheSize;
+      lastSavedStateRef.current.analysisRevision !== currentState.analysisRevision;
 
     if (!hasChanged) return;
 
@@ -237,7 +238,7 @@ export function useAutoSave({
     boardSize,
     boardHeight,
     komi,
-    analysisCacheSize,
+    analysisRevision,
   ]);
 
   // Auto-save on unmount or page refresh.
@@ -293,11 +294,11 @@ export function useAutoSave({
     );
     if (result === true) {
       const currentHash = gameTree.getHash();
-      const currentCacheSize = analysisCacheSize ?? 0;
+      const currentRevision = analysisRevision ?? 0;
       lastSavedStateRef.current = {
         treeHash: currentHash,
         nodeId: currentNodeId,
-        cacheSize: currentCacheSize,
+        analysisRevision: currentRevision,
       };
       setLastSaveTime(new Date());
     } else if (result === 'too-large' && onAutoSaveDisabled) {
@@ -313,7 +314,7 @@ export function useAutoSave({
     boardSize,
     boardHeight,
     komi,
-    analysisCacheSize,
+    analysisRevision,
     onAutoSaveDisabled,
   ]);
 

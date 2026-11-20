@@ -149,6 +149,49 @@ export async function runMCTS(
     });
   }
 
+  /**
+   * Report the search so far. Called after every evaluation, forced visits
+   * included: the web worker's watchdog takes a silent worker for a stuck one.
+   */
+  const reportProgress = async (completedVisits: number, totalVisits: number) => {
+    if (!onProgress || !root.children || root.children.size === 0) return;
+    const sorted = [...root.children.entries()].sort(([, a], [, b]) => b.N - a.N);
+    const [bestMove, bestChild] = sorted[0];
+    const progressTopMoves = sorted.slice(0, 5);
+
+    // Append includeMove if it's not already in the top 5
+    if (
+      includeMove &&
+      !progressTopMoves.some(([m]) => m === includeMove) &&
+      root.children.has(includeMove)
+    ) {
+      const child = root.children.get(includeMove)!;
+      progressTopMoves.push([includeMove, child]);
+    }
+
+    onProgress({
+      completedVisits,
+      totalVisits,
+      bestMove,
+      bestMoveVisits: bestChild.N,
+      winRate: root.N > 0 ? root.W / root.N : 0.5,
+      scoreLead: root.N > 0 ? root.S / root.N : 0,
+      topMoves: progressTopMoves.map(([move, child]) => ({
+        move,
+        visits: child.N,
+        ...ownEvaluation(child),
+      })),
+    });
+
+    // Yield to the event loop so progress messages can be delivered to the
+    // main thread. Without this, synchronous backends (WASM) run the entire
+    // loop in a tight microtask chain and all postMessage calls arrive at
+    // once, preventing the UI from showing intermediate progress.
+    if (completedVisits < totalVisits) {
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+    }
+  };
+
   let completed = 0;
   while (completed < numVisits) {
     if (signal?.aborted) break;
@@ -287,45 +330,7 @@ export async function runMCTS(
     }
 
     completed += pending.length;
-
-    // Emit progress after each batch
-    if (onProgress && root.children && root.children.size > 0) {
-      const sorted = [...root.children.entries()].sort(([, a], [, b]) => b.N - a.N);
-      const [bestMove, bestChild] = sorted[0];
-      let progressTopMoves = sorted.slice(0, 5);
-
-      // Append includeMove if it's not already in the top 5
-      if (
-        includeMove &&
-        !progressTopMoves.some(([m]) => m === includeMove) &&
-        root.children!.has(includeMove)
-      ) {
-        const child = root.children!.get(includeMove)!;
-        progressTopMoves.push([includeMove, child]);
-      }
-
-      onProgress({
-        completedVisits: completed,
-        totalVisits: numVisits,
-        bestMove,
-        bestMoveVisits: bestChild.N,
-        winRate: root.N > 0 ? root.W / root.N : 0.5,
-        scoreLead: root.N > 0 ? root.S / root.N : 0,
-        topMoves: progressTopMoves.map(([move, child]) => ({
-          move,
-          visits: child.N,
-          ...ownEvaluation(child),
-        })),
-      });
-
-      // Yield to the event loop so progress messages can be delivered to the
-      // main thread. Without this, synchronous backends (WASM) run the entire
-      // loop in a tight microtask chain and all postMessage calls arrive at
-      // once, preventing the UI from showing intermediate progress.
-      if (completed < numVisits) {
-        await new Promise<void>(resolve => setTimeout(resolve, 0));
-      }
-    }
+    await reportProgress(completed, numVisits);
   }
 
   // Force additional visits through includeMove if it has insufficient statistics.
@@ -447,6 +452,9 @@ export async function runMCTS(
           step.node.W += value;
           step.node.S += sl;
         }
+
+        // The forced visits extend the search past the visits asked for.
+        await reportProgress(completed + e + 1, completed + extraNeeded);
       }
     }
   }

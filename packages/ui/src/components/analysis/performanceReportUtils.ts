@@ -21,6 +21,7 @@ import {
 } from '../../utils/gameCache';
 import type { TFunction } from 'i18next';
 import { DEFAULT_KOMI } from '@kaya/ai-engine';
+import { boardMoveName } from '../../utils/gtpUtils';
 
 interface GameInfoInput {
   boardSize: number;
@@ -135,5 +136,17 @@ export function buildPerformanceReport(
     result: gameInfo.result ?? '',
   };
 
-  return generatePerformanceReport(positions, gameInfoData);
+  const report = generatePerformanceReport(positions, gameInfoData);
+  // The report compares moves by the engine's names; the list shows them as the
+  // board labels them, which differs on a board wider than tall.
+  const height = gameInfo.boardHeight ?? gameInfo.boardSize;
+  const shown = (move: string) => boardMoveName(move, analysisSize, height);
+  return {
+    ...report,
+    keyMistakes: report.keyMistakes.map(m => ({
+      ...m,
+      playedMove: shown(m.playedMove),
+      bestMove: shown(m.bestMove),
+    })),
+  };
 }

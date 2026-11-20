@@ -28,7 +28,7 @@ type PhaseFilter = 'entireGame' | GamePhase;
  */
 export const PerformanceReportTab: React.FC = () => {
   const { t } = useTranslation();
-  const { gameTree, currentNodeId, rootId, gameInfo, analysisCache, analysisCacheSize, navigate } =
+  const { gameTree, currentNodeId, rootId, gameInfo, analysisCache, analysisRevision, navigate } =
     useGameTreeSelector(
       useCallback(
         (ctx: GameTreeContextValue) => ({
@@ -37,7 +37,7 @@ export const PerformanceReportTab: React.FC = () => {
           rootId: ctx.rootId,
           gameInfo: ctx.gameInfo,
           analysisCache: ctx.analysisCache,
-          analysisCacheSize: ctx.analysisCacheSize,
+          analysisRevision: ctx.analysisRevision,
           navigate: ctx.navigate,
         }),
         []
@@ -55,9 +55,9 @@ export const PerformanceReportTab: React.FC = () => {
       return null;
     }
     return buildPerformanceReport(gameTree, rootId, currentNodeId, gameInfo, analysisCache, t);
-    // analysisCache is mutated in place: analysisCacheSize is what changes when results land.
+    // analysisCache is mutated in place: analysisRevision is what changes when results land.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisCacheSize, t]);
+  }, [gameTree, rootId, currentNodeId, gameInfo, analysisCache, analysisRevision, t]);
 
   // Get filtered stats based on phase
   const filteredStats = useMemo(() => {

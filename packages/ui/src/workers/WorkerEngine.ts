@@ -21,8 +21,9 @@ const DISPOSE_TIMEOUT_MS = 5000;
 
 /**
  * How long the worker may stay silent while it owes an answer. The worker runs
- * one request at a time and a search reports progress after every batch, so
- * silence means it is stuck, however deep the search or long the queue.
+ * one request at a time and a search reports progress after every evaluation
+ * (`runMCTS`, forced visits included), so silence means it is stuck, however
+ * deep the search or long the queue.
  */
 const STALL_TIMEOUT_MS = 60_000;
 

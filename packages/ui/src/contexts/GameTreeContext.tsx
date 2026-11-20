@@ -235,6 +235,7 @@ export const GameTreeProvider: React.FC<{
     toggleShowAnalysisBar,
     analysisCache,
     analysisCacheSize,
+    analysisRevision,
     updateAnalysisCacheSize,
     modelLibrary,
     selectedModelId,
@@ -281,7 +282,7 @@ export const GameTreeProvider: React.FC<{
     boardSize: gameInfo.boardSize ?? 19,
     boardHeight: gameInfo.boardHeight,
     komi: gameInfo.komi ?? DEFAULT_KOMI,
-    analysisCacheSize, // Triggers auto-save when analysis results are added
+    analysisRevision, // Triggers auto-save when analysis results land
   });
 
   // 11. Derived callbacks (resign, single-step navigation, toggles, removers)
@@ -318,6 +319,7 @@ export const GameTreeProvider: React.FC<{
       setConfigInitialTab,
       analysisCache,
       analysisCacheSize,
+      analysisRevision,
       updateAnalysisCacheSize,
       gameSettings,
       setGameSettings,
@@ -472,7 +474,7 @@ export const GameTreeProvider: React.FC<{
       // open changes nothing else, so the toggles looked inert until the next navigation.
       showOwnership, toggleOwnership, showTopMoves, toggleTopMoves,
       showAnalysisBar, toggleShowAnalysisBar,
-      analysisCache, analysisCacheSize, updateAnalysisCacheSize,
+      analysisCache, analysisCacheSize, analysisRevision, updateAnalysisCacheSize,
       gameId, territoryMap, totalMovesInBranch, loadSGFAsync, aliases,
       downloadModel, deleteModel, uploadModel,
       // Setters are stable, but the array is exhaustive on purpose: this is what drifted.
