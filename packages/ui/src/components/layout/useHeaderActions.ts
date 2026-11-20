@@ -7,7 +7,6 @@ import {
   useGameTreeGetter,
   useGameTreeEdit,
   useGameTreeAI,
-  useGameTreeActions,
 } from '../../contexts/selectors';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useGameSounds } from '../../useGameSounds';
@@ -45,9 +44,8 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     )
   );
   const getGameTree = useGameTreeGetter();
-  const { makeMainVariation, undo, redo, canUndo, canRedo, addSetupPosition } = useGameTreeEdit();
+  const { makeMainVariation, undo, redo, canUndo, canRedo } = useGameTreeEdit();
   const { setAIConfigOpen } = useGameTreeAI();
-  const { playMove } = useGameTreeActions();
   const {
     clearLoadedFile,
     loadedFileId,
@@ -108,50 +106,6 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
       }
     },
     [loadSGFAsync, setFileName, clearLoadedFile, checkUnsavedChanges, showToast, t] // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  const handleRecognitionImport = useCallback(
-    (
-      stones: { x: number; y: number; color: 'black' | 'white' }[],
-      boardSize: number,
-      mode: 'blank' | 'merge'
-    ) => {
-      setRecognitionFile(null);
-      const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
-      const coord = (col: number, row: number) => ALPHA[col] + ALPHA[row];
-      const blackCoords = stones.filter(s => s.color === 'black').map(s => coord(s.x, s.y));
-      const whiteCoords = stones.filter(s => s.color === 'white').map(s => coord(s.x, s.y));
-
-      // In 'blank' mode, clear all intersections first so the position starts from an empty board
-      let clearCoords: string[] | undefined;
-      if (mode === 'blank') {
-        clearCoords = [];
-        for (let x = 0; x < boardSize; x++) {
-          for (let y = 0; y < boardSize; y++) {
-            clearCoords.push(coord(x, y));
-          }
-        }
-      }
-
-      addSetupPosition(
-        blackCoords,
-        whiteCoords,
-        `Board recognition (${boardSize}×${boardSize}, ${stones.length} stones)`,
-        clearCoords
-      );
-    },
-    [addSetupPosition]
-  );
-
-  const handleRecognitionImportSGF = useCallback(
-    (sgf: string) => {
-      setRecognitionFile(null);
-      clearLoadedFile();
-      loadSGFAsync(sgf);
-      setFileName('scan.sgf');
-      onNavigateToBoard?.();
-    },
-    [loadSGFAsync, setFileName, clearLoadedFile, onNavigateToBoard]
   );
 
   const handleOpenClick = useCallback(() => {
@@ -382,9 +336,7 @@ export function useHeaderActions(options?: { onNavigateToBoard?: () => void }) {
     isMobileMenuOpen,
     setIsMobileMenuOpen,
     defaultSaveFileName,
-    handleRecognitionImport,
-    handleRecognitionImportSGF,
-    playMove,
+    onNavigateToBoard,
     handleOpenClick,
     handleScanBoardClick,
     handleScanFileSelected,

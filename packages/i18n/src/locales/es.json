@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "Reconocimiento de tablero ({{size}}×{{size}}, {{count}} piedras)",
     "title": "Reconocimiento de tablero",
     "selectSize": "Tamaño del tablero:",
     "photo": "Foto",

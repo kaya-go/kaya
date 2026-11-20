@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "Board recognition ({{size}}×{{size}}, {{count}} stones)",
     "title": "Board Image Recognition",
     "selectSize": "Board size:",
     "photo": "Photo",

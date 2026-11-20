@@ -154,10 +154,8 @@ export const Header: React.FC<HeaderProps> = ({
       {actions.recognitionFile && (
         <CurrentBoardRecognitionDialog
           file={actions.recognitionFile}
-          onImport={actions.handleRecognitionImport}
-          onImportSGF={actions.handleRecognitionImportSGF}
-          onPlayMove={actions.playMove}
           onClose={() => actions.setRecognitionFile(null)}
+          onNavigateToBoard={actions.onNavigateToBoard}
         />
       )}
     </>

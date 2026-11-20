@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "棋盘图片识别（{{size}}×{{size}}，{{count}} 颗棋子）",
     "title": "棋盘图片识别",
     "selectSize": "棋盘大小：",
     "photo": "图片",

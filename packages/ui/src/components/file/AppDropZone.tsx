@@ -48,19 +48,16 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
   ({ children, onNavigateToBoard }, ref) => {
     const { t } = useTranslation();
     const { showToast } = useToast();
-    const { loadSGFAsync, setFileName, uploadModel, addSetupPosition, playMove } =
-      useGameTreeSelector(
-        useCallback(
-          (ctx: GameTreeContextValue) => ({
-            loadSGFAsync: ctx.loadSGFAsync,
-            setFileName: ctx.setFileName,
-            uploadModel: ctx.uploadModel,
-            addSetupPosition: ctx.addSetupPosition,
-            playMove: ctx.playMove,
-          }),
-          []
-        )
-      );
+    const { loadSGFAsync, setFileName, uploadModel } = useGameTreeSelector(
+      useCallback(
+        (ctx: GameTreeContextValue) => ({
+          loadSGFAsync: ctx.loadSGFAsync,
+          setFileName: ctx.setFileName,
+          uploadModel: ctx.uploadModel,
+        }),
+        []
+      )
+    );
     const { clearLoadedFile, createFile, importZip, checkUnsavedChanges } = useLibrary();
     const { setTauriDragging, setOverLibrary } = useTauriDrag();
     const [isDragging, setIsDragging] = useState(false);
@@ -162,49 +159,6 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
 
     useImperativeHandle(ref, () => ({ loadFile: handleFileLoad }), [handleFileLoad]);
 
-    const handleRecognitionImport = useCallback(
-      (
-        stones: { x: number; y: number; color: 'black' | 'white' }[],
-        boardSize: number,
-        mode: 'blank' | 'merge'
-      ) => {
-        setRecognitionFile(null);
-        const ALPHA = 'abcdefghijklmnopqrstuvwxyz';
-        const coord = (col: number, row: number) => ALPHA[col] + ALPHA[row];
-        const blackCoords = stones.filter(s => s.color === 'black').map(s => coord(s.x, s.y));
-        const whiteCoords = stones.filter(s => s.color === 'white').map(s => coord(s.x, s.y));
-
-        let clearCoords: string[] | undefined;
-        if (mode === 'blank') {
-          clearCoords = [];
-          for (let x = 0; x < boardSize; x++) {
-            for (let y = 0; y < boardSize; y++) {
-              clearCoords.push(coord(x, y));
-            }
-          }
-        }
-
-        addSetupPosition(
-          blackCoords,
-          whiteCoords,
-          `Board recognition (${boardSize}×${boardSize}, ${stones.length} stones)`,
-          clearCoords
-        );
-      },
-      [addSetupPosition]
-    );
-
-    const handleRecognitionImportSGF = useCallback(
-      (sgf: string) => {
-        setRecognitionFile(null);
-        clearLoadedFile();
-        loadSGFAsync(sgf);
-        setFileName('scan.sgf');
-        onNavigateToBoard?.();
-      },
-      [loadSGFAsync, setFileName, clearLoadedFile, onNavigateToBoard]
-    );
-
     const resetDragState = useCallback(() => {
       dragCounterRef.current = 0;
       if (dragLeaveTimerRef.current) {
@@ -302,10 +256,8 @@ export const AppDropZone = forwardRef<AppDropZoneRef, AppDropZoneProps>(
         {recognitionFile && (
           <CurrentBoardRecognitionDialog
             file={recognitionFile}
-            onImport={handleRecognitionImport}
-            onImportSGF={handleRecognitionImportSGF}
-            onPlayMove={playMove}
             onClose={() => setRecognitionFile(null)}
+            onNavigateToBoard={onNavigateToBoard}
           />
         )}
       </div>

@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "Riconoscimento scacchiera Go ({{size}}×{{size}}, {{count}} pietre)",
     "title": "Riconoscimento scacchiera Go",
     "selectSize": "Dimensione tavola:",
     "photo": "Foto",

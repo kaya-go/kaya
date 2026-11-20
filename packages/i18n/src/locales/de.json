@@ -774,6 +774,7 @@
     }
   },
   "boardRecognition": {
+    "importComment": "Brett-Bilderkennung ({{size}}×{{size}}, {{count}} Steine)",
     "title": "Brett-Bilderkennung",
     "selectSize": "Brettgröße:",
     "photo": "Foto",
