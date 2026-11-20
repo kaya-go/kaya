@@ -158,6 +158,10 @@ jobs:
           if [ -d /tmp/previous-site/next ]; then
             mv /tmp/previous-site/next gh-pages/next
           fi
+          # Root dotfiles (.nojekyll) stay, as they did with rm -rf gh-pages/*
+          for f in /tmp/previous-site/.[!.]*; do
+            if [ -e "$f" ]; then cp -r "$f" gh-pages/; fi
+          done
 
       - name: Add CNAME
         run: echo "kayago.app" > gh-pages/CNAME
