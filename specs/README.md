@@ -86,3 +86,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [One service worker: isolation headers and caching](2026-11-20-single-service-worker.md)                    | shipped    |
 | 2026-11-20 | [Navigation calls compose within one frame](2026-11-20-navigation-composes-within-a-frame.md)               | shipped    |
 | 2026-11-20 | [macOS: an Edit menu, so text fields copy and paste](2026-11-20-macos-edit-menu.md)                         | shipped    |
+| 2026-11-20 | [Safari fires the paste event outside a text field](2026-11-20-safari-paste-event.md)                       | reference  |
