@@ -1,4 +1,5 @@
 {
+  "0.5.1": "Sound works again in the desktop app on macOS when Bluetooth headphones are the audio output.",
   "0.5.0": "AI analysis is closer to KataGo's own: it reads rectangular boards as they are, takes the komi's parity into account (win rates at komi 6.5 and 7.5 move most on 9×9, so analysis saved by an older version is run again), and never suggests a suicide or a ko recapture the rules forbid. SGF files in Chinese, Japanese or Korean encodings open with their names intact, the web app keeps working offline and across updates, and the macOS app, which now needs macOS 13.4 or later, gets an Edit menu so text fields copy and paste.",
   "0.4.18": "Suggest move now reads the whole position, ko included, and its results feed the analysis graph. A file that fails to open or import now says so, and no longer costs the current game its analysis or undo history.",
   "0.4.17": "Switching between 9×9, 13×13 and 19×19 games no longer reloads the AI engine, and the analysis report and graph no longer get cut off in a short panel.",

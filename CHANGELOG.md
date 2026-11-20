@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2026-11-20
+
+Sound works again in the desktop app on macOS when Bluetooth headphones are the audio output.
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(desktop)* Open audio outputs that cap the buffer below 50 ms ([#258](https://github.com/kaya-go/kaya/issues/258)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @github-actions[bot]
+
 ## [0.5.0] - 2026-11-20
 
 AI analysis is closer to KataGo's own: it reads rectangular boards as they are, takes the komi's parity into account (win rates at komi 6.5 and 7.5 move most on 9×9, so analysis saved by an older version is run again), and never suggests a suicide or a ko recapture the rules forbid. SGF files in Chinese, Japanese or Korean encodings open with their names intact, the web app keeps working offline and across updates, and the macOS app, which now needs macOS 13.4 or later, gets an Edit menu so text fields copy and paste.
@@ -66,15 +79,21 @@ AI analysis is closer to KataGo's own: it reads rectangular boards as they are, 
 
 - *(specs)* Record that safari fires the paste event outside a text field ([#247](https://github.com/kaya-go/kaya/issues/247)) by @hadim
 
+- Name the next release 0.5.0 ([#257](https://github.com/kaya-go/kaya/issues/257)) by @hadim
+
 ### <!-- 6 -->🧪 Testing
 
 - *(e2e)* Hold a library drag until the drop hover lands ([#239](https://github.com/kaya-go/kaya/issues/239)) by @hadim
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.5.0 ([c2882ec](https://github.com/kaya-go/kaya/commit/c2882ec0e4d6fff387db7a87ae8d8edcf378326c)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @hadim
 - @xifeiwu
-- @github-actions[bot]
 
 ## [0.4.18] - 2026-11-11
 
