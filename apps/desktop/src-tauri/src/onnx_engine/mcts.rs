@@ -3,8 +3,6 @@
 //! This runs the entire MCTS loop in Rust, eliminating the IPC overhead
 //! that occurs when MCTS runs in JS with per-batch Tauri IPC calls.
 
-use std::sync::atomic::{AtomicBool, Ordering};
-
 use serde::{Deserialize, Serialize};
 
 use super::types::{AnalysisOptions, AnalysisResult, HistoryMove};
@@ -346,7 +344,7 @@ impl OnnxEngine {
         &mut self,
         sign_map: &[Vec<i8>],
         options: &MCTSAnalysisOptions,
-        abort_flag: &AtomicBool,
+        should_abort: &dyn Fn() -> bool,
         progress_callback: &mut dyn FnMut(MCTSProgress),
     ) -> Result<MCTSAnalysisResult, String> {
         let size = sign_map.len();
@@ -394,7 +392,7 @@ impl OnnxEngine {
 
         let mut completed: usize = 0;
         while completed < num_visits {
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Until the root is expanded every path stops at it, so a full first
             // batch would evaluate the root batch_size times over. Evaluate it alone.
@@ -529,7 +527,7 @@ impl OnnxEngine {
 
             // Check abort before starting the (slow) ONNX inference. If the user
             // navigated away during leaf selection, skip the inference entirely.
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Phase 2: Batch evaluate unexpanded leaves
             let to_evaluate: Vec<usize> = pending.iter().enumerate()
@@ -560,7 +558,7 @@ impl OnnxEngine {
             // Inference is the dominant per-batch cost. Check abort right after
             // it returns so we don't waste time on backup + progress emit when
             // the user has already moved on.
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Phase 3: Remove virtual loss, expand leaves, backup values
             let mut eval_idx: usize = 0;
@@ -655,7 +653,7 @@ impl OnnxEngine {
 
         // Force additional visits through includeMove if needed
         if let Some(ref include_move) = options.include_move {
-            if num_visits > 1 && !abort_flag.load(Ordering::Relaxed) {
+            if num_visits > 1 && !should_abort() {
                 if let Some(ref children) = root.children {
                     if let Some((child_idx, _)) = children.iter().enumerate()
                         .find(|(_, (m, _))| m == include_move)
@@ -674,7 +672,7 @@ impl OnnxEngine {
                                 include_move,
                                 extra_needed,
                                 size,
-                                abort_flag,
+                                should_abort,
                             )?;
                         }
                     }
@@ -698,10 +696,10 @@ impl OnnxEngine {
         include_move: &str,
         extra_needed: usize,
         size: usize,
-        abort_flag: &AtomicBool,
+        should_abort: &dyn Fn() -> bool,
     ) -> Result<(), String> {
         for _ in 0..extra_needed {
-            if abort_flag.load(Ordering::Relaxed) { break; }
+            if should_abort() { break; }
 
             // Force select includeMove at root
             let mut cur_board = root_board.clone();

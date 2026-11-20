@@ -11,6 +11,7 @@ mod featurization;
 mod inference;
 pub mod mcts;
 mod result_processing;
+mod search_ids;
 mod types;
 
 pub use execution_providers::{
@@ -30,8 +31,8 @@ use boundary::{lock_or_reset, validate_batch, validate_board, validate_ko};
 use execution_providers::configure_execution_providers;
 use ndarray::{Array2, Array4};
 use ort::session::{builder::GraphOptimizationLevel, Session};
+use search_ids::SearchIds;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
 /// Native ONNX engine state
@@ -47,8 +48,11 @@ pub struct OnnxEngine {
 /// Global engine instance (lazy loaded)
 static ENGINE: Mutex<Option<OnnxEngine>> = Mutex::new(None);
 
-/// Global abort flag for MCTS — checked each iteration of the search loop.
-static MCTS_ABORT: AtomicBool = AtomicBool::new(false);
+/// Ids of MCTS searches and their aborts, checked each iteration of the search loop.
+static MCTS_IDS: SearchIds = SearchIds::new();
+
+/// The error of a search aborted before it started. The frontend matches "aborted".
+const SEARCH_ABORTED: &str = "MCTS search aborted";
 
 impl OnnxEngine {
     /// Determine optimal thread count based on platform and available parallelism.
@@ -417,29 +421,40 @@ pub fn get_provider_info() -> Option<ExecutionProviderInfo> {
 }
 
 /// Run MCTS analysis entirely in Rust (no per-batch IPC overhead).
+/// `request_id` comes from `next_mcts_request`; `abort_mcts` stops the search.
 pub fn run_mcts_analysis(
+    request_id: u64,
     sign_map: Vec<Vec<i8>>,
     options: mcts::MCTSAnalysisOptions,
     progress_callback: &mut dyn FnMut(mcts::MCTSProgress),
 ) -> Result<mcts::MCTSAnalysisResult, String> {
     let size = validate_board(&sign_map)?;
     validate_ko(&options.ko_info, size)?;
-    // Acquire the engine lock FIRST. If a previous MCTS is still running, this
-    // blocks until it releases the lock — which only happens after it observes
-    // any pending abort signal. Resetting MCTS_ABORT before this point would
-    // race with an in-flight abort meant for the previous run, causing either
-    // (a) the old run to ignore the abort, or (b) the new run to inherit a
-    // stale `true` flag and self-abort immediately.
+    let aborted = || MCTS_IDS.is_aborted(request_id);
+    // Aborted before it started: don't wait for the lock, run nothing. The
+    // frontend reads the "aborted" error as an AbortError.
+    if aborted() {
+        return Err(SEARCH_ABORTED.to_string());
+    }
+    // A previous search holds the lock until it returns; an abort can arrive
+    // meanwhile, and is kept for when this one gets the lock.
     let mut global = lock_engine();
+    if aborted() {
+        return Err(SEARCH_ABORTED.to_string());
+    }
     let engine = global.as_mut().ok_or("Engine not initialized")?;
-    // Now that the previous run is fully done, clear the flag for our run.
-    MCTS_ABORT.store(false, Ordering::Relaxed);
-    engine.run_mcts(&sign_map, &options, &MCTS_ABORT, progress_callback)
+    engine.run_mcts(&sign_map, &options, &aborted, progress_callback)
 }
 
-/// Signal the MCTS search to abort.
-pub fn abort_mcts() {
-    MCTS_ABORT.store(true, Ordering::Relaxed);
+/// A new id for a search, to pass to `run_mcts_analysis` and `abort_mcts`.
+pub fn next_mcts_request() -> u64 {
+    MCTS_IDS.issue()
+}
+
+/// Abort the search `request_id`, whether it is running, waiting for the
+/// engine lock or not started yet, and any older one.
+pub fn abort_mcts(request_id: u64) {
+    MCTS_IDS.abort_up_to(request_id);
 }
 
 #[cfg(test)]
@@ -492,8 +507,31 @@ mod tests {
             include_move: None,
             ko_info: Some(mcts::KoInfo { sign: 1, vertex: [3, 9] }),
         };
-        let err = run_mcts_analysis(vec![vec![0i8; 9]; 9], search, &mut |_| {}).unwrap_err();
+        let err = run_mcts_analysis(next_mcts_request(), vec![vec![0i8; 9]; 9], search, &mut |_| {})
+            .unwrap_err();
         assert!(err.contains("ko"), "{err}");
+    }
+
+    /// The frontend aborts a search that has not reached the engine yet, for
+    /// instance one queued behind another. Each search cleared the old global
+    /// flag once it held the lock, so that abort was lost and the search ran
+    /// in full. It now returns at once, without waiting for the lock.
+    #[test]
+    fn a_search_aborted_before_it_starts_runs_nothing() {
+        let request_id = next_mcts_request();
+        abort_mcts(request_id);
+
+        let search = mcts::MCTSAnalysisOptions {
+            komi: 7.5,
+            next_to_play: Some("B".to_string()),
+            history: vec![],
+            num_visits: 10,
+            include_move: None,
+            ko_info: None,
+        };
+        let err = run_mcts_analysis(request_id, vec![vec![0i8; 9]; 9], search, &mut |_| {})
+            .unwrap_err();
+        assert!(err.contains("aborted"), "{err}");
     }
 
     /// A real analysis through the whole native stack, which CI never runs: it
@@ -560,7 +598,7 @@ mod tests {
                 ko_info: None,
             };
             let searched = engine
-                .run_mcts(&sign_map, &search, &AtomicBool::new(false), &mut |_| {})
+                .run_mcts(&sign_map, &search, &|| false, &mut |_| {})
                 .expect("search should run");
             let move_visits: usize = searched.move_suggestions.iter().filter_map(|m| m.visits).sum();
             eprintln!(
@@ -574,7 +612,7 @@ mod tests {
             // Full-game analysis searches 10 visits a position: they must reach moves too.
             let short = mcts::MCTSAnalysisOptions { num_visits: 10, ..search.clone() };
             let searched = engine
-                .run_mcts(&sign_map, &short, &AtomicBool::new(false), &mut |_| {})
+                .run_mcts(&sign_map, &short, &|| false, &mut |_| {})
                 .expect("search should run");
             let move_visits: usize = searched.move_suggestions.iter().filter_map(|m| m.visits).sum();
             eprintln!("mcts 10 visits: visits on listed moves={}", move_visits);
@@ -624,7 +662,7 @@ mod tests {
                 ko_info: None,
             };
             let searched = engine
-                .run_mcts(&sign_map, &search, &AtomicBool::new(false), &mut |_| {})
+                .run_mcts(&sign_map, &search, &|| false, &mut |_| {})
                 .expect("search should run");
             assert!((0.1..=0.9).contains(&searched.win_rate), "win rate {}", searched.win_rate);
         }
