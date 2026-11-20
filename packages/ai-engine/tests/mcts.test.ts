@@ -6,8 +6,8 @@
 
 import { describe, test, expect } from 'bun:test';
 import { GoBoard } from '@kaya/goboard';
-import { runMCTS } from '../src/onnx-mcts';
-import type { MCTSBatchEvaluator, MCTSProgress } from '../src/onnx-types';
+import { expandNode, runMCTS } from '../src/onnx-mcts';
+import type { MCTSBatchEvaluator, MCTSNode, MCTSProgress } from '../src/onnx-types';
 import type { AnalysisResult } from '../src/types';
 
 /** Same evaluation everywhere: E5 is the obvious move, G7 a long shot. */
@@ -133,5 +133,47 @@ describe('runMCTS batching', () => {
   test('no position is evaluated twice', async () => {
     const { evaluated } = await batchedSearch(32, 16);
     expect(new Set(evaluated).size).toBe(evaluated.length);
+  });
+});
+
+describe('expandNode', () => {
+  const unexpanded = (): MCTSNode => ({
+    N: 0,
+    W: 0,
+    S: 0,
+    P: 1,
+    children: null,
+    expanded: false,
+    virtualLoss: 0,
+  });
+
+  // GoBoard.makeMove plays a suicide unless told not to, and expansion only
+  // skipped occupied points and the ko point: the search kept a suicide the
+  // network ranked high as a child, and played it.
+  test('drops suicide points, keeps an eye of your own', () => {
+    // Black surrounds C3: White there has no liberty and captures nothing.
+    const board = GoBoard.fromDimensions(5);
+    for (const [x, y] of [
+      [2, 1],
+      [1, 2],
+      [3, 2],
+      [2, 3],
+    ]) {
+      board.set([x, y], 1);
+    }
+    const policy: AnalysisResult = {
+      moveSuggestions: ['C3', 'A5', 'C4', 'PASS'].map(move => ({ move, probability: 0.25 })),
+      winRate: 0.5,
+      scoreLead: 0,
+      currentTurn: 'W',
+    };
+
+    const white = unexpanded();
+    expandNode(white, policy, board, -1, 5);
+    expect([...white.children!.keys()]).toEqual(['A5', 'PASS']);
+
+    const black = unexpanded();
+    expandNode(black, policy, board, 1, 5);
+    expect([...black.children!.keys()]).toEqual(['C3', 'A5', 'PASS']);
   });
 });
