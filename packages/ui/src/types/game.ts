@@ -312,8 +312,6 @@ export interface GameTreeContextValue {
   lastSaveTime: Date | null;
   triggerAutoSave: () => void;
   isLoadingSGF: boolean;
-  /** Share of the SGF load done, a fraction from 0 to 1. Show it with `loadingPercent`. */
-  loadingProgress: number;
   /** Translation key of the loading step, or '' */
   loadingMessage: string;
   toggleDeadStones: (vertex: Vertex | Vertex[], targetDead?: boolean) => void;

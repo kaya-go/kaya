@@ -41,8 +41,6 @@ export function useGameTreeState() {
 
   // Loading states
   const [isLoadingSGF, setIsLoadingSGF] = useState(false);
-  // A fraction from 0 to 1, like the parser's own progress.
-  const [loadingProgress, setLoadingProgress] = useState(0);
   // A translation key: the overlay translates it.
   const [loadingMessage, setLoadingMessage] = useState('');
 
@@ -133,21 +131,15 @@ export function useGameTreeState() {
     (sgfContent: string, onParsed?: (tree: GameTree<SGFProperty>) => void) =>
       new Promise<void>((resolve, reject) => {
         setIsLoadingSGF(true);
-        setLoadingProgress(0);
         setLoadingMessage('loading.parsingSgf');
 
         // Small delay to let the loading overlay paint before the parse blocks
         setTimeout(() => {
           try {
-            const [sgfRoot] = parseSGFStrict(sgfContent, {
-              onProgress: ({ progress }) => setLoadingProgress(progress * 0.5),
-            });
+            const [sgfRoot] = parseSGFStrict(sgfContent);
 
             setLoadingMessage('loading.buildingTree');
             const rootNode = sgfNodeToGameTreeNode(sgfRoot, { value: 0 }, null);
-
-            // Approximate progress for tree building since we can't track it directly
-            setLoadingProgress(0.9);
 
             const newTree = new GameTree<SGFProperty>({ root: rootNode });
 
@@ -168,7 +160,6 @@ export function useGameTreeState() {
             );
 
             setGameId(`game-${Date.now()}`);
-            setLoadingProgress(1);
             setLoadingMessage('loading.done');
             resolve();
           } catch (error) {
@@ -252,7 +243,6 @@ export function useGameTreeState() {
     setFilename: setFileName,
     isInitialized,
     isLoadingSGF,
-    loadingProgress,
     loadingMessage,
     loadSGFAsync,
     createNewGame: newGame,

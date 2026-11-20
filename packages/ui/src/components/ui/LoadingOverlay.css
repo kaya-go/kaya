@@ -64,36 +64,6 @@
   }
 }
 
-.loading-progress-container {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.loading-progress-bar {
-  flex: 1;
-  height: 8px;
-  background: var(--bg-tertiary, #f0f0f0);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.loading-progress-fill {
-  height: 100%;
-  background: var(--accent-primary, #007acc);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.loading-progress-text {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--text-primary, #333);
-  min-width: 40px;
-  text-align: right;
-}
-
 .loading-message {
   font-size: 0.9rem;
   color: var(--text-secondary, #666);
@@ -113,14 +83,6 @@
   }
 
   .loading-header h3 {
-    color: var(--text-primary, #ffffff);
-  }
-
-  .loading-progress-bar {
-    background: var(--bg-tertiary, #3e3e3e);
-  }
-
-  .loading-progress-text {
     color: var(--text-primary, #ffffff);
   }
 

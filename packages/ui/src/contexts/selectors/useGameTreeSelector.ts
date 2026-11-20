@@ -303,7 +303,6 @@ export function useGameTreeFile() {
         saveSGF: ctx.saveSGF,
         createNewGame: ctx.createNewGame,
         isLoadingSGF: ctx.isLoadingSGF,
-        loadingProgress: ctx.loadingProgress,
         loadingMessage: ctx.loadingMessage,
         lastSaveTime: ctx.lastSaveTime,
         triggerAutoSave: ctx.triggerAutoSave,
