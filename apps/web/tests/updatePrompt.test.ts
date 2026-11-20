@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { createUpdatePrompt, SNOOZE_MS, type AnswerStorage } from '../src/updatePrompt';
+import {
+  createUpdatePrompt as createForBase,
+  SNOOZE_MS,
+  storageKey,
+  type AnswerStorage,
+} from '../src/updatePrompt';
 
 function memoryStorage(): AnswerStorage & { data: Map<string, string> } {
   const data = new Map<string, string>();
@@ -11,6 +16,9 @@ function memoryStorage(): AnswerStorage & { data: Map<string, string> } {
 }
 
 const NOW = 1_800_000_000_000;
+
+/** The stable app, served at the root. */
+const createUpdatePrompt = (storage: AnswerStorage | null) => createForBase(storage, '/');
 
 describe('web update prompt', () => {
   test('shows for a new build when the user never answered', () => {
@@ -64,6 +72,30 @@ describe('web update prompt', () => {
       expect(prompt.shouldShow('abc', NOW)).toBe(false);
       expect(prompt.shouldShow('def', NOW)).toBe(true);
     }
+  });
+
+  test('stable and /next/ share localStorage but keep separate answers', () => {
+    const storage = memoryStorage();
+    const stable = createForBase(storage, '/');
+    const next = createForBase(storage, '/next/');
+
+    next.snooze(NOW);
+    expect(next.shouldShow('abc', NOW)).toBe(false);
+    expect(stable.shouldShow('abc', NOW)).toBe(true);
+
+    stable.skip('abc');
+    expect(stable.shouldShow('abc', NOW)).toBe(false);
+    // Skipping on stable did not wipe /next/'s snooze
+    expect(next.shouldShow('def', NOW + SNOOZE_MS - 1)).toBe(false);
+  });
+
+  test('stable reads the answer stored before /next/ had its own key', () => {
+    const storage = memoryStorage();
+    storage.data.set('kaya-web-update-prompt', JSON.stringify({ skippedHash: 'abc' }));
+    expect(createForBase(storage, '/').shouldShow('abc', NOW)).toBe(false);
+    expect(createForBase(storage, '/next/').shouldShow('abc', NOW)).toBe(true);
+    expect(storageKey('/')).toBe('kaya-web-update-prompt');
+    expect(storageKey('/next/')).toBe('kaya-web-update-prompt|/next/');
   });
 
   test('a corrupt stored answer is ignored', () => {
