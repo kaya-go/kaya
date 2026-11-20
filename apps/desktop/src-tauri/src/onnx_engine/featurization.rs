@@ -160,6 +160,13 @@ pub fn featurize_into(
     // White-to-move and -komi for Black-to-move. Kaya's Sign has Black=1, White=-1,
     // so selfKomi = -pla * komi.
     set_global(5, (-(pla as f32) * komi) / 20.0);
+
+    // Komi parity (rowGlobal[18]), from the area of the board itself. KataGo
+    // sets it under area scoring only; Kaya always tells the network area
+    // scoring (global 9 stays 0), so it is always set. If Kaya ever passes
+    // territory scoring, it must become conditional, as in fillRowV7.
+    let area = sign_map.len() * sign_map.first().map_or(0, Vec::len);
+    set_global(18, super::komi_parity::wave(-(pla as f32) * komi, area));
 }
 
 #[cfg(test)]

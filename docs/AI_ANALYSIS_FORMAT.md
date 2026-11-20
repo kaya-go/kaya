@@ -73,3 +73,4 @@ This feature can be enabled/disabled in the AI Settings:
 
 - **Serialization**: When saving an SGF, Kaya traverses the game tree. For each node, it rebuilds the analysis position through the position cache (`analysisCacheKeyAt`), the way live and full-game analysis build theirs, and looks up the result in the `analysisCache`. If found, the `KA` property is injected into the node.
 - **Deserialization**: When loading an SGF, Kaya builds the game tree, rebuilds the position of each node carrying `KA` the same way, and populates the `analysisCache` under that key. This allows instant access to analysis results without re-running the engine.
+- **Older values**: a saved result is what the engine said when it ran. Analysis saved before 2026-11-20 was computed without KataGo's komi parity input, so a game with a half-integer komi (7.5, 6.5) shows older win rates, most visibly on 9x9; running the analysis again refreshes them.
