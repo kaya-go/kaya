@@ -7,9 +7,8 @@ import type { TFunction } from 'i18next';
 import type { ImportResult } from '@kaya/game-library';
 import { loadContentOrOGSUrl, isOGSUrl, getFilenameForSGF } from '../../services/ogsLoader';
 import { isTauriApp, readClipboardText } from '@kaya/platform';
-import { parseModelFilename } from '../../services/modelStorage';
-import type { ModelQuantization } from '../../services/modelStorage';
 import { isSgfValidationError } from '@kaya/sgf';
+import type { ModelUpload } from '../../services/modelStorage';
 import type { ToastType } from '../ui/Toast';
 import {
   formatImportResultError,
@@ -32,6 +31,26 @@ const isPositionInsideLibrary = (x: number, y: number): boolean => {
   return false;
 };
 
+/**
+ * Store a dropped `.onnx` in the model library and say how it went. Web and
+ * desktop drops both end here, so a drop behaves like the settings picker:
+ * the file is deduplicated, persisted and selected.
+ */
+export async function uploadDroppedModel(
+  file: ModelUpload,
+  uploadModel: (file: ModelUpload) => Promise<void>,
+  showToast: (message: string, type: ToastType) => void,
+  t: TFunction
+): Promise<void> {
+  try {
+    await uploadModel(file);
+    showToast(t('aiConfig.modelUploadedSuccess'), 'success');
+  } catch (error) {
+    console.error('Failed to store AI model:', error);
+    showToast(t('aiConfig.modelUploadFailed'), 'error');
+  }
+}
+
 // --- Tauri drag-drop hook ---
 
 interface UseTauriDragDropParams {
@@ -40,14 +59,7 @@ interface UseTauriDragDropParams {
   isOverLibraryRef: MutableRefObject<boolean>;
   loadSGFAsync: (sgf: string) => Promise<void>;
   setFileName: (name: string) => void;
-  setCustomAIModel: (model: {
-    data: ArrayBuffer | File;
-    id: string;
-    name: string;
-    quantization?: ModelQuantization;
-    date: number;
-    size: number;
-  }) => void;
+  uploadModel: (file: ModelUpload) => Promise<void>;
   clearLoadedFile: () => void;
   createFile: (name: string, content: string, folderId: string | null) => Promise<unknown>;
   importZip: (buffer: ArrayBuffer) => Promise<ImportResult>;
@@ -62,7 +74,7 @@ export function useTauriDragDrop({
   isOverLibraryRef,
   loadSGFAsync,
   setFileName,
-  setCustomAIModel,
+  uploadModel,
   clearLoadedFile,
   createFile,
   importZip,
@@ -83,16 +95,18 @@ export function useTauriDragDrop({
           if (filePath.endsWith('.onnx')) {
             const content = await fs.readFile(filePath);
             const fileName = filePath.split(/[\/\\]/).pop() || 'model.onnx';
-            const { name, quantization } = parseModelFilename(fileName);
-            setCustomAIModel({
-              data: content.buffer,
-              id: quantization ? name + '.' + quantization : name,
-              name: name,
-              quantization: quantization,
-              date: Date.now(),
-              size: content.buffer.byteLength,
-            });
-            alert(`Loaded AI model: ${fileName}`);
+            // The bytes are already in memory: hand them over as they are.
+            const bytes =
+              content.byteOffset === 0 && content.byteLength === content.buffer.byteLength
+                ? (content.buffer as ArrayBuffer)
+                : (content.slice().buffer as ArrayBuffer);
+            const upload: ModelUpload = {
+              name: fileName,
+              size: bytes.byteLength,
+              lastModified: Date.now(),
+              arrayBuffer: async () => bytes,
+            };
+            await uploadDroppedModel(upload, uploadModel, showToast, t);
             return;
           }
 
@@ -110,15 +124,7 @@ export function useTauriDragDrop({
         showToast(formatSgfLoadError(error, t), 'error');
       }
     },
-    [
-      loadSGFAsync,
-      setFileName,
-      setCustomAIModel,
-      clearLoadedFile,
-      checkUnsavedChanges,
-      showToast,
-      t,
-    ]
+    [loadSGFAsync, setFileName, uploadModel, clearLoadedFile, checkUnsavedChanges, showToast, t]
   );
 
   // Handle file import to library (from path - Tauri only)

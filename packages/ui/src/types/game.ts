@@ -5,7 +5,7 @@ import { GameInfo as SGFGameInfo, type GameInfoPatch } from '@kaya/sgf';
 import { AnalysisResult } from '@kaya/ai-engine';
 
 import type { ConfigTab } from '../components/ai/useKayaConfig';
-import type { ModelQuantization, StoredModelMetadata } from '../services/modelStorage';
+import type { ModelUpload, StoredModelMetadata } from '../services/modelStorage';
 
 export interface SGFProperty {
   [key: string]: string[];
@@ -140,7 +140,6 @@ export interface GameTreeContextValue {
 
   // AI Model
   customAIModel: AIModel | null;
-  setCustomAIModel: (model: AIModel | null) => void;
   isModelLoaded: boolean;
   aiSettings: AISettings;
   setAISettings: (settings: Partial<AISettings>) => void;
@@ -162,7 +161,7 @@ export interface GameTreeContextValue {
   setSelectedModelId: (id: string | null) => void;
   downloadModel: (id: string) => Promise<void>;
   deleteModel: (id: string) => Promise<void>;
-  uploadModel: (file: File) => Promise<void>;
+  uploadModel: (file: ModelUpload) => Promise<void>;
 
   // Position in tree
   moveNumber: number;

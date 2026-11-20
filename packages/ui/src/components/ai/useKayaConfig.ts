@@ -56,25 +56,21 @@ export function useKayaConfig() {
   const { boardTheme, setBoardTheme, availableThemes } = useBoardTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Network names of the shipped models. A library row belongs to that
-  // group when its `name` is one of these; everything else is a user file.
-  const baseNames = useMemo(() => new Set(BASE_MODELS.map(m => m.name)), []);
-
+  // Catalog rows, grouped by network. A user file is never grouped here, even
+  // when it carries a catalog network's name (the files on Hugging Face do):
+  // the group renders one row per precision, so it would not be listed at all.
   const modelsByName = useMemo(() => {
     const grouped = new Map<string, typeof modelLibrary>();
     for (const model of modelLibrary) {
-      if (!baseNames.has(model.name)) continue;
+      if (model.isUserModel) continue;
       const existing = grouped.get(model.name) ?? [];
       existing.push(model);
       grouped.set(model.name, existing);
     }
     return grouped;
-  }, [modelLibrary, baseNames]);
+  }, [modelLibrary]);
 
-  const userModels = useMemo(
-    () => modelLibrary.filter(m => !baseNames.has(m.name)),
-    [modelLibrary, baseNames]
-  );
+  const userModels = useMemo(() => modelLibrary.filter(m => m.isUserModel), [modelLibrary]);
 
   // Detect Linux desktop for showing PyTorch option
   const isLinuxDesktop =
@@ -110,11 +106,11 @@ export function useKayaConfig() {
   useEffect(() => {
     if (selectedModelId && expandedModelName === null && !hasUserInteracted.current) {
       const selected = modelLibrary.find(m => m.id === selectedModelId);
-      if (selected && baseNames.has(selected.name)) {
+      if (selected && !selected.isUserModel) {
         setExpandedModelName(selected.name);
       }
     }
-  }, [selectedModelId, expandedModelName, modelLibrary, baseNames]);
+  }, [selectedModelId, expandedModelName, modelLibrary]);
 
   const handleToggleExpand = (name: string) => {
     hasUserInteracted.current = true;

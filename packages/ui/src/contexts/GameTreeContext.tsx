@@ -208,7 +208,6 @@ export const GameTreeProvider: React.FC<{
     aiSettings,
     setAISettings,
     customAIModel,
-    setCustomAIModel,
     isModelLoaded,
     isAIConfigOpen,
     setAIConfigOpen,
@@ -303,7 +302,6 @@ export const GameTreeProvider: React.FC<{
       gameInfo,
       markerMap,
       customAIModel,
-      setCustomAIModel,
       isModelLoaded,
       aiSettings,
       setAISettings,
@@ -473,7 +471,7 @@ export const GameTreeProvider: React.FC<{
       downloadModel, deleteModel, uploadModel,
       // Setters are stable, but the array is exhaustive on purpose: this is what drifted.
       setCurrentNodeId, setFilename, setIsDirty, setAnalysisMode, setAnalysisResult,
-      setAISettings, setCustomAIModel, setAIConfigOpen, setConfigInitialTab,
+      setAISettings, setAIConfigOpen, setConfigInitialTab,
       setShowAnalysisBar, setSelectedModelId, setGameSettings, setScoreMode,
       setEditMode, setEditPlayMode, setEditTool, setStoneToolColor,
     ]

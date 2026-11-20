@@ -19,7 +19,6 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
   // Delegate model library management to sub-hook
   const {
     customAIModel,
-    setCustomAIModel: handleSetCustomAIModel,
     isModelLoaded,
     modelLibrary,
     selectedModelId,
@@ -196,7 +195,6 @@ export function useAIAnalysis({ currentBoard }: UseAIAnalysisProps) {
 
   return {
     customAIModel,
-    setCustomAIModel: handleSetCustomAIModel,
     isModelLoaded,
     isAIConfigOpen,
     setAIConfigOpen,

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  loadModelData,
   saveModelData,
   deleteModelData,
   loadModelLibrary,
@@ -10,6 +9,7 @@ import {
   getStoredModelIds,
   parseModelFilename,
   sha256Base64Url,
+  type ModelUpload,
   type StoredModelMetadata,
 } from '../../services/modelStorage';
 import { type AIModel, type AIModelEntry } from '../../types/game';
@@ -19,7 +19,8 @@ import { listDiskCachedModels, type DiskCachedModel } from '../../services/model
 import { PREDEFINED_MODELS } from './ai-analysis-types';
 
 export function useModelLibrary() {
-  // Legacy model state (for backward compatibility with AIAnalysisOverlay)
+  // The selected library model, as the engine reads it. Always derived from
+  // `selectedModelId` by the effect below; nothing else sets it.
   const [customAIModel, setCustomAIModel] = useState<AIModel | null>(null);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
 
@@ -81,8 +82,8 @@ export function useModelLibrary() {
           if (isDownloaded) {
             library.push({
               ...userModel,
-              // Records saved before displayName existed only have `name`.
-              displayName: userModel.displayName || userModel.name,
+              // A row saved before displayName existed kept the whole filename in `name`.
+              ...(userModel.displayName ? {} : parseModelFilename(userModel.name)),
               size: userModel.size ?? disk?.size,
               date: userModel.date ?? disk?.modified,
               isDownloaded: true,
@@ -346,22 +347,22 @@ export function useModelLibrary() {
           }
         }
 
-        // Update metadata
+        // The stored row describes the bytes that are now gone (size, date,
+        // hash), so it goes for a catalog model too: a hash left behind would
+        // make a later upload of the same file select a model that is not there.
         const storedMetadata = await loadModelLibrary();
+        await saveModelLibrary(storedMetadata.filter(m => m.id !== id));
+
         const model = modelLibrary.find(m => m.id === id);
-
         if (model?.isUserModel) {
-          // Remove user model entirely from metadata
-          const filtered = storedMetadata.filter(m => m.id !== id);
-          await saveModelLibrary(filtered);
-
-          // Remove from library
           setModelLibrary(prev => prev.filter(m => m.id !== id));
         } else {
-          // Keep predefined model in library but mark as not downloaded
+          // A catalog model stays listed, ready to download again.
           setModelLibrary(prev =>
             prev.map(m =>
-              m.id === id ? { ...m, isDownloaded: false, size: undefined, date: undefined } : m
+              m.id === id
+                ? { ...m, isDownloaded: false, size: undefined, date: undefined, hash: undefined }
+                : m
             )
           );
         }
@@ -381,7 +382,7 @@ export function useModelLibrary() {
   );
 
   // Upload a model. A second drop of the same file, or of the same bytes, selects the copy already stored.
-  const uploadModel = useCallback(async (file: File) => {
+  const uploadModel = useCallback(async (file: ModelUpload) => {
     const fingerprint = `${file.name}\0${file.size}\0${file.lastModified}`;
     const pendingFile = uploadInflightRef.current.byFile.get(fingerprint);
     if (pendingFile) return pendingFile;
@@ -399,40 +400,45 @@ export function useModelLibrary() {
       }
 
       try {
-        const storedMetadata = await loadModelLibrary();
-        const existing = storedMetadata.find(m => m.hash === hash);
+        const [storedMetadata, storedIds, diskModels] = await Promise.all([
+          loadModelLibrary(),
+          getStoredModelIds(),
+          listDiskCachedModels(),
+        ]);
+        // A stored row can outlive its bytes (the browser evicted them, the
+        // file left the models directory). Only a row that still has its bytes
+        // is the copy already stored; `initModelLibrary` applies the same test.
+        const hasBytes = (id: string) =>
+          storedIds.includes(id) || diskModels.has(modelCacheIdFromStorageId(id));
+        const existing = storedMetadata.find(m => m.hash === hash && hasBytes(m.id));
         if (existing) {
           setSelectedModelIdState(existing.id);
           await saveSelectedModelId(existing.id);
           return;
         }
 
-        const { name, quantization } = parseModelFilename(file.name);
-        const basename = quantization ? name + '.' + quantization : name;
-        const id = `${basename}-${hash.slice(0, 12)}`;
-        const date = Date.now();
+        const parsed = parseModelFilename(file.name);
+        const id = `${parsed.displayName}-${hash.slice(0, 12)}`;
 
         await saveModelData(id, buffer);
 
         const newMetadata: StoredModelMetadata = {
           id,
-          name,
-          displayName: basename,
+          ...parsed,
           description: 'User uploaded model',
-          quantization,
           size: file.size,
-          date,
+          date: Date.now(),
           isUserModel: true,
           hash,
         };
-        storedMetadata.push(newMetadata);
-        await saveModelLibrary(storedMetadata);
+        // Replace a row left under the same id by bytes that are gone.
+        await saveModelLibrary([...storedMetadata.filter(m => m.id !== id), newMetadata]);
 
         const newEntry: AIModelEntry = {
           ...newMetadata,
           isDownloaded: true,
         };
-        setModelLibrary(prev => [...prev, newEntry]);
+        setModelLibrary(prev => [...prev.filter(m => m.id !== id), newEntry]);
         setSelectedModelIdState(id);
         await saveSelectedModelId(id);
       } finally {
@@ -460,27 +466,8 @@ export function useModelLibrary() {
     await saveSelectedModelId(id);
   }, []);
 
-  // Legacy wrapper for setCustomAIModel (for backward compatibility)
-  const handleSetCustomAIModel = useCallback(
-    async (model: AIModel | null) => {
-      if (model && model.data instanceof File) {
-        await uploadModel(model.data);
-      } else if (!model) {
-        setSelectedModelIdState(null);
-        await saveSelectedModelId(null);
-        setCustomAIModel(null);
-      } else {
-        // Bytes already in memory (a path drop). The library effect only
-        // rebuilds customAIModel for a selected id, so keep this one as given.
-        setCustomAIModel(model);
-      }
-    },
-    [uploadModel]
-  );
-
   return {
     customAIModel,
-    setCustomAIModel: handleSetCustomAIModel,
     isModelLoaded,
     modelLibrary,
     selectedModelId,

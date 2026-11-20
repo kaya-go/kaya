@@ -150,7 +150,7 @@ export const AIEngineProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       backend: aiSettings.backend ?? 'auto',
       webgpuBatchSize: aiSettings.webgpuBatchSize,
     });
-  }, [customAIModel, aiSettings.backend, aiSettings.webgpuBatchSize]);
+  }, [customAIModel?.id, aiSettings.backend, aiSettings.webgpuBatchSize]);
 
   const disposeEngine = useCallback(async () => {
     setEngine(null);
