@@ -12,7 +12,10 @@ function browserStorage(): AnswerStorage | null {
   }
 }
 
-const updatePrompt = createUpdatePrompt(browserStorage());
+/** Where this build is served: `/` (stable) or `/next/`. */
+const BASE_PATH = import.meta.env.VITE_ASSET_PREFIX || '/';
+
+const updatePrompt = createUpdatePrompt(browserStorage(), BASE_PATH);
 
 function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefined }) {
   const { t } = useTranslation();
@@ -26,8 +29,7 @@ function WebUpdater({ currentVersion }: { currentVersion: VersionData | undefine
       // Interval may fire in background; skip the fetch until visible again.
       if (document.visibilityState !== 'visible') return;
       try {
-        const baseUrl = import.meta.env.VITE_ASSET_PREFIX || '/';
-        const res = await fetch(`${baseUrl}version.json?t=${Date.now()}`);
+        const res = await fetch(`${BASE_PATH}version.json?t=${Date.now()}`);
         if (res.ok) {
           const latest: VersionData = await res.json();
           // Recomputed on every check, so an answer given in another tab

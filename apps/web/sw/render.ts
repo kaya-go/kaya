@@ -10,22 +10,42 @@ export interface ServiceWorkerValues {
   buildId: string;
   /** The onnxruntime-web version served under wasm/<version>/. */
   ortVersion: string;
+  /** The files to cache, relative to the worker's scope (sw/plugin.ts). */
+  precache: string[];
+  /** The part of `precache` a first install caches: index.html and what it loads. */
+  shell: string[];
 }
 
 const PLACEHOLDERS: Record<keyof ServiceWorkerValues, string> = {
   buildId: "'__KAYA_BUILD_ID__'",
   ortVersion: "'__KAYA_ORT_VERSION__'",
+  precache: "'__KAYA_PRECACHE__'",
+  shell: "'__KAYA_SHELL__'",
 };
 
-export function renderServiceWorker(template: string, values: ServiceWorkerValues): string {
+/** Replace each placeholder, which must appear exactly once, by its value as a JS literal. */
+function fill(template: string, file: string, values: Record<string, string | string[]>): string {
   let out = template;
-  for (const key of Object.keys(PLACEHOLDERS) as (keyof ServiceWorkerValues)[]) {
-    const placeholder = PLACEHOLDERS[key];
+  for (const [placeholder, value] of Object.entries(values)) {
     if (out.split(placeholder).length !== 2) {
-      throw new Error(`sw.js must contain ${placeholder} exactly once`);
+      throw new Error(`${file} must contain ${placeholder} exactly once`);
     }
-    if (!values[key]) throw new Error(`No ${key} for sw.js`);
-    out = out.replace(placeholder, JSON.stringify(values[key]));
+    if (!value || value.length === 0) throw new Error(`No value for ${placeholder} in ${file}`);
+    out = out.replace(placeholder, () => JSON.stringify(value));
   }
   return out;
+}
+
+export function renderServiceWorker(template: string, values: ServiceWorkerValues): string {
+  return fill(template, 'sw.js', {
+    [PLACEHOLDERS.buildId]: values.buildId,
+    [PLACEHOLDERS.ortVersion]: values.ortVersion,
+    [PLACEHOLDERS.precache]: values.precache,
+    [PLACEHOLDERS.shell]: values.shell,
+  });
+}
+
+/** Fill the registration script (register.js) that index.html inlines. */
+export function renderRegistration(template: string, scriptUrl: string): string {
+  return fill(template, 'register.js', { "'__KAYA_SW_URL__'": scriptUrl });
 }

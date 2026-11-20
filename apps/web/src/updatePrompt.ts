@@ -8,6 +8,16 @@
 
 const STORAGE_KEY = 'kaya-web-update-prompt';
 
+/**
+ * The localStorage key for the answer given on the app served at `basePath`.
+ * kayago.app/ (stable) and kayago.app/next/ share an origin, hence one
+ * localStorage, and each offers its own builds, so each keeps its own answer.
+ * Stable keeps the key both used before, so its users' answers carry over.
+ */
+export function storageKey(basePath: string): string {
+  return basePath === '/' ? STORAGE_KEY : `${STORAGE_KEY}|${basePath}`;
+}
+
 /** How long "Remind me tomorrow" keeps the banner away. */
 export const SNOOZE_MS = 24 * 60 * 60 * 1000;
 
@@ -29,9 +39,9 @@ export interface UpdatePrompt {
   snooze(now: number): void;
 }
 
-function readStored(storage: AnswerStorage | null): UpdatePromptAnswer | null {
+function readStored(storage: AnswerStorage | null, key: string): UpdatePromptAnswer | null {
   try {
-    const raw = storage?.getItem(STORAGE_KEY);
+    const raw = storage?.getItem(key);
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return null;
@@ -48,21 +58,22 @@ function readStored(storage: AnswerStorage | null): UpdatePromptAnswer | null {
 /**
  * `storage` is null when the browser refuses access to it (private mode,
  * blocked site data). The answer then lives in memory, so it still holds until
- * the page is reloaded.
+ * the page is reloaded. `basePath` is where the app is served (`/`, `/next/`).
  */
-export function createUpdatePrompt(storage: AnswerStorage | null): UpdatePrompt {
+export function createUpdatePrompt(storage: AnswerStorage | null, basePath: string): UpdatePrompt {
+  const key = storageKey(basePath);
   let memory: UpdatePromptAnswer = {};
 
   // Storage wins when it has an answer: another tab may have written it.
   const current = (): UpdatePromptAnswer => {
-    memory = readStored(storage) ?? memory;
+    memory = readStored(storage, key) ?? memory;
     return memory;
   };
 
   const save = (answer: UpdatePromptAnswer) => {
     memory = answer;
     try {
-      storage?.setItem(STORAGE_KEY, JSON.stringify(answer));
+      storage?.setItem(key, JSON.stringify(answer));
     } catch {
       // Quota or blocked storage: the in-memory answer still applies.
     }

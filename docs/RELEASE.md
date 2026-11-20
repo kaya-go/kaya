@@ -13,8 +13,12 @@ Two web deployments + native installers per release:
 | Next web           | https://kayago.app/next/ | `main` branch         | `ci.yml`      |
 | Desktop installers | GitHub Releases          | tagged release        | `release.yml` |
 
-Both web deployments use `keep_files: true` so they don't overwrite each
-other on Pages.
+Both web deployments push the whole `gh-pages` tree. The stable deploy keeps
+`next/`, and the next deploy replaces only `next/`. Each also keeps the
+previous build's `static/` and `wasm/` files for one more deploy
+([`scripts/keep-previous-build.ts`](../scripts/keep-previous-build.ts)), so
+tabs still running it can load its lazy chunks and ORT files. See
+[specs/2026-11-20-service-worker-updates.md](../specs/2026-11-20-service-worker-updates.md).
 
 Desktop builds: `.AppImage` (Arch container), `.deb` + `.rpm` (Ubuntu 24.04
 container), `.dmg` + `.app.tar.gz` (macOS, aarch64), `.exe` (Windows NSIS).

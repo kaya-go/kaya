@@ -143,21 +143,25 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
-      - name: Clean root and copy new build (preserve next/)
+      - name: Replace the root with the new build (preserve next/)
         run: |
-          # Save next/ folder if it exists
-          if [ -d gh-pages/next ]; then
-            mv gh-pages/next /tmp/next-backup
-          fi
-          # Clean everything in gh-pages
+          # Set the previous site aside, next/ included
           rm -rf gh-pages/.git
-          rm -rf gh-pages/*
+          mv gh-pages /tmp/previous-site
+          mkdir gh-pages
           # Copy new build
           cp -r apps/web/dist/* gh-pages/
+          # Tabs still running the previous release load its ORT files and
+          # lazy chunks from here until they reload
+          bun run scripts/keep-previous-build.ts /tmp/previous-site gh-pages
           # Restore next/ folder
-          if [ -d /tmp/next-backup ]; then
-            mv /tmp/next-backup gh-pages/next
+          if [ -d /tmp/previous-site/next ]; then
+            mv /tmp/previous-site/next gh-pages/next
           fi
+          # Root dotfiles (.nojekyll) stay, as they did with rm -rf gh-pages/*
+          for f in /tmp/previous-site/.[!.]*; do
+            if [ -e "$f" ]; then cp -r "$f" gh-pages/; fi
+          done
 
       - name: Add CNAME
         run: echo "kayago.app" > gh-pages/CNAME

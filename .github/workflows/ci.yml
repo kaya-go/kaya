@@ -337,12 +337,24 @@ jobs:
           ref: gh-pages
           path: gh-pages
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
       - name: Prepare deployment
         run: |
           mkdir -p gh-pages
           rm -rf gh-pages/.git
-          rm -rf gh-pages/next
+          # Set the previous next/ build aside
+          rm -rf /tmp/previous-next
+          if [ -d gh-pages/next ]; then
+            mv gh-pages/next /tmp/previous-next
+          fi
           cp -r apps/web/dist gh-pages/next
+          # Tabs still running the previous build load its ORT files and lazy
+          # chunks from here until they reload
+          bun run scripts/keep-previous-build.ts /tmp/previous-next gh-pages/next
           echo "kayago.app" > gh-pages/CNAME
 
       - name: Deploy to GitHub Pages
