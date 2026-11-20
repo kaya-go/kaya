@@ -2,6 +2,80 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-11-20
+
+AI analysis is closer to KataGo's own: it reads rectangular boards as they are, takes the komi's parity into account (win rates at komi 6.5 and 7.5 move most on 9×9, so analysis saved by an older version is run again), and never suggests a suicide or a ko recapture the rules forbid. SGF files in Chinese, Japanese or Korean encodings open with their names intact, the web app keeps working offline and across updates, and the macOS app, which now needs macOS 13.4 or later, gets an Edit menu so text fields copy and paste.
+
+### <!-- 0 -->🚀 Features
+
+- *(desktop)* Give the webview a content security policy ([#243](https://github.com/kaya-go/kaya/issues/243)) by @hadim
+
+### <!-- 1 -->🐛 Bug Fixes
+
+- *(web)* Poll version.json less often when the tab is hidden ([#228](https://github.com/kaya-go/kaya/issues/228)) by @xifeiwu
+
+- *(web)* Keep the update banner dismissed, add remind me tomorrow ([#230](https://github.com/kaya-go/kaya/issues/230)) by @hadim
+
+- *(ui)* Store model metadata explicitly and skip duplicate files ([#231](https://github.com/kaya-go/kaya/issues/231)) by @xifeiwu
+
+- Review pass, nine bugs that lose or corrupt data ([#233](https://github.com/kaya-go/kaya/issues/233)) by @hadim
+
+- *(ai)* Evaluate the mcts root once, and a leaf once per batch ([#234](https://github.com/kaya-go/kaya/issues/234)) by @hadim
+
+- Harden the desktop command boundary, keep suicides out of mcts ([#235](https://github.com/kaya-go/kaya/issues/235)) by @hadim
+
+- *(sgf)* Load what a file holds: ranges, tt passes, truncation, charsets ([#236](https://github.com/kaya-go/kaya/issues/236)) by @hadim
+
+- *(ai)* Engine review pass, worker timeout, probability prior, shared cache, desktop ko ([#237](https://github.com/kaya-go/kaya/issues/237)) by @hadim
+
+- *(desktop)* Mark a ko in the native mcts board only when it can be retaken ([#238](https://github.com/kaya-go/kaya/issues/238)) by @hadim
+
+- *(web)* Version ort wasm paths, bump onnxruntime-web to 1.31.1 ([#240](https://github.com/kaya-go/kaya/issues/240)) by @hadim
+
+- *(library)* List a change made before the database opens ([#242](https://github.com/kaya-go/kaya/issues/242)) by @hadim
+
+- *(desktop)* Native search follow-ups from #235 ([#244](https://github.com/kaya-go/kaya/issues/244)) by @hadim
+
+- *(ui)* Review pass, ten UI defects ([#241](https://github.com/kaya-go/kaya/issues/241)) by @hadim
+
+- *(web)* One service worker for isolation headers and caching ([#245](https://github.com/kaya-go/kaya/issues/245)) by @hadim
+
+- *(ui)* Drop the sgf loading percentage, which never moved ([#246](https://github.com/kaya-go/kaya/issues/246)) by @hadim
+
+- *(ui)* Compose navigation calls made within one frame ([#248](https://github.com/kaya-go/kaya/issues/248)) by @hadim
+
+- *(desktop)* Add an edit menu on macos so text fields copy and paste ([#249](https://github.com/kaya-go/kaya/issues/249)) by @hadim
+
+- *(ai)* Analyse a rectangular game on its own board ([#250](https://github.com/kaya-go/kaya/issues/250)) by @hadim
+
+- *(ai)* Give the network katago's komi parity input ([#251](https://github.com/kaya-go/kaya/issues/251)) by @hadim
+
+- *(ai)* Stopped analyses stop, old KA is run again, wide-board move names ([#253](https://github.com/kaya-go/kaya/issues/253)) by @hadim
+
+- *(library)* Open stored games #236 refuses, keep a collection on save ([#254](https://github.com/kaya-go/kaya/issues/254)) by @hadim
+
+- *(ui)* Pre-release review, eight ui and desktop defects ([#255](https://github.com/kaya-go/kaya/issues/255)) by @hadim
+
+- *(web)* Hard reloads, offline after updates, old tabs across deploys, per-channel banner answer ([#256](https://github.com/kaya-go/kaya/issues/256)) by @hadim
+
+### <!-- 2 -->🚜 Refactor
+
+- *(ai)* Remove the pytorch sidecar backend ([#252](https://github.com/kaya-go/kaya/issues/252)) by @hadim
+
+### <!-- 3 -->📚 Documentation
+
+- *(specs)* Record that safari fires the paste event outside a text field ([#247](https://github.com/kaya-go/kaya/issues/247)) by @hadim
+
+### <!-- 6 -->🧪 Testing
+
+- *(e2e)* Hold a library drag until the drop hover lands ([#239](https://github.com/kaya-go/kaya/issues/239)) by @hadim
+
+### 🙏 Contributors
+
+- @hadim
+- @xifeiwu
+- @github-actions[bot]
+
 ## [0.4.18] - 2026-11-11
 
 Suggest move now reads the whole position, ko included, and its results feed the analysis graph. A file that fails to open or import now says so, and no longer costs the current game its analysis or undo history.
@@ -26,11 +100,15 @@ Suggest move now reads the whole position, ko included, and its results feed the
 
 - *(ui)* Keep navigation callbacks stable ([#227](https://github.com/kaya-go/kaya/issues/227)) by @xifeiwu
 
+### <!-- 7 -->⚙️ Miscellaneous Tasks
+
+- Release v0.4.18 ([d2de404](https://github.com/kaya-go/kaya/commit/d2de404003da6c0c9a6c3a832fb9fa5ea4b0a637)) by @github-actions[bot]
+
 ### 🙏 Contributors
 
+- @github-actions[bot]
 - @xifeiwu
 - @hadim
-- @github-actions[bot]
 
 ## [0.4.17] - 2026-11-04
 
