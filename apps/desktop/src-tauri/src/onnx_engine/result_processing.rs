@@ -1,6 +1,7 @@
 //! Processing of raw ONNX inference outputs into structured results
 
-use super::types::{AnalysisResult, MoveSuggestion, OnnxOutputs};
+use super::featurization::{determine_next_player, ko_ban};
+use super::types::{AnalysisOptions, AnalysisResult, MoveSuggestion, OnnxOutputs};
 use super::OnnxEngine;
 
 /// Process raw inference outputs into an AnalysisResult (standalone, no engine needed).
@@ -96,6 +97,43 @@ pub fn process_raw_outputs(
     })
 }
 
+/// Remove the ko-forbidden recapture from a policy result. The policy covers
+/// every move, so the legal ones share 1 - p(ko): each is divided by that. A
+/// result that does not list the recapture comes back as it is.
+pub(crate) fn drop_ko_move(result: &AnalysisResult, ko_move: &str) -> AnalysisResult {
+    let Some(ko) = result.move_suggestions.iter().find(|s| s.move_str == ko_move) else {
+        return result.clone();
+    };
+    let legal = 1.0 - ko.probability;
+    let move_suggestions = result.move_suggestions.iter()
+        .filter(|s| s.move_str != ko_move)
+        .map(|s| {
+            let mut s = s.clone();
+            if legal > 0.0 { s.probability /= legal; }
+            s
+        })
+        .collect();
+    AnalysisResult { move_suggestions, ..result.clone() }
+}
+
+/// `result` for `sign_map` without the recapture `options`' ko forbids to the
+/// side to play.
+pub(crate) fn without_ko_recapture(
+    result: &AnalysisResult,
+    sign_map: &[Vec<i8>],
+    options: &AnalysisOptions,
+) -> AnalysisResult {
+    let size = sign_map.len();
+    let pla = determine_next_player(sign_map, options);
+    match ko_ban(options, pla, size) {
+        Some((x, y)) => {
+            let letter = "ABCDEFGHJKLMNOPQRST".chars().nth(x).unwrap_or('?');
+            drop_ko_move(result, &format!("{}{}", letter, size - y))
+        }
+        None => result.clone(),
+    }
+}
+
 impl OnnxEngine {
     /// Process single inference result
     pub(crate) fn process_results(
@@ -188,8 +226,10 @@ fn process_batch_outputs(
 
 #[cfg(test)]
 mod tests {
-    use super::{process_batch_outputs, process_raw_outputs};
-    use crate::onnx_engine::types::OnnxOutputs;
+    use super::{process_batch_outputs, process_raw_outputs, without_ko_recapture};
+    use crate::onnx_engine::types::{
+        AnalysisOptions, AnalysisResult, KoInfo, MoveSuggestion, OnnxOutputs,
+    };
 
     fn outputs(policy_dims: Vec<usize>, miscvalue: usize, ownership: Option<usize>) -> OnnxOutputs {
         let batch = policy_dims[0];
@@ -217,6 +257,36 @@ mod tests {
         let flat_policy = outputs(vec![5], 10, None);
         let err = process_batch_outputs(&flat_policy, &[1], 2).unwrap_err();
         assert!(err.contains("policy"), "{err}");
+    }
+
+    /// Full-game analysis on desktop goes through the batch command, which
+    /// listed the forbidden recapture: nothing told it about the ko.
+    #[test]
+    fn the_batch_command_drops_the_recapture_the_ko_forbids() {
+        let result = AnalysisResult {
+            move_suggestions: [("B1", 0.5f32), ("E5", 0.3)].iter()
+                .map(|&(m, p)| MoveSuggestion { move_str: m.to_string(), probability: p })
+                .collect(),
+            win_rate: 0.5,
+            score_lead: 0.0,
+            current_turn: "B".to_string(),
+            ownership: None,
+        };
+        let board = vec![vec![0i8; 9]; 9];
+        let ko = |sign| AnalysisOptions {
+            next_to_play: Some("B".to_string()),
+            ko_info: Some(KoInfo { sign, vertex: [1, 8] }),
+            ..Default::default()
+        };
+
+        let moves = |options| -> Vec<String> {
+            without_ko_recapture(&result, &board, &options).move_suggestions.into_iter()
+                .map(|s| s.move_str)
+                .collect()
+        };
+        assert_eq!(moves(ko(1)), vec!["E5"]);
+        // A ko that binds White leaves Black's moves alone.
+        assert_eq!(moves(ko(-1)), vec!["B1", "E5"]);
     }
 
     #[test]

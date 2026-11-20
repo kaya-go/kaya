@@ -20,7 +20,11 @@ export function getKoVertex(board: GoBoard, pla: Sign, size: number): string | n
   return `${letters[koInfo.vertex[0]]}${size - koInfo.vertex[1]}`;
 }
 
-/** Remove the ko-forbidden move from suggestions and renormalise probabilities. */
+/**
+ * Remove the ko-forbidden recapture from a policy result. The policy covers
+ * every move, so the legal ones share 1 - p(ko): each is divided by that. A
+ * result that does not list the recapture is returned as it is.
+ */
 export function filterKoMoves(
   result: AnalysisResult,
   board: GoBoard,
@@ -28,13 +32,15 @@ export function filterKoMoves(
   size: number
 ): AnalysisResult {
   const koMove = getKoVertex(board, pla, size);
-  if (!koMove) return result;
-  const filtered = result.moveSuggestions.filter(s => s.move !== koMove);
-  const total = filtered.reduce((sum, s) => sum + s.probability, 0);
-  if (total > 0) {
-    for (const s of filtered) s.probability /= total;
-  }
-  return { ...result, moveSuggestions: filtered };
+  const ko = koMove ? result.moveSuggestions.find(s => s.move === koMove) : undefined;
+  if (!ko) return result;
+  const legal = 1 - ko.probability;
+  return {
+    ...result,
+    moveSuggestions: result.moveSuggestions
+      .filter(s => s !== ko)
+      .map(s => (legal > 0 ? { ...s, probability: s.probability / legal } : s)),
+  };
 }
 
 /**
@@ -437,10 +443,10 @@ export async function runMCTS(
     }
   }
 
-  // Build AnalysisResult from MCTS visit counts
+  // Build AnalysisResult from MCTS visit counts. `probability` stays the
+  // prior; the search's own say is `visits`.
   const moveSuggestions: MoveSuggestion[] = [];
   if (root.children && root.children.size > 0) {
-    const totalChildVisits = [...root.children.values()].reduce((s, c) => s + c.N, 0);
     const sorted = [...root.children.entries()].sort(([, a], [, b]) => {
       // Visited children first (by visit count), then unvisited (by policy prior)
       if (a.N !== b.N) return b.N - a.N;
@@ -449,7 +455,7 @@ export async function runMCTS(
     for (const [move, child] of sorted) {
       moveSuggestions.push({
         move,
-        probability: child.N > 0 && totalChildVisits > 0 ? child.N / totalChildVisits : child.P,
+        probability: child.P,
         visits: child.N,
         ...ownEvaluation(child),
       });

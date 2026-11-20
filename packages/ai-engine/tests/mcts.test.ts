@@ -6,7 +6,7 @@
 
 import { describe, test, expect } from 'bun:test';
 import { GoBoard } from '@kaya/goboard';
-import { expandNode, runMCTS } from '../src/onnx-mcts';
+import { expandNode, filterKoMoves, runMCTS } from '../src/onnx-mcts';
 import type { MCTSBatchEvaluator, MCTSNode, MCTSProgress } from '../src/onnx-types';
 import type { AnalysisResult } from '../src/types';
 
@@ -65,6 +65,72 @@ describe('runMCTS per-move evaluation', () => {
     const early = progress.flatMap(p => p.topMoves).filter(m => m.visits === 0);
     expect(early.length).toBeGreaterThan(0);
     for (const m of early) expect(m.winRate).toBeUndefined();
+  });
+});
+
+/**
+ * `probability` is the policy prior, searched or not: what the search thinks is
+ * in `visits`. Writing the visit share for visited moves and the prior for the
+ * others put two units in one field.
+ */
+describe('runMCTS probability', () => {
+  test('is the prior for every listed move, visited or not', async () => {
+    const { result } = await search(8);
+    const byMove = Object.fromEntries(result.moveSuggestions.map(s => [s.move, s]));
+
+    expect(byMove.E5.visits).toBeGreaterThan(0);
+    expect(byMove.E5.probability).toBeCloseTo(0.9, 6);
+    expect(byMove.C3.probability).toBeCloseTo(0.09, 6);
+    expect(byMove.G7.probability).toBeCloseTo(0.01, 6);
+  });
+});
+
+describe('filterKoMoves', () => {
+  /** A ko: Black may not retake at B1 on this move. */
+  const koBoard = () => {
+    const board = GoBoard.fromDimensions(9);
+    board._koInfo = { sign: 1, vertex: [1, 8] }; // B1, forbidden to Black
+    return board;
+  };
+  const policy = (moves: [string, number][]): AnalysisResult => ({
+    moveSuggestions: moves.map(([move, probability]) => ({ move, probability })),
+    winRate: 0.5,
+    scoreLead: 0,
+    currentTurn: 'B',
+  });
+
+  test('drops the forbidden recapture and spreads its share over the legal moves', () => {
+    const input = policy([
+      ['B1', 0.5],
+      ['E5', 0.3],
+      ['C3', 0.1],
+    ]);
+    const filtered = filterKoMoves(input, koBoard(), 1, 9);
+
+    expect(filtered.moveSuggestions.map(s => s.move)).toEqual(['E5', 'C3']);
+    // Divided by 1 - 0.5: the policy covers every move, not just the listed ten.
+    expect(filtered.moveSuggestions[0].probability).toBeCloseTo(0.6, 6);
+    expect(filtered.moveSuggestions[1].probability).toBeCloseTo(0.2, 6);
+    // The input is left as it was.
+    expect(input.moveSuggestions[1].probability).toBe(0.3);
+  });
+
+  test('changes nothing when the forbidden recapture is not listed', () => {
+    const input = policy([
+      ['E5', 0.3],
+      ['C3', 0.1],
+    ]);
+    const filtered = filterKoMoves(input, koBoard(), 1, 9);
+
+    expect(filtered.moveSuggestions.map(s => s.probability)).toEqual([0.3, 0.1]);
+  });
+
+  test('changes nothing for the side the ko does not bind', () => {
+    const input = policy([
+      ['B1', 0.5],
+      ['E5', 0.3],
+    ]);
+    expect(filterKoMoves(input, koBoard(), -1, 9)).toBe(input);
   });
 });
 

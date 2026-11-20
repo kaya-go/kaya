@@ -159,16 +159,21 @@ Both live (per-position) and batch (full-game) analysis go through one
 `AIEngineContext`. It serializes engine access (one in-flight call at a
 time), implements priority lanes (live preempts batch transparently;
 new live also drops in-flight live), centralizes cancellation
-(`cancel(id)` / `cancelTag('full-game')`), and exposes a monotonic LRU
+(`cancel(id)` / `cancelTag('full-game')`), and reads and writes a monotonic
 cache that's shared with `GameTreeContext.analysisCache` so SGF `KA`
-persistence Just Works against the same Map.
+persistence Just Works against the same Map. The rule for that cache (what
+answers a request, which result to keep) lives in
+[`analysis-cache.ts`](../packages/ai-engine/src/analysis-cache.ts). The queue
+never evicts from the shared Map: it is what a save writes, and its owner clears
+it when a game is loaded or created.
 
 Preemption reaches into the engine: `analyzeBatch` checks the abort signal
 between inference chunks and throws an `AbortError` carrying the positions it
 already finished, which the queue caches. So a live request cuts in front of a
 full-game analysis without that analysis losing its progress. The desktop path
 hands a whole batch to one native call, so there it can only abort before
-dispatching.
+dispatching, and the web worker cannot stop a batch at all: a preempted batch
+that comes back complete is cached too.
 
 `useLiveAnalysis` and `useFullGameAnalysis` are thin submitters — they
 no longer carry their own coordination state. They use independent

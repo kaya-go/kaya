@@ -18,7 +18,7 @@ import {
   type EngineRuntimeInfo,
 } from './base-engine';
 import { DEFAULT_KOMI, type AnalysisResult } from './types';
-import { runNativeSearch } from './tauri-mcts';
+import { nativeKo, runNativeSearch } from './tauri-mcts';
 import {
   type UploadProgress,
   type ExecutionProviderInfo,
@@ -316,6 +316,8 @@ export class TauriEngine extends Engine {
             komi: options.komi ?? DEFAULT_KOMI,
             nextToPlay: options.nextToPlay,
             history: this.convertHistory(options.history),
+            // Sets the ko input plane, and drops the forbidden recapture.
+            koInfo: nativeKo(options),
           },
         },
       });

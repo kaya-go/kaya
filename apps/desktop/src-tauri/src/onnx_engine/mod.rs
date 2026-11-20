@@ -243,6 +243,7 @@ impl OnnxEngine {
             komi: 7.5,
             next_to_play: Some("B".to_string()),
             history: vec![],
+            ko_info: None,
         };
 
         match self.analyze(&empty_board, &options) {
@@ -266,10 +267,11 @@ impl OnnxEngine {
         self.board_size = sign_map.len();
 
         let next_pla = determine_next_player(sign_map, options);
+        let ko = featurization::ko_ban(options, next_pla, self.board_size);
 
         // Featurize using shared logic into ndarray
         let (bin_input, global_input) =
-            featurize_ndarray(sign_map, next_pla, options.komi, &options.history, self.board_size);
+            featurize_ndarray(sign_map, next_pla, options.komi, &options.history, ko, self.board_size);
 
         // Run inference
         let results = self.run_inference(bin_input, global_input)?;
@@ -298,9 +300,10 @@ impl OnnxEngine {
         for (b, (sign_map, options)) in inputs.iter().enumerate() {
             let next_pla = determine_next_player(sign_map, options);
             plas.push(next_pla);
+            let ko = featurization::ko_ban(options, next_pla, size);
 
             let (bin, global) =
-                featurize_ndarray(sign_map, next_pla, options.komi, &options.history, size);
+                featurize_ndarray(sign_map, next_pla, options.komi, &options.history, ko, size);
 
             // Copy to batch tensors
             for c in 0..22 {
@@ -337,13 +340,14 @@ fn featurize_ndarray(
     pla: i8,
     komi: f32,
     history: &[HistoryMove],
+    ko: Option<(usize, usize)>,
     size: usize,
 ) -> (Array4<f32>, Array2<f32>) {
     let mut bin_input = Array4::<f32>::zeros((1, 22, size, size));
     let mut global_input = Array2::<f32>::zeros((1, 19));
 
     featurization::featurize_into(
-        sign_map, pla, komi, history,
+        sign_map, pla, komi, history, ko,
         |c, y, x, v| { bin_input[[0, c, y, x]] = v; },
         |i, v| { global_input[[0, i]] = v; },
     );
@@ -372,7 +376,7 @@ pub fn initialize_engine_from_path(model_path: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Analyze a single position
+/// Analyze a single position. The move list leaves out the ko recapture.
 pub fn analyze_position(
     sign_map: Vec<Vec<i8>>,
     options: AnalysisOptions,
@@ -380,17 +384,25 @@ pub fn analyze_position(
     validate_board(&sign_map)?;
     let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
-    engine.analyze(&sign_map, &options)
+    let result = engine.analyze(&sign_map, &options)?;
+    Ok(result_processing::without_ko_recapture(&result, &sign_map, &options))
 }
 
-/// Analyze multiple positions in a batch
+/// Analyze multiple positions in a batch. The move lists leave out the ko
+/// recapture (the search drops it itself, from its own board).
 pub fn analyze_batch(
     inputs: Vec<(Vec<Vec<i8>>, AnalysisOptions)>,
 ) -> Result<Vec<AnalysisResult>, String> {
     validate_batch(&inputs)?;
     let mut global = lock_engine();
     let engine = global.as_mut().ok_or("Engine not initialized")?;
-    engine.analyze_batch(&inputs)
+    let results = engine.analyze_batch(&inputs)?;
+    Ok(results.iter()
+        .zip(&inputs)
+        .map(|(result, (sign_map, options))| {
+            result_processing::without_ko_recapture(result, sign_map, options)
+        })
+        .collect())
 }
 
 /// Dispose the global engine
@@ -572,6 +584,7 @@ mod tests {
                 komi: 7.5,
                 next_to_play: Some("B".to_string()),
                 history: vec![],
+                ko_info: None,
             };
             let result = engine.analyze(&sign_map, &options).expect("analysis should run");
             let top: Vec<_> = result.move_suggestions.iter().take(3).collect();
@@ -640,6 +653,7 @@ mod tests {
                 komi: 7.5,
                 next_to_play: Some("B".to_string()),
                 history: vec![],
+                ko_info: None,
             };
             let result = engine.analyze(&sign_map, &options).expect("analysis should run");
             eprintln!(
@@ -666,5 +680,56 @@ mod tests {
                 .expect("search should run");
             assert!((0.1..=0.9).contains(&searched.win_rate), "win rate {}", searched.win_rate);
         }
+    }
+
+    /// The network sees a ko only through input plane 6. Run it after touching
+    /// the featurizer:
+    ///
+    /// ```sh
+    /// KAYA_TEST_MODEL=/path/to/katago-latest.onnx \
+    ///     cargo test --release --lib real_ko -- --ignored --nocapture
+    /// ```
+    #[test]
+    #[ignore = "needs a real model, see KAYA_TEST_MODEL"]
+    fn real_ko_plane_keeps_the_network_off_the_recapture() {
+        let model = std::env::var("KAYA_TEST_MODEL").expect("KAYA_TEST_MODEL must point at a model");
+        let mut engine = OnnxEngine::new(Path::new(&model)).expect("engine should load");
+
+        // Black just took the white stone at E5 by playing F5: White may not
+        // take back at E5 this move.
+        //     D E F G
+        //  6  . X O .
+        //  5  X . X O
+        //  4  . X O .
+        let mut sign_map = vec![vec![0i8; 9]; 9];
+        for (x, y) in [(4, 3), (3, 4), (5, 4), (4, 5)] { sign_map[y][x] = 1; }
+        for (x, y) in [(5, 3), (6, 4), (5, 5)] { sign_map[y][x] = -1; }
+        let options = |ko_info| AnalysisOptions {
+            komi: 7.5,
+            next_to_play: Some("W".to_string()),
+            history: vec![HistoryMove { color: 1, x: 5, y: 4 }],
+            ko_info,
+        };
+        let recapture = |options: &AnalysisOptions, engine: &mut OnnxEngine| {
+            let result = engine.analyze(&sign_map, options).expect("analysis should run");
+            result.move_suggestions.iter().find(|s| s.move_str == "E5").map_or(0.0, |s| s.probability)
+        };
+
+        let blind = recapture(&options(None), &mut engine);
+        let ko = Some(mcts::KoInfo { sign: -1, vertex: [4, 4] });
+        let seen = recapture(&options(ko.clone()), &mut engine);
+        eprintln!("policy on the forbidden recapture E5: without plane 6 {blind:.4}, with it {seen:.4}");
+        assert!(seen < 0.01, "the network still plays the recapture: {seen}");
+
+        let listed = analyze_listing(&mut engine, &sign_map, &options(ko));
+        assert!(!listed.iter().any(|m| m == "E5"), "the batch command lists the recapture: {listed:?}");
+    }
+
+    /// The moves `analyze_batch`, the command, lists for one position.
+    fn analyze_listing(engine: &mut OnnxEngine, sign_map: &[Vec<i8>], options: &AnalysisOptions) -> Vec<String> {
+        let inputs = vec![(sign_map.to_vec(), options.clone())];
+        let results = engine.analyze_batch(&inputs).expect("analysis should run");
+        result_processing::without_ko_recapture(&results[0], sign_map, options)
+            .move_suggestions.into_iter().map(|s| s.move_str).collect()
     }
 }

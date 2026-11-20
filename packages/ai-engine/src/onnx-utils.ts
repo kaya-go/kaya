@@ -36,9 +36,10 @@ export function float32ToFloat16(float32Array: Float32Array): Uint16Array {
       } else if (newExp <= 0) {
         // Underflow to zero or denorm
         if (newExp >= -10) {
-          // Denormalized
+          // Denormalized: the shift leaves the 10-bit subnormal mantissa
+          // (value = mant * 2^-24), truncated like the normal case below.
           const mant = (frac | 0x800000) >> (1 - newExp + 13);
-          f16 = (sign << 15) | (mant >> 10);
+          f16 = (sign << 15) | mant;
         } else {
           f16 = sign << 15;
         }

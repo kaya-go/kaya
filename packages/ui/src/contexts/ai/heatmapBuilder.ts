@@ -29,6 +29,16 @@ interface BuildHeatmapArgs {
 }
 
 /**
+ * What colours a move once the search is done: its share of the visits the
+ * listed moves got, as during the search. `probability` is the policy prior,
+ * which is all a result without a search (no visits) has.
+ */
+function visitShare(listed: MoveSuggestion[]): (s: MoveSuggestion) => number {
+  const total = listed.reduce((sum, s) => sum + (s.visits ?? 0), 0);
+  return total > 0 ? s => (s.visits ?? 0) / total : s => s.probability;
+}
+
+/**
  * Build the heatmap shown on the board: live MCTS top moves during search,
  * final move suggestions after search completes, with a "played next move"
  * marker (▷) overlay.
@@ -110,9 +120,10 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
   if (!analysisResult) return null;
 
   if (analysisResult.moveSuggestions) {
-    const suggestions = (analysisResult.moveSuggestions as MoveSuggestion[]).filter(
-      s => s.probability >= aiSettings.minProb
-    );
+    const listed = analysisResult.moveSuggestions as MoveSuggestion[];
+    const share = visitShare(listed);
+    // A move shows if the network or the search gives it enough weight.
+    const suggestions = listed.filter(s => Math.max(s.probability, share(s)) >= aiSettings.minProb);
     let displayedCount = 0;
 
     for (const suggestion of suggestions) {
@@ -125,8 +136,8 @@ export function buildHeatmap(args: BuildHeatmapArgs): HeatMap | null {
       if (x < 0 || x >= boardSize || y < 0 || y >= boardSize) continue;
       if (currentBoard.signMap[y]?.[x] !== 0) continue;
 
-      const strength = normalizeStrength(suggestion.probability);
-      const text = formatMoveText(suggestion.probability, suggestion.winRate, suggestion.scoreLead);
+      const strength = normalizeStrength(share(suggestion));
+      const text = formatMoveText(share(suggestion), suggestion.winRate, suggestion.scoreLead);
 
       map[y][x] = { strength, text };
       displayedCount++;
@@ -168,12 +179,9 @@ function overlayNextMoveMarker(
   const allSuggestions = (analysisResult?.moveSuggestions ?? []) as MoveSuggestion[];
   const playedSuggestion = allSuggestions.find(s => s.move === nextMoveInfo.gtp);
   if (playedSuggestion) {
-    const strength = normalizeStrength(playedSuggestion.probability);
-    const text = formatMoveText(
-      playedSuggestion.probability,
-      playedSuggestion.winRate,
-      playedSuggestion.scoreLead
-    );
+    const share = visitShare(allSuggestions)(playedSuggestion);
+    const strength = normalizeStrength(share);
+    const text = formatMoveText(share, playedSuggestion.winRate, playedSuggestion.scoreLead);
     map[y][x] = { strength, text: text ? `${text}\n▷` : '▷' };
   } else {
     map[y][x] = { strength: 4, text: '▷' };

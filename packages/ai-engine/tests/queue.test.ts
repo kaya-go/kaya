@@ -135,6 +135,51 @@ describe('AnalysisQueue preemption', () => {
     expect(engine.positionsComputed).toBe(5);
   });
 
+  test('keeps a preempted batch that finished anyway', async () => {
+    // The web worker cannot stop a batch: WorkerEngine strips the signal, so a
+    // preempted batch still runs to the end and resolves.
+    const engine = new SteppableEngine();
+    const queue = new AnalysisQueue({
+      analyzeBatch: (inputs: { signMap: SignMap }[]) =>
+        engine.analyzeBatch(inputs.map(i => ({ signMap: i.signMap }))),
+      analyze: () => engine.analyze(),
+    } as unknown as Engine);
+
+    const batch = queue.submitBatch([0, 1, 2, 3].map(x => request(x, 'batch')));
+    await settle();
+    engine.allow(2);
+    await settle();
+
+    const live = queue.submit(request(8, 'live'));
+    engine.allow(10);
+    await expect(live.result).resolves.toBeDefined();
+    const batchResults = await Promise.all(batch.map(h => h.result));
+
+    expect(batchResults).toHaveLength(4);
+    // 4 for the batch and 1 for the live request. Dropping the finished batch
+    // makes the re-queued copy run all four again: 9.
+    expect(engine.positionsComputed).toBe(5);
+    expect(engine.batchCalls).toBe(1);
+  });
+
+  test('does not keep a search a preempted batch cut short', async () => {
+    let calls = 0;
+    const shallow: AnalysisResult = { ...result(0), visits: 3 };
+    const deep: AnalysisResult = { ...result(0), visits: 32 };
+    const queue = new AnalysisQueue({
+      // The first run is cut short by the preemption, the second completes.
+      analyzeBatch: async () => [calls++ === 0 ? shallow : deep],
+      analyze: async () => result(-1),
+    } as unknown as Engine);
+
+    const searched = { ...request(0, 'batch'), numVisits: 32 };
+    const [handle] = queue.submitBatch([searched]);
+    queue.submit(request(8, 'live'));
+
+    expect(await handle.result).toBe(deep);
+    expect(queue.peek(searched)).toBe(deep);
+  });
+
   test('a batch that is never preempted runs once', async () => {
     const engine = new SteppableEngine();
     const queue = new AnalysisQueue(engine as unknown as Engine);
@@ -242,6 +287,33 @@ describe('AnalysisQueue cache and the forced move', () => {
     expect(await ask(queue, search(32, 'A1'))).toBe(false);
     expect(await ask(queue, search(32, 'A1'))).toBe(true);
     expect(engine.runs).toHaveLength(2);
+  });
+});
+
+describe('AnalysisQueue cache size', () => {
+  const analyseThree = async (queue: AnalysisQueue) => {
+    for (const x of [0, 1, 2]) await queue.submit(request(x, 'live')).result;
+  };
+  const engine = { analyze: async () => result(0) } as unknown as Engine;
+
+  test('never evicts a shared map: it is the analysis an SGF save writes', async () => {
+    const shared = { current: new Map<string, AnalysisResult>() };
+    const queue = new AnalysisQueue(engine, { cacheRef: shared, cacheSize: 2 });
+
+    await analyseThree(queue);
+
+    // Evicting here would drop the oldest analysis from the next saved file.
+    expect(shared.current.size).toBe(3);
+    expect(queue.peek(request(0, 'live'))).not.toBeNull();
+  });
+
+  test('keeps its own cache to cacheSize entries', async () => {
+    const queue = new AnalysisQueue(engine, { cacheSize: 2 });
+
+    await analyseThree(queue);
+
+    expect(queue.cacheStats().size).toBe(2);
+    expect(queue.peek(request(0, 'live'))).toBeNull();
   });
 });
 

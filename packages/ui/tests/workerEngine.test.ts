@@ -3,7 +3,7 @@
  * provider relies on that to run the backend chain again.
  */
 
-import { describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, jest, mock, test } from 'bun:test';
 import { WorkerEngine } from '../src/workers/WorkerEngine';
 
 const fakeWorker = () =>
@@ -106,5 +106,104 @@ describe('WorkerEngine when the worker itself fails', () => {
     w.reply({ type: 'dispose_success' });
     await disposed;
     expect(w.isTerminated()).toBe(true);
+  });
+});
+
+/** An initialised engine on a scripted worker. */
+async function readyEngine() {
+  const w = scriptedWorker();
+  const engine = new WorkerEngine(w.worker, {});
+  const init = engine.initialize();
+  w.reply({ type: 'init_success' });
+  await init;
+  return { w, engine };
+}
+
+/** Lets the promise chain an analyze() call starts reach postMessage. */
+const settle = () => new Promise(resolve => process.nextTick(resolve));
+
+const analyzeIds = (posted: { type: string; id?: number }[]) =>
+  posted.filter(m => m.type === 'analyze').map(m => m.id!);
+
+const progress = (id: number, completedVisits: number) => ({
+  type: 'mcts_progress',
+  id,
+  progress: { completedVisits, totalVisits: 5000, topMoves: [] },
+});
+
+const RESULT = { moveSuggestions: [], winRate: 0.5, scoreLead: 0, currentTurn: 'B' };
+
+describe('WorkerEngine timeout', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  test('a request the worker stops answering times out and is aborted in the worker', async () => {
+    const { w, engine } = await readyEngine();
+    const outcome = engine.analyze([[0]], { numVisits: 500 } as any).then(
+      () => 'resolved',
+      (e: Error) => e.message
+    );
+    await settle();
+    const [id] = analyzeIds(w.posted as any);
+
+    jest.advanceTimersByTime(60_000);
+
+    expect(await outcome).toMatch(/timed out/);
+    // Without the abort the worker keeps searching, and every later request
+    // waits behind it.
+    expect(w.posted).toContainEqual({ type: 'abort', id });
+  });
+
+  test('a deep search does not time out while it reports progress', async () => {
+    const { w, engine } = await readyEngine();
+    const pending = engine.analyze([[0]], { numVisits: 5000 } as any);
+    await settle();
+    const [id] = analyzeIds(w.posted as any);
+
+    // Five minutes of search, progress every 30 s.
+    for (let i = 1; i <= 10; i++) {
+      jest.advanceTimersByTime(30_000);
+      w.reply(progress(id, i * 100));
+    }
+    w.reply({ type: 'analyze_success', id, result: RESULT });
+
+    expect(await pending).toEqual(RESULT as any);
+  });
+
+  test('a request queued behind a long search does not time out while it waits', async () => {
+    const { w, engine } = await readyEngine();
+    const first = engine.analyze([[0]], { numVisits: 5000 } as any);
+    const second = engine.analyze([[1]], { numVisits: 5000 } as any);
+    await settle();
+    const [firstId, secondId] = analyzeIds(w.posted as any);
+
+    for (let i = 1; i <= 6; i++) {
+      jest.advanceTimersByTime(30_000);
+      w.reply(progress(firstId, i * 100));
+    }
+    w.reply({ type: 'analyze_success', id: firstId, result: RESULT });
+    w.reply({ type: 'analyze_success', id: secondId, result: RESULT });
+
+    expect(await first).toEqual(RESULT as any);
+    expect(await second).toEqual(RESULT as any);
+  });
+
+  test('an aborted request rejects at once and tells the worker', async () => {
+    const { w, engine } = await readyEngine();
+    const controller = new AbortController();
+    const outcome = engine
+      .analyze([[0]], { numVisits: 500, signal: controller.signal } as any)
+      .then(
+        () => 'resolved',
+        (e: Error) => e.name
+      );
+    await settle();
+    const [id] = analyzeIds(w.posted as any);
+
+    controller.abort();
+
+    // The worker can take a whole batch to stop: the caller does not wait for it.
+    expect(await outcome).toBe('AbortedError');
+    expect(w.posted).toContainEqual({ type: 'abort', id });
   });
 });

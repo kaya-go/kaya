@@ -20,7 +20,11 @@ export interface HistoryMove {
 export interface MoveSuggestion {
   /** Move coordinate in GTP format (e.g., "D4", "Q16") */
   move: string;
-  /** Policy network probability (0.0 to 1.0) */
+  /**
+   * Policy network probability (0.0 to 1.0): the prior, searched or not. What a
+   * search made of the move is `visits` (its share: visits over the listed
+   * moves' total).
+   */
   probability: number;
   /** Win rate for this move (0.0 to 1.0, from Black's perspective) — only for a visited move */
   winRate?: number;

@@ -12,18 +12,16 @@
  *   - A new 'live' request also replaces any pending 'live' (only the
  *     latest navigation target matters).
  *   - Explicit cancel(id) / cancelTag(tag) rejects the submitter's promise.
- *   - A cached result answers a request when it searched at least as deep
- *     and, for a request that forces a move, it explored that move (see
- *     `answers`). Visit count is the only depth: the key omits it.
- *   - The cache never loses depth: a result that misses only for the
- *     unexplored move is redone at its own depth, then replaced.
+ *   - Cache lookups and stores follow one rule, in `analysis-cache.ts`.
  *   - Caller may pass a `cacheKey` (computed by the same generator the
  *     SGF persistence layer uses); otherwise the queue computes its own.
  *   - Caller may pass a `cacheRef` Map at construction so the cache is
- *     shared with other subsystems (e.g. SGF save/load).
+ *     shared with other subsystems (e.g. SGF save/load). The queue never
+ *     evicts from it; only its own cache is bounded (`cacheSize`).
  */
 
 import type { SignMap } from '@kaya/goboard';
+import { AnalysisCache } from './analysis-cache';
 import type { Engine } from './base-engine';
 import type { MCTSProgress } from './onnx-types';
 import type { AnalysisResult, HistoryMove } from './types';
@@ -50,26 +48,7 @@ export interface AnalysisRequest {
   extra?: Record<string, unknown>;
 }
 
-/**
- * Shared analysis cache key — single source of truth for AnalysisQueue,
- * SGF KA persistence, and UI lookups that share the same Map.
- *
- * Key intentionally omits visit count: the queue treats cache entries as
- * monotonic in visits (N visits satisfies any request asking for ≤ N).
- * BaseEngine's internal cache is a separate Map and may include visits.
- *
- * Includes the last 5 history moves (NN planes 9-13 / pass globals 0-4).
- */
-export function generateAnalysisCacheKey(
-  signMap: SignMap,
-  nextToPlay: 'B' | 'W',
-  komi: number,
-  history: HistoryMove[]
-): string {
-  const last5Moves = history.slice(-5).map(m => `${m.color}:${m.x},${m.y}`);
-  const boardHash = `${signMap.length}:${signMap.map(row => row.join(',')).join(';')}`;
-  return JSON.stringify({ board: boardHash, nextToPlay, komi, history: last5Moves });
-}
+export { generateAnalysisCacheKey } from './analysis-cache';
 
 export interface SubmitHandle {
   id: RequestId;
@@ -81,11 +60,17 @@ export interface CacheRef {
 }
 
 export interface AnalysisQueueOptions {
-  /** Max cache entries (LRU). Default 1000. Ignored if cacheRef is provided. */
+  /**
+   * Max entries of the queue's own cache (LRU). Default 1000. Not used with
+   * `cacheRef`: the queue never evicts from a map it does not own.
+   */
   cacheSize?: number;
   /**
    * Shared cache. When provided, the queue reads/writes against this Map
    * instead of an internal one — used to share state with SGF persistence.
+   * Its owner decides what it holds and when it is cleared: the map is the
+   * analysis an SGF save writes, so an eviction here would drop analysis from
+   * the user's file.
    */
   cacheRef?: CacheRef;
 }
@@ -119,20 +104,18 @@ type Item = InternalRequest | InternalBatch;
 
 export class AnalysisQueue {
   private engine: Engine;
-  private cache: Map<string, AnalysisResult>;
-  private cacheSize: number;
+  private cache: AnalysisCache;
   private liveQueue: Item[] = [];
   private batchQueue: Item[] = [];
   private inFlight: Item | null = null;
   private idCounter = 0;
   private disposed = false;
-  /** The forced move each result this queue ran was computed for (see `answers`). */
-  private ranFor = new WeakMap<AnalysisResult, string>();
 
   constructor(engine: Engine, opts: AnalysisQueueOptions = {}) {
     this.engine = engine;
-    this.cacheSize = opts.cacheSize ?? 1000;
-    this.cache = opts.cacheRef ? opts.cacheRef.current : new Map();
+    this.cache = opts.cacheRef
+      ? new AnalysisCache(opts.cacheRef.current, Infinity)
+      : new AnalysisCache(new Map(), opts.cacheSize ?? 1000);
   }
 
   /** Replace the engine handle (e.g. after a backend fallback). */
@@ -146,7 +129,7 @@ export class AnalysisQueue {
     }
 
     // Cache hit — return immediately.
-    const cached = this.cacheLookup(request);
+    const cached = this.cache.lookup(request);
     if (cached) {
       return { id: '', result: Promise.resolve(cached) };
     }
@@ -195,7 +178,7 @@ export class AnalysisQueue {
     const pending: AnalysisRequest[] = [];
     const pendingIdx: number[] = [];
     for (let i = 0; i < requests.length; i++) {
-      const cached = this.cacheLookup(requests[i]);
+      const cached = this.cache.lookup(requests[i]);
       if (cached) {
         handles.push({ id: '', result: Promise.resolve(cached) });
       } else {
@@ -293,11 +276,11 @@ export class AnalysisQueue {
    * state (other than touching LRU order).
    */
   peek(req: AnalysisRequest): AnalysisResult | null {
-    return this.cacheLookup(req);
+    return this.cache.lookup(req);
   }
 
   cacheStats(): { size: number; maxSize: number } {
-    return { size: this.cache.size, maxSize: this.cacheSize };
+    return { size: this.cache.size, maxSize: this.cache.limit };
   }
 
   pendingCount(): number {
@@ -353,7 +336,7 @@ export class AnalysisQueue {
 
   private async runOne(req: InternalRequest): Promise<void> {
     // Cache may have been populated since enqueue time.
-    const cached = this.cacheLookup(req.request);
+    const cached = this.cache.lookup(req.request);
     if (cached) {
       req.resolve(cached);
       return;
@@ -364,7 +347,7 @@ export class AnalysisQueue {
         nextToPlay: req.request.nextToPlay,
         komi: req.request.komi,
         history: req.request.history,
-        numVisits: this.visitsToRun(req.request),
+        numVisits: this.cache.visitsToRun(req.request),
         includeMove: req.request.includeMove,
         signal: req.controller.signal,
         onProgress: req.request.onProgress,
@@ -373,7 +356,7 @@ export class AnalysisQueue {
       } as any);
 
       if (req.preempted) return;
-      this.cacheStore(req.request, result);
+      this.cache.store(req.request, result);
       req.resolve(result);
     } catch (err) {
       if (req.preempted) return;
@@ -386,7 +369,7 @@ export class AnalysisQueue {
     // (or another batch in this run) between enqueue and dispatch.
     const stillPending: number[] = [];
     for (let i = 0; i < batch.requests.length; i++) {
-      const cached = this.cacheLookup(batch.requests[i]);
+      const cached = this.cache.lookup(batch.requests[i]);
       if (cached) batch.resolvers[i](cached);
       else stillPending.push(i);
     }
@@ -407,12 +390,18 @@ export class AnalysisQueue {
 
     try {
       const results = await this.engine.analyzeBatch(inputs);
+      // Cache before the preemption check: an engine that cannot stop a batch
+      // (the web worker) finishes it anyway, and the re-queued copy then finds
+      // every position here instead of running them all again. A search the
+      // abort did cut short came back shallower than asked, and is not kept.
+      for (let k = 0; k < stillPending.length; k++) {
+        const req = batch.requests[stillPending[k]];
+        const r = results[k];
+        if ((r.visits ?? req.numVisits) >= req.numVisits) this.cache.store(req, r);
+      }
       if (batch.preempted) return;
       for (let k = 0; k < stillPending.length; k++) {
-        const idx = stillPending[k];
-        const r = results[k];
-        this.cacheStore(batch.requests[idx], r);
-        batch.resolvers[idx](r);
+        batch.resolvers[stillPending[k]](results[k]);
       }
     } catch (err) {
       // A preempted batch can still hand back the positions it finished before
@@ -422,7 +411,7 @@ export class AnalysisQueue {
       if (partial) {
         for (let k = 0; k < stillPending.length; k++) {
           const result = partial[k];
-          if (result) this.cacheStore(batch.requests[stillPending[k]], result);
+          if (result) this.cache.store(batch.requests[stillPending[k]], result);
         }
       }
       if (batch.preempted) return;
@@ -458,63 +447,6 @@ export class AnalysisQueue {
       for (const reject of item.rejecters) reject(err);
     } else {
       item.reject(err);
-    }
-  }
-
-  private cacheKey(req: AnalysisRequest): string {
-    if (req.cacheKey) return req.cacheKey;
-    return generateAnalysisCacheKey(req.signMap, req.nextToPlay, req.komi, req.history);
-  }
-
-  /**
-   * Whether a cached result can stand in for running `req`. It must have searched
-   * at least as deep. A request that forces a move (`includeMove`, which engines
-   * honour only with search, so above 1 visit) also needs that move explored:
-   * engines list their top policy moves whether the search visited them or not,
-   * and one it never visited (`visits: 0`) has no evaluation of its own. Counted as explored: unknown visits (policy-only result, analysis loaded
-   * from an SGF), a move the result does not list (outside the moves the engine
-   * searches, so forcing it adds nothing), and a result already run for this move,
-   * so a move the engine cannot visit does not trigger a run on every lookup.
-   */
-  private answers(entry: AnalysisResult, req: AnalysisRequest): boolean {
-    if ((entry.visits ?? 1) < req.numVisits) return false;
-    const move = req.includeMove;
-    if (!move || req.numVisits <= 1 || this.ranFor.get(entry) === move) return true;
-    return entry.moveSuggestions.find(s => s.move === move)?.visits !== 0;
-  }
-
-  private cacheLookup(req: AnalysisRequest): AnalysisResult | null {
-    const key = this.cacheKey(req);
-    const entry = this.cache.get(key);
-    if (!entry || !this.answers(entry, req)) return null;
-    // Refresh LRU position.
-    this.cache.delete(key);
-    this.cache.set(key, entry);
-    return entry;
-  }
-
-  /**
-   * Visits to run `req` at. When the cached entry missed only because it did not
-   * explore the forced move, redo it at the entry's own depth: the replacement then
-   * loses nothing, and still answers every request the old entry answered.
-   */
-  private visitsToRun(req: AnalysisRequest): number {
-    return Math.max(req.numVisits, this.cache.get(this.cacheKey(req))?.visits ?? 0);
-  }
-
-  private cacheStore(req: AnalysisRequest, result: AnalysisResult): void {
-    const key = this.cacheKey(req);
-    const existing = this.cache.get(key);
-    if (req.includeMove) this.ranFor.set(result, req.includeMove);
-    // Keep a deeper entry only if it answers this request; otherwise the result
-    // that was run because the entry missed would be dropped, and the miss repeat.
-    const deeper = (existing?.visits ?? 0) > (result.visits ?? req.numVisits);
-    if (existing && deeper && this.answers(existing, req)) return;
-    this.cache.delete(key);
-    this.cache.set(key, result);
-    if (this.cache.size > this.cacheSize) {
-      const oldest = this.cache.keys().next().value;
-      if (oldest !== undefined) this.cache.delete(oldest);
     }
   }
 }
