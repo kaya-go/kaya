@@ -236,6 +236,24 @@ mod tests {
         assert_eq!(empty.unwrap(), "47DEQpj8HBSa-_TImW-5JCeuQeRkm5NMpJWZG3hSuFU");
         assert_eq!(abc.unwrap(), "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
     }
+
+    /// See `read_model_file`: the bytes must cross the IPC raw, not as JSON.
+    #[test]
+    fn model_bytes_cross_the_ipc_raw() {
+        use tauri::ipc::{InvokeResponseBody, IpcResponse};
+
+        let path = std::env::temp_dir().join(format!("kaya-read-{}.onnx", std::process::id()));
+        std::fs::write(&path, [0u8, 1, 254, 255]).unwrap();
+        let response = tokio::runtime::Runtime::new()
+            .unwrap()
+            .block_on(super::read_model_file(&path));
+        std::fs::remove_file(&path).unwrap();
+
+        match response.unwrap().body().unwrap() {
+            InvokeResponseBody::Raw(bytes) => assert_eq!(bytes, vec![0, 1, 254, 255]),
+            InvokeResponseBody::Json(json) => panic!("bytes sent as JSON: {json}"),
+        }
+    }
 }
 
 /// A model found in the on-disk cache.
@@ -303,11 +321,12 @@ pub async fn onnx_list_cached_models(
 
 /// Read a cached model's bytes from disk. Native fs read — bypasses the JS
 /// `@tauri-apps/plugin-fs` scope that rejects `$APPDATA` paths on Linux (#103).
+/// The frontend receives an `ArrayBuffer`.
 #[tauri::command]
 pub async fn onnx_read_model_bytes(
     model_id: String,
     app_handle: tauri::AppHandle,
-) -> Result<Vec<u8>, String> {
+) -> Result<tauri::ipc::Response, String> {
     sanitize_model_id(&model_id)?;
     let app_data = app_handle
         .path()
@@ -319,8 +338,15 @@ pub async fn onnx_read_model_bytes(
         return Err(format!("Model not cached on disk: {}", model_id));
     }
 
-    tokio::fs::read(&cached_path)
+    read_model_file(&cached_path).await
+}
+
+/// A `Vec<u8>` return would go through serde as a JSON array of numbers, about
+/// 1 GB of text for a 280 MB model. A raw `Response` crosses the IPC as bytes.
+async fn read_model_file(path: &std::path::Path) -> Result<tauri::ipc::Response, String> {
+    tokio::fs::read(path)
         .await
+        .map(tauri::ipc::Response::new)
         .map_err(|e| format!("Failed to read cached model: {}", e))
 }
 
