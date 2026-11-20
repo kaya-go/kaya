@@ -15,6 +15,7 @@ import {
   validateTensorData,
   debugLog,
   processBatchResults,
+  disposeTensors,
 } from './onnx-utils';
 import { filterKoMoves, runMCTS } from './onnx-mcts';
 import { featurizeToBuffer } from './onnx-featurization';
@@ -55,15 +56,6 @@ export class OnnxEngine extends Engine {
 
   private debugLog(message: string, payload?: Record<string, unknown>): void {
     debugLog(this.debugEnabled, message, payload);
-  }
-
-  /** Pop the GPU error scope and throw if a validation error was detected. */
-  private async checkGpuErrorScope(): Promise<void> {
-    if (!this.gpuDevice) return;
-    const error = await this.gpuDevice.popErrorScope();
-    if (error) {
-      throw new Error(`WebGPU validation error: ${error.message}`);
-    }
   }
 
   private async ensureGpuBuffers(size: number): Promise<void> {
@@ -259,14 +251,27 @@ export class OnnxEngine extends Engine {
       size
     );
 
+    // Close the scope and free the tensors whatever happens: a scope left open
+    // swallows every later validation error, and tensors left behind hold
+    // GPU memory.
     this.gpuDevice?.pushErrorScope('validation');
-    const results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
-    await this.checkGpuErrorScope();
-
+    let results: ort.InferenceSession.ReturnType | undefined;
+    let runError: unknown;
+    try {
+      results = await this.session!.run({ bin_input: binTensor, global_input: globalTensor });
+    } catch (e) {
+      runError = e;
+    }
     if (!usingGpuBuffers) {
       binTensor.dispose();
       globalTensor.dispose();
     }
+    const scopeError = this.gpuDevice ? await this.gpuDevice.popErrorScope() : null;
+    if (scopeError) {
+      if (results) disposeTensors(results);
+      throw new Error(`WebGPU validation error: ${scopeError.message}`);
+    }
+    if (!results) throw runError;
     return processBatchResults(results, plas, size, batchSize);
   }
 
