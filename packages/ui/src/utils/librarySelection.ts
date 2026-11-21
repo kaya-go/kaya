@@ -36,6 +36,28 @@ export function expandId(openIds: Set<string>, id: string): Set<string> {
   return next;
 }
 
+/**
+ * Folders that contain `id`, nearest parent first.
+ * A missing id or a cycle yields the parents found before the break.
+ */
+export function ancestorIds(
+  items: readonly { id: string; parentId: string | null }[],
+  id: string | null
+): Set<string> {
+  const ancestors = new Set<string>();
+  if (!id) return ancestors;
+  const parentOf = new Map(items.map(item => [item.id, item.parentId]));
+  let parentId = parentOf.get(id) ?? null;
+  const seen = new Set<string>();
+  while (parentId) {
+    if (seen.has(parentId)) break;
+    seen.add(parentId);
+    ancestors.add(parentId);
+    parentId = parentOf.get(parentId) ?? null;
+  }
+  return ancestors;
+}
+
 /** Close a folder. Already-closed is the same set. */
 export function collapseId(openIds: Set<string>, id: string): Set<string> {
   if (!openIds.has(id)) return openIds;

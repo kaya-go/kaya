@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'bun:test';
 import {
+  ancestorIds,
   collapseId,
   contextMenuSelection,
   expandId,
@@ -35,5 +36,21 @@ describe('expandId / collapseId', () => {
     expect(collapseId(open, 'missing')).toBe(open);
     const closed = collapseId(open, 'folder');
     expect(closed.has('folder')).toBe(false);
+  });
+});
+
+describe('ancestorIds', () => {
+  test('walks parents nearest-first and stops on a cycle', () => {
+    const items = [
+      { id: 'top', parentId: null },
+      { id: 'mid', parentId: 'top' },
+      { id: 'file', parentId: 'mid' },
+      { id: 'loop-a', parentId: 'loop-b' },
+      { id: 'loop-b', parentId: 'loop-a' },
+    ];
+    expect([...ancestorIds(items, 'file')]).toEqual(['mid', 'top']);
+    expect(ancestorIds(items, 'top').size).toBe(0);
+    expect(ancestorIds(items, null).size).toBe(0);
+    expect(ancestorIds(items, 'loop-a').size).toBe(2);
   });
 });

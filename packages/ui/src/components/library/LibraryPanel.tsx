@@ -11,7 +11,6 @@ import { Tree } from 'react-arborist';
 import { LuFolderPlus, LuUpload, LuDownload, LuTrash2, LuCopy } from 'react-icons/lu';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
-import type { LibraryItemId } from '@kaya/game-library';
 import { formatFileSize } from '@kaya/game-library';
 import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
 import { LibraryContextMenu } from './LibraryContextMenu';
@@ -23,6 +22,7 @@ import {
   LibraryTreeNodeProvider,
   LibraryTreeNodeRenderer,
 } from './LibraryTreeNode';
+import { ancestorIds } from '../../utils/librarySelection';
 import { LIBRARY_SELECTION_LOCK, useLibraryTreeBinding } from './useLibraryTreeBinding';
 import { useLibraryTreeSize } from './useLibraryTreeSize';
 import './LibraryPanel.css';
@@ -62,6 +62,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     selectedId,
     selectedIds,
     expandedIds,
+    loadedFileId,
     expandFolder,
     collapseFolder,
   });
@@ -160,22 +161,11 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     return roots;
   }, [items]);
 
-  // Computed ancestor IDs for highlighting
-  const loadedFileAncestorIds = useMemo(() => {
-    if (!loadedFileId) return new Set<LibraryItemId>();
-
-    const ancestors = new Set<LibraryItemId>();
-    const loadedItem = items.find(item => item.id === loadedFileId);
-    if (!loadedItem) return ancestors;
-
-    let parentId = loadedItem.parentId;
-    while (parentId) {
-      ancestors.add(parentId);
-      const parent = items.find(item => item.id === parentId);
-      parentId = parent?.parentId ?? null;
-    }
-    return ancestors;
-  }, [loadedFileId, items]);
+  // Folders that contain the game on the board. A collapsed one keeps a dot.
+  const loadedFileAncestorIds = useMemo(
+    () => ancestorIds(items, loadedFileId),
+    [items, loadedFileId]
+  );
 
   if (collapsed) {
     return null;

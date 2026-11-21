@@ -23,6 +23,7 @@ interface UseLibraryTreeBindingParams {
   selectedId: LibraryItemId | null;
   selectedIds: Set<LibraryItemId>;
   expandedIds: Set<LibraryItemId>;
+  loadedFileId: LibraryItemId | null;
   expandFolder: (id: LibraryItemId) => void;
   collapseFolder: (id: LibraryItemId) => void;
 }
@@ -33,10 +34,14 @@ export function useLibraryTreeBinding({
   selectedId,
   selectedIds,
   expandedIds,
+  loadedFileId,
   expandFolder,
   collapseFolder,
 }: UseLibraryTreeBindingParams) {
   const treeRef = useRef<TreeApi<TreeNode>>(null);
+  // Reveal once per open game. A later refresh must not reopen folders the
+  // user closed, and must not pull the list back to this row.
+  const revealedFileIdRef = useRef<LibraryItemId | null>(null);
 
   // Open state. Skip while the panel is unmounted: the ref is only set once
   // the tree commits, and reopening the panel must replay the folders.
@@ -64,6 +69,18 @@ export function useLibraryTreeBinding({
       mostRecent: anchor,
     });
   }, [collapsed, selectedId, selectedIds]);
+
+  // The game on the board: open the folders above it and scroll it into view.
+  useEffect(() => {
+    if (collapsed || !loadedFileId) return;
+    if (revealedFileIdRef.current === loadedFileId) return;
+    if (!items.some(item => item.id === loadedFileId)) return;
+    const tree = treeRef.current;
+    if (!tree) return;
+    revealedFileIdRef.current = loadedFileId;
+    tree.openParents(loadedFileId);
+    void tree.scrollTo(loadedFileId);
+  }, [collapsed, items, loadedFileId]);
 
   // The tree opens and closes on its own (a drop into a folder, arrow keys).
   // Write that back into expandedIds, which is what range-select walks.
