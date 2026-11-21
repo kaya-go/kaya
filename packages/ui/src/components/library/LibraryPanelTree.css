@@ -139,6 +139,7 @@
 
 .library-tree-node-input {
   flex: 1;
+  user-select: text;
   padding: 2px 4px;
   border: 1px solid var(--accent-color, #3b82f6);
   border-radius: 3px;

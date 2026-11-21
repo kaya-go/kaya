@@ -4,7 +4,7 @@
  * A collapsible panel for managing the game library.
  */
 
-import React, { useRef, useMemo } from 'react';
+import React, { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Tree } from 'react-arborist';
@@ -47,6 +47,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     loadedFileId,
     expandFolder,
     collapseFolder,
+    renameItem,
     stats,
     error,
     clearSelection,
@@ -55,7 +56,17 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
 
   const { isTauriDragging, isOverLibrary: isTauriOverLibrary } = useTauriDrag();
 
-  const actions = useLibraryActions();
+  const { treeRef, onToggle } = useLibraryTreeBinding({
+    items,
+    collapsed,
+    selectedId,
+    selectedIds,
+    expandedIds,
+    expandFolder,
+    collapseFolder,
+  });
+
+  const actions = useLibraryActions(treeRef);
   const {
     contextMenu,
     setContextMenu,
@@ -93,15 +104,16 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     downloadFolder,
   } = actions;
 
-  const { treeRef, onToggle } = useLibraryTreeBinding({
-    items,
-    collapsed,
-    selectedId,
-    selectedIds,
-    expandedIds,
-    expandFolder,
-    collapseFolder,
-  });
+  const handleTreeRename = useCallback(
+    async ({ id, name }: { id: string; name: string }) => {
+      try {
+        await renameItem(id, name);
+      } catch (error) {
+        console.error('Failed to rename library item:', error);
+      }
+    },
+    [renameItem]
+  );
 
   const panelRef = useRef<HTMLDivElement>(null);
   const { contentRef, treeHeight, treeWidth } = useLibraryTreeSize(!collapsed);
@@ -227,9 +239,6 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
         ) : (
           <div className="library-tree" onWheel={e => e.stopPropagation()}>
             <LibraryTreeNodeProvider
-              renamingId={actions.renamingId}
-              setRenamingId={actions.setRenamingId}
-              handleRename={actions.handleRename}
               handleContextMenu={actions.handleContextMenu}
               loadedFileAncestorIds={loadedFileAncestorIds}
             >
@@ -243,6 +252,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
                 rowHeight={32}
                 selection={LIBRARY_SELECTION_LOCK}
                 onToggle={onToggle}
+                onRename={handleTreeRename}
                 onMove={handleTreeMove}
                 disableDrag={false}
                 disableDrop={args => {

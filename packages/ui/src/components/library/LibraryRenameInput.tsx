@@ -53,6 +53,13 @@ export function LibraryRenameInput({ initialValue, onCommit, onCancel }: Library
       onKeyUp={e => e.stopPropagation()}
       onKeyPress={e => e.stopPropagation()}
       onClick={e => e.stopPropagation()}
+      // The row is the drag source. A drag that starts in this field would move
+      // the item; stop it so the pointer can select text. The tree also refuses
+      // the drag while node.isEditing, which is what shows this field.
+      onDragStart={e => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     />
   );
 }

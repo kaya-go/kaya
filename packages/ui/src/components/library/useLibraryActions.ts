@@ -2,13 +2,23 @@
  * Hook encapsulating all Library Panel action handlers and related state.
  */
 
-import { useState, useCallback, useRef, useEffect, type DragEvent, type MouseEvent } from 'react';
+import {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type DragEvent,
+  type MouseEvent,
+  type RefObject,
+} from 'react';
+import type { TreeApi } from 'react-arborist';
 import { useTranslation } from 'react-i18next';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { buildSGF } from '@kaya/board-recognition';
 import { decodeSgf } from '@kaya/sgf';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import { contextMenuSelection } from '../../utils/librarySelection';
+import type { TreeNode } from './LibraryTreeNode';
 import type { ConfirmDialogState } from './LibraryDialogs';
 import type { DuplicateResult } from '../../contexts/library-types';
 import { useToast } from '../ui/Toast';
@@ -28,7 +38,7 @@ export interface ContextMenuState {
   item: LibraryItem | null;
 }
 
-export function useLibraryActions() {
+export function useLibraryActions(treeRef: RefObject<TreeApi<TreeNode> | null>) {
   const { t } = useTranslation();
   const { showToast } = useToast();
   const openFile = useOpenLibraryFile();
@@ -41,7 +51,6 @@ export function useLibraryActions() {
     createFile,
     deleteItem,
     deleteItems,
-    renameItem,
     moveItem,
     moveItems,
     importZip,
@@ -56,7 +65,6 @@ export function useLibraryActions() {
   } = useLibrary();
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
-  const [renamingId, setRenamingId] = useState<LibraryItemId | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [recognitionFile, setRecognitionFile] = useState<File | null>(null);
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
@@ -239,24 +247,14 @@ export function useLibraryActions() {
     setNewFolderParent(null);
   }, [newFolderName, newFolderParent, createFolder]);
 
-  const startRename = useCallback((item: LibraryItem) => {
-    setRenamingId(item.id);
-    setContextMenu(null);
-  }, []);
-
-  const handleRename = useCallback(
-    async (value: string) => {
-      try {
-        if (renamingId && value.trim()) {
-          await renameItem(renamingId, value.trim());
-        }
-      } catch (error) {
-        console.error('Failed to rename library item:', error);
-      } finally {
-        setRenamingId(null);
-      }
+  // node.edit() sets the tree's editing id. canDrag is false while that is set,
+  // so a drag inside the rename field selects text instead of moving the row.
+  const startRename = useCallback(
+    (item: LibraryItem) => {
+      setContextMenu(null);
+      void treeRef.current?.edit(item.id);
     },
-    [renamingId, renameItem]
+    [treeRef]
   );
 
   const handleDelete = useCallback(
@@ -382,8 +380,6 @@ export function useLibraryActions() {
     // State
     contextMenu,
     setContextMenu,
-    renamingId,
-    setRenamingId,
     isDraggingOver,
     recognitionFile,
     setRecognitionFile,
@@ -410,7 +406,6 @@ export function useLibraryActions() {
     handleNewFolder,
     handleCreateFolder,
     startRename,
-    handleRename,
     handleDelete,
     handleBatchDelete,
     handleBatchDownload,

@@ -52,9 +52,6 @@ export const DragPreview: React.FC<DragPreviewProps> = ({ mouse, isDragging, dra
 };
 
 interface LibraryTreeNodeContextValue {
-  renamingId: LibraryItemId | null;
-  setRenamingId: (id: LibraryItemId | null) => void;
-  handleRename: (value: string) => void;
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
   /** Click bookkeeping is shared by every row: ranges and double-click detection. */
@@ -66,18 +63,12 @@ interface LibraryTreeNodeContextValue {
 const LibraryTreeNodeContext = createContext<LibraryTreeNodeContextValue | null>(null);
 
 export interface LibraryTreeNodeProviderProps {
-  renamingId: LibraryItemId | null;
-  setRenamingId: (id: LibraryItemId | null) => void;
-  handleRename: (value: string) => void;
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
   children: React.ReactNode;
 }
 
 export function LibraryTreeNodeProvider({
-  renamingId,
-  setRenamingId,
-  handleRename,
   handleContextMenu,
   loadedFileAncestorIds,
   children,
@@ -88,16 +79,13 @@ export function LibraryTreeNodeProvider({
 
   const value = useMemo<LibraryTreeNodeContextValue>(
     () => ({
-      renamingId,
-      setRenamingId,
-      handleRename,
       handleContextMenu,
       loadedFileAncestorIds,
       lastClickedIdRef,
       lastClickTimeRef,
       lastClickIdRef,
     }),
-    [renamingId, setRenamingId, handleRename, handleContextMenu, loadedFileAncestorIds]
+    [handleContextMenu, loadedFileAncestorIds]
   );
 
   return (
@@ -112,9 +100,6 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
   }
 
   const {
-    renamingId,
-    setRenamingId,
-    handleRename,
     handleContextMenu,
     loadedFileAncestorIds,
     lastClickedIdRef,
@@ -138,7 +123,7 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
   const isFolder = item.type === 'folder';
   const isSelected = selectedIds.has(item.id);
   const isExpanded = node.isOpen;
-  const isRenaming = renamingId === item.id;
+  const isRenaming = node.isEditing;
   const isDropTarget = node.willReceiveDrop;
   const isLoaded = loadedFileId === item.id;
   const hasLoadedDescendant = isFolder && !isExpanded && loadedFileAncestorIds.has(item.id);
@@ -214,8 +199,12 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
       {isRenaming ? (
         <LibraryRenameInput
           initialValue={item.name}
-          onCommit={handleRename}
-          onCancel={() => setRenamingId(null)}
+          onCommit={value => {
+            const trimmed = value.trim();
+            if (trimmed) node.submit(trimmed);
+            else node.reset();
+          }}
+          onCancel={() => node.reset()}
         />
       ) : (
         <span className="library-tree-node-name">
