@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
-import { collapseId, expandId } from '../utils/librarySelection';
+import { collapseId, expandId, sameIdSet } from '../utils/librarySelection';
 
 export function useLibrarySelection(items: LibraryItem[]) {
   const [selectedId, setSelectedId] = useState<LibraryItemId | null>(null);
@@ -89,6 +89,17 @@ export function useLibrarySelection(items: LibraryItem[]) {
     setSelectedId(null);
   }, []);
 
+  // Same sets come back unchanged, so a selection echo from the tree does not
+  // schedule another pass that would write the tree again.
+  const replaceSelection = useCallback(
+    (ids: readonly LibraryItemId[], anchorId: LibraryItemId | null) => {
+      const next = new Set(ids);
+      setSelectedIds(prev => (sameIdSet(prev, next) ? prev : next));
+      setSelectedId(prev => (prev === anchorId ? prev : anchorId));
+    },
+    []
+  );
+
   const toggleExpanded = useCallback((id: LibraryItemId) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
@@ -122,6 +133,7 @@ export function useLibrarySelection(items: LibraryItem[]) {
     toggleItemSelection,
     selectRange,
     clearSelection,
+    replaceSelection,
     toggleExpanded,
     expandFolder,
     collapseFolder,

@@ -3,13 +3,13 @@
  *
  * The context owns both sets: range select, move-to-open, and the menu read
  * them. The tree has its own copy, and a drag uses that copy, so the two have
- * to match. Pushing context → tree is enough for clicks. A constant
- * `selection` id keeps arborist's controlled-selection effect from wiping a
- * multi-select on mount (an unknown id is not selected).
+ * to match. Clicks push context → tree. Arrow keys push tree → context.
+ * A constant `selection` id keeps arborist's controlled-selection effect from
+ * wiping a multi-select on mount (an unknown id is not selected).
  */
 
 import { useCallback, useEffect, useRef } from 'react';
-import type { TreeApi } from 'react-arborist';
+import type { NodeApi, TreeApi } from 'react-arborist';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import { sameIdSet } from '../../utils/librarySelection';
 import type { TreeNode } from './LibraryTreeNode';
@@ -26,6 +26,7 @@ interface UseLibraryTreeBindingParams {
   loadedFileId: LibraryItemId | null;
   expandFolder: (id: LibraryItemId) => void;
   collapseFolder: (id: LibraryItemId) => void;
+  replaceSelection: (ids: readonly LibraryItemId[], anchorId: LibraryItemId | null) => void;
 }
 
 export function useLibraryTreeBinding({
@@ -37,8 +38,12 @@ export function useLibraryTreeBinding({
   loadedFileId,
   expandFolder,
   collapseFolder,
+  replaceSelection,
 }: UseLibraryTreeBindingParams) {
   const treeRef = useRef<TreeApi<TreeNode>>(null);
+  // setSelection notifies onSelect. Ignore that echo, or the two copies of the
+  // selection write each other forever.
+  const echoingSelection = useRef(false);
   // Reveal once per open game. A later refresh must not reopen folders the
   // user closed, and must not pull the list back to this row.
   const revealedFileIdRef = useRef<LibraryItemId | null>(null);
@@ -63,12 +68,25 @@ export function useLibraryTreeBinding({
     const tree = treeRef.current;
     if (!tree || sameIdSet(tree.selectedIds, selectedIds)) return;
     const anchor = selectedId ?? selectedIds.values().next().value ?? null;
+    echoingSelection.current = true;
     tree.setSelection({
       ids: [...selectedIds],
       anchor,
       mostRecent: anchor,
     });
+    echoingSelection.current = false;
   }, [collapsed, selectedId, selectedIds]);
+
+  // Arrow keys and Cmd-A change the tree's selection. Keep the context's set,
+  // which is what the menu and a drag read.
+  const onSelect = useCallback(
+    (nodes: NodeApi<TreeNode>[]) => {
+      if (echoingSelection.current) return;
+      const ids = nodes.map(node => node.id);
+      replaceSelection(ids, ids[ids.length - 1] ?? null);
+    },
+    [replaceSelection]
+  );
 
   // The game on the board: open the folders above it and scroll it into view.
   useEffect(() => {
@@ -94,5 +112,5 @@ export function useLibraryTreeBinding({
     [collapseFolder, expandFolder]
   );
 
-  return { treeRef, onToggle };
+  return { treeRef, onToggle, onSelect };
 }

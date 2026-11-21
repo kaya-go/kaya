@@ -16,16 +16,13 @@ import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecogn
 import { LibraryContextMenu } from './LibraryContextMenu';
 import { NewFolderDialog, ConfirmDialog } from './LibraryDialogs';
 import { useLibraryActions } from './useLibraryActions';
-import {
-  type TreeNode,
-  DragPreview,
-  LibraryTreeNodeProvider,
-  LibraryTreeNodeRenderer,
-} from './LibraryTreeNode';
+import { DragPreview, LibraryTreeNodeProvider, LibraryTreeNodeRenderer } from './LibraryTreeNode';
+import { buildLibraryTree } from './libraryTreeData';
 import { ancestorIds } from '../../utils/librarySelection';
 import { LIBRARY_SELECTION_LOCK, useLibraryTreeBinding } from './useLibraryTreeBinding';
 import { useLibraryTreeSize } from './useLibraryTreeSize';
 import { useLibraryClipboard } from './useLibraryClipboard';
+import { useLibraryTreeKeys } from './useLibraryTreeKeys';
 import './LibraryPanel.css';
 import './LibraryPanelTree.css';
 import './LibraryPanelOverlays.css';
@@ -52,12 +49,13 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     stats,
     error,
     clearSelection,
+    replaceSelection,
     exportZip,
   } = useLibrary();
 
   const { isTauriDragging, isOverLibrary: isTauriOverLibrary } = useTauriDrag();
 
-  const { treeRef, onToggle } = useLibraryTreeBinding({
+  const { treeRef, onToggle, onSelect } = useLibraryTreeBinding({
     items,
     collapsed,
     selectedId,
@@ -66,10 +64,13 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     loadedFileId,
     expandFolder,
     collapseFolder,
+    replaceSelection,
   });
 
   const actions = useLibraryActions(treeRef);
-  const { canPaste, cutIds, copy, cut, paste } = useLibraryClipboard();
+  const clipboard = useLibraryClipboard();
+  const { canPaste, cutIds, copy, cut, paste } = clipboard;
+  const { onKeyDownCapture, onPaste } = useLibraryTreeKeys(treeRef, selectedIds, clipboard);
   const {
     contextMenu,
     setContextMenu,
@@ -121,47 +122,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
   const panelRef = useRef<HTMLDivElement>(null);
   const { contentRef, treeHeight, treeWidth } = useLibraryTreeSize(!collapsed);
 
-  // Build tree data from flat items
-  const treeData = useMemo((): TreeNode[] => {
-    const itemMap = new Map<string, TreeNode>();
-    const roots: TreeNode[] = [];
-
-    for (const item of items) {
-      itemMap.set(item.id, {
-        id: item.id,
-        name: item.name,
-        children: item.type === 'folder' ? [] : undefined,
-        data: item,
-      });
-    }
-
-    for (const item of items) {
-      const node = itemMap.get(item.id)!;
-      if (item.parentId && itemMap.has(item.parentId)) {
-        const parent = itemMap.get(item.parentId)!;
-        parent.children?.push(node);
-      } else {
-        roots.push(node);
-      }
-    }
-
-    const sortNodes = (nodes: TreeNode[]) => {
-      nodes.sort((a, b) => {
-        if (a.data.type !== b.data.type) {
-          return a.data.type === 'folder' ? -1 : 1;
-        }
-        return a.name.localeCompare(b.name);
-      });
-      for (const node of nodes) {
-        if (node.children) {
-          sortNodes(node.children);
-        }
-      }
-    };
-    sortNodes(roots);
-
-    return roots;
-  }, [items]);
+  const treeData = useMemo(() => buildLibraryTree(items), [items]);
 
   // Folders that contain the game on the board. A collapsed one keeps a dot.
   const loadedFileAncestorIds = useMemo(
@@ -229,7 +190,12 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             <div className="library-empty-hint">{t('library.emptyLibraryHint')}</div>
           </div>
         ) : (
-          <div className="library-tree" onWheel={e => e.stopPropagation()}>
+          <div
+            className="library-tree"
+            onWheel={e => e.stopPropagation()}
+            onKeyDownCapture={onKeyDownCapture}
+            onPaste={onPaste}
+          >
             <LibraryTreeNodeProvider
               handleContextMenu={actions.handleContextMenu}
               loadedFileAncestorIds={loadedFileAncestorIds}
@@ -244,6 +210,8 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
                 indent={16}
                 rowHeight={32}
                 selection={LIBRARY_SELECTION_LOCK}
+                selectionFollowsFocus
+                onSelect={onSelect}
                 onToggle={onToggle}
                 onRename={handleTreeRename}
                 onMove={handleTreeMove}

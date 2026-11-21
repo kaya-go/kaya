@@ -49,6 +49,8 @@ export interface LibraryContextValue {
   selectRange: (fromId: LibraryItemId, toId: LibraryItemId) => void;
   /** Clear all selection */
   clearSelection: () => void;
+  /** Replace the selection. The anchor is the row arrow keys extend from. */
+  replaceSelection: (ids: readonly LibraryItemId[], anchorId: LibraryItemId | null) => void;
   /** Toggle folder expansion */
   toggleExpanded: (id: LibraryItemId) => void;
   /** Expand a folder */
