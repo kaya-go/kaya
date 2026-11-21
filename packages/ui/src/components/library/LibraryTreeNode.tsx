@@ -122,7 +122,14 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     lastClickIdRef,
   } = context;
 
-  const { selectedIds, loadedFileId, selectItem, selectRange, toggleItemSelection } = useLibrary();
+  const {
+    selectedIds,
+    loadedFileId,
+    selectItem,
+    selectRange,
+    toggleItemSelection,
+    toggleExpanded,
+  } = useLibrary();
   const openFile = useOpenLibraryFile();
   const { isDirty } = useGameTreeFile();
   const { t } = useTranslation();
@@ -147,6 +154,10 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     if (isDoubleClick && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
       if (item.type === 'file') {
         openFile(item.id);
+      } else {
+        // Folders open from a double-click or the chevron. A single click only
+        // selects, so a drag does not collapse the row under the pointer.
+        toggleExpanded(item.id);
       }
       return;
     }
@@ -161,10 +172,8 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     } else {
       selectItem(item.id);
       lastClickedIdRef.current = item.id;
-      if (item.type === 'folder') {
-        node.toggle();
-      }
     }
+    node.focus();
   };
 
   return (
@@ -173,14 +182,19 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
       style={style}
       className={`library-tree-node ${isSelected ? 'selected' : ''} ${isDropTarget ? 'drop-target' : ''} ${isLoaded ? 'loaded' : ''} ${hasLoadedDescendant ? 'has-loaded' : ''}`}
       onClick={handleClick}
-      onContextMenu={e => handleContextMenu(e, item)}
+      onContextMenu={e => {
+        // Shift-range starts from the row a right-click made the selection.
+        // A right-click inside a group keeps that group's anchor.
+        if (!selectedIds.has(item.id)) lastClickedIdRef.current = item.id;
+        handleContextMenu(e, item);
+      }}
     >
       {isFolder && (
         <span
           className={`library-tree-node-arrow ${isExpanded ? 'expanded' : ''}`}
           onClick={e => {
             e.stopPropagation();
-            node.toggle();
+            toggleExpanded(item.id);
           }}
         >
           <LuChevronRight size={14} />

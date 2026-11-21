@@ -4,7 +4,7 @@
  * A collapsible panel for managing the game library.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Tree } from 'react-arborist';
@@ -23,6 +23,8 @@ import {
   LibraryTreeNodeProvider,
   LibraryTreeNodeRenderer,
 } from './LibraryTreeNode';
+import { LIBRARY_SELECTION_LOCK, useLibraryTreeBinding } from './useLibraryTreeBinding';
+import { useLibraryTreeSize } from './useLibraryTreeSize';
 import './LibraryPanel.css';
 import './LibraryPanelTree.css';
 import './LibraryPanelOverlays.css';
@@ -41,7 +43,10 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     items,
     selectedId,
     selectedIds,
+    expandedIds,
     loadedFileId,
+    expandFolder,
+    collapseFolder,
     stats,
     error,
     clearSelection,
@@ -88,35 +93,18 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     downloadFolder,
   } = actions;
 
+  const { treeRef, onToggle } = useLibraryTreeBinding({
+    items,
+    collapsed,
+    selectedId,
+    selectedIds,
+    expandedIds,
+    expandFolder,
+    collapseFolder,
+  });
+
   const panelRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [treeHeight, setTreeHeight] = useState(400);
-  const [treeWidth, setTreeWidth] = useState(250);
-
-  // Resize observer for tree dimensions
-  useEffect(() => {
-    const container = contentRef.current;
-    if (!container) return;
-
-    const updateDimensions = (width: number, height: number) => {
-      const adjustedHeight = height - 16;
-      const adjustedWidth = width - 16;
-      if (adjustedHeight > 0) setTreeHeight(adjustedHeight);
-      if (adjustedWidth > 0) setTreeWidth(adjustedWidth);
-    };
-
-    const rect = container.getBoundingClientRect();
-    updateDimensions(rect.width, rect.height);
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        updateDimensions(entry.contentRect.width, entry.contentRect.height);
-      }
-    });
-    resizeObserver.observe(container);
-
-    return () => resizeObserver.disconnect();
-  }, []);
+  const { contentRef, treeHeight, treeWidth } = useLibraryTreeSize(!collapsed);
 
   // Build tree data from flat items
   const treeData = useMemo((): TreeNode[] => {
@@ -246,13 +234,15 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
               loadedFileAncestorIds={loadedFileAncestorIds}
             >
               <Tree
+                ref={treeRef}
                 data={treeData}
                 openByDefault={false}
                 width={treeWidth}
                 height={treeHeight}
                 indent={16}
                 rowHeight={32}
-                selection={selectedId || undefined}
+                selection={LIBRARY_SELECTION_LOCK}
+                onToggle={onToggle}
                 onMove={handleTreeMove}
                 disableDrag={false}
                 disableDrop={args => {

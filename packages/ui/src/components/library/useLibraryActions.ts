@@ -8,6 +8,7 @@ import { useLibrary } from '../../contexts/LibraryContext';
 import { buildSGF } from '@kaya/board-recognition';
 import { decodeSgf } from '@kaya/sgf';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
+import { contextMenuSelection } from '../../utils/librarySelection';
 import type { ConfirmDialogState } from './LibraryDialogs';
 import type { DuplicateResult } from '../../contexts/library-types';
 import { useToast } from '../ui/Toast';
@@ -51,6 +52,7 @@ export function useLibraryActions() {
     duplicateItem,
     duplicateItems,
     toggleExpanded,
+    selectItem,
   } = useLibrary();
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
@@ -163,11 +165,18 @@ export function useLibraryActions() {
     [isDraggingOver]
   );
 
-  const handleContextMenu = useCallback((e: MouseEvent, item: LibraryItem) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, item });
-  }, []);
+  const handleContextMenu = useCallback(
+    (e: MouseEvent, item: LibraryItem) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // The menu describes the selection. A row outside it becomes the selection;
+      // a row already inside a group leaves the group in place.
+      const next = contextMenuSelection(selectedIds, item.id);
+      if (next !== selectedIds) selectItem(item.id);
+      setContextMenu({ x: e.clientX, y: e.clientY, item });
+    },
+    [selectedIds, selectItem]
+  );
 
   const handleEmptySpaceContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
