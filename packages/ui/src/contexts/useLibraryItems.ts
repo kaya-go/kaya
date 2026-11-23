@@ -66,5 +66,12 @@ export function useLibraryItems() {
     }
   }, [isInitialized, refresh]);
 
-  return { isInitialized, isLoading, items, stats, error, setError, refresh };
+  // Apply an edit before storage returns. Bump the refresh token first, so a
+  // read that started earlier cannot write the old list back over this one.
+  const patchItems = useCallback((patch: (items: LibraryItem[]) => LibraryItem[]) => {
+    latestRefresh.current += 1;
+    setItems(prev => patch(prev));
+  }, []);
+
+  return { isInitialized, isLoading, items, stats, error, setError, refresh, patchItems };
 }
