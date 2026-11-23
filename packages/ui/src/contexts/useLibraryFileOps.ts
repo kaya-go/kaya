@@ -271,15 +271,12 @@ export function useLibraryFileOps({ refresh, setError }: UseLibraryFileOpsParams
     [refresh]
   );
 
-  const duplicateItem = useCallback((id: LibraryItemId) => duplicateItems([id]), [duplicateItems]);
-
   return {
     importZip,
     exportZip,
     downloadFile,
     downloadFolder,
     downloadItems,
-    duplicateItem,
     duplicateItems,
   };
 }

@@ -10,9 +10,7 @@ import {
   LuTrash2,
   LuPencil,
   LuPlay,
-  LuFolder,
   LuCopy,
-  LuCopyPlus,
   LuScissors,
   LuClipboardPaste,
 } from 'react-icons/lu';
@@ -31,14 +29,11 @@ export interface LibraryContextMenuProps {
   onOpen: (item: LibraryItem) => void;
   onNewFolder: (parentId: string | null) => void;
   onStartRename: (item: LibraryItem) => void;
-  onDuplicate: (item: LibraryItem) => void;
-  onBatchDuplicate: (ids: LibraryItemId[]) => void;
   onBatchDownload: (ids: LibraryItemId[]) => void;
   onBatchDelete: (ids: LibraryItemId[]) => void;
   onDelete: (item: LibraryItem) => void;
   onDownloadFile: (id: LibraryItemId) => void;
   onDownloadFolder: (id: LibraryItemId) => void;
-  onMoveToRoot: (item: LibraryItem) => void;
   onCopy: () => void;
   onCut: () => void;
   onPaste: (parentId: string | null) => void;
@@ -52,14 +47,11 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   onOpen,
   onNewFolder,
   onStartRename,
-  onDuplicate,
-  onBatchDuplicate,
   onBatchDownload,
   onBatchDelete,
   onDelete,
   onDownloadFile,
   onDownloadFolder,
-  onMoveToRoot,
   onCopy,
   onCut,
   onPaste,
@@ -142,15 +134,6 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
           <div className="library-context-menu-separator" />
           <div
             className="library-context-menu-item"
-            onClick={() => onBatchDuplicate([...selectedIds])}
-          >
-            <span className="library-context-menu-item-icon">
-              <LuCopy size={14} />
-            </span>
-            {t('library.duplicateItems', { count: selectedIds.size })}
-          </div>
-          <div
-            className="library-context-menu-item"
             onClick={() => onBatchDownload([...selectedIds])}
           >
             <span className="library-context-menu-item-icon">
@@ -210,12 +193,6 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
                   onPaste={() => onPaste(pasteParentId(item))}
                   onClose={onClose}
                 />
-                <div className="library-context-menu-item" onClick={() => onDuplicate(item)}>
-                  <span className="library-context-menu-item-icon">
-                    <LuCopyPlus size={14} />
-                  </span>
-                  {t('library.duplicate')}
-                </div>
                 <div
                   className="library-context-menu-item"
                   onClick={() => {
@@ -232,17 +209,6 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
                   </span>
                   {t('library.download')}
                 </div>
-                {item.parentId !== null && (
-                  <>
-                    <div className="library-context-menu-separator" />
-                    <div className="library-context-menu-item" onClick={() => onMoveToRoot(item)}>
-                      <span className="library-context-menu-item-icon">
-                        <LuFolder size={14} />
-                      </span>
-                      {t('library.moveToRoot')}
-                    </div>
-                  </>
-                )}
                 <div className="library-context-menu-separator" />
                 <div className="library-context-menu-item danger" onClick={() => onDelete(item)}>
                   <span className="library-context-menu-item-icon">

@@ -111,7 +111,7 @@ test.describe('Library content stored by an earlier version', () => {
     await expect(page.locator('.toast.toast-error')).toHaveCount(0);
   });
 
-  test('a folder holding one is duplicated whole, past a file it cannot copy', async ({ page }) => {
+  test('a folder holding one is copied whole, past a file it cannot copy', async ({ page }) => {
     // a-notes.sgf was stored before the library required a game (#169): it is
     // copied first among the files, and its failure must not stop the others.
     await plant(page, [
@@ -123,8 +123,12 @@ test.describe('Library content stored by an earlier version', () => {
       { id: 'ladder', name: 'ladder.sgf', parentId: 'joseki', content: GAME },
     ]);
 
+    // Copy + paste into the root (same parent) stands in for the old Duplicate.
+    // Paste on a folder would land inside it; empty space below the row is the root.
     await row(page, 'Old games').click({ button: 'right' });
-    await page.locator('.library-context-menu-item', { hasText: 'Duplicate' }).click();
+    await page.locator('.library-context-menu-item', { hasText: 'Copy' }).click();
+    await page.locator('.library-tree').click({ button: 'right', position: { x: 40, y: 200 } });
+    await page.locator('.library-context-menu-item', { hasText: 'Paste' }).click();
     await expect(page.locator('.toast.toast-error .toast-content')).toHaveText(
       'Failed to duplicate a-notes.sgf: Invalid SGF content'
     );

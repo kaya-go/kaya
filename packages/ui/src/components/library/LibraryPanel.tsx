@@ -8,7 +8,7 @@ import React, { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Tree } from 'react-arborist';
-import { LuFolderPlus, LuUpload, LuDownload, LuTrash2, LuCopy } from 'react-icons/lu';
+import { LuFolderPlus, LuUpload, LuDownload, LuTrash2 } from 'react-icons/lu';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
 import { formatFileSize } from '@kaya/game-library';
@@ -98,11 +98,8 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     handleDelete,
     handleBatchDelete,
     handleBatchDownload,
-    handleBatchDuplicate,
     handleClearLibrary,
     handleOpen,
-    handleMoveToRoot,
-    handleDuplicate,
     handleTreeMove,
     downloadFile,
     downloadFolder,
@@ -241,13 +238,6 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
           <div className="library-selection-actions">
             <button
               className="library-btn"
-              onClick={() => handleBatchDuplicate([...selectedIds])}
-              title={t('library.duplicateSelected')}
-            >
-              <LuCopy size={14} />
-            </button>
-            <button
-              className="library-btn"
               onClick={() => handleBatchDownload([...selectedIds])}
               title={t('library.downloadSelected')}
             >
@@ -306,14 +296,11 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             onOpen={handleOpen}
             onNewFolder={handleNewFolder}
             onStartRename={startRename}
-            onDuplicate={handleDuplicate}
-            onBatchDuplicate={handleBatchDuplicate}
             onBatchDownload={handleBatchDownload}
             onBatchDelete={handleBatchDelete}
             onDelete={handleDelete}
             onDownloadFile={downloadFile}
             onDownloadFolder={downloadFolder}
-            onMoveToRoot={handleMoveToRoot}
             onCopy={() => copy([...selectedIds])}
             onCut={() => cut([...selectedIds])}
             onPaste={parentId => void paste(parentId)}

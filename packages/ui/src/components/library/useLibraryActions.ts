@@ -20,10 +20,8 @@ import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
 import { contextMenuSelection } from '../../utils/librarySelection';
 import type { TreeNode } from './LibraryTreeNode';
 import type { ConfirmDialogState } from './LibraryDialogs';
-import type { DuplicateResult } from '../../contexts/library-types';
 import { useToast } from '../ui/Toast';
 import {
-  formatDuplicateError,
   formatImportResultError,
   formatImportResultWarning,
   formatLibraryFileImportError,
@@ -51,15 +49,12 @@ export function useLibraryActions(treeRef: RefObject<TreeApi<TreeNode> | null>) 
     createFile,
     deleteItem,
     deleteItems,
-    moveItem,
     moveItems,
     importZip,
     downloadFile,
     downloadFolder,
     downloadItems,
     clearLibrary,
-    duplicateItem,
-    duplicateItems,
     toggleExpanded,
     selectItem,
   } = useLibrary();
@@ -304,21 +299,6 @@ export function useLibraryActions(treeRef: RefObject<TreeApi<TreeNode> | null>) 
     [downloadItems]
   );
 
-  // A duplication copies what it can and names what it could not.
-  const reportDuplicate = useCallback(
-    async (duplicate: Promise<DuplicateResult>) => {
-      setContextMenu(null);
-      const message = formatDuplicateError(await duplicate, t);
-      if (message) showToast(message, 'error');
-    },
-    [showToast, t]
-  );
-
-  const handleBatchDuplicate = useCallback(
-    (ids: LibraryItemId[]) => reportDuplicate(duplicateItems(ids)),
-    [duplicateItems, reportDuplicate]
-  );
-
   const handleClearLibrary = useCallback(() => {
     if (items.length === 0) return;
 
@@ -343,21 +323,6 @@ export function useLibraryActions(treeRef: RefObject<TreeApi<TreeNode> | null>) 
       setContextMenu(null);
     },
     [openFile, toggleExpanded]
-  );
-
-  const handleMoveToRoot = useCallback(
-    async (item: LibraryItem) => {
-      if (item.parentId !== null) {
-        await moveItem(item.id, null);
-      }
-      setContextMenu(null);
-    },
-    [moveItem]
-  );
-
-  const handleDuplicate = useCallback(
-    (item: LibraryItem) => reportDuplicate(duplicateItem(item.id)),
-    [duplicateItem, reportDuplicate]
   );
 
   const handleTreeMove = useCallback(
@@ -409,11 +374,8 @@ export function useLibraryActions(treeRef: RefObject<TreeApi<TreeNode> | null>) 
     handleDelete,
     handleBatchDelete,
     handleBatchDownload,
-    handleBatchDuplicate,
     handleClearLibrary,
     handleOpen,
-    handleMoveToRoot,
-    handleDuplicate,
     handleTreeMove,
 
     // Re-exported from useLibrary for convenience

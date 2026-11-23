@@ -88,16 +88,9 @@ export function LibraryProvider({
     }
   }, []);
 
-  // File operations (download, import/export, duplicate)
-  const {
-    importZip,
-    exportZip,
-    downloadFile,
-    downloadFolder,
-    downloadItems,
-    duplicateItem,
-    duplicateItems,
-  } = useLibraryFileOps({ refresh, setError });
+  // File operations (download, import/export, copy-for-paste)
+  const { importZip, exportZip, downloadFile, downloadFolder, downloadItems, duplicateItems } =
+    useLibraryFileOps({ refresh, setError });
 
   // CRUD operations
   const createFolder = useCallback(
@@ -166,11 +159,6 @@ export function LibraryProvider({
       }
     },
     [refresh, expandFolder, loadedFileId, onLoadedFileRenamed]
-  );
-
-  const moveItem = useCallback(
-    (id: LibraryItemId, newParentId: LibraryItemId | null) => moveItems([id], newParentId),
-    [moveItems]
   );
 
   // Deleting a folder deletes its files: drop the open file's id if it went too.
@@ -374,7 +362,6 @@ export function LibraryProvider({
       createFolder,
       createFile,
       renameItem,
-      moveItem,
       moveItems,
       deleteItem,
       deleteItems,
@@ -389,7 +376,6 @@ export function LibraryProvider({
       downloadItems,
       clearLibrary,
       clearLoadedFile,
-      duplicateItem,
       duplicateItems,
       checkUnsavedChanges,
     }),
@@ -415,7 +401,6 @@ export function LibraryProvider({
       createFolder,
       createFile,
       renameItem,
-      moveItem,
       moveItems,
       deleteItem,
       deleteItems,
@@ -430,7 +415,6 @@ export function LibraryProvider({
       downloadItems,
       clearLibrary,
       clearLoadedFile,
-      duplicateItem,
       duplicateItems,
       checkUnsavedChanges,
     ]
