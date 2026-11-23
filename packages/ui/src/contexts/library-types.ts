@@ -100,8 +100,15 @@ export interface LibraryContextValue {
   clearLoadedFile: () => void;
   /** Duplicate an item (file or folder) */
   duplicateItem: (id: LibraryItemId) => Promise<DuplicateResult>;
-  /** Duplicate multiple items */
-  duplicateItems: (ids: LibraryItemId[]) => Promise<DuplicateResult>;
+  /**
+   * Duplicate items. Without a destination, each copy sits beside its source
+   * under a "(copy)" name. A destination (null is the root) is a paste: the
+   * name is kept, and uniquified only when that folder already has it.
+   */
+  duplicateItems: (
+    ids: LibraryItemId[],
+    destinationParentId?: LibraryItemId | null
+  ) => Promise<DuplicateResult>;
   /** Check for unsaved changes and prompt user. Returns true if safe to proceed. */
   checkUnsavedChanges: () => Promise<boolean>;
 }

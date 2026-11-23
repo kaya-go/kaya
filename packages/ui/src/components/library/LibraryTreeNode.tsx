@@ -54,6 +54,7 @@ export const DragPreview: React.FC<DragPreviewProps> = ({ mouse, isDragging, dra
 interface LibraryTreeNodeContextValue {
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
+  cutIds: Set<LibraryItemId>;
   /** Click bookkeeping is shared by every row: ranges and double-click detection. */
   lastClickedIdRef: React.RefObject<LibraryItemId | null>;
   lastClickTimeRef: React.RefObject<number>;
@@ -65,12 +66,14 @@ const LibraryTreeNodeContext = createContext<LibraryTreeNodeContextValue | null>
 export interface LibraryTreeNodeProviderProps {
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
+  cutIds: Set<LibraryItemId>;
   children: React.ReactNode;
 }
 
 export function LibraryTreeNodeProvider({
   handleContextMenu,
   loadedFileAncestorIds,
+  cutIds,
   children,
 }: LibraryTreeNodeProviderProps) {
   const lastClickedIdRef = useRef<LibraryItemId | null>(null);
@@ -81,11 +84,12 @@ export function LibraryTreeNodeProvider({
     () => ({
       handleContextMenu,
       loadedFileAncestorIds,
+      cutIds,
       lastClickedIdRef,
       lastClickTimeRef,
       lastClickIdRef,
     }),
-    [handleContextMenu, loadedFileAncestorIds]
+    [handleContextMenu, loadedFileAncestorIds, cutIds]
   );
 
   return (
@@ -102,6 +106,7 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
   const {
     handleContextMenu,
     loadedFileAncestorIds,
+    cutIds,
     lastClickedIdRef,
     lastClickTimeRef,
     lastClickIdRef,
@@ -165,7 +170,8 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     <div
       ref={dragHandle}
       style={style}
-      className={`library-tree-node ${isSelected ? 'selected' : ''} ${isDropTarget ? 'drop-target' : ''} ${isLoaded ? 'loaded' : ''} ${hasLoadedDescendant ? 'has-loaded' : ''}`}
+      data-library-id={item.id}
+      className={`library-tree-node ${isSelected ? 'selected' : ''} ${isDropTarget ? 'drop-target' : ''} ${isLoaded ? 'loaded' : ''} ${hasLoadedDescendant ? 'has-loaded' : ''} ${cutIds.has(item.id) ? 'cut' : ''}`}
       onClick={handleClick}
       onContextMenu={e => {
         // Shift-range starts from the row a right-click made the selection.

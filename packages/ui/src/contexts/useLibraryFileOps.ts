@@ -216,7 +216,10 @@ export function useLibraryFileOps({ refresh, setError }: UseLibraryFileOpsParams
   // is counted and the rest still copied, so a folder is never left half-made.
   // It never throws: every failure is in the result.
   const duplicateItems = useCallback(
-    async (ids: LibraryItemId[]): Promise<DuplicateResult> => {
+    async (
+      ids: LibraryItemId[],
+      destinationParentId?: LibraryItemId | null
+    ): Promise<DuplicateResult> => {
       const storage = getLibraryStorage();
       const result: DuplicateResult = { copies: [], failures: [] };
 
@@ -244,10 +247,15 @@ export function useLibraryFileOps({ refresh, setError }: UseLibraryFileOpsParams
         }
       };
       const duplicate = async (item: LibraryItem): Promise<LibraryItem> => {
-        const siblings = await storage.getItems(item.parentId);
-        const name = makeUniqueName(copyName(item.name), siblings);
-        if (item.type === 'file') return copyFile(item, name, item.parentId);
-        const folder = await storage.createFolder({ name, parentId: item.parentId });
+        // No destination: beside the source. null is a paste into the root.
+        const parentId = destinationParentId === undefined ? item.parentId : destinationParentId;
+        const siblings = await storage.getItems(parentId);
+        // Beside the original, "(copy)" keeps the two apart. A paste into
+        // another folder keeps the name and only uniquifies a collision.
+        const base = parentId === item.parentId ? copyName(item.name) : item.name;
+        const name = makeUniqueName(base, siblings);
+        if (item.type === 'file') return copyFile(item, name, parentId);
+        const folder = await storage.createFolder({ name, parentId });
         await copyFolderContents(item, folder.id);
         return folder;
       };

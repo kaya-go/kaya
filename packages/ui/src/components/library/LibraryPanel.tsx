@@ -25,6 +25,7 @@ import {
 import { ancestorIds } from '../../utils/librarySelection';
 import { LIBRARY_SELECTION_LOCK, useLibraryTreeBinding } from './useLibraryTreeBinding';
 import { useLibraryTreeSize } from './useLibraryTreeSize';
+import { useLibraryClipboard } from './useLibraryClipboard';
 import './LibraryPanel.css';
 import './LibraryPanelTree.css';
 import './LibraryPanelOverlays.css';
@@ -68,6 +69,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
   });
 
   const actions = useLibraryActions(treeRef);
+  const { canPaste, cutIds, copy, cut, paste } = useLibraryClipboard();
   const {
     contextMenu,
     setContextMenu,
@@ -231,6 +233,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             <LibraryTreeNodeProvider
               handleContextMenu={actions.handleContextMenu}
               loadedFileAncestorIds={loadedFileAncestorIds}
+              cutIds={cutIds}
             >
               <Tree
                 ref={treeRef}
@@ -343,6 +346,10 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             onDownloadFile={downloadFile}
             onDownloadFolder={downloadFolder}
             onMoveToRoot={handleMoveToRoot}
+            onCopy={() => copy([...selectedIds])}
+            onCut={() => cut([...selectedIds])}
+            onPaste={parentId => void paste(parentId)}
+            canPaste={canPaste}
             onClose={() => setContextMenu(null)}
           />,
           document.body
