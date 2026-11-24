@@ -70,7 +70,11 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
   const actions = useLibraryActions(treeRef);
   const clipboard = useLibraryClipboard();
   const { canPaste, cutIds, copy, cut, paste } = clipboard;
-  const { onKeyDownCapture, onPaste } = useLibraryTreeKeys(treeRef, selectedIds, clipboard);
+  const { onKeyDownCapture, onKeyDown, onPaste } = useLibraryTreeKeys(
+    treeRef,
+    selectedIds,
+    clipboard
+  );
   const {
     contextMenu,
     setContextMenu,
@@ -191,6 +195,7 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             className="library-tree"
             onWheel={e => e.stopPropagation()}
             onKeyDownCapture={onKeyDownCapture}
+            onKeyDown={onKeyDown}
             onPaste={onPaste}
           >
             <LibraryTreeNodeProvider

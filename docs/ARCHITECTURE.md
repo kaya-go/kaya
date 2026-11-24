@@ -302,7 +302,8 @@ A shortcut waits while the user types in a text field or while a dialog or
 menu is open (`shouldIgnoreShortcut` / `hasOpenOverlay`, fed by every overlay
 through `useCloseOnBack`). Fullscreen is the one exception. Select All stays
 inside a text field or a block marked `data-selectable-text`
-(`useSelectAllScope`).
+(`useSelectAllScope`). The library tree stops arrow / Home / End propagation
+on bubble so board nav (`useBoardControlsKeyNav`) does not also fire.
 
 ## Assets
 

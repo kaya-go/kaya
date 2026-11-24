@@ -1,6 +1,7 @@
 /**
  * Keys that belong to the library tree while it is focused.
- * Arrow keys stay with react-arborist. These run in the capture phase so
+ * Arrow keys stay with react-arborist; the bubble handler stops them from
+ * reaching window board-nav listeners. Capture handles Enter / F2 / paste so
  * Enter opens a game instead of starting a rename, and so a paste here is not
  * also delivered to the board.
  */
@@ -20,6 +21,9 @@ interface LibraryTreeClipboard {
   cut: (ids: readonly LibraryItemId[]) => void;
   paste: (parentId: LibraryItemId | null) => Promise<void>;
 }
+
+/** Same keys the board uses for move / branch nav — keep them on the tree. */
+const TREE_NAV_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End']);
 
 export function useLibraryTreeKeys(
   treeRef: RefObject<TreeApi<TreeNode> | null>,
@@ -72,6 +76,14 @@ export function useLibraryTreeKeys(
     [canPaste, copy, cut, openFile, paste, selectedIds, toggleExpanded, treeRef]
   );
 
+  // Bubble only: arborist must see the key first. Stopping here keeps
+  // useBoardControlsKeyNav (window, bubble) from also driving the game.
+  const onKeyDown = useCallback((e: KeyboardEvent) => {
+    if (isTextEntryTarget(e.target)) return;
+    if (!TREE_NAV_KEYS.has(e.key)) return;
+    e.stopPropagation();
+  }, []);
+
   // The key handler does not cancel the paste event that follows Cmd+V.
   // Swallow it when the library clipboard has something, so the board does not
   // also load whatever text is on the system clipboard.
@@ -84,5 +96,5 @@ export function useLibraryTreeKeys(
     [canPaste]
   );
 
-  return { onKeyDownCapture, onPaste };
+  return { onKeyDownCapture, onKeyDown, onPaste };
 }
