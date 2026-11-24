@@ -150,7 +150,7 @@ bun run copy-assets  # Runs automatically in build
 - Use `useKeyboardShortcuts()` hook from context
 - Add new shortcuts to `ShortcutId` type and `DEFAULT_SHORTCUTS`
 - Add translations under `shortcuts.{id}` in all locale files
-- A global key handler checks `shouldIgnoreShortcut(e)` (typing, or a dialog open): behind a dialog only fullscreen works. A new dialog registers through `useCloseOnBack`
+- A global key handler checks `shouldIgnoreShortcut(e)` (typing, or a dialog open): behind a dialog only fullscreen works. A new dialog registers through `useCloseOnBack`. The library tree stops arrow / Home / End propagation so board nav does not steal them while the tree is focused
 
 **5. Native Audio System** (`apps/desktop/src-tauri/src/audio.rs`)
 

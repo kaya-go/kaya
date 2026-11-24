@@ -4,25 +4,25 @@
  * A collapsible panel for managing the game library.
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import React, { useCallback, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Tree } from 'react-arborist';
-import { LuFolderPlus, LuUpload, LuDownload, LuTrash2, LuCopy } from 'react-icons/lu';
+import { LuFolderPlus, LuUpload, LuDownload, LuTrash2 } from 'react-icons/lu';
 import { useLibrary } from '../../contexts/LibraryContext';
 import { useTauriDrag } from '../../contexts/TauriDragContext';
-import type { LibraryItemId } from '@kaya/game-library';
 import { formatFileSize } from '@kaya/game-library';
 import { BoardRecognitionDialog } from '../dialogs/board-recognition/BoardRecognitionDialog';
 import { LibraryContextMenu } from './LibraryContextMenu';
 import { NewFolderDialog, ConfirmDialog } from './LibraryDialogs';
 import { useLibraryActions } from './useLibraryActions';
-import {
-  type TreeNode,
-  DragPreview,
-  LibraryTreeNodeProvider,
-  LibraryTreeNodeRenderer,
-} from './LibraryTreeNode';
+import { DragPreview, LibraryTreeNodeProvider, LibraryTreeNodeRenderer } from './LibraryTreeNode';
+import { buildLibraryTree } from './libraryTreeData';
+import { ancestorIds } from '../../utils/librarySelection';
+import { LIBRARY_SELECTION_LOCK, useLibraryTreeBinding } from './useLibraryTreeBinding';
+import { useLibraryTreeSize } from './useLibraryTreeSize';
+import { useLibraryClipboard } from './useLibraryClipboard';
+import { useLibraryTreeKeys } from './useLibraryTreeKeys';
 import './LibraryPanel.css';
 import './LibraryPanelTree.css';
 import './LibraryPanelOverlays.css';
@@ -41,16 +41,40 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     items,
     selectedId,
     selectedIds,
+    expandedIds,
     loadedFileId,
+    expandFolder,
+    collapseFolder,
+    renameItem,
     stats,
     error,
     clearSelection,
+    replaceSelection,
     exportZip,
   } = useLibrary();
 
   const { isTauriDragging, isOverLibrary: isTauriOverLibrary } = useTauriDrag();
 
-  const actions = useLibraryActions();
+  const { treeRef, onToggle, onSelect } = useLibraryTreeBinding({
+    items,
+    collapsed,
+    selectedId,
+    selectedIds,
+    expandedIds,
+    loadedFileId,
+    expandFolder,
+    collapseFolder,
+    replaceSelection,
+  });
+
+  const actions = useLibraryActions(treeRef);
+  const clipboard = useLibraryClipboard();
+  const { canPaste, cutIds, copy, cut, paste } = clipboard;
+  const { onKeyDownCapture, onKeyDown, onPaste } = useLibraryTreeKeys(
+    treeRef,
+    selectedIds,
+    clipboard
+  );
   const {
     contextMenu,
     setContextMenu,
@@ -78,104 +102,34 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
     handleDelete,
     handleBatchDelete,
     handleBatchDownload,
-    handleBatchDuplicate,
     handleClearLibrary,
     handleOpen,
-    handleMoveToRoot,
-    handleDuplicate,
     handleTreeMove,
     downloadFile,
     downloadFolder,
   } = actions;
 
+  const handleTreeRename = useCallback(
+    async ({ id, name }: { id: string; name: string }) => {
+      try {
+        await renameItem(id, name);
+      } catch (error) {
+        console.error('Failed to rename library item:', error);
+      }
+    },
+    [renameItem]
+  );
+
   const panelRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [treeHeight, setTreeHeight] = useState(400);
-  const [treeWidth, setTreeWidth] = useState(250);
+  const { contentRef, treeHeight, treeWidth } = useLibraryTreeSize(!collapsed);
 
-  // Resize observer for tree dimensions
-  useEffect(() => {
-    const container = contentRef.current;
-    if (!container) return;
+  const treeData = useMemo(() => buildLibraryTree(items), [items]);
 
-    const updateDimensions = (width: number, height: number) => {
-      const adjustedHeight = height - 16;
-      const adjustedWidth = width - 16;
-      if (adjustedHeight > 0) setTreeHeight(adjustedHeight);
-      if (adjustedWidth > 0) setTreeWidth(adjustedWidth);
-    };
-
-    const rect = container.getBoundingClientRect();
-    updateDimensions(rect.width, rect.height);
-
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        updateDimensions(entry.contentRect.width, entry.contentRect.height);
-      }
-    });
-    resizeObserver.observe(container);
-
-    return () => resizeObserver.disconnect();
-  }, []);
-
-  // Build tree data from flat items
-  const treeData = useMemo((): TreeNode[] => {
-    const itemMap = new Map<string, TreeNode>();
-    const roots: TreeNode[] = [];
-
-    for (const item of items) {
-      itemMap.set(item.id, {
-        id: item.id,
-        name: item.name,
-        children: item.type === 'folder' ? [] : undefined,
-        data: item,
-      });
-    }
-
-    for (const item of items) {
-      const node = itemMap.get(item.id)!;
-      if (item.parentId && itemMap.has(item.parentId)) {
-        const parent = itemMap.get(item.parentId)!;
-        parent.children?.push(node);
-      } else {
-        roots.push(node);
-      }
-    }
-
-    const sortNodes = (nodes: TreeNode[]) => {
-      nodes.sort((a, b) => {
-        if (a.data.type !== b.data.type) {
-          return a.data.type === 'folder' ? -1 : 1;
-        }
-        return a.name.localeCompare(b.name);
-      });
-      for (const node of nodes) {
-        if (node.children) {
-          sortNodes(node.children);
-        }
-      }
-    };
-    sortNodes(roots);
-
-    return roots;
-  }, [items]);
-
-  // Computed ancestor IDs for highlighting
-  const loadedFileAncestorIds = useMemo(() => {
-    if (!loadedFileId) return new Set<LibraryItemId>();
-
-    const ancestors = new Set<LibraryItemId>();
-    const loadedItem = items.find(item => item.id === loadedFileId);
-    if (!loadedItem) return ancestors;
-
-    let parentId = loadedItem.parentId;
-    while (parentId) {
-      ancestors.add(parentId);
-      const parent = items.find(item => item.id === parentId);
-      parentId = parent?.parentId ?? null;
-    }
-    return ancestors;
-  }, [loadedFileId, items]);
+  // Folders that contain the game on the board. A collapsed one keeps a dot.
+  const loadedFileAncestorIds = useMemo(
+    () => ancestorIds(items, loadedFileId),
+    [items, loadedFileId]
+  );
 
   if (collapsed) {
     return null;
@@ -237,22 +191,31 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             <div className="library-empty-hint">{t('library.emptyLibraryHint')}</div>
           </div>
         ) : (
-          <div className="library-tree" onWheel={e => e.stopPropagation()}>
+          <div
+            className="library-tree"
+            onWheel={e => e.stopPropagation()}
+            onKeyDownCapture={onKeyDownCapture}
+            onKeyDown={onKeyDown}
+            onPaste={onPaste}
+          >
             <LibraryTreeNodeProvider
-              renamingId={actions.renamingId}
-              setRenamingId={actions.setRenamingId}
-              handleRename={actions.handleRename}
               handleContextMenu={actions.handleContextMenu}
               loadedFileAncestorIds={loadedFileAncestorIds}
+              cutIds={cutIds}
             >
               <Tree
+                ref={treeRef}
                 data={treeData}
                 openByDefault={false}
                 width={treeWidth}
                 height={treeHeight}
                 indent={16}
                 rowHeight={32}
-                selection={selectedId || undefined}
+                selection={LIBRARY_SELECTION_LOCK}
+                selectionFollowsFocus
+                onSelect={onSelect}
+                onToggle={onToggle}
+                onRename={handleTreeRename}
                 onMove={handleTreeMove}
                 disableDrag={false}
                 disableDrop={args => {
@@ -278,13 +241,6 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             {t('library.itemsSelected', { count: selectedIds.size })}
           </span>
           <div className="library-selection-actions">
-            <button
-              className="library-btn"
-              onClick={() => handleBatchDuplicate([...selectedIds])}
-              title={t('library.duplicateSelected')}
-            >
-              <LuCopy size={14} />
-            </button>
             <button
               className="library-btn"
               onClick={() => handleBatchDownload([...selectedIds])}
@@ -345,14 +301,15 @@ export function LibraryPanel({ collapsed = false, onCollapseChange }: LibraryPan
             onOpen={handleOpen}
             onNewFolder={handleNewFolder}
             onStartRename={startRename}
-            onDuplicate={handleDuplicate}
-            onBatchDuplicate={handleBatchDuplicate}
             onBatchDownload={handleBatchDownload}
             onBatchDelete={handleBatchDelete}
             onDelete={handleDelete}
             onDownloadFile={downloadFile}
             onDownloadFolder={downloadFolder}
-            onMoveToRoot={handleMoveToRoot}
+            onCopy={() => copy([...selectedIds])}
+            onCut={() => cut([...selectedIds])}
+            onPaste={parentId => void paste(parentId)}
+            canPaste={canPaste}
             onClose={() => setContextMenu(null)}
           />,
           document.body

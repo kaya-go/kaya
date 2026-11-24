@@ -52,11 +52,9 @@ export const DragPreview: React.FC<DragPreviewProps> = ({ mouse, isDragging, dra
 };
 
 interface LibraryTreeNodeContextValue {
-  renamingId: LibraryItemId | null;
-  setRenamingId: (id: LibraryItemId | null) => void;
-  handleRename: (value: string) => void;
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
+  cutIds: Set<LibraryItemId>;
   /** Click bookkeeping is shared by every row: ranges and double-click detection. */
   lastClickedIdRef: React.RefObject<LibraryItemId | null>;
   lastClickTimeRef: React.RefObject<number>;
@@ -66,20 +64,16 @@ interface LibraryTreeNodeContextValue {
 const LibraryTreeNodeContext = createContext<LibraryTreeNodeContextValue | null>(null);
 
 export interface LibraryTreeNodeProviderProps {
-  renamingId: LibraryItemId | null;
-  setRenamingId: (id: LibraryItemId | null) => void;
-  handleRename: (value: string) => void;
   handleContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   loadedFileAncestorIds: Set<LibraryItemId>;
+  cutIds: Set<LibraryItemId>;
   children: React.ReactNode;
 }
 
 export function LibraryTreeNodeProvider({
-  renamingId,
-  setRenamingId,
-  handleRename,
   handleContextMenu,
   loadedFileAncestorIds,
+  cutIds,
   children,
 }: LibraryTreeNodeProviderProps) {
   const lastClickedIdRef = useRef<LibraryItemId | null>(null);
@@ -88,16 +82,14 @@ export function LibraryTreeNodeProvider({
 
   const value = useMemo<LibraryTreeNodeContextValue>(
     () => ({
-      renamingId,
-      setRenamingId,
-      handleRename,
       handleContextMenu,
       loadedFileAncestorIds,
+      cutIds,
       lastClickedIdRef,
       lastClickTimeRef,
       lastClickIdRef,
     }),
-    [renamingId, setRenamingId, handleRename, handleContextMenu, loadedFileAncestorIds]
+    [handleContextMenu, loadedFileAncestorIds, cutIds]
   );
 
   return (
@@ -112,17 +104,22 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
   }
 
   const {
-    renamingId,
-    setRenamingId,
-    handleRename,
     handleContextMenu,
     loadedFileAncestorIds,
+    cutIds,
     lastClickedIdRef,
     lastClickTimeRef,
     lastClickIdRef,
   } = context;
 
-  const { selectedIds, loadedFileId, selectItem, selectRange, toggleItemSelection } = useLibrary();
+  const {
+    selectedIds,
+    loadedFileId,
+    selectItem,
+    selectRange,
+    toggleItemSelection,
+    toggleExpanded,
+  } = useLibrary();
   const openFile = useOpenLibraryFile();
   const { isDirty } = useGameTreeFile();
   const { t } = useTranslation();
@@ -131,7 +128,7 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
   const isFolder = item.type === 'folder';
   const isSelected = selectedIds.has(item.id);
   const isExpanded = node.isOpen;
-  const isRenaming = renamingId === item.id;
+  const isRenaming = node.isEditing;
   const isDropTarget = node.willReceiveDrop;
   const isLoaded = loadedFileId === item.id;
   const hasLoadedDescendant = isFolder && !isExpanded && loadedFileAncestorIds.has(item.id);
@@ -147,6 +144,10 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     if (isDoubleClick && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
       if (item.type === 'file') {
         openFile(item.id);
+      } else {
+        // Folders open from a double-click or the chevron. A single click only
+        // selects, so a drag does not collapse the row under the pointer.
+        toggleExpanded(item.id);
       }
       return;
     }
@@ -161,26 +162,30 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
     } else {
       selectItem(item.id);
       lastClickedIdRef.current = item.id;
-      if (item.type === 'folder') {
-        node.toggle();
-      }
     }
+    node.focus();
   };
 
   return (
     <div
       ref={dragHandle}
       style={style}
-      className={`library-tree-node ${isSelected ? 'selected' : ''} ${isDropTarget ? 'drop-target' : ''} ${isLoaded ? 'loaded' : ''} ${hasLoadedDescendant ? 'has-loaded' : ''}`}
+      data-library-id={item.id}
+      className={`library-tree-node ${isSelected ? 'selected' : ''} ${isDropTarget ? 'drop-target' : ''} ${isLoaded ? 'loaded' : ''} ${hasLoadedDescendant ? 'has-loaded' : ''} ${cutIds.has(item.id) ? 'cut' : ''}`}
       onClick={handleClick}
-      onContextMenu={e => handleContextMenu(e, item)}
+      onContextMenu={e => {
+        // Shift-range starts from the row a right-click made the selection.
+        // A right-click inside a group keeps that group's anchor.
+        if (!selectedIds.has(item.id)) lastClickedIdRef.current = item.id;
+        handleContextMenu(e, item);
+      }}
     >
       {isFolder && (
         <span
           className={`library-tree-node-arrow ${isExpanded ? 'expanded' : ''}`}
           onClick={e => {
             e.stopPropagation();
-            node.toggle();
+            toggleExpanded(item.id);
           }}
         >
           <LuChevronRight size={14} />
@@ -200,8 +205,12 @@ export function LibraryTreeNodeRenderer({ node, style, dragHandle }: NodeRendere
       {isRenaming ? (
         <LibraryRenameInput
           initialValue={item.name}
-          onCommit={handleRename}
-          onCancel={() => setRenamingId(null)}
+          onCommit={value => {
+            const trimmed = value.trim();
+            if (trimmed) node.submit(trimmed);
+            else node.reset();
+          }}
+          onCancel={() => node.reset()}
         />
       ) : (
         <span className="library-tree-node-name">

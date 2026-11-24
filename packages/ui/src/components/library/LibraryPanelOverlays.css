@@ -39,6 +39,11 @@
   background: var(--bg-hover, #333);
 }
 
+.library-context-menu-item.disabled {
+  opacity: 0.4;
+  pointer-events: none;
+}
+
 .library-context-menu-item.danger {
   color: #ef4444;
 }

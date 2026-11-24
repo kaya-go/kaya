@@ -10,10 +10,12 @@ import {
   LuTrash2,
   LuPencil,
   LuPlay,
-  LuFolder,
   LuCopy,
+  LuScissors,
+  LuClipboardPaste,
 } from 'react-icons/lu';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
+import { pasteParentId } from '../../utils/libraryClipboard';
 
 interface ContextMenuState {
   x: number;
@@ -27,14 +29,15 @@ export interface LibraryContextMenuProps {
   onOpen: (item: LibraryItem) => void;
   onNewFolder: (parentId: string | null) => void;
   onStartRename: (item: LibraryItem) => void;
-  onDuplicate: (item: LibraryItem) => void;
-  onBatchDuplicate: (ids: LibraryItemId[]) => void;
   onBatchDownload: (ids: LibraryItemId[]) => void;
   onBatchDelete: (ids: LibraryItemId[]) => void;
   onDelete: (item: LibraryItem) => void;
   onDownloadFile: (id: LibraryItemId) => void;
   onDownloadFolder: (id: LibraryItemId) => void;
-  onMoveToRoot: (item: LibraryItem) => void;
+  onCopy: () => void;
+  onCut: () => void;
+  onPaste: (parentId: string | null) => void;
+  canPaste: boolean;
   onClose: () => void;
 }
 
@@ -44,14 +47,15 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
   onOpen,
   onNewFolder,
   onStartRename,
-  onDuplicate,
-  onBatchDuplicate,
   onBatchDownload,
   onBatchDelete,
   onDelete,
   onDownloadFile,
   onDownloadFolder,
-  onMoveToRoot,
+  onCopy,
+  onCut,
+  onPaste,
+  canPaste,
   onClose,
 }) => {
   const { t } = useTranslation();
@@ -92,33 +96,42 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
     >
       {/* Empty space context menu */}
       {contextMenu.item === null ? (
-        <div
-          className="library-context-menu-item"
-          onClick={() => {
-            onNewFolder(null);
-            onClose();
-          }}
-        >
-          <span className="library-context-menu-item-icon">
-            <LuFolderPlus size={14} />
-          </span>
-          {t('library.newFolder')}
-        </div>
+        <>
+          <div
+            className="library-context-menu-item"
+            onClick={() => {
+              onNewFolder(null);
+              onClose();
+            }}
+          >
+            <span className="library-context-menu-item-icon">
+              <LuFolderPlus size={14} />
+            </span>
+            {t('library.newFolder')}
+          </div>
+          <MenuCommand
+            icon={<LuClipboardPaste size={14} />}
+            label={t('library.paste')}
+            disabled={!canPaste}
+            onClick={() => {
+              onPaste(null);
+              onClose();
+            }}
+          />
+        </>
       ) : selectedIds.size > 1 ? (
         <>
           <div className="library-context-menu-header">
             {t('library.itemsSelected', { count: selectedIds.size })}
           </div>
+          <ClipboardCommands
+            canPaste={canPaste}
+            onCopy={onCopy}
+            onCut={onCut}
+            onPaste={() => onPaste(pasteParentId(contextMenu.item))}
+            onClose={onClose}
+          />
           <div className="library-context-menu-separator" />
-          <div
-            className="library-context-menu-item"
-            onClick={() => onBatchDuplicate([...selectedIds])}
-          >
-            <span className="library-context-menu-item-icon">
-              <LuCopy size={14} />
-            </span>
-            {t('library.duplicateItems', { count: selectedIds.size })}
-          </div>
           <div
             className="library-context-menu-item"
             onClick={() => onBatchDownload([...selectedIds])}
@@ -173,12 +186,13 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
                   </span>
                   {t('library.rename')}
                 </div>
-                <div className="library-context-menu-item" onClick={() => onDuplicate(item)}>
-                  <span className="library-context-menu-item-icon">
-                    <LuCopy size={14} />
-                  </span>
-                  {t('library.duplicate')}
-                </div>
+                <ClipboardCommands
+                  canPaste={canPaste}
+                  onCopy={onCopy}
+                  onCut={onCut}
+                  onPaste={() => onPaste(pasteParentId(item))}
+                  onClose={onClose}
+                />
                 <div
                   className="library-context-menu-item"
                   onClick={() => {
@@ -195,17 +209,6 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
                   </span>
                   {t('library.download')}
                 </div>
-                {item.parentId !== null && (
-                  <>
-                    <div className="library-context-menu-separator" />
-                    <div className="library-context-menu-item" onClick={() => onMoveToRoot(item)}>
-                      <span className="library-context-menu-item-icon">
-                        <LuFolder size={14} />
-                      </span>
-                      {t('library.moveToRoot')}
-                    </div>
-                  </>
-                )}
                 <div className="library-context-menu-separator" />
                 <div className="library-context-menu-item danger" onClick={() => onDelete(item)}>
                   <span className="library-context-menu-item-icon">
@@ -221,3 +224,69 @@ export const LibraryContextMenu: React.FC<LibraryContextMenuProps> = ({
     </div>
   );
 };
+
+function MenuCommand({
+  icon,
+  label,
+  disabled,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div
+      className={`library-context-menu-item${disabled ? ' disabled' : ''}`}
+      onClick={() => {
+        if (disabled) return;
+        onClick();
+      }}
+    >
+      <span className="library-context-menu-item-icon">{icon}</span>
+      {label}
+    </div>
+  );
+}
+
+/** Cut, copy, and paste. Paste stays visible and does nothing until something was cut or copied. */
+function ClipboardCommands({
+  canPaste,
+  onCopy,
+  onCut,
+  onPaste,
+  onClose,
+}: {
+  canPaste: boolean;
+  onCopy: () => void;
+  onCut: () => void;
+  onPaste: () => void;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const run = (action: () => void) => {
+    action();
+    onClose();
+  };
+  return (
+    <>
+      <MenuCommand
+        icon={<LuScissors size={14} />}
+        label={t('library.cut')}
+        onClick={() => run(onCut)}
+      />
+      <MenuCommand
+        icon={<LuCopy size={14} />}
+        label={t('library.copy')}
+        onClick={() => run(onCopy)}
+      />
+      <MenuCommand
+        icon={<LuClipboardPaste size={14} />}
+        label={t('library.paste')}
+        disabled={!canPaste}
+        onClick={() => run(onPaste)}
+      />
+    </>
+  );
+}

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { LibraryItem, LibraryItemId } from '@kaya/game-library';
+import { collapseId, expandId, sameIdSet } from '../utils/librarySelection';
 
 export function useLibrarySelection(items: LibraryItem[]) {
   const [selectedId, setSelectedId] = useState<LibraryItemId | null>(null);
@@ -88,6 +89,17 @@ export function useLibrarySelection(items: LibraryItem[]) {
     setSelectedId(null);
   }, []);
 
+  // Same sets come back unchanged, so a selection echo from the tree does not
+  // schedule another pass that would write the tree again.
+  const replaceSelection = useCallback(
+    (ids: readonly LibraryItemId[], anchorId: LibraryItemId | null) => {
+      const next = new Set(ids);
+      setSelectedIds(prev => (sameIdSet(prev, next) ? prev : next));
+      setSelectedId(prev => (prev === anchorId ? prev : anchorId));
+    },
+    []
+  );
+
   const toggleExpanded = useCallback((id: LibraryItemId) => {
     setExpandedIds(prev => {
       const next = new Set(prev);
@@ -100,16 +112,14 @@ export function useLibrarySelection(items: LibraryItem[]) {
     });
   }, []);
 
+  // Same set when the folder is already in that state: the tree echoes
+  // open/close back here, and a fresh Set would sync the tree again.
   const expandFolder = useCallback((id: LibraryItemId) => {
-    setExpandedIds(prev => new Set([...prev, id]));
+    setExpandedIds(prev => expandId(prev, id));
   }, []);
 
   const collapseFolder = useCallback((id: LibraryItemId) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
+    setExpandedIds(prev => collapseId(prev, id));
   }, []);
 
   return {
@@ -123,6 +133,7 @@ export function useLibrarySelection(items: LibraryItem[]) {
     toggleItemSelection,
     selectRange,
     clearSelection,
+    replaceSelection,
     toggleExpanded,
     expandFolder,
     collapseFolder,

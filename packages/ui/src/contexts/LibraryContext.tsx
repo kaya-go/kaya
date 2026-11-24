@@ -26,6 +26,7 @@ import { useLibraryFileOps } from './useLibraryFileOps';
 import { useLibraryItems } from './useLibraryItems';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../components/ui/Toast';
+import { idsMovableTo, renameInList, reparentItems } from '../utils/libraryItemsPatch';
 import { openStoredGame, storedGameSave } from '../utils/storedGame';
 
 export type { LibraryContextValue, LibraryProviderProps };
@@ -44,7 +45,8 @@ export function LibraryProvider({
 }: LibraryProviderProps) {
   const { t } = useTranslation();
   const { showToast } = useToast();
-  const { isInitialized, isLoading, items, stats, error, setError, refresh } = useLibraryItems();
+  const { isInitialized, isLoading, items, stats, error, setError, refresh, patchItems } =
+    useLibraryItems();
   const [loadedFileId, setLoadedFileIdState] = useState<LibraryItemId | null>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(LOADED_FILE_ID_KEY);
@@ -70,6 +72,7 @@ export function LibraryProvider({
     toggleItemSelection,
     selectRange,
     clearSelection,
+    replaceSelection,
     toggleExpanded,
     expandFolder,
     collapseFolder,
@@ -87,16 +90,9 @@ export function LibraryProvider({
     }
   }, []);
 
-  // File operations (download, import/export, duplicate)
-  const {
-    importZip,
-    exportZip,
-    downloadFile,
-    downloadFolder,
-    downloadItems,
-    duplicateItem,
-    duplicateItems,
-  } = useLibraryFileOps({ refresh, setError });
+  // File operations (download, import/export, copy-for-paste)
+  const { importZip, exportZip, downloadFile, downloadFolder, downloadItems, duplicateItems } =
+    useLibraryFileOps({ refresh, setError });
 
   // CRUD operations
   const createFolder = useCallback(
@@ -128,15 +124,20 @@ export function LibraryProvider({
   const renameItem = useCallback(
     async (id: LibraryItemId, newName: string) => {
       const storage = getLibraryStorage();
-      // Use the returned name: storage may sanitize or uniquify it.
-      const renamed = await storage.renameItem({ itemId: id, newName });
-      await refresh();
-      // Notify outside when the loaded file's stored name changed.
-      if (id === loadedFileId) {
-        onLoadedFileRenamed?.(renamed.name);
+      // Show the typed name at once. Refresh below replaces it when storage
+      // sanitizes or uniquifies, and restores the old name if the write fails.
+      patchItems(prev => renameInList(prev, id, newName));
+      try {
+        // Use the returned name: storage may sanitize or uniquify it.
+        const renamed = await storage.renameItem({ itemId: id, newName });
+        if (id === loadedFileId) {
+          onLoadedFileRenamed?.(renamed.name);
+        }
+      } finally {
+        await refresh();
       }
     },
-    [refresh, loadedFileId, onLoadedFileRenamed]
+    [patchItems, refresh, loadedFileId, onLoadedFileRenamed]
   );
 
   const moveItems = useCallback(
@@ -145,6 +146,9 @@ export function LibraryProvider({
       // Destination may uniquify the name; remember if the open file's stored name changed.
       let loadedFileNewName: string | undefined;
       try {
+        // The row moves before IndexedDB returns. A folder dropped onto itself
+        // or its own child is left where it is; storage would reject that.
+        patchItems(prev => reparentItems(prev, idsMovableTo(prev, ids, newParentId), newParentId));
         for (const id of ids) {
           // Use the returned name: storage may uniquify on collision in the destination.
           const moved = await storage.moveItem({ itemId: id, newParentId });
@@ -164,12 +168,7 @@ export function LibraryProvider({
         }
       }
     },
-    [refresh, expandFolder, loadedFileId, onLoadedFileRenamed]
-  );
-
-  const moveItem = useCallback(
-    (id: LibraryItemId, newParentId: LibraryItemId | null) => moveItems([id], newParentId),
-    [moveItems]
+    [patchItems, refresh, expandFolder, loadedFileId, onLoadedFileRenamed]
   );
 
   // Deleting a folder deletes its files: drop the open file's id if it went too.
@@ -366,13 +365,13 @@ export function LibraryProvider({
       toggleItemSelection,
       selectRange,
       clearSelection,
+      replaceSelection,
       toggleExpanded,
       expandFolder,
       collapseFolder,
       createFolder,
       createFile,
       renameItem,
-      moveItem,
       moveItems,
       deleteItem,
       deleteItems,
@@ -387,7 +386,6 @@ export function LibraryProvider({
       downloadItems,
       clearLibrary,
       clearLoadedFile,
-      duplicateItem,
       duplicateItems,
       checkUnsavedChanges,
     }),
@@ -406,13 +404,13 @@ export function LibraryProvider({
       toggleItemSelection,
       selectRange,
       clearSelection,
+      replaceSelection,
       toggleExpanded,
       expandFolder,
       collapseFolder,
       createFolder,
       createFile,
       renameItem,
-      moveItem,
       moveItems,
       deleteItem,
       deleteItems,
@@ -427,7 +425,6 @@ export function LibraryProvider({
       downloadItems,
       clearLibrary,
       clearLoadedFile,
-      duplicateItem,
       duplicateItems,
       checkUnsavedChanges,
     ]

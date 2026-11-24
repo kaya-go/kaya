@@ -49,6 +49,8 @@ export interface LibraryContextValue {
   selectRange: (fromId: LibraryItemId, toId: LibraryItemId) => void;
   /** Clear all selection */
   clearSelection: () => void;
+  /** Replace the selection. The anchor is the row arrow keys extend from. */
+  replaceSelection: (ids: readonly LibraryItemId[], anchorId: LibraryItemId | null) => void;
   /** Toggle folder expansion */
   toggleExpanded: (id: LibraryItemId) => void;
   /** Expand a folder */
@@ -65,8 +67,6 @@ export interface LibraryContextValue {
   ) => Promise<LibraryFile>;
   /** Rename an item */
   renameItem: (id: LibraryItemId, newName: string) => Promise<void>;
-  /** Move an item */
-  moveItem: (id: LibraryItemId, newParentId: LibraryItemId | null) => Promise<void>;
   /** Move multiple items into the same parent, refreshing the library once */
   moveItems: (ids: LibraryItemId[], newParentId: LibraryItemId | null) => Promise<void>;
   /** Delete an item */
@@ -98,10 +98,15 @@ export interface LibraryContextValue {
   clearLibrary: () => Promise<void>;
   /** Clear the loaded file indicator (call when loading from outside library) */
   clearLoadedFile: () => void;
-  /** Duplicate an item (file or folder) */
-  duplicateItem: (id: LibraryItemId) => Promise<DuplicateResult>;
-  /** Duplicate multiple items */
-  duplicateItems: (ids: LibraryItemId[]) => Promise<DuplicateResult>;
+  /**
+   * Copy items for paste. Without a destination, each copy sits beside its
+   * source under a "(copy)" name. A destination (null is the root) is a paste:
+   * the name is kept, and uniquified only when that folder already has it.
+   */
+  duplicateItems: (
+    ids: LibraryItemId[],
+    destinationParentId?: LibraryItemId | null
+  ) => Promise<DuplicateResult>;
   /** Check for unsaved changes and prompt user. Returns true if safe to proceed. */
   checkUnsavedChanges: () => Promise<boolean>;
 }

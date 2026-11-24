@@ -96,6 +96,11 @@
   opacity: 0.7;
 }
 
+/* A cut row stays put until it is pasted or the cut is cancelled. */
+.library-tree-node.cut {
+  opacity: 0.45;
+}
+
 .library-tree-node.drop-target {
   background: rgba(59, 130, 246, 0.3);
   outline: 2px dashed var(--accent-color, #3b82f6);
@@ -139,6 +144,7 @@
 
 .library-tree-node-input {
   flex: 1;
+  user-select: text;
   padding: 2px 4px;
   border: 1px solid var(--accent-color, #3b82f6);
   border-radius: 3px;
