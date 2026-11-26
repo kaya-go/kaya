@@ -286,7 +286,6 @@ describe('buildAnalysisRequest', () => {
     expect(request.extra).toEqual({ koInfo: { sign: 1, vertex: [2, 1] } });
     expect(request.komi).toBe(6.5);
     expect(request.numVisits).toBe(1);
-    expect(request.priority).toBe('live');
   });
 
   test('takes the default komi when the game has none', () => {
@@ -305,11 +304,10 @@ describe('buildAnalysisRequest', () => {
       gameTree: tree,
       currentNodeId: mainLine(tree)[KO_NODE].id,
       gameInfo: { boardSize: 9 },
-      overrides: { nextToPlay: 'W', numVisits: 50, priority: 'batch', extra: { tag: 1 } },
+      overrides: { nextToPlay: 'W', numVisits: 50, extra: { tag: 1 } },
     });
     expect(request.nextToPlay).toBe('W');
     expect(request.numVisits).toBe(50);
-    expect(request.priority).toBe('batch');
     expect(request.extra).toEqual({ koInfo: { sign: 1, vertex: [2, 1] }, tag: 1 });
   });
 

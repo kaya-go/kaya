@@ -260,7 +260,7 @@ export function analysisCacheKeyAt(
 
 /** The request fields a caller may set. The position always comes from the tree. */
 export type AnalysisRequestOverrides = Partial<
-  Pick<AnalysisRequest, 'nextToPlay' | 'numVisits' | 'priority' | 'extra'>
+  Pick<AnalysisRequest, 'nextToPlay' | 'numVisits' | 'extra'>
 >;
 
 export type BuildAnalysisRequestParams = {
@@ -274,6 +274,7 @@ export type BuildAnalysisRequestParams = {
  * Build an engine request for the position at a node: board, history, side to
  * play and ko, all from one reconstruction. The board is the game's own, height
  * rows of width points: its shape is how the engines learn the dimensions.
+ * Scheduling (priority / tag) is a submit option, not part of the request.
  */
 export function buildAnalysisRequest({
   gameTree,
@@ -293,7 +294,6 @@ export function buildAnalysisRequest({
     komi: gameInfo.komi ?? DEFAULT_KOMI,
     history,
     numVisits: overrides.numVisits ?? 1,
-    priority: overrides.priority ?? 'live',
     extra: { koInfo: board._koInfo, ...overrides.extra },
   };
 }

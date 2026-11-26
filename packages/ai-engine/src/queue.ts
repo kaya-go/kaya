@@ -5,7 +5,8 @@
  *
  * Semantics
  *   - One in-flight engine.analyze() at a time (engine constraint).
- *   - Two priority lanes: 'live' (high) and 'batch' (low).
+ *   - Two priority lanes: 'live' (high) and 'batch' (low). Lane and
+ *     cancel tag are submit options.
  *   - A new 'live' request preempts a running 'batch' — the batch is
  *     aborted and re-enqueued with a fresh AbortController, transparent
  *     to its caller.
@@ -31,15 +32,13 @@ import type { AnalysisResult, HistoryMove } from './types';
 export type Priority = 'live' | 'batch';
 export type RequestId = string;
 
+/** parameters used by engine for analysis */
 export interface AnalysisRequest {
   signMap: SignMap;
   nextToPlay: 'B' | 'W';
   komi: number;
   history: HistoryMove[];
   numVisits: number;
-  priority: Priority;
-  /** Optional tag for bulk cancellation (e.g. "full-game"). */
-  tag?: string;
   /** Force-visit a specific GTP move so it has full MCTS stats. */
   includeMove?: string;
   /** Live progress callback. Only the latest progress is delivered. */
@@ -48,6 +47,21 @@ export interface AnalysisRequest {
   cacheKey?: string;
   /** Engine-specific extras (e.g. koInfo) forwarded to engine.analyze. */
   extra?: Record<string, unknown>;
+}
+
+/**
+ * Scheduling for one submit: which lane, and an optional cancel tag.
+ * Independent of submit vs submitBatch (full-game uses both with 'batch');
+ * each method only picks a different default when `priority` is omitted.
+ */
+export interface SubmitOptions {
+  /**
+   * Queue lane. Defaults to `'live'` for `submit`, `'batch'` for
+   * `submitBatch` — the common case for each API, overridable either way.
+   */
+  priority?: Priority;
+  /** Optional tag for bulk cancellation (e.g. "full-game"). */
+  tag?: string;
 }
 
 export { generateAnalysisCacheKey } from './analysis-cache';
@@ -83,7 +97,7 @@ export interface AnalysisQueueOptions {
  */
 type StopReason = 'requeued' | 'cancelled';
 
-interface InternalRequest {
+interface InternalRequest extends SubmitOptions {
   kind: 'single';
   id: RequestId;
   request: AnalysisRequest;
@@ -95,7 +109,7 @@ interface InternalRequest {
   stopped: StopReason | null;
 }
 
-interface InternalBatch {
+interface InternalBatch extends SubmitOptions {
   kind: 'batch';
   id: RequestId;
   requests: AnalysisRequest[];
@@ -103,9 +117,6 @@ interface InternalBatch {
   rejecters: Array<(e: unknown) => void>;
   controller: AbortController;
   stopped: StopReason | null;
-  /** All sub-requests share priority; we copy from the first. */
-  priority: Priority;
-  tag?: string;
 }
 
 type Item = InternalRequest | InternalBatch;
@@ -131,7 +142,7 @@ export class AnalysisQueue {
     this.engine = engine;
   }
 
-  submit(request: AnalysisRequest): SubmitHandle {
+  submit(request: AnalysisRequest, opts?: SubmitOptions): SubmitHandle {
     if (this.disposed) {
       return { id: '', result: Promise.reject(new Error('AnalysisQueue is disposed')) };
     }
@@ -142,6 +153,7 @@ export class AnalysisQueue {
       return { id: '', result: Promise.resolve(cached) };
     }
 
+    const priority = opts?.priority ?? 'live';
     const id = `req-${++this.idCounter}`;
     let resolve!: (r: AnalysisResult) => void;
     let reject!: (e: unknown) => void;
@@ -154,13 +166,15 @@ export class AnalysisQueue {
       kind: 'single',
       id,
       request,
+      priority,
+      tag: opts?.tag,
       resolve,
       reject,
       controller: new AbortController(),
       stopped: null,
     };
 
-    this.enqueue(internal, request.priority);
+    this.enqueue(internal, priority);
     void this.pump();
     return { id, result };
   }
@@ -170,9 +184,10 @@ export class AnalysisQueue {
    * for the policy-only full-game scan (numVisits=1) where batched
    * inference is dramatically faster on GPU backends.
    *
-   * Returned promises resolve in the same order as the input.
+   * Returned promises resolve in the same order as the input. Default
+   * lane is `'batch'` (overridable via `opts.priority`).
    */
-  submitBatch(requests: AnalysisRequest[]): SubmitHandle[] {
+  submitBatch(requests: AnalysisRequest[], opts?: SubmitOptions): SubmitHandle[] {
     if (requests.length === 0) return [];
     if (this.disposed) {
       return requests.map(() => ({
@@ -197,6 +212,7 @@ export class AnalysisQueue {
     }
     if (pending.length === 0) return handles;
 
+    const priority = opts?.priority ?? 'batch';
     const id = `batch-${++this.idCounter}`;
     const resolvers: Array<(r: AnalysisResult) => void> = [];
     const rejecters: Array<(e: unknown) => void> = [];
@@ -216,11 +232,11 @@ export class AnalysisQueue {
       rejecters,
       controller: new AbortController(),
       stopped: null,
-      priority: pending[0].priority,
-      tag: pending[0].tag,
+      priority,
+      tag: opts?.tag,
     };
 
-    this.enqueue(batch, batch.priority);
+    this.enqueue(batch, priority);
     void this.pump();
     return handles;
   }
@@ -238,7 +254,7 @@ export class AnalysisQueue {
   cancelTag(tag: string): void {
     const filterTag = (queue: Item[]) => {
       for (let i = queue.length - 1; i >= 0; i--) {
-        if (itemTag(queue[i]) === tag) {
+        if (queue[i].tag === tag) {
           const [item] = queue.splice(i, 1);
           this.rejectItem(item, abortError());
         }
@@ -246,7 +262,7 @@ export class AnalysisQueue {
     };
     filterTag(this.liveQueue);
     filterTag(this.batchQueue);
-    if (this.inFlight && itemTag(this.inFlight) === tag) this.cancelInFlight();
+    if (this.inFlight && this.inFlight.tag === tag) this.cancelInFlight();
   }
 
   cancelAll(): void {
@@ -291,12 +307,12 @@ export class AnalysisQueue {
       // Transparent re-queue for batch (caller never sees the interruption).
       // Not for one already stopped: a cancelled batch the engine could not
       // stop would run again, and a re-queued one already has its copy queued.
-      if (this.inFlight && !this.inFlight.stopped && itemPriority(this.inFlight) === 'batch') {
+      if (this.inFlight && !this.inFlight.stopped && this.inFlight.priority === 'batch') {
         this.preempt(this.inFlight);
       }
       // Drop in-flight live — user navigated away. Pump's finally then picks
       // up the new live we just queued.
-      if (this.inFlight && itemPriority(this.inFlight) === 'live') this.cancelInFlight();
+      if (this.inFlight && this.inFlight.priority === 'live') this.cancelInFlight();
     } else {
       this.batchQueue.push(item);
     }
@@ -423,24 +439,21 @@ export class AnalysisQueue {
   private preempt(item: Item): void {
     item.stopped = 'requeued';
     item.controller.abort();
-    if (item.kind === 'batch') {
-      const fresh: InternalBatch = {
-        ...item,
-        controller: new AbortController(),
-        stopped: null,
-      };
-      if (item.priority === 'batch') this.batchQueue.unshift(fresh);
-      else this.liveQueue.unshift(fresh);
-    } else {
-      const fresh: InternalRequest = {
-        ...item,
-        kind: 'single',
-        controller: new AbortController(),
-        stopped: null,
-      };
-      if (item.request.priority === 'batch') this.batchQueue.unshift(fresh);
-      else this.liveQueue.unshift(fresh);
-    }
+    const fresh =
+      item.kind === 'batch'
+        ? ({
+            ...item,
+            controller: new AbortController(),
+            stopped: null,
+          } satisfies InternalBatch)
+        : ({
+            ...item,
+            kind: 'single',
+            controller: new AbortController(),
+            stopped: null,
+          } satisfies InternalRequest);
+    if (item.priority === 'batch') this.batchQueue.unshift(fresh);
+    else this.liveQueue.unshift(fresh);
   }
 
   private rejectItem(item: Item, err: unknown): void {
@@ -450,14 +463,6 @@ export class AnalysisQueue {
       item.reject(err);
     }
   }
-}
-
-function itemPriority(item: Item): Priority {
-  return item.kind === 'batch' ? item.priority : item.request.priority;
-}
-
-function itemTag(item: Item): string | undefined {
-  return item.kind === 'batch' ? item.tag : item.request.tag;
 }
 
 function abortError(): Error {

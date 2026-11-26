@@ -129,8 +129,6 @@ export function useFullGameAnalysis({
             komi,
             history: [...state.history],
             numVisits,
-            priority: 'batch',
-            tag: TAG,
             cacheKey,
             extra: { koInfo: state.board._koInfo },
           };
@@ -167,6 +165,8 @@ export function useFullGameAnalysis({
 
       const outcome = await runFullGameSlices(queue, positions, {
         batchSize,
+        // Lane + cancel tag for the whole run — not fields of each request.
+        submitOpts: { priority: 'batch', tag: TAG },
         onSlice: ({ positions: slice, durationMs }) => {
           totalInferenceTime += durationMs;
           totalInferences += slice.length;

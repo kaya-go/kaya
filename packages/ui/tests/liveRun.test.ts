@@ -17,7 +17,7 @@ import { runLiveRequests } from '../src/contexts/ai/liveRun';
 function position(stoneAt: number, numVisits: number): AnalysisRequest {
   const signMap = Array.from({ length: 9 }, () => Array(9).fill(0));
   signMap[0][stoneAt] = 1;
-  return { signMap, nextToPlay: 'W', komi: 7.5, history: [], numVisits, priority: 'live' };
+  return { signMap, nextToPlay: 'W', komi: 7.5, history: [], numVisits };
 }
 
 const PARENT = position(0, 1);

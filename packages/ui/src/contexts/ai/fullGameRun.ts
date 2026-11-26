@@ -3,7 +3,7 @@
  * run ends (done, stopped, failed) is decided in one place and tested.
  */
 
-import type { AnalysisQueue, AnalysisRequest } from '@kaya/ai-engine';
+import type { AnalysisQueue, AnalysisRequest, SubmitOptions } from '@kaya/ai-engine';
 import type { TFunction } from 'i18next';
 import { isAbortError } from '../../utils/aiAnalysis';
 
@@ -37,11 +37,22 @@ export interface FullGameSlice {
  * fast path, one request at a time otherwise. A cancelled request (the user
  * stopped, or a newer run replaced this one) stops the run; any other error
  * fails it, and the caller must say so.
+ *
+ * `submitOpts` is the scheduling lane for every slice (batch + cancel tag);
+ * it is independent of whether the slice uses submit or submitBatch.
  */
 export async function runFullGameSlices(
   queue: Pick<AnalysisQueue, 'submit' | 'submitBatch'>,
   positions: FullGamePosition[],
-  { batchSize, onSlice }: { batchSize: number; onSlice: (slice: FullGameSlice) => void }
+  {
+    batchSize,
+    onSlice,
+    submitOpts,
+  }: {
+    batchSize: number;
+    onSlice: (slice: FullGameSlice) => void;
+    submitOpts: SubmitOptions;
+  }
 ): Promise<FullGameRunOutcome> {
   const useBatch = batchSize > 1;
 
@@ -51,11 +62,14 @@ export async function runFullGameSlices(
 
     try {
       if (useBatch && slice.length > 1) {
-        const handles = queue.submitBatch(slice.map(p => p.request));
+        const handles = queue.submitBatch(
+          slice.map(p => p.request),
+          submitOpts
+        );
         await Promise.all(handles.map(h => h.result));
       } else {
         for (const p of slice) {
-          await queue.submit(p.request).result;
+          await queue.submit(p.request, submitOpts).result;
         }
       }
     } catch (err) {

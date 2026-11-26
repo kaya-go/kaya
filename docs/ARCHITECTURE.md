@@ -164,11 +164,13 @@ memory.
 Both live (per-position) and batch (full-game) analysis go through one
 [`AnalysisQueue`](../packages/ai-engine/src/queue.ts) owned by
 `AIEngineContext`. It serializes engine access (one in-flight call at a
-time), implements priority lanes (live preempts batch transparently;
-new live also drops in-flight live), centralizes cancellation
-(`cancel(id)` / `cancelTag('full-game')`), and reads and writes a monotonic
-cache that's shared with `GameTreeContext.analysisCache` so SGF `KA`
-persistence Just Works against the same Map. The rule for that cache (what
+time), implements priority lanes via `SubmitOptions` on `submit` /
+`submitBatch` (live preempts batch transparently; new live also drops
+in-flight live — lane and cancel tag are not part of the analysis
+payload), centralizes cancellation (`cancel(id)` / `cancelTag('full-game')`),
+and reads and writes a monotonic cache that's shared with
+`GameTreeContext.analysisCache` so SGF `KA` persistence Just Works against
+the same Map. The rule for that cache (what
 answers a request, which result to keep) lives in
 [`analysis-cache.ts`](../packages/ai-engine/src/analysis-cache.ts). The queue
 never evicts from the shared Map: it is what a save writes, and its owner clears

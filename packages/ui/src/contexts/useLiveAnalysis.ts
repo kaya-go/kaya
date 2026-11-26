@@ -99,7 +99,6 @@ export function useLiveAnalysis({
       komi,
       history: state.history,
       numVisits: required,
-      priority: 'live',
       cacheKey: currentKey,
     });
     if (!cur) return false;
@@ -116,7 +115,6 @@ export function useLiveAnalysis({
         komi,
         history: prevState.history,
         numVisits: 1,
-        priority: 'live',
         cacheKey: prevKey,
       });
     }
@@ -207,7 +205,6 @@ export function useLiveAnalysis({
             komi,
             history: prevPos.history,
             numVisits: 1,
-            priority: 'live',
             cacheKey: prevPos.cacheKey,
             extra: { koInfo: prevPos.koInfo },
           },
@@ -221,7 +218,6 @@ export function useLiveAnalysis({
             komi,
             history: currentPos.history,
             numVisits,
-            priority: 'live',
             cacheKey: currentPos.cacheKey,
             includeMove,
             onProgress: (p: MCTSProgress) => {

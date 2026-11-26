@@ -4,7 +4,7 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import type { AnalysisRequest, AnalysisResult } from '@kaya/ai-engine';
+import type { AnalysisRequest, AnalysisResult, SubmitOptions } from '@kaya/ai-engine';
 import type { TFunction } from 'i18next';
 import {
   formatFullGameNotice,
@@ -18,6 +18,8 @@ const RESULT: AnalysisResult = {
   currentTurn: 'B',
   moveSuggestions: [],
 };
+
+const BATCH_OPTS: SubmitOptions = { priority: 'batch', tag: 'full-game' };
 
 function positions(n: number): FullGamePosition[] {
   return Array.from({ length: n }, (_, index) => ({
@@ -45,7 +47,11 @@ describe('full-game run', () => {
     const outcome = await runFullGameSlices(
       queueFailingAt(2, new Error('WebGPU device lost')),
       positions(6),
-      { batchSize: 1, onSlice: s => slices.push(s.positions[0].index) }
+      {
+        batchSize: 1,
+        submitOpts: BATCH_OPTS,
+        onSlice: s => slices.push(s.positions[0].index),
+      }
     );
     expect(outcome).toEqual({ status: 'failed', message: 'WebGPU device lost' });
     expect(slices).toEqual([0, 1]);
@@ -54,6 +60,7 @@ describe('full-game run', () => {
   test('a failed batch fails the run', async () => {
     const outcome = await runFullGameSlices(queueFailingAt(5, new Error('boom')), positions(8), {
       batchSize: 4,
+      submitOpts: BATCH_OPTS,
       onSlice: () => {},
     });
     expect(outcome).toEqual({ status: 'failed', message: 'boom' });
@@ -63,6 +70,7 @@ describe('full-game run', () => {
     const abort = Object.assign(new Error('Request cancelled'), { name: 'AbortError' });
     const outcome = await runFullGameSlices(queueFailingAt(1, abort), positions(3), {
       batchSize: 1,
+      submitOpts: BATCH_OPTS,
       onSlice: () => {},
     });
     expect(outcome).toEqual({ status: 'stopped' });
@@ -72,6 +80,7 @@ describe('full-game run', () => {
     let count = 0;
     const outcome = await runFullGameSlices(queueFailingAt(-1, new Error()), positions(10), {
       batchSize: 4,
+      submitOpts: BATCH_OPTS,
       onSlice: s => (count += s.positions.length),
     });
     expect(outcome).toEqual({ status: 'done' });

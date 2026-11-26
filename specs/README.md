@@ -96,3 +96,4 @@ link forward to the replacement. Don't delete history.
 | 2026-11-20 | [Stopping an analysis stops it, and leaves nothing behind](2026-11-20-analysis-stops-cleanly.md)            | shipped    |
 | 2026-11-20 | [KA records the engine version, and older analysis is run again](2026-11-20-ka-engine-version.md)           | shipped    |
 | 2026-11-20 | [Desktop audio clamps the buffer to the device's range](2026-11-20-audio-buffer-range.md)                   | shipped    |
+| 2026-11-26 | [Submit options carry the scheduling lane](2026-11-26-submit-options-scheduling.md)                         | shipped    |
