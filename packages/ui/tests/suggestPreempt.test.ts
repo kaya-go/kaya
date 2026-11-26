@@ -24,7 +24,6 @@ function position(): AnalysisRequest {
     komi: 7.5,
     history: [],
     numVisits: 8,
-    priority: 'live',
   };
 }
 

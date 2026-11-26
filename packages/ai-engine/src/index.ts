@@ -94,4 +94,5 @@ export {
   type Priority,
   type RequestId,
   type SubmitHandle,
+  type SubmitOptions,
 } from './queue';

@@ -19,6 +19,8 @@ export interface LiveRunResult {
  * Aborting `signal` (analysis turned off, or a newer run) cancels the request in
  * flight and submits nothing more, whichever step the run is at. The run then
  * resolves to null, as it does when the queue cancels its request.
+ *
+ * Uses `submit`'s default live lane: a newer live request replaces these.
  */
 export async function runLiveRequests(
   queue: Pick<AnalysisQueue, 'submit' | 'cancel'>,

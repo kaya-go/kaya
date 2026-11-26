@@ -22,17 +22,18 @@ function boardWithStoneAt(x: number): SignMap {
   return board;
 }
 
-function request(x: number, priority: 'live' | 'batch'): AnalysisRequest {
+function request(x: number): AnalysisRequest {
   return {
     signMap: boardWithStoneAt(x),
     nextToPlay: 'W',
     komi: 7.5,
     history: [],
     numVisits: 1,
-    priority,
-    tag: priority === 'batch' ? 'full-game' : undefined,
   };
 }
+
+const LIVE = { priority: 'live' as const };
+const BATCH = { priority: 'batch' as const, tag: 'full-game' };
 
 function result(label: number): AnalysisResult {
   return {
@@ -120,7 +121,10 @@ describe('AnalysisQueue preemption', () => {
     const engine = new SteppableEngine();
     const queue = new AnalysisQueue(engine as unknown as Engine);
 
-    const batch = queue.submitBatch([0, 1, 2, 3].map(x => request(x, 'batch')));
+    const batch = queue.submitBatch(
+      [0, 1, 2, 3].map(x => request(x)),
+      BATCH
+    );
     await settle();
 
     // Two positions are done, then the user clicks a move.
@@ -128,7 +132,7 @@ describe('AnalysisQueue preemption', () => {
     await settle();
     expect(engine.positionsComputed).toBe(2);
 
-    const live = queue.submit(request(8, 'live'));
+    const live = queue.submit(request(8), LIVE);
     engine.allow(1); // the batch notices the abort on its next position
     await settle();
 
@@ -151,12 +155,15 @@ describe('AnalysisQueue preemption', () => {
     const engine = new SteppableEngine();
     const queue = new AnalysisQueue(unstoppable(engine));
 
-    const batch = queue.submitBatch([0, 1, 2, 3].map(x => request(x, 'batch')));
+    const batch = queue.submitBatch(
+      [0, 1, 2, 3].map(x => request(x)),
+      BATCH
+    );
     await settle();
     engine.allow(2);
     await settle();
 
-    const live = queue.submit(request(8, 'live'));
+    const live = queue.submit(request(8), LIVE);
     engine.allow(10);
     await expect(live.result).resolves.toBeDefined();
     const batchResults = await Promise.all(batch.map(h => h.result));
@@ -178,9 +185,9 @@ describe('AnalysisQueue preemption', () => {
       analyze: async () => result(-1),
     } as unknown as Engine);
 
-    const searched = { ...request(0, 'batch'), numVisits: 32 };
-    const [handle] = queue.submitBatch([searched]);
-    queue.submit(request(8, 'live'));
+    const searched = { ...request(0), numVisits: 32 };
+    const [handle] = queue.submitBatch([searched], BATCH);
+    queue.submit(request(8), LIVE);
 
     expect(await handle.result).toBe(deep);
     expect(queue.peek(searched)).toBe(deep);
@@ -190,7 +197,10 @@ describe('AnalysisQueue preemption', () => {
     const engine = new SteppableEngine();
     const queue = new AnalysisQueue(engine as unknown as Engine);
 
-    const batch = queue.submitBatch([0, 1, 2].map(x => request(x, 'batch')));
+    const batch = queue.submitBatch(
+      [0, 1, 2].map(x => request(x)),
+      BATCH
+    );
     engine.allow(10);
 
     const results = await Promise.all(batch.map(h => h.result));
@@ -214,7 +224,10 @@ describe('AnalysisQueue cancellation', () => {
     const engine = new SteppableEngine();
     const shared = { current: new Map<string, AnalysisResult>() };
     const queue = new AnalysisQueue(unstoppable(engine), { cacheRef: shared });
-    const handles = queue.submitBatch([0, 1, 2, 3].map(x => request(x, 'batch')));
+    const handles = queue.submitBatch(
+      [0, 1, 2, 3].map(x => request(x)),
+      BATCH
+    );
     const outcomes = Promise.allSettled(handles.map(h => h.result));
     await settle();
     engine.allow(2);
@@ -252,7 +265,7 @@ describe('AnalysisQueue cancellation', () => {
     queue.cancelAll();
     queue.clearCache();
     // The user clicks a move while the worker is still finishing the batch.
-    const live = queue.submit(request(8, 'live'));
+    const live = queue.submit(request(8), LIVE);
     engine.allow(10);
     await live.result;
     await settle();
@@ -271,7 +284,7 @@ describe('AnalysisQueue cancellation', () => {
 
       // A live request preempts the batch, which the worker cannot stop: it is
       // queued again and still running when the user stops the full-game run.
-      const live = queue.submit(request(8, 'live'));
+      const live = queue.submit(request(8), LIVE);
       stop(queue, handles[0].id);
       engine.allow(10);
       await live.result;
@@ -311,7 +324,7 @@ class SearchEngine {
 }
 
 function search(numVisits: number, includeMove?: string): AnalysisRequest {
-  return { ...request(0, 'live'), numVisits, includeMove };
+  return { ...request(0), numVisits, includeMove };
 }
 
 /** Submits and waits; returns whether the cache answered (no engine run). */
@@ -387,7 +400,7 @@ describe('AnalysisQueue cache and the forced move', () => {
 describe('AnalysisQueue and analysis from another engine version', () => {
   function sharedWith(entry: AnalysisResult) {
     const shared = { current: new Map<string, AnalysisResult>() };
-    const key = generateAnalysisCacheKey(request(0, 'live').signMap, 'W', 7.5, []);
+    const key = generateAnalysisCacheKey(request(0).signMap, 'W', 7.5, []);
     shared.current.set(key, entry);
     return { shared, key };
   }
@@ -398,14 +411,14 @@ describe('AnalysisQueue and analysis from another engine version', () => {
     const engine = new SearchEngine();
     const queue = new AnalysisQueue(engine as unknown as Engine, { cacheRef: shared });
 
-    expect(queue.peek(request(0, 'live'))).toBeNull();
-    const fresh = await queue.submit(request(0, 'live')).result;
+    expect(queue.peek(request(0))).toBeNull();
+    const fresh = await queue.submit(request(0), LIVE).result;
 
     // Run at the depth asked for: the old entry's 2500 visits are no reason to
     // search that deep again.
     expect(engine.runs).toEqual([{ numVisits: 1, includeMove: undefined }]);
     expect(shared.current.get(key)).toBe(fresh);
-    expect(queue.peek(request(0, 'live'))).toBe(fresh);
+    expect(queue.peek(request(0))).toBe(fresh);
   });
 
   test('analysis this engine version wrote answers as before', () => {
@@ -413,13 +426,13 @@ describe('AnalysisQueue and analysis from another engine version', () => {
     const { shared } = sharedWith(saved);
     const queue = new AnalysisQueue(new SearchEngine() as unknown as Engine, { cacheRef: shared });
 
-    expect(queue.peek(request(0, 'live'))).toBe(saved);
+    expect(queue.peek(request(0))).toBe(saved);
   });
 });
 
 describe('AnalysisQueue cache size', () => {
   const analyseThree = async (queue: AnalysisQueue) => {
-    for (const x of [0, 1, 2]) await queue.submit(request(x, 'live')).result;
+    for (const x of [0, 1, 2]) await queue.submit(request(x), LIVE).result;
   };
   const engine = { analyze: async () => result(0) } as unknown as Engine;
 
@@ -431,7 +444,7 @@ describe('AnalysisQueue cache size', () => {
 
     // Evicting here would drop the oldest analysis from the next saved file.
     expect(shared.current.size).toBe(3);
-    expect(queue.peek(request(0, 'live'))).not.toBeNull();
+    expect(queue.peek(request(0))).not.toBeNull();
   });
 
   test('keeps its own cache to cacheSize entries', async () => {
@@ -440,7 +453,7 @@ describe('AnalysisQueue cache size', () => {
     await analyseThree(queue);
 
     expect(queue.cacheStats().size).toBe(2);
-    expect(queue.peek(request(0, 'live'))).toBeNull();
+    expect(queue.peek(request(0))).toBeNull();
   });
 });
 
